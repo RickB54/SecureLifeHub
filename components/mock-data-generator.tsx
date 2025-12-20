@@ -29,7 +29,10 @@ export default function MockDataGenerator({ bulkAddItems }: MockDataGeneratorPro
             // Helper to add multiple items per category
             const addItems = (category: string, count: number, factory: (i: number) => any) => {
                 for (let i = 1; i <= count; i++) {
-                    mockItems.push(factory(i))
+                    const item = factory(i)
+                    if (!item.item_metadata) item.item_metadata = {}
+                    item.item_metadata.is_mock = true
+                    mockItems.push(item)
                 }
             }
 
