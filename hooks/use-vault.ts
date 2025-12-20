@@ -1,0 +1,256 @@
+"use client"
+
+import { useEffect, useState, useCallback } from "react"
+import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/components/auth-provider"
+import { toast } from "sonner" // Assuming sonner is installed as per package.json
+
+export interface VaultItem {
+    id: string
+    user_id: string
+    type: "password" | "contact" | "card" | "note"
+    title: string
+    username?: string
+    password?: string
+    website?: string
+    category?: string
+    notes?: string
+    folder_id?: string
+    is_favorite: boolean
+    is_archived: boolean
+    created_at: string
+    updated_at: string
+    // Legacy fields for compatibility during migration
+    path?: string
+    folder?: string
+    name?: string
+    strength?: string
+    item_metadata?: any
+}
+
+export interface Folder {
+    id: string
+    user_id: string
+    name: string
+    parent_id?: string
+    created_at: string
+    updated_at: string
+    type: "folder" // For compatibility
+    path: string // For compatibility
+}
+
+export function useVault() {
+    const { user } = useAuth()
+    const [items, setItems] = useState<VaultItem[]>([])
+    const [folders, setFolders] = useState<Folder[]>([])
+    const [loading, setLoading] = useState(true)
+
+    const fetchData = useCallback(async () => {
+        if (!user) return
+
+        setLoading(true)
+        try {
+            // Fetch Folders
+            const { data: folderData, error: folderError } = await supabase
+                .from("folders")
+                .select("*")
+                .order("name")
+
+            if (folderError) throw folderError
+
+            // Fetch Items
+            const { data: itemData, error: itemError } = await supabase
+                .from("vault_items")
+                .select("*")
+                .order("created_at", { ascending: false })
+
+            if (itemError) throw itemError
+
+            // Map to ensure compatibility with existing components if needed
+            const mappedFolders = (folderData || []).map(f => ({
+                ...f,
+                type: "folder" as const,
+                path: f.name // Simplification for now
+            }))
+
+            // Map items
+            const mappedItems = (itemData || []).map(i => ({
+                ...i,
+                // Map DB fields to UI fields if different
+                updatedAt: i.updated_at,
+                createdAt: i.created_at,
+            }))
+
+            setFolders(mappedFolders)
+            setItems(mappedItems as any) // Type assertion for transition
+        } catch (error: any) {
+            console.error("Error fetching vault:", error)
+            toast.error("Failed to load vault items")
+        } finally {
+            setLoading(false)
+        }
+    }, [user])
+
+    useEffect(() => {
+        fetchData()
+    }, [fetchData])
+
+    // CRUD Operations
+    const addFolder = async (name: string, parentId?: string) => {
+        if (!user) return
+        try {
+            const { data, error } = await supabase
+                .from("folders")
+                .insert({
+                    user_id: user.id,
+                    name,
+                    parent_id: parentId || null
+                })
+                .select()
+                .single()
+
+            if (error) throw error
+
+            const newFolder = { ...data, type: "folder", path: data.name }
+            setFolders(prev => [...prev, newFolder as any])
+            toast.success("Folder created")
+            return newFolder
+        } catch (error: any) {
+            console.error("Error adding folder:", error)
+            toast.error(error.message)
+        }
+    }
+
+    const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }) => {
+        if (!user) return
+        try {
+            // Prepare payload (remove UI specific fields if any)
+            const payload = {
+                user_id: user.id,
+                type: item.type || 'password',
+                title: item.title || item.website || 'Untitled',
+                username: item.username,
+                password: item.password,
+                website: item.website,
+                category: item.category,
+                folder_id: item.folder_id,
+                is_favorite: item.is_favorite || false,
+                is_archived: item.is_archived || false,
+                notes: item.notes,
+                item_metadata: item.item_metadata || {} // Add metadata support
+            }
+
+            const { data, error } = await supabase
+                .from("vault_items")
+                .insert(payload)
+                .select()
+                .single()
+
+            if (error) throw error
+
+            const newItem = { ...data, updatedAt: data.updated_at }
+            setItems(prev => [newItem as any, ...prev])
+            toast.success("Item added")
+            return newItem
+        } catch (error: any) {
+            console.error("Error adding item:", error)
+            toast.error(error.message)
+        }
+    }
+
+    const bulkAddItems = async (newItems: (Partial<VaultItem> & { item_metadata?: any })[]) => {
+        if (!user || newItems.length === 0) return
+        try {
+            const payload = newItems.map(item => ({
+                user_id: user.id,
+                type: item.type || 'password',
+                title: item.title || item.website || 'Untitled',
+                username: item.username,
+                password: item.password,
+                website: item.website,
+                category: item.category,
+                folder_id: item.folder_id,
+                is_favorite: item.is_favorite || false,
+                is_archived: item.is_archived || false,
+                notes: item.notes,
+                item_metadata: item.item_metadata || {}
+            }))
+
+            const { data, error } = await supabase
+                .from("vault_items")
+                .insert(payload)
+                .select()
+
+            if (error) throw error
+
+            const mappedItems = data.map(i => ({ ...i, updatedAt: i.updated_at }))
+            setItems(prev => [...mappedItems as any, ...prev])
+            toast.success(`${mappedItems.length} items imported`)
+            return mappedItems
+        } catch (error: any) {
+            console.error("Error batch importing:", error)
+            toast.error(error.message)
+        }
+    }
+
+    const updateItem = async (id: string, updates: Partial<VaultItem>) => {
+        try {
+            // Filter out legacy/UI-only fields that shouldn't be sent to DB
+            const { path, folder, ...validUpdates } = updates as any
+
+            // Map camelCase to snake_case if necessary (though we tried to standardize on snake_case)
+            // Ideally we stick to the VaultItem interface which is snake_case for DB fields.
+
+            const payload = {
+                ...validUpdates,
+                updated_at: new Date().toISOString()
+            }
+
+            const { error } = await supabase
+                .from("vault_items")
+                .update(payload)
+                .eq('id', id)
+
+            if (error) throw error
+
+            // Update local state - keep the UI fields in local state so UI updates immediately
+            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item))
+            toast.success("Item updated")
+        } catch (error: any) {
+            console.error("Update error:", error)
+            toast.error("Failed to update item")
+        }
+    }
+
+    const deleteItem = async (id: string) => {
+        try {
+            const { error } = await supabase
+                .from("vault_items")
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+
+            setItems(prev => prev.filter(i => i.id !== id))
+            toast.success("Item deleted")
+        } catch (error: any) {
+            toast.error("Failed to delete item")
+        }
+    }
+
+    // Combine for legacy 'records' prop
+    const records = [...items, ...folders]
+
+    return {
+        items,
+        folders,
+        records,
+        loading,
+        addFolder,
+        addItem,
+        bulkAddItems,
+        updateItem,
+        deleteItem,
+        refresh: fetchData
+    }
+}
