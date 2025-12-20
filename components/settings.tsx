@@ -495,7 +495,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
                     item.title.startsWith("Credit Card") ||
                     item.title.startsWith("Contact") ||
                     item.title.startsWith("Address") ||
-                    item.title.startsWith("Bank Account") || // Covers "Bank Account X"
+                    item.title.startsWith("Bank Account") ||
                     item.title.startsWith("Driver's License") ||
                     item.title.startsWith("Database Prod") ||
                     item.title.startsWith("Server Node") ||
