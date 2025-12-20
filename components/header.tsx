@@ -30,7 +30,7 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, theme, tog
         <div className="flex items-center">
           <button
             onClick={toggleSidebar}
-            className={`mr-3 md:hidden ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
+            className={`mr-3 ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
             aria-label="Toggle sidebar"
           >
             <Menu className="h-6 w-6" />

@@ -64,20 +64,21 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
     <>
       {/* Overlay for mobile */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden" onClick={() => setIsOpen(false)}></div>
-      )}
+        { isOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-20" onClick={() => setIsOpen(false)}></div>
+        )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:relative inset-y-0 left-0 w-64 bg-[#2a2a2a] transition-transform duration-300 ease-in-out z-30 ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
-          } h-full border-r border-gray-800`}
+        className={`fixed inset-y-0 left-0 w-64 bg-[#2a2a2a] transition-transform duration-300 ease-in-out z-30 ${isOpen ? "translate-x-0" : "-translate-x-full"
+          } h-full border-r border-gray-800 pt-16`}
       >
         <div className="flex flex-col h-full">
           <div className="sticky top-0 bg-[#2a2a2a] z-10 px-6 py-4 border-b border-gray-800 flex justify-end">
             <button
-              onClick={toggleAll}
-              className="p-1 rounded hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-              title={isAnyExpanded ? "Collapse All" : "Expand All"}
+              onClick={() => setIsOpen(!isOpen)}
+              className={`mr-3 ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
+              aria-label="Toggle sidebar"
             >
               {isAnyExpanded ? <ChevronsUp className="h-5 w-5" /> : <ChevronsDown className="h-5 w-5" />}
             </button>

@@ -34,8 +34,8 @@ interface PasswordsProps {
   records: any[]
   addItem: (item: any) => Promise<void>
   addFolder: (name: string, parent?: string) => Promise<void>
-  updateItem: (id: string, item: any) => Promise<void>
-  deleteItem: (id: string) => Promise<void>
+  updateItem: (id: string, item: any) => Promise<any>
+  deleteItem: (id: string) => Promise<any>
   theme: string
   initialCategoryFilter?: string
   showAllTypes?: boolean
@@ -74,10 +74,6 @@ export default function Passwords({
   // State for showing/hiding filters
   const [showFilters, setShowFilters] = useState(false)
 
-  // State for visible card numbers
-  // @ts-ignore
-  const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({})
-
   // State for expanded folders
   // @ts-ignore
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({})
@@ -107,18 +103,23 @@ export default function Passwords({
     }
 
     document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
   }, [])
 
-  // Toggle password visibility
-  const togglePasswordVisibility = (id: string) => {
-    setVisiblePasswords({
-      ...visiblePasswords,
-      [id]: !visiblePasswords[id],
-    })
-  }
+  // State for active password popup
+  const [activePasswordPopup, setActivePasswordPopup] = useState<string | null>(null)
+
+  // Close password popup when clicking outside
+  useEffect(() => {
+    const handlePopupClickOutside = (event: MouseEvent) => {
+      // If we clicked outside any popup-trigger (which we handle with stopPropagation usually), close it.
+      // Actually simple: click anywhere on document closes it, UNLESS it was the trigger or popup itself.
+      // We put stopPropagation on trigger and popup, so document listener is enough.
+      setActivePasswordPopup(null)
+    }
+    document.addEventListener("click", handlePopupClickOutside)
+    return () => document.removeEventListener("click", handlePopupClickOutside)
+  }, [])
+
 
   // Toggle folder expansion
   const toggleFolder = (folderId: string) => {
@@ -391,7 +392,8 @@ export default function Passwords({
     return (
       <div
         key={password.id}
-        className="glass-panel rounded-xl p-3 hover:bg-white/5 transition-all group relative"
+        className="glass-panel rounded-xl p-3 hover:bg-white/5 transition-all group relative cursor-pointer"
+        onClick={() => handleEditPassword(password.id)}
       >
         <div className="flex justify-between items-start gap-3">
           {/* Left Side: Info */}
@@ -421,15 +423,39 @@ export default function Passwords({
                 className="flex items-center cursor-pointer hover:text-foreground transition-colors min-w-0"
                 onClick={(e) => {
                   e.stopPropagation()
-                  togglePasswordVisibility(password.id)
+                  // Toggle popup: if already open for this id, close it; otherwise open it
+                  if (activePasswordPopup === password.id) {
+                    setActivePasswordPopup(null)
+                  } else {
+                    setActivePasswordPopup(password.id)
+                  }
                 }}
               >
-                <span className="truncate block">
-                  {visiblePasswords[password.id] ? password.password : "••••••••"}
-                </span>
+                <span className="truncate block">••••••••</span>
                 <span className="ml-1 opacity-70">
-                  {visiblePasswords[password.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  <Eye className="h-3 w-3" />
                 </span>
+
+                {/* Password Popup */}
+                {activePasswordPopup === password.id && (
+                  <div
+                    className="absolute left-0 bottom-full mb-1 z-50 bg-black text-white px-3 py-2 rounded shadow-lg text-sm font-mono cursor-pointer border border-gray-700 animate-in fade-in zoom-in-95"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      navigator.clipboard.writeText(password.password)
+                      // Optional: Show copied feedback? For now just copy.
+                      // Ideally we'd show a "Copied!" tooltip or toast.
+                      // Let's rely on standard toast if possible or just action.
+                      // Actually let's close it after copy to signal action?
+                      // User said: "however if i touch the popup then the pw will be copied to the clipboard."
+                      // It doesn't explicitly say close, but closing is good feedback.
+                      setActivePasswordPopup(null)
+                    }}
+                  >
+                    {password.password}
+                    <div className="absolute -bottom-1 left-4 w-2 h-2 bg-black border-r border-b border-gray-700 transform rotate-45"></div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -650,7 +676,11 @@ export default function Passwords({
     }
 
     return filteredPasswords.map((password) => (
-      <tr key={password.id} className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
+      <tr
+        key={password.id}
+        className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"} hover:bg-white/5 transition-colors cursor-pointer`}
+        onClick={() => handleEditPassword(password.id)}
+      >
         <td className="py-3 px-4">
           {password.website ? (
             <a
@@ -667,15 +697,38 @@ export default function Passwords({
           )}
         </td>
         <td className="py-3 px-4">{password.username}</td>
-        <td className="py-3 px-4 hidden md:table-cell">
+        <td className="py-3 px-4 hidden md:table-cell relative">
           <div className="flex items-center">
-            <span>{visiblePasswords[password.id] ? password.password : "••••••••••"}</span>
+            <span>••••••••••</span>
             <button
-              onClick={() => togglePasswordVisibility(password.id)}
-              className="ml-2 text-gray-400 hover:text-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                // Toggle popup
+                if (activePasswordPopup === password.id) {
+                  setActivePasswordPopup(null)
+                } else {
+                  setActivePasswordPopup(password.id)
+                }
+              }}
+              className="ml-2 text-gray-400 hover:text-white relative"
             >
-              {visiblePasswords[password.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              <Eye className="h-4 w-4" />
             </button>
+
+            {/* Password Popup for Table */}
+            {activePasswordPopup === password.id && (
+              <div
+                className="absolute left-1/2 bottom-full mb-1 -translate-x-1/2 z-50 bg-black text-white px-3 py-2 rounded shadow-lg text-sm font-mono cursor-pointer border border-gray-700 animate-in fade-in zoom-in-95 w-max max-w-[200px] break-all"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigator.clipboard.writeText(password.password)
+                  setActivePasswordPopup(null)
+                }}
+              >
+                {password.password}
+                <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-black border-r border-b border-gray-700 transform rotate-45 -translate-x-1/2"></div>
+              </div>
+            )}
           </div>
         </td>
         <td className="py-3 px-4 hidden lg:table-cell">{password.category || "General"}</td>

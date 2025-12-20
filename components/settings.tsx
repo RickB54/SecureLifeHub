@@ -477,24 +477,41 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
               onClick={async () => {
                 if (!confirm("Are you sure you want to delete all MOCK data?")) return;
 
-                // Filter and delete mock items
-                const mockItems = records.filter((r: any) => r.item_metadata?.is_mock || r.title?.startsWith("[MOCK]"))
+                if (!deleteItem) {
+                  showNotification("Delete capability not available", "error")
+                  return
+                }
+
+                // Filter mock items
+                // Criteria: metadata is_mock OR title starts with [MOCK]
+                const mockItems = records.filter((r: any) =>
+                  r.item_metadata?.is_mock ||
+                  (r.title && r.title.startsWith("[MOCK]")) ||
+                  (r.website && r.website.startsWith("[MOCK]")) ||
+                  (r.username && r.username.startsWith("user_mock_"))
+                )
+
                 if (mockItems.length === 0) {
                   showNotification("No mock data found to delete", "error")
                   return
                 }
 
                 let deletedCount = 0
-                // We need to delete strictly. Since we don't have bulkDelete, we loop.
-                // Ideally we'd use a bulkDelete exposed by useVault, but for now:
-                /* 
-                   Note: verify if deleteItem is exposed in props. 
-                   SettingsProps has records, bulkAddItems, addFolder, folders, theme.
-                   It DOES NOT have deleteItem currently in interface or destructuring!
-                   I need to add deleteItem to SettingsProps.
-                */
-                console.log("Mock items to delete:", mockItems.length)
-                // We need deleteItem prop.
+                try {
+                  showNotification(`Deleting ${mockItems.length} mock items...`, "success")
+
+                  // Execute deletions in parallel for speed, or sequential if rate limits concern
+                  // Sequential is safer for UI feedback and errors
+                  for (const item of mockItems) {
+                    await deleteItem(item.id)
+                    deletedCount++
+                  }
+
+                  showNotification(`Successfully deleted ${deletedCount} mock items`, "success")
+                } catch (error) {
+                  console.error("Error deleting mock data:", error)
+                  showNotification(`Error: Deleted ${deletedCount} of ${mockItems.length} items`, "error")
+                }
               }}
               className="flex items-center text-red-400 hover:text-red-300 transition duration-200"
             >
