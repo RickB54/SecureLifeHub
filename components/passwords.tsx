@@ -391,8 +391,7 @@ export default function Passwords({
     return (
       <div
         key={password.id}
-        className="glass-panel rounded-xl p-3 hover:bg-white/5 transition-all group relative cursor-pointer"
-        onClick={() => handleEditPassword(password.id)}
+        className="glass-panel rounded-xl p-3 hover:bg-white/5 transition-all group relative"
       >
         <div className="flex justify-between items-start gap-3">
           {/* Left Side: Info */}
@@ -416,7 +415,13 @@ export default function Passwords({
 
             {/* Bottom Line: Username • Password */}
             <div className="flex items-center text-sm mt-1 gap-2 text-gray-500 dark:text-gray-400">
-              <span className="truncate max-w-[120px]" title={password.username}>{password.username}</span>
+              <span
+                className="truncate max-w-[120px] cursor-pointer hover:text-white transition-colors p-0.5 -m-0.5 rounded hover:bg-white/5"
+                title="Click to Edit Username"
+                onClick={() => handleEditPassword(password.id)}
+              >
+                {password.username}
+              </span>
               <span className="text-xs opacity-50">•</span>
               {activePasswordPopup === password.id && (
                 <div
@@ -911,19 +916,45 @@ export default function Passwords({
         <div className="space-y-2 flex-1">
           <div className="flex items-center">
             <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Username:</span>
-            <span className="flex-1 truncate">{password.username}</span>
+            <span
+              className="flex-1 truncate cursor-pointer hover:text-white transition-colors"
+              onClick={() => handleEditPassword(password.id)}
+              title="Click to edit username"
+            >
+              {password.username}
+            </span>
           </div>
 
           <div className="flex items-center">
             <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Password:</span>
-            <div className="flex items-center flex-1">
-              <span className="truncate">{visiblePasswords[password.id] ? password.password : "••••••••••"}</span>
+            <div className="flex items-center flex-1 relative">
+              <span className="truncate">••••••••••</span>
               <button
-                onClick={() => togglePasswordVisibility(password.id)}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (activePasswordPopup === password.id) {
+                    setActivePasswordPopup(null)
+                  } else {
+                    setActivePasswordPopup(password.id)
+                  }
+                }}
                 className="ml-2 text-gray-400 hover:text-white"
               >
-                {visiblePasswords[password.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {activePasswordPopup === password.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
+              {activePasswordPopup === password.id && (
+                <div
+                  className="absolute left-0 bottom-full mb-2 z-50 bg-black text-white px-3 py-2 rounded shadow-lg text-sm font-mono cursor-pointer border border-gray-700 animate-in fade-in zoom-in-95"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(password.password)
+                    setActivePasswordPopup(null)
+                  }}
+                >
+                  {password.password}
+                  <div className="absolute -bottom-1 left-3 w-2 h-2 bg-black border-r border-b border-gray-700 transform rotate-45"></div>
+                </div>
+              )}
             </div>
           </div>
 

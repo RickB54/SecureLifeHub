@@ -79,6 +79,12 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
             >
               <Folder className="h-5 w-5 mr-2" /> New Folder
             </button>
+            <button
+              onClick={() => setActivePage("settings")}
+              className="flex items-center px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-medium"
+            >
+              <Activity className="h-5 w-5 mr-2" /> Settings
+            </button>
           </div>
         </div>
 

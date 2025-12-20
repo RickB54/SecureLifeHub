@@ -486,28 +486,30 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
                 // Criteria: metadata is_mock OR title starts with [MOCK]
                 const mockItems = records.filter(
                   (item) =>
-                    item.item_metadata?.is_mock ||
-                    item.title.startsWith("[MOCK]") ||
-                    item.website?.startsWith("[MOCK]") ||
-                    item.username?.startsWith("user_mock_") ||
+                    item?.item_metadata?.is_mock ||
+                    item?.title?.startsWith("[MOCK]") ||
+                    item?.website?.startsWith("[MOCK]") ||
+                    item?.username?.startsWith("user_mock_") ||
                     // Catch existing generated mock data by common title prefixes
-                    item.title.startsWith("Login Service") ||
-                    item.title.startsWith("Credit Card") ||
-                    item.title.startsWith("Contact") ||
-                    item.title.startsWith("Address") ||
-                    item.title.startsWith("Bank Account") ||
-                    item.title.startsWith("Driver's License") ||
-                    item.title.startsWith("Database Prod") ||
-                    item.title.startsWith("Server Node") ||
-                    item.title.startsWith("Health Insurance") ||
-                    item.title.startsWith("Membership") ||
-                    item.title.startsWith("Secure Note") ||
-                    item.title.startsWith("Passport") ||
-                    item.title.startsWith("National ID") ||
-                    item.title.startsWith("Adobe Suite") ||
-                    item.title.startsWith("SSH Key") ||
-                    item.title.startsWith("Wifi Password") ||
-                    item.title.startsWith("Birth Certificate")
+                    (item?.title && (
+                      item.title.startsWith("Login Service") ||
+                      item.title.startsWith("Credit Card") ||
+                      item.title.startsWith("Contact") ||
+                      item.title.startsWith("Address") ||
+                      item.title.startsWith("Bank Account") ||
+                      item.title.startsWith("Driver's License") ||
+                      item.title.startsWith("Database Prod") ||
+                      item.title.startsWith("Server Node") ||
+                      item.title.startsWith("Health Insurance") ||
+                      item.title.startsWith("Membership") ||
+                      item.title.startsWith("Secure Note") ||
+                      item.title.startsWith("Passport") ||
+                      item.title.startsWith("National ID") ||
+                      item.title.startsWith("Adobe Suite") ||
+                      item.title.startsWith("SSH Key") ||
+                      item.title.startsWith("Wifi Password") ||
+                      item.title.startsWith("Birth Certificate")
+                    ))
                 )
 
                 if (mockItems.length === 0) {
