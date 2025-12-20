@@ -68,7 +68,7 @@ export default function Passwords({
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showCategoryFilterMenu, setShowCategoryFilterMenu] = useState(false)
   const [showTimeFilterMenu, setShowTimeFilterMenu] = useState(false)
-  const [showMoreFilterMenu, setShowMoreFilterMenu] = useState(false)
+  const [showStatusFilterMenu, setShowStatusFilterMenu] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
   // State for showing/hiding filters
@@ -94,7 +94,6 @@ export default function Passwords({
 
   // Ref for dropdown menus
   const menuRef = useRef<HTMLDivElement>(null)
-  const moreMenuRef = useRef<HTMLDivElement>(null)
 
   // State for active dropdown menu
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
@@ -104,9 +103,6 @@ export default function Passwords({
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setActiveMenu(null)
-      }
-      if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
-        setShowMoreFilterMenu(false)
       }
     }
 
@@ -1005,43 +1001,7 @@ export default function Passwords({
             Add New Folder
           </button>
 
-          <div className="relative" ref={moreMenuRef}>
-            <button
-              className={`flex items-center ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200`}
-              onClick={() => setShowMoreFilterMenu(!showMoreFilterMenu)}
-            >
-              <MoreHorizontal className="h-5 w-5 mr-2" />
-              More
-            </button>
-            {showMoreFilterMenu && (
-              <div
-                className={`absolute right-0 mt-1 w-48 ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1 z-10`}
-              >
-                <button
-                  className={`flex items-center w-full px-4 py-2 text-sm text-left ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${favoriteFilter ? "bg-blue-600 text-white" : ""}`}
-                  onClick={() => {
-                    setFavoriteFilter(!favoriteFilter)
-                    setArchivedFilter(false)
-                    console.log("More filter applied: Favorites")
-                  }}
-                >
-                  <Star className="h-4 w-4 mr-2" />
-                  Favorites Only
-                </button>
-                <button
-                  className={`flex items-center w-full px-4 py-2 text-sm text-left ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${archivedFilter ? "bg-blue-600 text-white" : ""}`}
-                  onClick={() => {
-                    setArchivedFilter(!archivedFilter)
-                    setFavoriteFilter(false)
-                    console.log("More filter applied: Archived")
-                  }}
-                >
-                  <Archive className="h-4 w-4 mr-2" />
-                  Archived Only
-                </button>
-              </div>
-            )}
-          </div>
+
 
           <div className={`flex items-center ${theme === "light" ? "bg-gray-200" : "bg-[#333]"} rounded-md`}>
             <button
@@ -1128,6 +1088,7 @@ export default function Passwords({
                         setShowFilterMenu(!showFilterMenu)
                         setShowCategoryFilterMenu(false)
                         setShowTimeFilterMenu(false)
+                        setShowStatusFilterMenu(false)
                       }}
                     >
                       <span>
@@ -1187,6 +1148,7 @@ export default function Passwords({
                         setShowCategoryFilterMenu(!showCategoryFilterMenu)
                         setShowFilterMenu(false)
                         setShowTimeFilterMenu(false)
+                        setShowStatusFilterMenu(false)
                       }}
                     >
                       <span>{categoryFilter === "all" ? "All Categories" : categoryFilter}</span>
@@ -1231,6 +1193,7 @@ export default function Passwords({
                         setShowTimeFilterMenu(!showTimeFilterMenu)
                         setShowFilterMenu(false)
                         setShowCategoryFilterMenu(false)
+                        setShowStatusFilterMenu(false)
                       }}
                     >
                       <span>
@@ -1262,6 +1225,63 @@ export default function Passwords({
                           }}
                         >
                           Last 30 Days
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <button
+                      className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
+                      onClick={() => {
+                        setShowStatusFilterMenu(!showStatusFilterMenu)
+                        setShowFilterMenu(false)
+                        setShowCategoryFilterMenu(false)
+                        setShowTimeFilterMenu(false)
+                      }}
+                    >
+                      <span>
+                        {favoriteFilter ? "Favorites" : archivedFilter ? "Archived" : "All Statuses"}
+                      </span>
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </button>
+
+                    {showStatusFilterMenu && (
+                      <div
+                        className={`absolute z-10 mt-1 w-full ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1`}
+                      >
+                        <button
+                          className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${!favoriteFilter && !archivedFilter ? "bg-blue-600 text-white" : ""}`}
+                          onClick={() => {
+                            setFavoriteFilter(false)
+                            setArchivedFilter(false)
+                            setShowStatusFilterMenu(false)
+                            console.log("Filter applied: All Statuses")
+                          }}
+                        >
+                          All Statuses
+                        </button>
+                        <button
+                          className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${favoriteFilter ? "bg-blue-600 text-white" : ""}`}
+                          onClick={() => {
+                            setFavoriteFilter(true)
+                            setArchivedFilter(false)
+                            setShowStatusFilterMenu(false)
+                            console.log("Filter applied: Favorites")
+                          }}
+                        >
+                          Favorites
+                        </button>
+                        <button
+                          className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${archivedFilter ? "bg-blue-600 text-white" : ""}`}
+                          onClick={() => {
+                            setFavoriteFilter(false)
+                            setArchivedFilter(true)
+                            setShowStatusFilterMenu(false)
+                            console.log("Filter applied: Archived")
+                          }}
+                        >
+                          Archived
                         </button>
                       </div>
                     )}
