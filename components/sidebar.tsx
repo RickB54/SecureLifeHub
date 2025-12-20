@@ -90,15 +90,14 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                   {/* Section Title Link */}
                   <button
                     onClick={() => {
-                      // If it's Main or Vault or Config, maybe standard behavior?
-                      // User said "When I select a main title in the menu... show sub dashboard"
-                      // I will define a convention: section-[id]
-                      if (section.id !== 'main') { // Main usually goes to Dashboard
+                      if (section.id !== 'main') {
                         handleNavigation(`section-${section.id}`)
-                        if (!expandedSections[section.id]) toggleSection(section.id) // Auto expand too?
+                        if (!expandedSections[section.id]) toggleSection(section.id)
                       } else {
                         handleNavigation(`dashboard`)
                       }
+                      // Auto-close on mobile when a main section link is clicked
+                      if (window.innerWidth < 768) setIsOpen(false)
                     }}
                     className="flex-1 text-left text-gray-400 uppercase text-xs font-semibold hover:text-white transition-colors"
                   >
@@ -123,7 +122,11 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                     {section.items.map((item) => (
                       <li key={item.id}>
                         <button
-                          onClick={() => handleNavigation(item.id)}
+                          onClick={() => {
+                            handleNavigation(item.id)
+                            // Explicitly close sidebar on mobile for sub-items too
+                            if (window.innerWidth < 768) setIsOpen(false)
+                          }}
                           className={`flex items-center w-full px-3 py-2 rounded-md text-sm ${activePage === item.id ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-700"
                             }`}
                         >

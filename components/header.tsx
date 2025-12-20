@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft } from "lucide-react"
+import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings } from "lucide-react"
 
 import { useAuth } from "./auth-provider"
 
@@ -53,6 +53,13 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, theme, tog
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          <button
+            onClick={() => onNavigate("settings")}
+            className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
+            aria-label="Settings"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
           <button
             onClick={toggleTheme}
             className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}

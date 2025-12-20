@@ -425,18 +425,13 @@ export default function Passwords({
               <span className="text-xs opacity-50">•</span>
               {activePasswordPopup === password.id && (
                 <div
-                  className="absolute left-0 bottom-full mb-1 z-50 bg-black text-white px-3 py-2 rounded shadow-lg text-sm font-mono cursor-pointer border border-gray-700 animate-in fade-in zoom-in-95"
+                  className="absolute left-0 bottom-full mb-1 z-[9999] bg-black text-white px-3 py-2 rounded shadow-lg text-sm font-mono cursor-pointer border border-gray-700 animate-in fade-in zoom-in-95"
                   onClick={(e) => {
                     e.stopPropagation()
                     navigator.clipboard.writeText(password.password)
-                    // Optional: Show copied feedback? For now just copy.
-                    // Ideally we'd show a "Copied!" tooltip or toast.
-                    // Let's rely on standard toast if possible or just action.
-                    // Actually let's close it after copy to signal action?
-                    // User said: "however if i touch the popup then the pw will be copied to the clipboard."
-                    // It doesn't explicitly say close, but closing is good feedback.
                     setActivePasswordPopup(null)
                   }}
+                  style={{ minWidth: 'max-content' }}
                 >
                   {password.password}
                   <div className="absolute -bottom-1 left-4 w-2 h-2 bg-black border-r border-b border-gray-700 transform rotate-45"></div>
