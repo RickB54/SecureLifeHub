@@ -637,7 +637,6 @@ export default function Passwords({
       <tr
         key={password.id}
         className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"} hover:bg-white/5 transition-colors cursor-pointer`}
-        onClick={() => handleEditPassword(password.id)}
       >
         <td className="py-3 px-4">
           {password.website ? (

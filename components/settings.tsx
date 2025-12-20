@@ -523,10 +523,13 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
 
                   // Execute deletions in parallel for speed, or sequential if rate limits concern
                   // Sequential is safer for UI feedback and errors
-                  for (const item of mockItems) {
-                    await deleteItem(item.id)
-                    deletedCount++
-                  }
+                  // Execute deletions in parallel for speed
+                  await Promise.all(mockItems.map(async (item) => {
+                    try {
+                      await deleteItem(item.id)
+                      deletedCount++
+                    } catch (e) { console.error(e) }
+                  }))
 
                   showNotification(`Successfully deleted ${deletedCount} mock items`, "success")
                 } catch (error) {

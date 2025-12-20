@@ -75,9 +75,9 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
         <div className="flex flex-col h-full">
           <div className="sticky top-0 bg-[#2a2a2a] z-10 px-6 py-4 border-b border-gray-800 flex justify-end">
             <button
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={toggleAll}
               className={`mr-3 ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
-              aria-label="Toggle sidebar"
+              aria-label="Toggle all sections"
             >
               {isAnyExpanded ? <ChevronsUp className="h-5 w-5" /> : <ChevronsDown className="h-5 w-5" />}
             </button>
