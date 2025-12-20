@@ -387,65 +387,57 @@ export default function Passwords({
     return filtered
   }
 
-  // Render password card
   const renderPasswordCard = (password: any) => {
     return (
       <div
         key={password.id}
-        className="glass-panel rounded-xl p-4 hover:bg-white/5 transition-all group"
+        className="glass-panel rounded-xl p-3 hover:bg-white/5 transition-all group relative"
       >
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium">
-            {password.website ? (
-              <a
-                href={password.website.startsWith("http") ? password.website : `https://${password.website}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 hover:underline flex items-center"
-              >
-                {password.website}
-                <ExternalLink className="h-3 w-3 ml-1" />
-              </a>
-            ) : (
-              "Unnamed"
-            )}
-          </h3>
-        </div>
-        <div className="space-y-1">
-          <div className="flex items-center text-sm">
-            <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-20`}>Username:</span>
-            <span className="flex-1 truncate">{password.username}</span>
-          </div>
-          <div className="flex items-center text-sm">
-            <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-20`}>Password:</span>
-            <div className="flex items-center flex-1">
-              <span className="truncate">{visiblePasswords[password.id] ? password.password : "••••••••••"}</span>
-              <button
+        <div className="flex justify-between items-start gap-3">
+          {/* Left Side: Info */}
+          <div className="flex-1 min-w-0">
+            {/* Top Line: Website/Title */}
+            <h3 className="font-medium truncate items-center flex">
+              {password.website ? (
+                <a
+                  href={password.website.startsWith("http") ? password.website : `https://${password.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 hover:underline truncate flex items-center gap-1"
+                >
+                  <span className="truncate">{password.website}</span>
+                  <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                </a>
+              ) : (
+                "Unnamed"
+              )}
+            </h3>
+
+            {/* Bottom Line: Username • Password */}
+            <div className="flex items-center text-sm mt-1 gap-2 text-gray-500 dark:text-gray-400">
+              <span className="truncate max-w-[120px]" title={password.username}>{password.username}</span>
+              <span className="text-xs opacity-50">•</span>
+              <div
+                className="flex items-center cursor-pointer hover:text-foreground transition-colors min-w-0"
                 onClick={(e) => {
                   e.stopPropagation()
                   togglePasswordVisibility(password.id)
                 }}
-                className="ml-2 text-gray-400 hover:text-white"
               >
-                {visiblePasswords[password.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-              </button>
+                <span className="truncate block">
+                  {visiblePasswords[password.id] ? password.password : "••••••••"}
+                </span>
+                <span className="ml-1 opacity-70">
+                  {visiblePasswords[password.id] ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center text-sm">
-            <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-20`}>Category:</span>
-            <span className="flex-1 truncate">{password.category || "General"}</span>
-          </div>
-          <div className="flex items-center text-sm">
-            <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-20`}>Folder:</span>
-            <span className="flex-1 truncate">{password.path || password.folder || "None"}</span>
-          </div>
-        </div>
-        <div
-          className={`flex justify-end mt-2 pt-2 border-t ${theme === "light" ? "border-gray-200" : "border-gray-600"}`}
-        >
-          <div className="flex items-center space-x-2">
+
+          {/* Right Side: Actions (Wrap if needed, but flex-nowrap prevents it) */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             <button
-              className="text-blue-400 hover:text-blue-300"
+              className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-md transition-colors"
               onClick={(e) => {
                 e.stopPropagation()
                 setSelectedRecord(password)
@@ -455,40 +447,8 @@ export default function Passwords({
             >
               <Copy className="h-4 w-4" />
             </button>
-            {password.picture && (
-              <button
-                className="text-blue-400 hover:text-blue-300"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleViewPicture(password)
-                }}
-                title="View Picture"
-              >
-                <Image className="h-4 w-4" />
-              </button>
-            )}
             <button
-              className="text-blue-400 hover:text-blue-300"
-              onClick={(e) => {
-                e.stopPropagation()
-                handleEditPassword(password.id)
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-            <button
-              className="text-blue-400 hover:text-blue-300"
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedRecord(password)
-                setMoveToFolderModalOpen(true)
-              }}
-              title="Move to Folder"
-            >
-              <Folder className="h-4 w-4" />
-            </button>
-            <button
-              className={`${password.is_favorite ? "text-yellow-300" : "text-yellow-400 hover:text-yellow-300"}`}
+              className={`p-1.5 ${password.is_favorite ? "text-yellow-300" : "text-gray-400 hover:text-yellow-300"} hover:bg-yellow-500/10 rounded-md transition-colors`}
               onClick={(e) => {
                 e.stopPropagation()
                 handleToggleFavorite(password.id)
@@ -496,16 +456,87 @@ export default function Passwords({
             >
               <Star className="h-4 w-4" fill={password.is_favorite ? "currentColor" : "none"} />
             </button>
-            <button
-              className="text-red-500 hover:text-red-400"
-              onClick={(e) => {
-                e.stopPropagation()
-                setSelectedRecord(password)
-                setDeleteConfirmModalOpen(true)
-              }}
-            >
-              <Trash className="h-4 w-4" />
-            </button>
+
+            {/* More Menu for compact layout actions */}
+            <div className="relative">
+              <button
+                className={`p-1.5 ${theme === "light" ? "text-gray-500" : "text-gray-400"} hover:bg-gray-500/10 rounded-md transition-colors`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setActiveMenu(activeMenu === password.id ? null : password.id)
+                }}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+
+              {activeMenu === password.id && (
+                <div
+                  ref={menuRef}
+                  className={`absolute right-0 mt-2 w-48 ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1 z-20 border ${theme === "light" ? "border-gray-200" : "border-gray-600"}`}
+                >
+                  <button
+                    className={`flex items-center w-full px-4 py-2 text-sm text-left ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleEditPassword(password.id)
+                      setActiveMenu(null)
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </button>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 text-sm text-left ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedRecord(password)
+                      setMoveToFolderModalOpen(true)
+                      setActiveMenu(null)
+                    }}
+                  >
+                    <Folder className="h-4 w-4 mr-2" />
+                    Move to Folder
+                  </button>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 text-sm text-left ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleToggleArchive(password.id)
+                      setActiveMenu(null)
+                    }}
+                  >
+                    <Archive className="h-4 w-4 mr-2" />
+                    {password.is_archived ? "Unarchive" : "Archive"}
+                  </button>
+                  {password.picture && (
+                    <button
+                      className={`flex items-center w-full px-4 py-2 text-sm text-left ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleViewPicture(password)
+                        setActiveMenu(null)
+                      }}
+                    >
+                      <Image className="h-4 w-4 mr-2" />
+                      View Picture
+                    </button>
+                  )}
+                  <div className={`border-t my-1 ${theme === "light" ? "border-gray-200" : "border-gray-600"}`}></div>
+                  <button
+                    className={`flex items-center w-full px-4 py-2 text-sm text-left text-red-500 ${theme === "light" ? "hover:bg-red-50" : "hover:bg-red-900/20"}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedRecord(password)
+                      setDeleteConfirmModalOpen(true)
+                      setActiveMenu(null)
+                    }}
+                  >
+                    <Trash className="h-4 w-4 mr-2" />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -636,7 +667,7 @@ export default function Passwords({
           )}
         </td>
         <td className="py-3 px-4">{password.username}</td>
-        <td className="py-3 px-4">
+        <td className="py-3 px-4 hidden md:table-cell">
           <div className="flex items-center">
             <span>{visiblePasswords[password.id] ? password.password : "••••••••••"}</span>
             <button
@@ -647,8 +678,8 @@ export default function Passwords({
             </button>
           </div>
         </td>
-        <td className="py-3 px-4">{password.category || "General"}</td>
-        <td className="py-3 px-4">{new Date(password.updatedAt).toLocaleDateString()}</td>
+        <td className="py-3 px-4 hidden lg:table-cell">{password.category || "General"}</td>
+        <td className="py-3 px-4 hidden xl:table-cell">{new Date(password.updatedAt).toLocaleDateString()}</td>
         <td className="py-3 px-4">
           <div className="flex items-center space-x-2 flex-wrap sm:flex-nowrap">
             <button
@@ -1315,10 +1346,10 @@ export default function Passwords({
                     <tr className={`${theme === "light" ? "bg-gray-100" : "bg-[#333]"} text-left`}>
                       <th className="py-3 px-4 font-semibold">Website</th>
                       <th className="py-3 px-4 font-semibold">Username</th>
-                      <th className="py-3 px-4 font-semibold">Password</th>
-                      <th className="py-3 px-4 font-semibold">Category</th>
-                      <th className="py-3 px-4 font-semibold">Last Updated</th>
-                      <th className="py-3 px-4 font-semibold">Actions</th>
+                      <th className="py-3 px-4 font-semibold hidden md:table-cell">Password</th>
+                      <th className="py-3 px-4 font-semibold hidden lg:table-cell">Category</th>
+                      <th className="py-3 px-4 font-semibold hidden xl:table-cell">Last Updated</th>
+                      <th className="py-3 px-4 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>{renderPasswordRows()}</tbody>
