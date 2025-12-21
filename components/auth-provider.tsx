@@ -59,6 +59,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         // Initial limit setup
         const getTimeoutDuration = () => {
             const saved = typeof window !== 'undefined' ? localStorage.getItem("auto_lock_timeout") : null
+            // If explicitly "0" or "disabled", return null (disabled)
+            if (saved === "0" || saved === "disabled") return null;
             return (saved ? parseInt(saved) : 15) * 60 * 1000
         }
 
@@ -66,6 +68,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         const resetTimer = () => {
             if (inactivityTimer) clearTimeout(inactivityTimer)
+            if (currentLimit === null) return; // Auto-lock disabled
+
             inactivityTimer = setTimeout(async () => {
                 console.log("User inactive, logging out...")
                 await supabase.auth.signOut()
@@ -79,10 +83,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         // Listen for timeout settings changes
         const handleTimeoutChange = (e: CustomEvent) => {
-            if (e.detail?.timeout) {
-                currentLimit = e.detail.timeout * 60 * 1000
+            if (e.detail?.timeout !== undefined) {
+                if (e.detail.timeout === 0 || e.detail.timeout === "disabled") {
+                    currentLimit = null
+                    console.log("Auto-lock disabled")
+                } else {
+                    currentLimit = e.detail.timeout * 60 * 1000
+                    console.log(`Auto-lock timeout updated to ${e.detail.timeout} minutes`)
+                }
                 resetTimer()
-                console.log(`Auto-lock timeout updated to ${e.detail.timeout} minutes`)
             }
         }
 

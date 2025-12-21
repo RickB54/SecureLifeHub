@@ -78,6 +78,7 @@ export default function Home() {
     addItem,
     addFolder,
     updateItem,
+    updateFolder,
     deleteItem,
     bulkAddItems, // Destructure bulkAddItems
     refresh
@@ -135,6 +136,7 @@ export default function Home() {
     addItem,
     addFolder,
     updateItem,
+    updateFolder,
     deleteItem,
     bulkAddItems,
     theme,

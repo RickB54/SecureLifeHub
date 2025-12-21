@@ -195,26 +195,46 @@ export function useVault() {
 
     const updateItem = async (id: string, updates: Partial<VaultItem>) => {
         try {
-            // Filter out legacy/UI-only fields that shouldn't be sent to DB
-            const { path, folder, ...validUpdates } = updates as any
+            // Define known schema columns to prevent errors
+            const schemaFields = [
+                'type', 'title', 'username', 'password', 'website',
+                'category', 'notes', 'folder_id', 'is_favorite', 'is_archived'
+            ];
 
-            // Map camelCase to snake_case if necessary (though we tried to standardize on snake_case)
-            // Ideally we stick to the VaultItem interface which is snake_case for DB fields.
+            // Separate schema fields from metadata
+            const dbPayload: any = { updated_at: new Date().toISOString() };
+            const metadataUpdates: any = {};
 
-            const payload = {
-                ...validUpdates,
-                updated_at: new Date().toISOString()
+            // Get current item to merge metadata
+            const currentItem = items.find(i => i.id === id);
+            const currentMetadata = currentItem?.item_metadata || {};
+
+            Object.entries(updates).forEach(([key, value]) => {
+                // Skip path/folder legacy fields
+                if (key === 'path' || key === 'folder') return;
+
+                if (schemaFields.includes(key)) {
+                    dbPayload[key] = value;
+                } else {
+                    // Assume anything else is metadata (e.g. picture)
+                    metadataUpdates[key] = value;
+                }
+            });
+
+            // If we have metadata updates, merge them
+            if (Object.keys(metadataUpdates).length > 0) {
+                dbPayload.item_metadata = { ...currentMetadata, ...metadataUpdates };
             }
 
             const { error } = await supabase
                 .from("vault_items")
-                .update(payload)
+                .update(dbPayload)
                 .eq('id', id)
 
             if (error) throw error
 
-            // Update local state - keep the UI fields in local state so UI updates immediately
-            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item))
+            // Update local state
+            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates, item_metadata: dbPayload.item_metadata || item.item_metadata } : item))
             toast.success("Item updated")
         } catch (error: any) {
             console.error("Update error:", error)
@@ -222,19 +242,45 @@ export function useVault() {
         }
     }
 
-    const deleteItem = async (id: string) => {
+    const updateFolder = async (id: string, updates: Partial<Folder>) => {
         try {
             const { error } = await supabase
-                .from("vault_items")
+                .from("folders")
+                .update({
+                    name: updates.name,
+                    parent_id: updates.parent_id
+                })
+                .eq('id', id)
+
+            if (error) throw error
+
+            setFolders(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f))
+            toast.success("Folder updated")
+        } catch (error: any) {
+            console.error("Folder update error:", error)
+            toast.error("Failed to update folder")
+        }
+    }
+
+    const deleteItem = async (id: string, type: string = "item") => {
+        try {
+            const table = type === "folder" ? "folders" : "vault_items"
+            const { error } = await supabase
+                .from(table)
                 .delete()
                 .eq('id', id)
 
             if (error) throw error
 
-            setItems(prev => prev.filter(i => i.id !== id))
-            toast.success("Item deleted")
+            if (type === "folder") {
+                setFolders(prev => prev.filter(f => f.id !== id))
+            } else {
+                setItems(prev => prev.filter(i => i.id !== id))
+            }
+            toast.success(`${type === 'folder' ? 'Folder' : 'Item'} deleted`)
         } catch (error: any) {
-            toast.error("Failed to delete item")
+            console.error("Delete operation failed:", JSON.stringify(error, null, 2))
+            toast.error(`Failed to delete ${type}: ${error.message || "Unknown error"}`)
         }
     }
 
@@ -250,6 +296,7 @@ export function useVault() {
         addItem,
         bulkAddItems,
         updateItem,
+        updateFolder,
         deleteItem,
         refresh: fetchData
     }

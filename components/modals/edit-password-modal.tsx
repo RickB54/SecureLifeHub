@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { X, Image } from "lucide-react"
+import { X, Image, Eye, EyeOff } from "lucide-react"
 
 export default function EditPasswordModal({ onClose, onSave, passwordData, folders, theme }: { onClose: () => void, onSave: (data: any) => void, passwordData: any, folders: any[], theme: string }) {
   const [formData, setFormData] = useState({
+    title: "",
     website: "",
     username: "",
     password: "",
@@ -13,6 +14,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
     path: "",
     picture: "",
   })
+  const [showPassword, setShowPassword] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -37,6 +39,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
   useEffect(() => {
     if (passwordData) {
       setFormData({
+        title: passwordData.title || "",
         website: passwordData.website || "",
         username: passwordData.username || "",
         password: passwordData.password || "",
@@ -105,6 +108,21 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
         <form onSubmit={handleSubmit} className="p-4">
           <div className="space-y-4">
             <div>
+              <label htmlFor="title" className="block text-sm font-medium mb-1">
+                Name
+              </label>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                placeholder="Item Name (e.g. Google)"
+              />
+            </div>
+
+            <div>
               <label htmlFor="website" className="block text-sm font-medium mb-1">
                 Website
               </label>
@@ -138,15 +156,24 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
               <label htmlFor="password" className="block text-sm font-medium mb-1">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
-                placeholder="Enter password"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] pr-10"
+                  placeholder="Enter password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             <div>

@@ -39,14 +39,14 @@ export default function MoveToFolderModal({ onClose, onMove, folders, record, th
         <form onSubmit={handleSubmit} className="p-4">
           <div className="mb-4">
             <p className={`text-sm mb-4 ${theme === 'light' ? 'text-gray-600' : 'text-gray-400'}`}>
-              Select a destination for <strong>{record?.website || record?.username || "this item"}</strong>:
+              Select a destination for <strong>{record?.name || record?.website || record?.username || "this item"}</strong>:
             </p>
 
             <div className={`space-y-2 max-h-60 overflow-y-auto p-2 rounded-lg border ${theme === 'light' ? 'bg-gray-50 border-gray-200' : 'bg-[#1a1a1a] border-gray-700'}`}>
               <div
                 className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${selectedFolder === ""
-                    ? "bg-blue-500 text-white"
-                    : theme === 'light' ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-700 text-gray-300"
+                  ? "bg-blue-500 text-white"
+                  : theme === 'light' ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-700 text-gray-300"
                   }`}
                 onClick={() => setSelectedFolder("")}
               >
@@ -58,8 +58,8 @@ export default function MoveToFolderModal({ onClose, onMove, folders, record, th
                 <div
                   key={folder.id}
                   className={`flex items-center p-3 rounded-lg cursor-pointer transition-colors ${selectedFolder === folder.id
-                      ? "bg-blue-500 text-white"
-                      : theme === 'light' ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-700 text-gray-300"
+                    ? "bg-blue-500 text-white"
+                    : theme === 'light' ? "hover:bg-gray-200 text-gray-700" : "hover:bg-gray-700 text-gray-300"
                     }`}
                   onClick={() => setSelectedFolder(folder.id)}
                 >

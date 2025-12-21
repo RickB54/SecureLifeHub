@@ -8,12 +8,13 @@ interface AddFolderModalProps {
   onAdd: (data: any) => Promise<void>
   folders: any[]
   theme: string
+  initialParentId?: string
 }
 
-export default function AddFolderModal({ onClose, onAdd, folders, theme }: AddFolderModalProps) {
+export default function AddFolderModal({ onClose, onAdd, folders, theme, initialParentId }: AddFolderModalProps) {
   const [formData, setFormData] = useState({
     name: "",
-    parentFolder: "",
+    parentFolder: initialParentId || "",
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

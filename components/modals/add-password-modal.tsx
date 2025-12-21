@@ -3,15 +3,15 @@
 import { useState, useRef } from "react"
 import { X, Image } from "lucide-react"
 
-// Update the component to accept folders prop
-export default function AddPasswordModal({ onClose, onAdd, folders, theme }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string }) {
+// Update the component to accept folders prop and initialPath
+export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialPath = "" }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialPath?: string }) {
   const [formData, setFormData] = useState({
     website: "",
     username: "",
     password: "",
     notes: "",
     category: "General",
-    path: "", // Add path for folder selection
+    path: initialPath, // Use initialPath
     picture: "", // Add picture field
   })
 
