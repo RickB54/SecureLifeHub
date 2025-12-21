@@ -1,0 +1,32 @@
+{
+    "name": "secure-life-hub-extension",
+    "version": "1.0.0",
+    "scripts": {
+        "build": "parcel build --target extension --no-source-maps --no-optimize --no-content-hash",
+        "watch": "parcel watch --target extension"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.47.2",
+        "lucide": "^0.468.0"
+    },
+    "devDependencies": {
+        "@parcel/config-webextension": "^2.16.3",
+        "autoprefixer": "^10.4.23",
+        "buffer": "^6.0.3",
+        "parcel": "^2.13.3",
+        "postcss": "^8.5.6",
+        "process": "^0.11.10",
+        "tailwindcss": "^3.4.19"
+    },
+    "targets": {
+        "extension": {
+            "source": "src/manifest.json",
+            "distDir": "dist",
+            "engines": {
+                "browsers": [
+                    "last 1 Chrome version"
+                ]
+            }
+        }
+    }
+}
