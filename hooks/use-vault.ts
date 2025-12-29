@@ -198,7 +198,8 @@ export function useVault() {
             // Define known schema columns to prevent errors
             const schemaFields = [
                 'type', 'title', 'username', 'password', 'website',
-                'category', 'notes', 'folder_id', 'is_favorite', 'is_archived'
+                'category', 'notes', 'folder_id', 'is_favorite', 'is_archived',
+                'item_metadata' // Added to prevent nesting
             ];
 
             // Separate schema fields from metadata
@@ -221,9 +222,10 @@ export function useVault() {
                 }
             });
 
-            // If we have metadata updates, merge them
+            // If we have metadata updates, merge them with the base (either new metadata from payload or existing)
             if (Object.keys(metadataUpdates).length > 0) {
-                dbPayload.item_metadata = { ...currentMetadata, ...metadataUpdates };
+                const baseMetadata = dbPayload.item_metadata || currentMetadata;
+                dbPayload.item_metadata = { ...baseMetadata, ...metadataUpdates };
             }
 
             const { error } = await supabase

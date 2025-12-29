@@ -1,78 +1,161 @@
-console.log("SecureLifeHub content script loaded.");
+console.log("%c SecureLifeHub Extension Loaded.", "background: #222; color: #bada55; font-size: 14px");
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'fill') {
-        fillCredentials(request.data);
-        sendResponse({ status: 'filled' });
+let cachedVaultItems = [];
+let autoFillPreffered = false;
+
+// Initialize
+chrome.storage.local.get(['vaultItems', 'autoFillEnabled'], (result) => {
+    cachedVaultItems = result.vaultItems || [];
+    autoFillPreffered = result.autoFillEnabled || false;
+    if (autoFillPreffered) scanPage();
+});
+
+// Watch for changes
+chrome.storage.onChanged.addListener((changes, namespace) => {
+    if (namespace === 'local') {
+        if (changes.vaultItems) cachedVaultItems = changes.vaultItems.newValue || [];
+        if (changes.autoFillEnabled) {
+            autoFillPreffered = changes.autoFillEnabled.newValue;
+            if (autoFillPreffered) scanPage();
+            else removeIcons();
+        }
     }
 });
 
-function fillCredentials(data) {
-    console.log("Attempting to fill credentials...", data);
-    const inputs = Array.from(document.querySelectorAll('input'));
+// Observer for dynamic forms (SPA)
+const observer = new MutationObserver((mutations) => {
+    if (autoFillPreffered) scanPage();
+});
+observer.observe(document.body, { childList: true, subtree: true });
 
-    let passwordInput = null;
+function scanPage() {
+    if (!cachedVaultItems.length) return;
+
+    const hostname = window.location.hostname.replace(/^www\./, '').toLowerCase();
+
+    const match = cachedVaultItems.find(item => {
+        if (!item.website) return false;
+
+        // Normalize stored website
+        let storedDomain = item.website.toLowerCase().trim();
+        storedDomain = storedDomain.replace(/^https?:\/\//, '');
+        storedDomain = storedDomain.replace(/^www\./, '');
+        storedDomain = storedDomain.split('/')[0].split('?')[0];
+
+        // Strict match or subdomain match
+        return hostname === storedDomain || hostname.endsWith('.' + storedDomain);
+    });
+
+    if (match) {
+        // console.log("SecureLifeHub: Credentials identified for this domain.");
+        identifyAndDecorateFields(match);
+    }
+}
+
+function identifyAndDecorateFields(match) {
+    const inputs = Array.from(document.querySelectorAll('input:not([data-slh-decorated])'));
+
+    // Simple Heuristic for login fields
+    const passwordInput = inputs.find(i => i.type === 'password');
     let usernameInput = null;
 
-    // 1. Find Password Field
-    // Priority: explicit type="password"
-    passwordInput = inputs.find(i => i.type === 'password');
-
-    // 2. Find Username/Email Field
-    // Priority: 
-    // a. autocomplete="username" or "email"
-    // b. type="email"
-    // c. name/id contains "user", "login", "email" (regex)
-    // d. visible text input preceding the password input (if password exists)
-
-    const userRegex = /(user|login|email|id)/i;
-
-    // Logic if we have specific attributes
-    usernameInput = inputs.find(i =>
-        (i.autocomplete && (i.autocomplete === 'username' || i.autocomplete === 'email')) ||
-        (i.type === 'email')
-    );
-
-    // Logic by name/id if no specific type/autocomplete found
-    if (!usernameInput) {
-        usernameInput = inputs.find(i =>
-            i.type === 'text' && (userRegex.test(i.name) || userRegex.test(i.id))
-        );
-    }
-
-    // Fallback: If password exists, look for the nearest preceding text input
-    if (!usernameInput && passwordInput) {
+    if (passwordInput) {
+        // Look for preceding text input
         let currentIndex = inputs.indexOf(passwordInput);
+        // Search backwards in the DOM order (approximate)
+        // A better way is looking at the 'inputs' array we just grabbed
+        // logic: user input usually comes before password
         for (let i = currentIndex - 1; i >= 0; i--) {
             const candidate = inputs[i];
-            if (candidate.type === 'text' && candidate.offsetParent !== null) { // check visibility
+            const type = candidate.type;
+            if ((type === 'text' || type === 'email') && candidate.offsetParent !== null) {
                 usernameInput = candidate;
                 break;
             }
         }
+    } else {
+        // Maybe just a username field (step 1 of 2)
+        usernameInput = inputs.find(i => i.type === 'email' || (i.name && i.name.toLowerCase().includes('user')));
     }
 
-    // 3. Fill Fields
-    if (usernameInput && data.username) {
-        console.log("Filling username:", usernameInput);
-        fillField(usernameInput, data.username);
-    } else {
-        console.log("No username field found.");
-    }
-
-    if (passwordInput && data.password) {
-        console.log("Filling password:", passwordInput);
-        fillField(passwordInput, data.password);
-    } else {
-        console.log("No password field found (might be a 2-step login).");
-    }
+    if (usernameInput) decorateInput(usernameInput, match);
+    if (passwordInput) decorateInput(passwordInput, match);
 }
 
-function fillField(element, value) {
-    element.focus();
-    element.value = value;
-    element.setAttribute('value', value); // React workaround sometimes
+function decorateInput(input, match) {
+    input.setAttribute('data-slh-decorated', 'true'); // Mark as handled
+
+    // Ensure parent is relative so absolute icon works
+    const parent = input.parentElement;
+    const computedStyle = window.getComputedStyle(parent);
+    if (computedStyle.position === 'static') {
+        parent.style.position = 'relative';
+    }
+
+    // Create Icon
+    const icon = document.createElement('img');
+    icon.src = chrome.runtime.getURL('icons/field-icon.jpg'); // Adjust if copied elsewhere
+    icon.className = 'slh-field-icon';
+    icon.title = `SecureLifeHub: Fill ${match.username}`;
+
+    // Inject
+    parent.appendChild(icon);
+
+    // Event
+    icon.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // "Ask" logic: The click IS the answer "Yes"
+        fillCredentials(match);
+    });
+}
+
+function removeIcons() {
+    document.querySelectorAll('.slh-field-icon').forEach(el => el.remove());
+    document.querySelectorAll('[data-slh-decorated]').forEach(el => el.removeAttribute('data-slh-decorated'));
+}
+
+function fillCredentials(data) {
+    // Re-find inputs (they might have changed or we just want to be sure)
+    // We can recycle the logic or just target the ones we decorated if we stored references.
+    // But generic fill is safer.
+
+    const inputs = Array.from(document.querySelectorAll('input'));
+    const passwordInput = inputs.find(i => i.type === 'password');
+    let usernameInput = null;
+
+    // Reuse heuristic
+    if (passwordInput) {
+        let idx = inputs.indexOf(passwordInput);
+        for (let i = idx - 1; i >= 0; i--) {
+            if ((inputs[i].type === 'text' || inputs[i].type === 'email') && inputs[i].offsetParent) {
+                usernameInput = inputs[i];
+                break;
+            }
+        }
+    } else {
+        usernameInput = inputs.find(i => i.type === 'email');
+    }
+
+    if (usernameInput && data.username) performFill(usernameInput, data.username);
+    if (passwordInput && data.password) performFill(passwordInput, data.password);
+}
+
+
+function performFill(element, value) {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    setter.call(element, value);
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
-    element.blur();
 }
+
+// Listen for manual fill requests from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'fill' && request.data) {
+        console.log("SecureLifeHub: Manual fill requested", request.data);
+        fillCredentials(request.data);
+    }
+});
+
+console.log("SecureLifeHub: Content script ready.");

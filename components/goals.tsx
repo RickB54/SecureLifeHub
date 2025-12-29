@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Target, Trash2, CheckCircle2, Circle, Trophy, History, LayoutDashboard, TrendingUp, Calendar, Medal, ImageIcon } from "lucide-react"
+import { Plus, Target, Trash2, CheckCircle2, Circle, Trophy, History, LayoutDashboard, TrendingUp, Calendar, Medal, ImageIcon, Pencil } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts"
 import AddGoalModal from "./modals/add-goal-modal"
 import Lightbox from "./media/lightbox"
@@ -17,6 +17,7 @@ interface GoalsProps {
 export default function Goals({ records = [], addItem, updateItem, deleteItem, theme }: GoalsProps) {
     const [activeTab, setActiveTab] = useState("active") // 'dashboard', 'active', 'history'
     const [showAddModal, setShowAddModal] = useState(false)
+    const [editingGoal, setEditingGoal] = useState<any>(null)
 
     // Lightbox State
     const [lightboxOpen, setLightboxOpen] = useState(false)
@@ -245,8 +246,14 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                                                 </p>
                                             </div>
                                             <button
+                                                onClick={() => setEditingGoal(item)}
+                                                className="text-gray-400 hover:text-blue-400 transition-colors ml-4 p-1"
+                                            >
+                                                <Pencil className="h-5 w-5" />
+                                            </button>
+                                            <button
                                                 onClick={() => { if (confirm("Delete goal?")) deleteItem(item.id) }}
-                                                className="text-gray-400 hover:text-red-500 transition-colors ml-4 p-1"
+                                                className="text-gray-400 hover:text-red-500 transition-colors ml-2 p-1"
                                             >
                                                 <Trash2 className="h-5 w-5" />
                                             </button>
@@ -343,12 +350,20 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
             </div>
 
             {/* Modals */}
-            {showAddModal && (
+            {(showAddModal || editingGoal) && (
                 <AddGoalModal
-                    onClose={() => setShowAddModal(false)}
+                    initialData={editingGoal}
+                    onClose={() => {
+                        setShowAddModal(false)
+                        setEditingGoal(null)
+                    }}
                     onAdd={async (data) => {
                         await addItem(data)
                         setShowAddModal(false)
+                    }}
+                    onEdit={async (id, data) => {
+                        await updateItem(id, data)
+                        setEditingGoal(null)
                     }}
                 />
             )}

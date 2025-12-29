@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import Login from "@/components/login"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
 import { useAuth } from "@/components/auth-provider"
@@ -35,7 +36,7 @@ import BudgetManager from "@/components/budget-manager"
 import SubDashboard from "@/components/sub-dashboard"
 import { sidebarSections } from "@/lib/sidebar-config"
 
-export default function Home() {
+function HomeContent() {
   // Security audit data (Mock for now, needs real calculation later)
   const [securityAuditData, setSecurityAuditData] = useState({
     score: 36,
@@ -45,12 +46,21 @@ export default function Home() {
   })
 
   // Theme state
-
   const [theme, setTheme] = useState("dark")
 
   // Changed initial page to "dashboard" as requested
-  const [activePage, setActivePage] = useState("dashboard")
+  const searchParams = useSearchParams()
+  const initialPage = searchParams.get("page") || "dashboard"
+  const [activePage, setActivePage] = useState(initialPage)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Sync activePage with URL if it changes (optional, but good for back button)
+  useEffect(() => {
+    const page = searchParams.get("page")
+    if (page && page !== activePage) {
+      setActivePage(page)
+    }
+  }, [searchParams])
 
   // Security & Locking Logic
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
@@ -349,6 +359,14 @@ export default function Home() {
         </div>
       </div>
     </ErrorBoundary>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   )
 }
 

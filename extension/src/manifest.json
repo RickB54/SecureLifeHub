@@ -42,5 +42,17 @@
         "16": "icons/icon.png",
         "48": "icons/icon.png",
         "128": "icons/icon.png"
-    }
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "icons/field-icon.jpg",
+                "icons/icon.png",
+                "icons/icon128.png"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ]
 }

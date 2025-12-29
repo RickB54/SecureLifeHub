@@ -1,7 +1,9 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { X, Image } from "lucide-react"
+import { Image, X } from "lucide-react"
+import { PasswordInput } from "@/components/ui/password-input"
+
 
 // Update the component to accept folders prop and initialPath
 export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialPath = "" }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialPath?: string }) {
@@ -130,10 +132,9 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
               <label htmlFor="password" className="block text-sm font-medium mb-1">
                 Password
               </label>
-              <input
+              <PasswordInput
                 id="password"
                 name="password"
-                type="password"
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"

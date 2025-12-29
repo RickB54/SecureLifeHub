@@ -6,16 +6,26 @@ import { X, Plus, Calendar, Camera, Target, ImageIcon, Loader2 } from "lucide-re
 interface AddGoalModalProps {
     onClose: () => void
     onAdd: (item: any) => Promise<void>
+    onEdit?: (id: string, item: any) => Promise<void>
+    initialData?: any
 }
 
-export default function AddGoalModal({ onClose, onAdd }: AddGoalModalProps) {
-    const [title, setTitle] = useState("")
-    const [description, setDescription] = useState("")
-    const [category, setCategory] = useState("Personal")
-    const [deadline, setDeadline] = useState("")
-    const [steps, setSteps] = useState<string[]>([])
+export default function AddGoalModal({ onClose, onAdd, onEdit, initialData }: AddGoalModalProps) {
+    const [title, setTitle] = useState(initialData?.title || "")
+    const [description, setDescription] = useState(initialData?.item_metadata?.description || "")
+    const [category, setCategory] = useState(initialData?.item_metadata?.goal_category || "Personal")
+    const [deadline, setDeadline] = useState(initialData?.item_metadata?.targetDate || "")
+    const [steps, setSteps] = useState<string[]>(
+        initialData?.item_metadata?.steps?.map((s: any) => s.title) || []
+    )
     const [newStep, setNewStep] = useState("")
-    const [photos, setPhotos] = useState<string[]>([])
+    const [photos, setPhotos] = useState<string[]>(initialData?.item_metadata?.photos || [])
+
+    // Keep track of existing completed steps to preserve completion status
+    const existingStepsMap = useRef<Record<string, boolean>>(
+        initialData?.item_metadata?.steps?.reduce((acc: any, s: any) => ({ ...acc, [s.title]: s.completed }), {}) || {}
+    )
+
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -52,19 +62,42 @@ export default function AddGoalModal({ onClose, onAdd }: AddGoalModalProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        await onAdd({
-            title,
-            category: "Goals",
-            type: "note", // Use 'note' type to satisfy DB constraints
-            item_metadata: {
-                is_goal: true,
-                description, // Move description here
-                goal_category: category,
-                targetDate: deadline, // Match component expectation
-                steps: steps.map(s => ({ title: s, completed: false })),
-                photos: photos
-            }
-        })
+        // Auto-add pending step if user forgot to click Add
+        const finalSteps = [...steps]
+        if (newStep.trim()) {
+            finalSteps.push(newStep.trim())
+        }
+
+        const metadata = {
+            is_goal: true,
+            description,
+            goal_category: category,
+            targetDate: deadline,
+            // Preserve completion status if step existed, otherwise false
+            steps: finalSteps.map(s => ({
+                title: s,
+                completed: existingStepsMap.current[s] || false
+            })),
+            photos: photos
+        }
+
+        if (initialData && onEdit) {
+            await onEdit(initialData.id, {
+                title,
+                category: "Goals",
+                item_metadata: {
+                    ...initialData.item_metadata,
+                    ...metadata
+                }
+            })
+        } else {
+            await onAdd({
+                title,
+                category: "Goals",
+                type: "note",
+                item_metadata: metadata
+            })
+        }
     }
 
     return (
@@ -76,7 +109,7 @@ export default function AddGoalModal({ onClose, onAdd }: AddGoalModalProps) {
                         <div className="p-2 bg-orange-500/20 rounded-lg">
                             <Target className="h-6 w-6 text-orange-500" />
                         </div>
-                        <h2 className="text-xl font-bold text-white">Goal Planner</h2>
+                        <h2 className="text-xl font-bold text-white">{initialData ? "Edit Goal" : "Goal Planner"}</h2>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
                         <X className="h-6 w-6" />
@@ -220,7 +253,7 @@ export default function AddGoalModal({ onClose, onAdd }: AddGoalModalProps) {
                         onClick={handleSubmit}
                         className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.01]"
                     >
-                        Create Goal
+                        {initialData ? "Save Changes" : "Create Goal"}
                     </button>
                 </div>
 

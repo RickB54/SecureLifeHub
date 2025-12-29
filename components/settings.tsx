@@ -34,10 +34,12 @@ interface SettingsProps {
   addFolder?: (name: string, parentId?: string) => Promise<any>
   folders?: any[]
   deleteItem?: (id: string, type?: string) => Promise<any>
+  updateItem?: (id: string, updates: any) => Promise<any>
+  addItem?: (item: any) => Promise<any>
   theme: string
 }
 
-export default function Settings({ records, bulkAddItems, addFolder, folders, deleteItem, theme }: SettingsProps) {
+export default function Settings({ records, bulkAddItems, addFolder, folders, deleteItem, updateItem, addItem, theme }: SettingsProps) {
   // Initialize profile info from localStorage or defaults
   const [profileInfo, setProfileInfo] = useState(() => {
     const saved = localStorage.getItem("profileInfo")
@@ -67,6 +69,20 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
   // State for master password
   const [masterPassword, setMasterPassword] = useState("")
   const [confirmMasterPassword, setConfirmMasterPassword] = useState("")
+
+  // State for Auto-Fill
+  const [autoFillEnabled, setAutoFillEnabled] = useState(false)
+  const [preferencesItemId, setPreferencesItemId] = useState<string | null>(null)
+
+  // Load User Preferences on mount
+  useState(() => {
+    // Find preference item
+    const prefItem = records.find(r => r.title === "[SYSTEM] User Preferences")
+    if (prefItem) {
+      setPreferencesItemId(prefItem.id)
+      setAutoFillEnabled(prefItem.item_metadata?.auto_fill_enabled === true)
+    }
+  })
 
   // State for notifications
   const [notification, setNotification] = useState({ show: false, message: "", type: "" })
@@ -137,6 +153,41 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
     localStorage.setItem("auto_lock_timeout", autoLockTimeout.toString())
     window.dispatchEvent(new CustomEvent('autoLockTimeoutChanged', { detail: { timeout: autoLockTimeout } }))
     showNotification("Auto-lock timeout updated successfully")
+  }
+
+  // Handle toggling Auto-Fill
+  const handleToggleAutoFill = async () => {
+    const newState = !autoFillEnabled
+    setAutoFillEnabled(newState)
+
+    try {
+      if (preferencesItemId && updateItem) {
+        // Update existing item
+        // useVault.updateItem merges unknown fields into item_metadata automatically.
+        // We pass 'auto_fill_enabled' directly so it ends up in item_metadata, NOT nested inside it.
+        await updateItem(preferencesItemId, {
+          auto_fill_enabled: newState
+        })
+        showNotification(`Auto-Fill turned ${newState ? "ON" : "OFF"}`)
+      } else if (addItem) {
+        // Create new preference item
+        // Use type="note" to avoid DB constraint violations.
+        const newItem = await addItem({
+          title: "[SYSTEM] User Preferences",
+          type: "note",
+          item_metadata: { auto_fill_enabled: newState, system_type: "user_preferences" }
+        })
+        if (newItem) {
+          setPreferencesItemId(newItem.id)
+          showNotification(`Auto-Fill turned ${newState ? "ON" : "OFF"}`)
+        }
+      }
+    } catch (e) {
+      console.error(e)
+      showNotification("Failed to save setting", "error")
+      // Revert state on error
+      setAutoFillEnabled(!newState)
+    }
   }
 
   // Handle changing backup frequency
@@ -360,6 +411,31 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
               </button>
               <span className="ml-2">{twoFactorEnabled ? "Enabled" : "Disabled"}</span>
             </div>
+          </div>
+
+          {/* Auto-Fill Settings */}
+          <div>
+            <h3 className="text-lg font-medium mb-2 flex items-center">
+              <ToggleRight className="h-4 w-4 mr-2" />
+              Auto-Fill Settings
+            </h3>
+            <p className={`mb - 4 ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
+              Control whether the SecureLifeHub extension can automatically fill your passwords.
+            </p>
+            <div className="flex items-center">
+              <button
+                onClick={handleToggleAutoFill}
+                className={`flex items - center ${autoFillEnabled ? "text-green-500" : theme === "light" ? "text-gray-400" : "text-gray-500"} `}
+              >
+                {autoFillEnabled ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+              </button>
+              <span className="ml-2">{autoFillEnabled ? "Auto-Fill ON" : "Auto-Fill OFF"}</span>
+            </div>
+            {!autoFillEnabled && (
+              <p className="text-xs text-yellow-500 mt-2">
+                Note: You will need to manually copy/paste passwords when this is off.
+              </p>
+            )}
           </div>
 
           {/* Auto-Lock Timeout */}

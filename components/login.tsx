@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react"
+import { PasswordInput } from "@/components/ui/password-input"
 import { supabase } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 
@@ -52,11 +53,11 @@ export default function Login() {
           <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-4 rounded-2xl mb-4 shadow-lg shadow-blue-500/30">
             <Lock className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Secure Pass Hub</h1>
-          <p className="text-gray-400">
-            {isSignUp ? "Create your secure vault" : "Unlock your vault"}
-          </p>
         </div>
+        <h1 className="text-3xl font-bold text-white mb-2">Secure Pass Hub</h1>
+        <p className="text-gray-400">
+          {isSignUp ? "Create your secure vault" : "Unlock your vault"}
+        </p>
 
         <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-4">
@@ -73,12 +74,11 @@ export default function Login() {
             </div>
             <div className="relative group">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
+                className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
                 placeholder="Master Password"
               />
             </div>
@@ -86,8 +86,8 @@ export default function Login() {
 
           {error && (
             <div className={`p-3 rounded-lg text-sm border ${error.includes("Check")
-                ? "bg-green-500/10 border-green-500/20 text-green-400"
-                : "bg-red-500/10 border-red-500/20 text-red-400"
+              ? "bg-green-500/10 border-green-500/20 text-green-400"
+              : "bg-red-500/10 border-red-500/20 text-red-400"
               }`}>
               {error}
             </div>
@@ -128,6 +128,6 @@ export default function Login() {
       <div className="absolute bottom-4 text-gray-600 text-xs text-center w-full">
         Secure Pass Hub v1.0 • Encrypted & Secure
       </div>
-    </div>
+    </div >
   )
 }
