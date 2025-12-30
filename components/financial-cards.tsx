@@ -127,7 +127,9 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
 
     // Filter by type
     if (typeFilter !== "all") {
-      if (typeFilter === "mastercard") {
+      if (typeFilter === "favorites") {
+        filtered = filtered.filter((card) => card.is_favorite)
+      } else if (typeFilter === "mastercard") {
         filtered = filtered.filter((card) => {
           return card.title?.toLowerCase().includes("mastercard") || card.cardType?.toLowerCase() === "mastercard"
         })
@@ -423,7 +425,7 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
         </td>
         <td className="py-3 px-4">{card.expiry}</td>
         <td className="py-3 px-4">
-          <span className="filter blur-sm">{card.cvv}</span>
+          <span className={visibleCardNumbers[card.id] ? "" : "filter blur-sm"}>{card.cvv}</span>
         </td>
         <td className="py-3 px-4">
           <div className="flex items-center space-x-2">
@@ -584,6 +586,12 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
 
             <div className="mb-6">
               <div className="text-lg font-mono tracking-wider">{formatCardNumber(card.cardNumber, card.id)}</div>
+              {visibleCardNumbers[card.id] && (
+                <div className="mt-2 text-sm">
+                  <span className="text-gray-400">CVV: </span>
+                  <span className="font-mono">{card.cvv || "---"}</span>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between items-end">
@@ -686,6 +694,23 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
               title="Show Archived"
             >
               <Archive className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => {
+                const showFavs = getFilteredCards().every(c => c.is_favorite)
+                // Toggle: if all shown are favorites, show all. Otherwise show only favorites.
+                if (showFavs) {
+                  // Currently showing favorites, go back to all
+                  setTypeFilter("all")
+                } else {
+                  // Show favorites by using a custom filter
+                  setTypeFilter("favorites")
+                }
+              }}
+              className={`p-2 ${typeFilter === "favorites" ? "text-yellow-400" : "text-gray-400 hover:text-white"}`}
+              title="Show Favorites"
+            >
+              <Star className="h-5 w-5" fill={typeFilter === "favorites" ? "currentColor" : "none"} />
             </button>
             <button
               onClick={() => setViewMode("grid")}

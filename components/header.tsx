@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings } from "lucide-react"
+import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize } from "lucide-react"
 
 import { useAuth } from "./auth-provider"
 
@@ -16,7 +16,20 @@ interface HeaderProps {
 
 export default function Header({ onLogout, toggleSidebar, onNavigate, theme, toggleTheme, activePage }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const { user } = useAuth()
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen()
+      setIsFullscreen(true)
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+        setIsFullscreen(false)
+      }
+    }
+  }
 
   // Get display name from user metadata or fallback to email username
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User"
@@ -59,6 +72,14 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, theme, tog
             aria-label="Settings"
           >
             <Settings className="h-5 w-5" />
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
+            aria-label="Toggle Full Screen"
+            title={isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
+          >
+            {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
           </button>
           <button
             onClick={toggleTheme}

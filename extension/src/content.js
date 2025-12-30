@@ -40,7 +40,7 @@ function scanPage() {
         let storedDomain = item.website.toLowerCase().trim();
         storedDomain = storedDomain.replace(/^https?:\/\//, '');
         storedDomain = storedDomain.replace(/^www\./, '');
-        storedDomain = storedDomain.split('/')[0].split('?')[0];
+        storedDomain = storedDomain.split('/')[0].split('?')[0].split(':')[0];
 
         // Strict match or subdomain match
         return hostname === storedDomain || hostname.endsWith('.' + storedDomain);

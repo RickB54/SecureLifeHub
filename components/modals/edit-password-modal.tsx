@@ -97,8 +97,8 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
+      <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-4 border-b border-gray-700 sticky top-0 bg-[#2a2a2a] z-10">
           <h2 className="text-xl font-semibold">Edit Password</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X className="h-5 w-5" />

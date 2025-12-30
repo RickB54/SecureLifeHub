@@ -224,6 +224,7 @@ function HomeContent() {
         )
       case "type-logins":
         return <Passwords {...commonProps} initialCategoryFilter="Logins" />
+      case "financial-cards":
       case "type-payment-cards":
         return <FinancialCards {...commonProps} />
       case "type-contacts":

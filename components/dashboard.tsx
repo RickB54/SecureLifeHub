@@ -206,6 +206,16 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           isLocked={securitySettings['type-subscriptions']?.isLocked}
         />
         <ModuleCard
+          title="Financial Cards"
+          count={records.filter((r: any) => r.type === "financial-card").length}
+          description="Manage your credit and debit cards securely."
+          icon={<CreditCard className="h-6 w-6 text-yellow-500" />}
+          colorClass="border-yellow-500"
+          buttonColorClass="text-yellow-400 hover:bg-yellow-500"
+          onClick={() => setActivePage('financial-cards')}
+          isLocked={securitySettings['financial-cards']?.isLocked}
+        />
+        <ModuleCard
           title="Media Vault"
           count={records.filter((r: any) => r.category === "Secure Media").length}
           description="Encrypted gallery for photos and videos."

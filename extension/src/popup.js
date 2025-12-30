@@ -379,7 +379,7 @@ async function checkForMatches() {
             // Remove www.
             storedDomain = storedDomain.replace(/^www\./, '')
             // Remove path/query
-            storedDomain = storedDomain.split('/')[0].split('?')[0]
+            storedDomain = storedDomain.split('/')[0].split('?')[0].split(':')[0]
 
             // Check if domains match (or are subdomains)
             const isMatch = currentDomain === storedDomain || currentDomain.endsWith('.' + storedDomain)
@@ -515,5 +515,39 @@ genPassBtn.addEventListener('click', () => {
     editPassword.value = pass
 })
 
+
+// Toggle Favorite
+viewFavBtn.addEventListener('click', async () => {
+    if (!selectedItem) return
+
+    const newFavStatus = !selectedItem.is_favorite
+    selectedItem.is_favorite = newFavStatus
+
+    // Optimistic UI update
+    if (newFavStatus) {
+        viewFavBtn.classList.add('text-yellow-500')
+    } else {
+        viewFavBtn.classList.remove('text-yellow-500')
+    }
+
+    // Database Update
+    const { error } = await supabase
+        .from('vault_items')
+        .update({ is_favorite: newFavStatus })
+        .eq('id', selectedItem.id)
+
+    if (error) {
+        console.error("Failed to update favorite", error)
+        // Revert UI
+        selectedItem.is_favorite = !newFavStatus
+        renderDetailView(selectedItem)
+        alert("Failed to update favorite status")
+    } else {
+        // Update local cache
+        const idx = allItems.findIndex(i => i.id === selectedItem.id)
+        if (idx !== -1) allItems[idx] = selectedItem
+        cacheData(allItems)
+    }
+})
 
 init()

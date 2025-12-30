@@ -61,8 +61,8 @@ export default function Passwords({
   initialFavoriteFilter = false,
   initialArchivedFilter = false
 }: PasswordsProps) {
-  // State for view mode (grid, list, or folder)
-  const [viewMode, setViewMode] = useState("list")
+  // State for view mode (folder only now)
+  const [viewMode, setViewMode] = useState("folder")
 
   // State for filters
   const [typeFilter, setTypeFilter] = useState("all")
@@ -128,13 +128,62 @@ export default function Passwords({
     return () => document.removeEventListener("click", handlePopupClickOutside)
   }, [])
 
+  // State to control list visibility (User request: hide until letter selected)
+  const [listVisible, setListVisible] = useState(false);
+
+  // State for showing password in details panel
+  const [showPasswordInDetails, setShowPasswordInDetails] = useState(false);
+
   // Scroll to letter function
   const scrollToLetter = (letter: string) => {
-    const element = document.getElementById(`letter-group-${letter}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Reveal list if hidden
+    if (!listVisible) {
+      setListVisible(true);
+      // Small delay to allow render
+      setTimeout(() => performScroll(letter), 100);
+    } else {
+      performScroll(letter);
     }
   };
+
+  const performScroll = (letter: string) => {
+    const element = document.getElementById(`letter-group-${letter}`);
+
+    // Find the scrollable container - could be table container or grid container
+    let container: Element | null = null;
+
+    // Try to find the overflow container based on view mode
+    if (viewMode === 'list') {
+      // In list view, find the table's parent overflow container
+      container = element?.closest('.overflow-x-auto') || null;
+    } else if (viewMode === 'grid') {
+      // In grid view, find the grid's parent overflow container
+      container = element?.closest('.overflow-y-auto') || null;
+    }
+
+    // Fallback to main container if specific container not found
+    if (!container) {
+      container = document.querySelector('main');
+    }
+
+    if (element && container) {
+      // Calculate position relative to the container
+      const elementRect = element.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const offset = elementRect.top - containerRect.top;
+
+      // Current scroll position
+      const currentScroll = container.scrollTop;
+
+      // Target scroll position (minus header height ~160px to clear fixed header + search bar)
+      const targetScroll = currentScroll + offset - 160;
+
+      container.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth'
+      });
+    }
+  }
 
   const alphabet = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -231,11 +280,12 @@ export default function Passwords({
     }
   }
 
-  // Handle edit password
+  // Handle edit password - now shows in side panel instead of modal
   const handleEditPassword = (id: string) => {
     const passwordToEdit = records.find((record) => record.id === id)
     setSelectedRecord(passwordToEdit)
-    setEditPasswordModalOpen(true)
+    setShowPasswordInDetails(false) // Reset password visibility when selecting new record
+    // Don't open modal - details will show in side panel
   }
 
   // Handle duplicate password
@@ -260,10 +310,20 @@ export default function Passwords({
     }
 
     try {
+      // Ensure both picture and image fields are saved to Supabase
+      const dataToSave = {
+        ...updatedData,
+        image: updatedData.picture || updatedData.image, // Map picture to image
+        picture: updatedData.picture || updatedData.image, // Keep both for compatibility
+      }
+
       // @ts-ignore
-      await updateItem(selectedRecord.id, updatedData)
+      await updateItem(selectedRecord.id, dataToSave)
       setEditPasswordModalOpen(false)
-      setSelectedRecord(null)
+
+      // Refresh selected record with updated data
+      const updatedRecord = { ...selectedRecord, ...dataToSave }
+      setSelectedRecord(updatedRecord)
     } catch (error) {
       console.error("Failed to update password:", error)
       alert("Failed to save changes. Please try again.")
@@ -633,31 +693,45 @@ export default function Passwords({
       <div
         key={password.id}
         className={`flex items-center py-3 px-2 border-b ${theme === "light" ? "border-gray-100 hover:bg-gray-50" : "border-gray-800 hover:bg-white/5"} cursor-pointer transition-colors group`}
-        onClick={() => handleEditPassword(password.id)}
+        onClick={() => {
+          setSelectedRecord(password)
+          setShowPasswordInDetails(false)
+        }}
       >
-        <div className="mr-3 text-gray-400 group-hover:text-blue-500">
-          <Lock className="h-5 w-5" />
+        <div className="mr-3 flex-shrink-0">
+          {(password.image || password.picture) ? (
+            /* Show uploaded password image */
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+              <img
+                src={password.image || password.picture}
+                alt={password.title || "Password"}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback to icon if image fails to load
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement!.innerHTML = password.website
+                    ? '<div class="p-2 bg-blue-500/10 rounded-lg"><svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></div>'
+                    : '<div class="p-2 bg-purple-500/10 rounded-lg"><svg class="h-5 w-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>';
+                }}
+              />
+            </div>
+          ) : password.website ? (
+            /* Default website icon */
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <ExternalLink className="h-5 w-5 text-blue-400" />
+            </div>
+          ) : (
+            /* Default lock icon */
+            <div className="p-2 bg-purple-500/10 rounded-lg">
+              <Lock className="h-5 w-5 text-purple-400" />
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{password.title || password.website || "Untitled"}</div>
           <div className={`text-xs truncate ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
             {password.username || password.email || "No username"}
           </div>
-        </div>
-
-        {/* Quick Actions on Hover */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setSelectedRecord(password)
-              setAutoFillModalOpen(true)
-            }}
-            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-blue-500"
-            title="Auto Fill"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
         </div>
       </div>
     )
@@ -700,27 +774,25 @@ export default function Passwords({
         <div key={folder.id} className={`${level > 0 ? "ml-8" : ""} border-b ${theme === "light" ? "border-gray-100" : "border-gray-800"}`}>
           <div className="flex items-center flex-1 min-w-0 py-2">
             <div
-              className={`flex items-center flex-1 cursor-pointer py-2 px-2 rounded-lg transition-colors ${isSelected ? "bg-blue-50 dark:bg-blue-900/20" : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
+              className={`flex items-center flex-1 cursor-pointer py-2 px-2 rounded-lg transition-colors ${isSelected ? "bg-blue-600/20 dark:bg-blue-600/30" : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
               onClick={() => {
-                toggleFolder(folder.id)
                 setSelectedFolder(folder.id)
+                if (!isExpanded) toggleFolder(folder.id)
               }}
             >
-              <div className={`mr-3 ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>
-                {effectivelyExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </div>
-
-              <div className="mr-3">
-                <Folder className={`h-8 w-8 ${theme === "light" ? "text-gray-700" : "text-gray-400"}`} />
-              </div>
-
-              <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <span className={`font-semibold text-sm ${theme === "light" ? "text-gray-900" : "text-gray-100"}`}>
-                  {folder.name}
-                </span>
-                <span className={`text-xs ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                  {countLabel}
-                </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  toggleFolder(folder.id)
+                }}
+                className="p-1 mr-2 flex-shrink-0"
+              >
+                {effectivelyExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+              </button>
+              <Folder className={`h-6 w-6 mr-3 flex-shrink-0 ${isSelected ? 'text-blue-400' : 'text-purple-400'}`} />
+              <div className="flex-1 min-w-0">
+                <div className={`font-medium truncate ${isSelected ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>{folder.name}</div>
+                <div className="text-xs text-gray-400 truncate">{countLabel}</div>
               </div>
             </div>
 
@@ -795,7 +867,7 @@ export default function Passwords({
                 </div>
               )}
             </div>
-          </div>
+          </div >
 
           {effectivelyExpanded && (
             <div>
@@ -813,8 +885,9 @@ export default function Passwords({
                 </div>
               )}
             </div>
-          )}
-        </div>
+          )
+          }
+        </div >
       )
     })
   }
@@ -842,32 +915,36 @@ export default function Passwords({
       const isFirstOfLetter = firstLetter !== prevLetter;
       const anchorId = isFirstOfLetter ? `letter-group-${firstLetter}` : undefined;
 
+      const isFolder = password.type === 'folder';
+
       return (
         <tr
           key={password.id}
           id={anchorId}
-          className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"} hover:bg-white/5 transition-colors cursor-pointer`}
+          className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"} hover:bg-white/5 transition-colors cursor-pointer ${isFolder ? 'hidden md:table-row' : ''}`}
+          onClick={() => handleEditPassword(password.id)}
         >
-          <td className="py-3 px-4">
+          <td className="py-3 px-4 overflow-hidden max-w-[150px] md:max-w-none">
             {password.website ? (
-              <div>
-                <div className="font-medium">{password.title || "Untitled"}</div>
+              <div className="flex flex-col">
+                <div className="font-medium truncate">{password.title || "Untitled"}</div>
                 <a
                   href={password.website.startsWith("http") ? password.website : `https://${password.website}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center mt-0.5"
+                  className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center mt-0.5 truncate"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   {password.website.replace(/^https?:\/\//, '').replace(/^www\./, '').substring(0, 30)}{password.website.length > 30 ? '...' : ''}
-                  <ExternalLink className="h-3 w-3 ml-1" />
+                  <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                 </a>
               </div>
             ) : (
-              <span className="font-medium">{password.title || "Untitled"}</span>
+              <span className="font-medium truncate block">{password.title || "Untitled"}</span>
             )}
           </td>
           <td
-            className="py-3 px-4 cursor-pointer hover:text-blue-400 transition-colors"
+            className="py-3 px-4 hidden md:table-cell hover:text-blue-400 transition-colors truncate max-w-[150px]"
             onClick={(e) => {
               e.stopPropagation()
               handleEditPassword(password.id)
@@ -876,7 +953,7 @@ export default function Passwords({
           >
             {password.username}
           </td>
-          <td className="py-3 px-4 hidden md:table-cell relative min-w-[140px]">
+          <td className="py-3 px-4 hidden lg:table-cell relative min-w-[140px]">
             <div className="flex items-center justify-between group/pass">
               <span className={`truncate font-mono ${activePasswordPopup === password.id ? "text-white select-all" : "text-gray-500"}`}>
                 {activePasswordPopup === password.id ? password.password : "••••••••••"}
@@ -899,13 +976,14 @@ export default function Passwords({
               </button>
             </div>
           </td>
-          <td className="py-3 px-4 hidden lg:table-cell">{password.category || "General"}</td>
-          <td className="py-3 px-4 hidden xl:table-cell">{new Date(password.updatedAt).toLocaleDateString()}</td>
-          <td className="py-3 px-4">
-            <div className="flex items-center space-x-2 flex-wrap sm:flex-nowrap">
+          <td className="py-3 px-4 hidden xl:table-cell truncate max-w-[120px]">{password.category || "General"}</td>
+          <td className="py-3 px-4 hidden 2xl:table-cell whitespace-nowrap">{new Date(password.updatedAt).toLocaleDateString()}</td>
+          <td className="py-3 px-4 text-right md:text-left">
+            <div className="flex items-center justify-end md:justify-start space-x-1 sm:space-x-2">
               <button
-                className="text-blue-400 hover:text-blue-300"
-                onClick={() => {
+                className="text-blue-400 hover:text-blue-300 p-1"
+                onClick={(e) => {
+                  e.stopPropagation()
                   setSelectedRecord(password)
                   setAutoFillModalOpen(true)
                 }}
@@ -913,49 +991,21 @@ export default function Passwords({
               >
                 <Copy className="h-4 w-4" />
               </button>
-              {password.picture && (
-                <button
-                  className="text-blue-400 hover:text-blue-300"
-                  onClick={() => handleViewPicture(password)}
-                  title="View Picture"
-                >
-                  <Image className="h-4 w-4" />
-                </button>
-              )}
+
               <button
-                className="text-blue-400 hover:text-blue-300"
-                onClick={() => {
-                  console.log("Action clicked:", "Edit")
-                  handleEditPassword(password.id)
+                className={`${password.is_favorite ? "text-yellow-300" : "text-yellow-400 hover:text-yellow-300"} p-1`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleToggleFavorite(password.id)
                 }}
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                className={`${password.is_favorite ? "text-yellow-300" : "text-yellow-400 hover:text-yellow-300"}`}
-                onClick={() => handleToggleFavorite(password.id)}
               >
                 <Star className="h-4 w-4" fill={password.is_favorite ? "currentColor" : "none"} />
               </button>
+
               <button
-                className={`${password.is_archived ? "text-green-400" : "text-gray-400 hover:text-gray-300"}`}
-                onClick={() => handleToggleArchive(password.id)}
-              >
-                <Archive className="h-4 w-4" />
-              </button>
-              <button
-                className="text-blue-400 hover:text-blue-300"
-                onClick={() => {
-                  console.log("Action clicked:", "Move to Folder")
-                  setSelectedRecord(password)
-                  setMoveToFolderModalOpen(true)
-                }}
-              >
-                <Folder className="h-4 w-4" />
-              </button>
-              <button
-                className="text-red-500 hover:text-red-400"
-                onClick={() => {
+                className="text-red-500 hover:text-red-400 p-1"
+                onClick={(e) => {
+                  e.stopPropagation()
                   console.log("Action clicked:", "Delete")
                   setSelectedRecord(password)
                   setDeleteConfirmModalOpen(true)
@@ -1267,40 +1317,88 @@ export default function Passwords({
     }
 
     return (
-      <div className={`h-full flex flex-col ${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded-xl shadow-lg border ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}>
+      <div className={`h-full flex flex-col ${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded-xl shadow-lg border ${theme === "light" ? "border-gray-200" : "border-gray-700"} w-full max-w-full overflow-hidden`} style={{ maxWidth: '100%', wordWrap: 'break-word' }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
-              {record.website ? <ExternalLink className="h-8 w-8 text-blue-500" /> : <Lock className="h-8 w-8 text-gray-500" />}
+        <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 space-y-3">
+          {/* Title Row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+              <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0">
+                {record.website ? <ExternalLink className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" /> : <Lock className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />}
+              </div>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <h2 className="text-lg sm:text-xl font-bold break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{record.title || "Untitled"}</h2>
+                <p className="text-xs sm:text-sm text-gray-500">Record Info</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-bold">{record.title || "Untitled"}</h2>
-              <p className="text-sm text-gray-500">Record Info</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleEditPassword(record.id)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-              title="Edit"
-            >
-              <Edit className="h-5 w-5 text-gray-500" />
-            </button>
             <button
               onClick={() => setSelectedRecord(null)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors flex-shrink-0"
               title="Close"
             >
-              <X className="h-5 w-5 text-gray-500" />
+              <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Action Icons Row */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap overflow-x-auto">
+            <button
+              onClick={async () => {
+                const newFavoriteStatus = !(record.isFavorite || record.is_favorite)
+                const updatedRecord = { ...record, isFavorite: newFavoriteStatus, is_favorite: newFavoriteStatus }
+                setSelectedRecord(updatedRecord) // Update local state immediately
+                await updateItem(record.id, updatedRecord)
+              }}
+              className={`p-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-full transition-colors ${(record.isFavorite || record.is_favorite) ? 'text-yellow-500' : 'text-gray-400'}`}
+              title={(record.isFavorite || record.is_favorite) ? "Remove Favorite" : "Add Favorite"}
+            >
+              <Star className="h-5 w-5" fill={(record.isFavorite || record.is_favorite) ? "currentColor" : "none"} />
+            </button>
+            <button
+              onClick={() => {
+                setSelectedRecord(record)
+                setMoveToFolderModalOpen(true)
+              }}
+              className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded-full transition-colors text-purple-500"
+              title="Move to Folder"
+            >
+              <Folder className="h-5 w-5" />
+            </button>
+            <button
+              onClick={async () => {
+                const newArchivedStatus = !(record.is_archived || record.isArchived)
+                const updatedRecord = { ...record, is_archived: newArchivedStatus, isArchived: newArchivedStatus }
+                setSelectedRecord(updatedRecord) // Update local state immediately
+                await updateItem(record.id, updatedRecord)
+              }}
+              className={`p-2 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-full transition-colors ${(record.is_archived || record.isArchived) ? 'text-green-500' : 'text-gray-400'}`}
+              title={(record.is_archived || record.isArchived) ? "Unarchive" : "Archive"}
+            >
+              <Archive className="h-5 w-5" fill={(record.is_archived || record.isArchived) ? "currentColor" : "none"} />
+            </button>
+            <button
+              onClick={() => setEditPasswordModalOpen(true)}
+              className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-full transition-colors text-blue-500"
+              title="Edit"
+            >
+              <Edit className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => {
+                setDeleteConfirmModalOpen(true)
+              }}
+              className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-full transition-colors text-red-500"
+              title="Delete"
+            >
+              <Trash className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Section: General */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">General</h3>
 
             {/* Title Field */}
@@ -1330,22 +1428,23 @@ export default function Passwords({
             {/* Password Field */}
             <div className="group relative">
               <label className="text-xs text-gray-500 block mb-1">Password</label>
-              <div className="flex items-center gap-2 p-2 -ml-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 -ml-1 sm:-ml-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                 <div
-                  className="flex-1 font-mono text-sm cursor-pointer hover:text-blue-500"
+                  className={`flex-1 font-mono text-sm cursor-pointer ${showPasswordInDetails ? 'text-gray-900 dark:text-gray-100 font-bold' : 'text-gray-500'} hover:text-blue-500`}
                   onClick={() => navigator.clipboard.writeText(record.password || "")}
                   title="Click to Copy"
+                  style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
                 >
-                  {activePasswordPopup === record.id ? record.password : "••••••••••"}
+                  {showPasswordInDetails ? record.password : "••••••••••"}
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    setActivePasswordPopup(activePasswordPopup === record.id ? null : record.id)
+                    setShowPasswordInDetails(!showPasswordInDetails)
                   }}
                   className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
                 >
-                  {activePasswordPopup === record.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPasswordInDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               <div className={`h-1 w-full bg-gray-200 mt-2 rounded-full overflow-hidden ${record.password ? "opacity-100" : "opacity-0"}`}>
@@ -1369,21 +1468,36 @@ export default function Passwords({
                 </a>
               </div>
             )}
+
+            {/* Picture Field - Show uploaded image */}
+            {(record.image || record.picture) && (
+              <div className="group">
+                <label className="text-xs text-gray-500 block mb-2">Picture</label>
+                <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                  <img
+                    src={record.image || record.picture}
+                    alt={record.title || "Password"}
+                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => handleViewPicture(record)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mock "Custom Fields" or Notes can go here */}
           {record.notes && (
             <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="group">
-                <label className="text-xs text-gray-500 block mb-1">Notes</label>
-                <div className="text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                <label className="text-xs text-gray-400 block mb-1">Notes</label>
+                <div className="text-sm whitespace-pre-wrap text-gray-600 dark:text-gray-100 leading-relaxed">
                   {record.notes}
                 </div>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </div >
     )
   }
 
@@ -1392,23 +1506,41 @@ export default function Passwords({
   const renderFolderView = () => {
     // Get filtered items ignoring folder selection (so we can distribute them into structure)
     const itemsForStructure = getFilteredPasswords(true)
+    const topLevelFolders = folders.filter((f: any) => !f.parent_id)
 
     return (
-      <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-250px)]">
-        {/* Left Side: Folder Tree (Scrollable) */}
-        <div className={`flex-1 md:w-1/3 overflow-y-auto pr-2 custom-scrollbar ${selectedRecord ? 'hidden md:block' : 'block'}`}>
+      <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-300px)] w-full max-w-full overflow-hidden">
+        {/* Left Side: Folder/List - HIDE on mobile when password selected */}
+        <div className={`md:w-1/3 border-r border-gray-100 dark:border-gray-800 pr-2 overflow-y-auto ${selectedRecord ? 'hidden md:block' : 'block'} w-full md:max-w-[33%]`}>
           <div className="space-y-2">
-            {renderFolderStructure(topLevelFolders, itemsForStructure)}
+            {/* Only show folder structure when NO filters are active */}
+            {!favoriteFilter && !archivedFilter && renderFolderStructure(topLevelFolders, itemsForStructure)}
 
-            {/* Show passwords without folders */}
-            {itemsForStructure.filter((p) => !p.path && !p.folder).length > 0 && (
-              <div className={`${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded-lg p-4 border-b ${theme === "light" ? "border-gray-100" : "border-gray-800"}`}>
-                <div className="flex items-center mb-3">
-                  <Folder className="h-5 w-5 mr-2 text-blue-400" />
-                  <h3 className="font-semibold">No Folder</h3>
-                  <span className={`ml-2 text-sm ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-                    ({itemsForStructure.filter((p) => !p.path && !p.folder).length})
-                  </span>
+            {/* Passwords without folders - Show when no filters OR show filtered items in flat list */}
+            {favoriteFilter || archivedFilter ? (
+              /* When filtering, show flat list of matching passwords */
+              <div className="space-y-1">
+                {itemsForStructure.filter((p) => !p.folder).map((password) => renderFolderListItem(password))}
+                {itemsForStructure.filter((p) => !p.folder).length === 0 && (
+                  <div className="text-center py-10 text-gray-500">
+                    <p>No {favoriteFilter ? 'favorite' : 'archived'} items found</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Normal view - show passwords without folders */
+              <div className={`border-b ${theme === "light" ? "border-gray-100" : "border-gray-800"} mt-4`}>
+                <div
+                  className={`flex items-center py-3 px-2 cursor-pointer rounded-lg transition-colors ${!selectedFolder ? 'bg-blue-600/20 dark:bg-blue-600/30' : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
+                  onClick={() => setSelectedFolder("")}
+                >
+                  <Folder className="h-6 w-6 mr-3 text-gray-500" />
+                  <div className="flex-1">
+                    <div className={`font-semibold ${!selectedFolder ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No Folder</div>
+                    <span className="text-xs text-gray-400">
+                      {itemsForStructure.filter((p) => !p.path && !p.folder).length} Records
+                    </span>
+                  </div>
                 </div>
 
                 <div className="pl-7 space-y-0 text-sm"> {/* Compact list for root items */}
@@ -1419,8 +1551,8 @@ export default function Passwords({
           </div>
         </div>
 
-        {/* Right Side: Details Pane (Visible when record selected) */}
-        <div className={`md:w-2/3 h-full pl-2 ${selectedRecord ? 'block' : 'hidden md:block'}`}>
+        {/* Right Side: Details Pane - FULL WIDTH on mobile when password selected */}
+        <div className={`h-full w-full md:w-2/3 md:pl-2 ${selectedRecord ? 'block px-2' : 'hidden md:block'}`}>
           {renderRecordDetails(selectedRecord)}
         </div>
       </div>
@@ -1429,7 +1561,8 @@ export default function Passwords({
 
   // Render A-Z Scrollbar Sidebar
   const renderAZSidebar = () => {
-    if (viewMode === 'folder') return null;
+    // Only show A-Z in List View (per user request to avoid clutter)
+    if (viewMode !== 'list') return null;
 
     return (
       <div className={`fixed right-2 top-1/2 transform -translate-y-1/2 z-50 flex flex-col gap-1 p-1 rounded-full ${theme === 'light' ? 'bg-gray-100/80' : 'bg-black/40'} backdrop-blur-sm shadow-sm max-h-[80vh] overflow-y-auto w-6 items-center`}>
@@ -1479,67 +1612,74 @@ export default function Passwords({
             Add New Folder
           </button>
 
-
-
-          <div className={`flex items-center ${theme === "light" ? "bg-gray-200" : "bg-[#333]"} rounded-md`}>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 ${viewMode === "list" ? "text-[#007bff]" : theme === "light" ? "text-gray-600 hover:text-gray-800" : "text-gray-400 hover:text-white"}`}
-              aria-label="List view"
-            >
-              <ListIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 ${viewMode === "grid" ? "text-[#007bff]" : theme === "light" ? "text-gray-600 hover:text-gray-800" : "text-gray-400 hover:text-white"}`}
-              aria-label="Grid view"
-            >
-              <Grid className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => setViewMode("folder")}
-              className={`p-2 ${viewMode === "folder" ? "text-[#007bff]" : theme === "light" ? "text-gray-600 hover:text-gray-800" : "text-gray-400 hover:text-white"}`}
-              aria-label="Folder view"
-            >
-              <FolderTree className="h-5 w-5" />
-            </button>
-          </div>
-
-          {viewMode === "folder" && (
-            <div className={`flex items-center ${theme === "light" ? "bg-gray-200" : "bg-[#333]"} rounded-md ml-2`}>
-              <button
-                onClick={() => setExpandedFolders(Object.keys(folders).reduce((acc, key) => ({ ...acc, [key]: true }), {}))}
-                className={`p-2 ${theme === "light" ? "text-gray-600 hover:text-gray-800" : "text-gray-400 hover:text-white"}`}
-                title="Expand All"
-              >
-                <ChevronsDown className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setExpandedFolders({})}
-                className={`p-2 ${theme === "light" ? "text-gray-600 hover:text-gray-800" : "text-gray-400 hover:text-white"}`}
-                title="Collapse All"
-              >
-                <ChevronsUp className="h-5 w-5" />
-              </button>
-            </div>
-          )}
-
           <button
             onClick={() => {
-              setShowFilters(!showFilters)
-              console.log("Filters toggled on Passwords page:", !showFilters)
+              const allFolderIds = folders.reduce((acc: Record<string, boolean>, folder: any) => {
+                acc[folder.id] = true
+                return acc
+              }, {})
+              setExpandedFolders(allFolderIds)
             }}
-            className={`flex items-center ${theme === "light" ? "bg-gray-200 hover:bg-gray-300" : "bg-[#333] hover:bg-gray-600"} ${theme === "light" ? "text-gray-800" : "text-white"} p-2 rounded-md transition duration-200`}
-            aria-label="Toggle filters"
+            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition duration-200"
+            title="Expand All Folders"
           >
-            <Filter
-              className={`h-5 w-5 ${showFilters ? "text-[#007bff]" : theme === "light" ? "text-gray-600" : "text-gray-400"}`}
-            />
+            <ChevronDown className="h-5 w-5 mr-2" />
+            Expand All
+          </button>
+
+          <button
+            onClick={() => setExpandedFolders({})}
+            className="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition duration-200"
+            title="Collapse All Folders"
+          >
+            <ChevronRight className="h-5 w-5 mr-2" />
+            Collapse All
           </button>
         </div>
       </div>
 
-      <div className={`${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded-lg p-4 sticky top-0 z-40 shadow-md`}>
+      {/* Filter Status Indicator */}
+      {(favoriteFilter || archivedFilter) && (
+        <div className={`${favoriteFilter ? 'bg-yellow-500/20 border-yellow-500' : 'bg-green-500/20 border-green-500'} border-l-4 rounded-md p-4 mb-4`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {favoriteFilter ? (
+                <>
+                  <Star className="h-5 w-5 text-yellow-500" fill="currentColor" />
+                  <span className="font-semibold text-yellow-700 dark:text-yellow-300">Showing Favorites Only</span>
+                </>
+              ) : (
+                <>
+                  <Archive className="h-5 w-5 text-green-500" fill="currentColor" />
+                  <span className="font-semibold text-green-700 dark:text-green-300">Showing Archived Items Only</span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setFavoriteFilter(false)
+                setArchivedFilter(false)
+              }}
+              className="text-sm px-3 py-1 bg-white dark:bg-gray-800 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Clear Filter
+            </button>
+          </div>
+        </div>
+      )}
+      <button
+        onClick={() => {
+          setShowFilters(!showFilters)
+          console.log("Filters toggled on Passwords page:", !showFilters)
+        }}
+        className={`flex items-center ${theme === "light" ? "bg-gray-200 hover:bg-gray-300" : "bg-[#333] hover:bg-gray-600"} ${theme === "light" ? "text-gray-800" : "text-white"} p-2 rounded-md transition duration-200`}
+        aria-label="Toggle filters"
+      >
+        <Filter
+          className={`h-5 w-5 ${showFilters ? "text-[#007bff]" : theme === "light" ? "text-gray-600" : "text-gray-400"}`}
+        />
+      </button>
+      <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg p-4 sticky top-0 z-10 shadow-md`}>
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="relative flex-1">
             <Search
@@ -1549,128 +1689,114 @@ export default function Passwords({
               type="text"
               placeholder="Search passwords..."
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                console.log("Search applied")
-              }}
-              className={`w-full pl-10 pr-4 py-2 ${theme === "light" ? "bg-gray-100 border-gray-300" : "bg-[#333] border-gray-500"} border rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]`}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full pl-10 pr-4 py-2 rounded-md ${theme === "light" ? "bg-white text-gray-900 border-gray-300" : "bg-[#2a2a2a] text-white border-gray-700"} border focus:outline-none focus:ring-2 focus:ring-blue-500`}
             />
           </div>
 
-          {showFilters && (
-            <div className="flex flex-wrap gap-2">
-              <div className="relative">
-                <button
-                  className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
-                  onClick={() => {
-                    setShowFilterMenu(!showFilterMenu)
-                    setShowCategoryFilterMenu(false)
-                    setShowTimeFilterMenu(false)
-                    setShowStatusFilterMenu(false)
-                  }}
+          {/* Always Visible Dropdowns */}
+          <div className="flex gap-2 flex-wrap">
+            {/* Categories Dropdown */}
+            <div className="relative">
+              <button
+                className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
+                onClick={() => {
+                  setShowCategoryFilterMenu(!showCategoryFilterMenu)
+                  setShowStatusFilterMenu(false)
+                }}
+              >
+                <span>{categoryFilter === "all" ? "Categories" : categoryFilter}</span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </button>
+
+              {showCategoryFilterMenu && (
+                <div
+                  className={`absolute z-10 mt-1 w-full ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1 max-h-60 overflow-y-auto`}
                 >
-                  <span>
-                    {typeFilter === "all"
-                      ? "All"
-                      : typeFilter === "password"
-                        ? "Password"
-                        : typeFilter === "folder"
-                          ? "Folder"
-                          : "All"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </button>
-
-                {showFilterMenu && (
-                  <div
-                    className={`absolute z-10 mt-1 w-full ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1`}
+                  <button
+                    className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${categoryFilter === "all" ? "bg-blue-600 text-white" : ""}`}
+                    onClick={() => {
+                      setCategoryFilter("all")
+                      setShowCategoryFilterMenu(false)
+                    }}
                   >
+                    All Categories
+                  </button>
+                  {categories.map((category) => (
                     <button
-                      className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${typeFilter === "all" ? "bg-blue-600 text-white" : ""}`}
+                      key={category}
+                      className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${categoryFilter === category ? "bg-blue-600 text-white" : ""}`}
                       onClick={() => {
-                        setTypeFilter("all")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied")
-                      }}
-                    >
-                      All
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${typeFilter === "password" ? "bg-blue-600 text-white" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("password")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied")
-                      }}
-                    >
-                      Password
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${typeFilter === "folder" ? "bg-blue-600 text-white" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("folder")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied")
-                      }}
-                    >
-                      Folder
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <button
-                  className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
-                  onClick={() => {
-                    setShowCategoryFilterMenu(!showCategoryFilterMenu)
-                    setShowFilterMenu(false)
-                    setShowTimeFilterMenu(false)
-                    setShowStatusFilterMenu(false)
-                  }}
-                >
-                  <span>{categoryFilter === "all" ? "All Categories" : categoryFilter}</span>
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </button>
-
-                {showCategoryFilterMenu && (
-                  <div
-                    className={`absolute z-10 mt-1 w-full ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1 max-h-60 overflow-y-auto`}
-                  >
-                    <button
-                      className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${categoryFilter === "all" ? "bg-blue-600 text-white" : ""}`}
-                      onClick={() => {
-                        setCategoryFilter("all")
+                        setCategoryFilter(category)
                         setShowCategoryFilterMenu(false)
-                        console.log("Filter applied")
                       }}
                     >
-                      All Categories
+                      {category}
                     </button>
-                    {categories.map((category) => (
-                      <button
-                        key={category}
-                        className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${categoryFilter === category ? "bg-blue-600 text-white" : ""}`}
-                        onClick={() => {
-                          setCategoryFilter(category)
-                          setShowCategoryFilterMenu(false)
-                          console.log("Filter applied")
-                        }}
-                      >
-                        {category}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Functions Dropdown */}
+            <div className="relative">
+              <button
+                className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
+                onClick={() => {
+                  setShowStatusFilterMenu(!showStatusFilterMenu)
+                  setShowCategoryFilterMenu(false)
+                }}
+              >
+                <span>Functions</span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </button>
+
+              {showStatusFilterMenu && (
+                <div
+                  className={`absolute z-10 mt-1 w-48 ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1`}
+                >
+                  <button
+                    className={`w-full text-left px-4 py-2 flex items-center gap-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${favoriteFilter ? "bg-blue-600 text-white" : ""}`}
+                    onClick={() => {
+                      setFavoriteFilter(!favoriteFilter)
+                      setShowStatusFilterMenu(false)
+                    }}
+                  >
+                    <Star className="h-4 w-4" fill={favoriteFilter ? "currentColor" : "none"} />
+                    {favoriteFilter ? "Show All" : "Favorites Only"}
+                  </button>
+                  <button
+                    className={`w-full text-left px-4 py-2 flex items-center gap-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${archivedFilter ? "bg-blue-600 text-white" : ""}`}
+                    onClick={() => {
+                      setArchivedFilter(!archivedFilter)
+                      setShowStatusFilterMenu(false)
+                    }}
+                  >
+                    <Archive className="h-4 w-4" />
+                    {archivedFilter ? "Show Active" : "Show Archived"}
+                  </button>
+                  <div className={`h-px ${theme === "light" ? "bg-gray-200" : "bg-gray-700"} my-1`} />
+                  <button
+                    className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100 text-red-600" : "hover:bg-gray-600 text-red-400"}`}
+                    onClick={() => {
+                      setCategoryFilter("all")
+                      setFavoriteFilter(false)
+                      setArchivedFilter(false)
+                      setShowStatusFilterMenu(false)
+                    }}
+                  >
+                    Clear All Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-start">
         {viewMode !== "folder" && (
-          <div className="w-full md:w-64 glass-panel rounded-xl p-4 h-fit sticky top-24">
+          <div className={`w-full md:w-64 rounded-xl p-4 h-fit sticky top-24 ${theme === "light" ? "bg-white border border-gray-200" : "bg-[#1a1a1a] border border-gray-800"}`}>
             <h2 className="text-lg font-semibold mb-4">Folders</h2>
             <div className="space-y-1">
               <div
@@ -1678,7 +1804,7 @@ export default function Passwords({
                   }`}
                 onClick={() => setSelectedFolder("")}
               >
-                <Folder className="h-5 w-5 mr-2 text-blue-400" />
+                <Folder className={`h-5 w-5 mr-2 ${selectedFolder === "" ? "text-white" : "text-blue-400"}`} />
                 <span>All Items</span>
               </div>
               {renderFolderStructure(topLevelFolders, getFilteredPasswords(true))}
@@ -1688,25 +1814,45 @@ export default function Passwords({
 
         <div className="flex-1">
           {viewMode === "list" ? (
-            <div className="glass-panel rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className={`${theme === "light" ? "bg-gray-100" : "bg-[#333]"} text-left`}>
-                      <th className="py-3 px-4 font-semibold">Name</th>
-                      <th className="py-3 px-4 font-semibold">Username</th>
-                      <th className="py-3 px-4 font-semibold hidden md:table-cell">Password</th>
-                      <th className="py-3 px-4 font-semibold hidden lg:table-cell">Category</th>
-                      <th className="py-3 px-4 font-semibold hidden xl:table-cell">Last Updated</th>
-                      <th className="py-3 px-4 font-semibold text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>{renderPasswordRows()}</tbody>
-                </table>
+            <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-300px)]">
+              {/* Left: Password List */}
+              <div className={`${selectedRecord ? 'hidden' : 'w-full'} rounded-xl overflow-hidden relative z-40 ${theme === "light" ? "bg-white border border-gray-200" : "bg-[#1a1a1a] border border-gray-800"}`}>
+                <div className="overflow-x-auto h-full">
+                  <table className="w-full text-left text-sm table-fixed">
+                    <thead className={`${theme === "light" ? "bg-gray-50 text-gray-600" : "bg-[#1a1a1a] text-gray-300"} sticky top-0`}>
+                      <tr>
+                        <th className="py-3 px-4 font-medium w-full md:w-auto">Title / Website</th>
+                        <th className="py-3 px-4 font-medium hidden md:table-cell w-48">Username</th>
+                        <th className="py-3 px-4 font-medium hidden lg:table-cell w-48">Password</th>
+                        <th className="py-3 px-4 font-medium hidden xl:table-cell w-32">Category</th>
+                        <th className="py-3 px-4 font-medium hidden 2xl:table-cell w-32">Updated</th>
+                        <th className="py-3 px-4 font-medium w-32 md:w-auto text-right md:text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${theme === "light" ? "divide-gray-100" : "divide-gray-800"}`}>
+                      {renderPasswordRows()}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Right: Password Details Panel */}
+              <div className={`${selectedRecord ? 'block w-full' : 'hidden'} h-full sticky top-24 self-start`}>
+                {renderRecordDetails(selectedRecord)}
               </div>
             </div>
           ) : viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">{renderPasswordGrid()}</div>
+            <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-300px)]">
+              {/* Left: Password Grid */}
+              <div className={`${selectedRecord ? 'hidden' : 'w-full'} overflow-y-auto`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">{renderPasswordGrid()}</div>
+              </div>
+
+              {/* Right: Password Details Panel */}
+              <div className={`${selectedRecord ? 'block w-full' : 'hidden'} h-full overflow-y-auto sticky top-24 self-start`}>
+                {renderRecordDetails(selectedRecord)}
+              </div>
+            </div>
           ) : (
             <div>{renderFolderView()}</div>
           )}
