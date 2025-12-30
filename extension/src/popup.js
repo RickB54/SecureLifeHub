@@ -500,8 +500,22 @@ async function toggleAutoFill(forceState = null) {
 }
 
 // Open Web Vault
-document.getElementById('open-vault-btn').addEventListener('click', () => {
-    chrome.tabs.create({ url: WEB_VAULT_URL })
+document.getElementById('open-vault-btn').addEventListener('click', async () => {
+    // Get current session to enable SSO
+    const { data: { session } } = await supabase.auth.getSession()
+
+    let url = WEB_VAULT_URL
+
+    // If user is logged in, pass session tokens for SSO
+    if (session?.access_token && session?.refresh_token) {
+        const params = new URLSearchParams({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+        })
+        url = `${WEB_VAULT_URL}?${params.toString()}`
+    }
+
+    chrome.tabs.create({ url })
     closeMenu()
 })
 

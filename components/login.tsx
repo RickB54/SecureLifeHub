@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react"
 import { PasswordInput } from "@/components/ui/password-input"
 import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import Image from "next/image"
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -13,6 +14,41 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // SSO: Check for session token in URL and auto-login
+  useEffect(() => {
+    const handleSSO = async () => {
+      const accessToken = searchParams.get('access_token')
+      const refreshToken = searchParams.get('refresh_token')
+
+      if (accessToken && refreshToken) {
+        setLoading(true)
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
+
+          if (error) {
+            console.error('SSO session restore failed:', error)
+            setError('Failed to restore session from extension')
+          } else {
+            // Session restored successfully, router.refresh() will redirect
+            router.refresh()
+            router.push('/dashboard')
+          }
+        } catch (err: any) {
+          console.error('SSO error:', err)
+          setError('Session restore error')
+        } finally {
+          setLoading(false)
+        }
+      }
+    }
+
+    handleSSO()
+  }, [searchParams, router])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,11 +86,17 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10 glass-panel rounded-2xl shadow-2xl border border-white/10 p-8 backdrop-blur-xl bg-white/5">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-gradient-to-br from-blue-500 to-purple-600 p-4 rounded-2xl mb-4 shadow-lg shadow-blue-500/30">
-            <Lock className="h-8 w-8 text-white" />
+          <div className="relative w-24 h-24 mb-4 rounded-full overflow-hidden shadow-lg shadow-blue-500/30">
+            <Image
+              src="/securelifehub-logo.jpg"
+              alt="SecureLifeHub Logo"
+              fill
+              className="object-cover"
+              priority
+            />
           </div>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Secure Pass Hub</h1>
+        <h1 className="text-3xl font-bold text-white mb-2">SecureLifeHub</h1>
         <p className="text-gray-400">
           {isSignUp ? "Create your secure vault" : "Unlock your vault"}
         </p>
@@ -126,7 +168,7 @@ export default function Login() {
 
       {/* Footer / Copyright */}
       <div className="absolute bottom-4 text-gray-600 text-xs text-center w-full">
-        Secure Pass Hub v1.0 • Encrypted & Secure
+        SecureLifeHub v1.0 • Encrypted & Secure
       </div>
     </div >
   )

@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: 'Secure Life Hub',
   description: 'Manage your entire digital and physical life securely.',
   generator: 'v0.dev',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 import AuthProvider from "@/components/auth-provider"
@@ -16,7 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
