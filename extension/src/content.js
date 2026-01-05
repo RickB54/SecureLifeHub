@@ -31,6 +31,14 @@ observer.observe(document.body, { childList: true, subtree: true });
 function scanPage() {
     if (!cachedVaultItems.length) return;
 
+    // Don't autofill on our own app (allow strict block on local dev environment)
+    const currentHost = window.location.hostname;
+    // Block ANY localhost or 127.0.0.1 regardless of port, and production domain
+    if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost.includes('securelifehub')) {
+        console.log("SecureLifeHub: Skipping autofill on own app");
+        return;
+    }
+
     const hostname = window.location.hostname.replace(/^www\./, '').toLowerCase();
 
     const match = cachedVaultItems.find(item => {
@@ -47,7 +55,7 @@ function scanPage() {
     });
 
     if (match) {
-        // console.log("SecureLifeHub: Credentials identified for this domain.");
+        console.log("SecureLifeHub: Credentials found for", hostname, match);
         identifyAndDecorateFields(match);
     }
 }
@@ -78,12 +86,13 @@ function identifyAndDecorateFields(match) {
         usernameInput = inputs.find(i => i.type === 'email' || (i.name && i.name.toLowerCase().includes('user')));
     }
 
-    if (usernameInput) decorateInput(usernameInput, match);
-    if (passwordInput) decorateInput(passwordInput, match);
+    if (usernameInput) decorateInput(usernameInput, match, 'username');
+    if (passwordInput) decorateInput(passwordInput, match, 'password');
 }
 
-function decorateInput(input, match) {
+function decorateInput(input, match, fieldType) {
     input.setAttribute('data-slh-decorated', 'true'); // Mark as handled
+    input.setAttribute('data-slh-field-type', fieldType); // Mark field type
 
     // Ensure parent is relative so absolute icon works
     const parent = input.parentElement;
@@ -96,7 +105,7 @@ function decorateInput(input, match) {
     const icon = document.createElement('img');
     icon.src = chrome.runtime.getURL('icons/field-icon.jpg'); // Adjust if copied elsewhere
     icon.className = 'slh-field-icon';
-    icon.title = `SecureLifeHub: Fill ${match.username}`;
+    icon.title = `SecureLifeHub: Fill ${fieldType === 'username' ? match.username : '••••••••'}`;
 
     // Inject
     parent.appendChild(icon);
@@ -113,41 +122,88 @@ function decorateInput(input, match) {
 
 function removeIcons() {
     document.querySelectorAll('.slh-field-icon').forEach(el => el.remove());
-    document.querySelectorAll('[data-slh-decorated]').forEach(el => el.removeAttribute('data-slh-decorated'));
+    document.querySelectorAll('[data-slh-decorated]').forEach(el => {
+        el.removeAttribute('data-slh-decorated');
+        el.removeAttribute('data-slh-field-type');
+    });
 }
 
 function fillCredentials(data) {
-    // Re-find inputs (they might have changed or we just want to be sure)
-    // We can recycle the logic or just target the ones we decorated if we stored references.
-    // But generic fill is safer.
+    console.log("SecureLifeHub: Filling credentials", {
+        username: data.username,
+        passwordLength: data.password ? data.password.length : 0,
+        website: data.website
+    });
 
+    // Find all inputs on the page
     const inputs = Array.from(document.querySelectorAll('input'));
-    const passwordInput = inputs.find(i => i.type === 'password');
+
+    // Find password field
+    const passwordInput = inputs.find(i => i.type === 'password' && i.offsetParent !== null);
+
+    // Find username field (email or text before password)
     let usernameInput = null;
 
-    // Reuse heuristic
     if (passwordInput) {
         let idx = inputs.indexOf(passwordInput);
+        // Search backwards for username field
         for (let i = idx - 1; i >= 0; i--) {
-            if ((inputs[i].type === 'text' || inputs[i].type === 'email') && inputs[i].offsetParent) {
-                usernameInput = inputs[i];
+            const candidate = inputs[i];
+            if ((candidate.type === 'text' || candidate.type === 'email') && candidate.offsetParent !== null) {
+                usernameInput = candidate;
                 break;
             }
         }
     } else {
-        usernameInput = inputs.find(i => i.type === 'email');
+        // No password field visible, might be step 1 of multi-step login
+        usernameInput = inputs.find(i =>
+            (i.type === 'email' || i.type === 'text') &&
+            i.offsetParent !== null &&
+            (i.name?.toLowerCase().includes('user') ||
+                i.name?.toLowerCase().includes('email') ||
+                i.id?.toLowerCase().includes('user') ||
+                i.id?.toLowerCase().includes('email') ||
+                i.autocomplete === 'username' ||
+                i.autocomplete === 'email')
+        );
     }
 
-    if (usernameInput && data.username) performFill(usernameInput, data.username);
-    if (passwordInput && data.password) performFill(passwordInput, data.password);
+    // Fill username field
+    if (usernameInput && data.username) {
+        console.log("SecureLifeHub: Filling username:", data.username);
+        performFill(usernameInput, data.username);
+    } else {
+        console.log("SecureLifeHub: Username field not found or no username data");
+    }
+
+    // Fill password field
+    if (passwordInput && data.password) {
+        console.log("SecureLifeHub: Filling password (length:", data.password.length, ")");
+        performFill(passwordInput, data.password);
+    } else {
+        console.log("SecureLifeHub: Password field not found or no password data");
+    }
 }
 
 
 function performFill(element, value) {
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-    setter.call(element, value);
+    // Clear the field first
+    element.value = '';
+
+    // Use native setter to bypass React/Vue watchers
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    nativeInputValueSetter.call(element, value);
+
+    // Trigger all possible events to ensure frameworks detect the change
     element.dispatchEvent(new Event('input', { bubbles: true }));
     element.dispatchEvent(new Event('change', { bubbles: true }));
+    element.dispatchEvent(new Event('keyup', { bubbles: true }));
+    element.dispatchEvent(new Event('keydown', { bubbles: true }));
+
+    // Focus the element to ensure it's recognized
+    element.focus();
+
+    console.log("SecureLifeHub: Filled field with value length:", value.length);
 }
 
 // Listen for manual fill requests from popup

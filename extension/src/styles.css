@@ -6,8 +6,8 @@
 body {
     font-family: system-ui, -apple-system, sans-serif;
     /* Force dimensions for Chrome Popup */
-    width: 780px !important;
-    height: 600px !important;
+    width: 500px !important;
+    height: 500px !important;
     margin: 0;
     padding: 0;
     overflow: hidden;

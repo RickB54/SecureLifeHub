@@ -2,15 +2,27 @@ import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings,
 
 export const sidebarSections = [
     {
-        id: "main",
-        title: "Main",
+        id: "dashboard",
+        title: "Dashboard",
         items: [{ id: "dashboard", label: "Dashboard", icon: <Home className="h-5 w-5" /> }],
+        isTopLevel: true, // Mark as top-level to render differently
     },
     {
         id: "vault",
         title: "Vault",
+        items: [{ id: "all-items", label: "Vault", icon: <Key className="h-5 w-5" /> }],
+        isTopLevel: true, // Mark as top-level to render differently
+    },
+    {
+        id: "payment-cards",
+        title: "Payment Cards",
+        items: [{ id: "type-payment-cards", label: "Payment Cards", icon: <CreditCard className="h-5 w-5" /> }],
+        isTopLevel: true, // Mark as top-level to render differently
+    },
+    {
+        id: "vault-advanced",
+        title: "Vault Advanced",
         items: [
-            { id: "all-items", label: "All Items", icon: <Key className="h-5 w-5" /> },
             { id: "favorites", label: "Favorites", icon: <Star className="h-5 w-5" /> },
             { id: "trash", label: "Deleted", icon: <Trash className="h-5 w-5" /> },
             { id: "generate-password", label: "Generate Password", icon: <Wand2 className="h-5 w-5" /> },
@@ -21,7 +33,6 @@ export const sidebarSections = [
         title: "Record Types",
         items: [
             { id: "type-logins", label: "Logins", icon: <Key className="h-4 w-4" /> },
-            { id: "type-payment-cards", label: "Payment Cards", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-contacts", label: "Contacts", icon: <User className="h-4 w-4" /> },
             { id: "type-addresses", label: "Addresses", icon: <FileText className="h-4 w-4" /> },
             { id: "type-bank-accounts", label: "Bank Accounts", icon: <FileText className="h-4 w-4" /> },
@@ -103,3 +114,4 @@ export const sidebarSections = [
         ],
     },
 ]
+

@@ -15,8 +15,10 @@ interface SidebarProps {
 export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, theme }: SidebarProps) {
   // Default expanded state: all false (collapsed) as requested
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    main: true, // Default main open? Or all closed. User said "default to passwords only" before.
-    vault: true,
+    dashboard: false,
+    vault: false,
+    'payment-cards': false,
+    'vault-advanced': false,
     recordTypes: false,
     healthFitness: false,
     vehicles: false,
@@ -84,61 +86,80 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
           </div>
 
           <nav className="p-4 overflow-y-auto flex-1 custom-scrollbar">
-            {sections.map((section) => (
-              <div key={section.id} className="mb-6">
-                <div className="flex items-center justify-between w-full mb-2 sticky top-0 bg-[#2a2a2a] py-1">
-                  {/* Section Title Link */}
-                  <button
-                    onClick={() => {
-                      if (section.id !== 'main') {
+            {sections.map((section) => {
+              // @ts-ignore - isTopLevel is a custom property
+              const isTopLevel = section.isTopLevel === true
+
+              // For top-level items, render as a single button
+              if (isTopLevel && section.items.length === 1) {
+                const item = section.items[0]
+                return (
+                  <div key={section.id} className="mb-2">
+                    <button
+                      onClick={() => handleNavigation(item.id)}
+                      className={`flex items-center w-full px-3 py-2.5 rounded-md text-sm font-medium ${activePage === item.id ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-700"
+                        }`}
+                    >
+                      {item.icon}
+                      <span className="ml-3">{item.label}</span>
+                    </button>
+                  </div>
+                )
+              }
+
+              // For regular sections with dropdowns
+              return (
+                <div key={section.id} className="mb-6">
+                  <div className="flex items-center justify-between w-full mb-2 sticky top-0 bg-[#2a2a2a] py-1">
+                    {/* Section Title Link */}
+                    <button
+                      onClick={() => {
                         handleNavigation(`section-${section.id}`)
                         if (!expandedSections[section.id]) toggleSection(section.id)
-                      } else {
-                        handleNavigation(`dashboard`)
-                      }
-                      // Auto-close on mobile when a main section link is clicked
-                      if (window.innerWidth < 768) setIsOpen(false)
-                    }}
-                    className="flex-1 text-left text-gray-400 uppercase text-xs font-semibold hover:text-white transition-colors"
-                  >
-                    {section.title}
-                  </button>
+                        // Auto-close on mobile when a main section link is clicked
+                        if (window.innerWidth < 768) setIsOpen(false)
+                      }}
+                      className="flex-1 text-left text-gray-400 uppercase text-xs font-semibold hover:text-white transition-colors"
+                    >
+                      {section.title}
+                    </button>
 
-                  {/* Toggle Chevron */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); toggleSection(section.id) }}
-                    className="p-1 text-gray-400 hover:text-white"
-                  >
-                    {expandedSections[section.id] ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                  </button>
+                    {/* Toggle Chevron */}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleSection(section.id) }}
+                      className="p-1 text-gray-400 hover:text-white"
+                    >
+                      {expandedSections[section.id] ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  {expandedSections[section.id] && (
+                    <ul className="space-y-1 pl-1">
+                      {section.items.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            onClick={() => {
+                              handleNavigation(item.id)
+                              // Explicitly close sidebar on mobile for sub-items too
+                              if (window.innerWidth < 768) setIsOpen(false)
+                            }}
+                            className={`flex items-center w-full px-3 py-2 rounded-md text-sm ${activePage === item.id ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-700"
+                              }`}
+                          >
+                            {item.icon}
+                            <span className="ml-3">{item.label}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-
-                {expandedSections[section.id] && (
-                  <ul className="space-y-1 pl-1">
-                    {section.items.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          onClick={() => {
-                            handleNavigation(item.id)
-                            // Explicitly close sidebar on mobile for sub-items too
-                            if (window.innerWidth < 768) setIsOpen(false)
-                          }}
-                          className={`flex items-center w-full px-3 py-2 rounded-md text-sm ${activePage === item.id ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-700"
-                            }`}
-                        >
-                          {item.icon}
-                          <span className="ml-3">{item.label}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </nav>
         </div>
       </aside>

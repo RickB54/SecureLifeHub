@@ -1614,26 +1614,29 @@ export default function Passwords({
 
           <button
             onClick={() => {
-              const allFolderIds = folders.reduce((acc: Record<string, boolean>, folder: any) => {
-                acc[folder.id] = true
-                return acc
-              }, {})
-              setExpandedFolders(allFolderIds)
-            }}
-            className="flex items-center bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition duration-200"
-            title="Expand All Folders"
-          >
-            <ChevronDown className="h-5 w-5 mr-2" />
-            Expand All
-          </button>
+              // Check if all folders are expanded
+              const allExpanded = folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id])
 
-          <button
-            onClick={() => setExpandedFolders({})}
-            className="flex items-center bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition duration-200"
-            title="Collapse All Folders"
+              if (allExpanded) {
+                // Collapse all
+                setExpandedFolders({})
+              } else {
+                // Expand all
+                const allFolderIds = folders.reduce((acc: Record<string, boolean>, folder: any) => {
+                  acc[folder.id] = true
+                  return acc
+                }, {})
+                setExpandedFolders(allFolderIds)
+              }
+            }}
+            className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md transition duration-200"
+            title={folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id]) ? "Collapse All Folders" : "Expand All Folders"}
           >
-            <ChevronRight className="h-5 w-5 mr-2" />
-            Collapse All
+            {folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id]) ? (
+              <ChevronsUp className="h-5 w-5" />
+            ) : (
+              <ChevronsDown className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
@@ -1667,18 +1670,7 @@ export default function Passwords({
           </div>
         </div>
       )}
-      <button
-        onClick={() => {
-          setShowFilters(!showFilters)
-          console.log("Filters toggled on Passwords page:", !showFilters)
-        }}
-        className={`flex items-center ${theme === "light" ? "bg-gray-200 hover:bg-gray-300" : "bg-[#333] hover:bg-gray-600"} ${theme === "light" ? "text-gray-800" : "text-white"} p-2 rounded-md transition duration-200`}
-        aria-label="Toggle filters"
-      >
-        <Filter
-          className={`h-5 w-5 ${showFilters ? "text-[#007bff]" : theme === "light" ? "text-gray-600" : "text-gray-400"}`}
-        />
-      </button>
+
       <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg p-4 sticky top-0 z-10 shadow-md`}>
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="relative flex-1">
