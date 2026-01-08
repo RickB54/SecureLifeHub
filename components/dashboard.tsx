@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import {
@@ -156,6 +156,16 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           isLocked={securitySettings['type-health-records']?.isLocked}
         />
         <ModuleCard
+          title="Financial Cards"
+          count={records.filter((r: any) => r.type === "financial-card").length}
+          description="Manage your credit and debit cards securely."
+          icon={<CreditCard className="h-6 w-6 text-yellow-500" />}
+          colorClass="border-yellow-500"
+          buttonColorClass="text-yellow-400 hover:bg-yellow-500"
+          onClick={() => setActivePage('financial-cards')}
+          isLocked={securitySettings['financial-cards']?.isLocked}
+        />
+        <ModuleCard
           title="Vehicles"
           count={vehicleCount}
           description="Manage vehicle profiles, maintenance, and docs."
@@ -204,16 +214,6 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           buttonColorClass="text-green-400 hover:bg-green-500"
           onClick={() => setActivePage('type-subscriptions')}
           isLocked={securitySettings['type-subscriptions']?.isLocked}
-        />
-        <ModuleCard
-          title="Financial Cards"
-          count={records.filter((r: any) => r.type === "financial-card").length}
-          description="Manage your credit and debit cards securely."
-          icon={<CreditCard className="h-6 w-6 text-yellow-500" />}
-          colorClass="border-yellow-500"
-          buttonColorClass="text-yellow-400 hover:bg-yellow-500"
-          onClick={() => setActivePage('financial-cards')}
-          isLocked={securitySettings['financial-cards']?.isLocked}
         />
         <ModuleCard
           title="Media Vault"
@@ -272,7 +272,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                 <div>
                   <p className="font-bold text-sm tracking-wide">{item.title || item.name || "Untitled"}</p>
                   <p className="text-xs opacity-50 flex items-center gap-1">
-                    {item.category || "General"} • <span className="opacity-70">{new Date(item.updatedAt).toLocaleDateString()}</span>
+                    {item.category || "General"} â€¢ <span className="opacity-70">{new Date(item.updatedAt).toLocaleDateString()}</span>
                   </p>
                 </div>
               </div>

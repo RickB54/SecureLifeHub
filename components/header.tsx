@@ -117,7 +117,7 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, theme, tog
                   }}
                   className={`w-full text-left px-4 py-2 ${theme === "light" ? "text-gray-800 hover:bg-gray-100" : "text-white hover:bg-gray-600"}`}
                 >
-                  Settings
+                  User Settings
                 </button>
                 <button
                   onClick={onLogout}

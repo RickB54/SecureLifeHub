@@ -129,16 +129,20 @@ export function useVault() {
                 user_id: user.id,
                 type: item.type || 'password',
                 title: item.title || item.website || 'Untitled',
-                username: item.username,
-                password: item.password,
-                website: item.website,
-                category: item.category,
-                folder_id: item.folder_id,
+                username: item.username || null,
+                password: item.password || null,
+                website: item.website || null,
+                category: item.category || null,
+                folder_id: item.folder_id || null, // Explicitly null if not provided
                 is_favorite: item.is_favorite || false,
                 is_archived: item.is_archived || false,
-                notes: item.notes,
+                notes: item.notes || null,
                 item_metadata: item.item_metadata || {} // Add metadata support
             }
+
+            console.log("=== VAULT ADD PAYLOAD ===")
+            console.log(JSON.stringify(payload, null, 2))
+            console.log("=== END PAYLOAD ===")
 
             const { data, error } = await supabase
                 .from("vault_items")
@@ -146,15 +150,45 @@ export function useVault() {
                 .select()
                 .single()
 
-            if (error) throw error
+            if (error) {
+                console.error("=== SUPABASE INSERT ERROR ===")
+                console.error("Error object:", error)
+                console.error("Error message:", error.message)
+                console.error("Error code:", error.code)
+                console.error("Error details:", error.details)
+                console.error("Error hint:", error.hint)
+                console.error("=== END SUPABASE ERROR ===")
+                throw error
+            }
+
+            console.log("=== SUPABASE INSERT SUCCESS ===")
+            console.log("Inserted data:", data)
+            console.log("=== END SUCCESS ===")
 
             const newItem = { ...data, updatedAt: data.updated_at }
-            setItems(prev => [newItem as any, ...prev])
+            setItems(prev => {
+                const updated = [newItem as any, ...prev]
+                console.log("🔄 Items state updated, new count:", updated.length)
+                console.log("🔍 Sample item:", updated[0])
+                return updated
+            })
+
             toast.success("Item added")
+            await fetchData() // Force sync
             return newItem
         } catch (error: any) {
-            console.error("Error adding item:", error)
-            toast.error(error.message)
+            console.error("=== CAUGHT ERROR IN addItem ===")
+            console.error("Raw error:", error)
+            console.error("Error type:", typeof error)
+            console.error("Error constructor:", error?.constructor?.name)
+            console.error("Error keys:", error ? Object.keys(error) : "null")
+            if (error?.message) console.error("Message:", error.message)
+            if (error?.code) console.error("Code:", error.code)
+            if (error?.details) console.error("Details:", error.details)
+            if (error?.hint) console.error("Hint:", error.hint)
+            console.error("=== END CAUGHT ERROR ===")
+
+            toast.error(error?.message || error?.hint || "Failed to add item")
         }
     }
 
@@ -186,6 +220,7 @@ export function useVault() {
             const mappedItems = data.map(i => ({ ...i, updatedAt: i.updated_at }))
             setItems(prev => [...mappedItems as any, ...prev])
             toast.success(`${mappedItems.length} items imported`)
+            await fetchData() // Force sync
             return mappedItems
         } catch (error: any) {
             console.error("Error batch importing:", error)
@@ -238,6 +273,7 @@ export function useVault() {
             // Update local state
             setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates, item_metadata: dbPayload.item_metadata || item.item_metadata } : item))
             toast.success("Item updated")
+            await fetchData() // Force sync
         } catch (error: any) {
             console.error("Update error:", error)
             toast.error("Failed to update item")
@@ -280,6 +316,7 @@ export function useVault() {
                 setItems(prev => prev.filter(i => i.id !== id))
             }
             toast.success(`${type === 'folder' ? 'Folder' : 'Item'} deleted`)
+            await fetchData() // Force sync
         } catch (error: any) {
             console.error("Delete operation failed:", JSON.stringify(error, null, 2))
             toast.error(`Failed to delete ${type}: ${error.message || "Unknown error"}`)
@@ -288,6 +325,13 @@ export function useVault() {
 
     // Combine for legacy 'records' prop
     const records = [...items, ...folders]
+
+    console.log("🎯 useVault returning:", {
+        itemsCount: items.length,
+        foldersCount: folders.length,
+        recordsCount: records.length,
+        sampleRecord: records[0] ? { title: (records[0] as any).title, type: (records[0] as any).type, category: (records[0] as any).category } : null
+    })
 
     return {
         items,

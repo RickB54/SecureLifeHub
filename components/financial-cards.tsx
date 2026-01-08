@@ -65,7 +65,6 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
   const [showArchived, setShowArchived] = useState(false)
   const [showFilterMenu, setShowFilterMenu] = useState(false)
   const [showExpiryFilterMenu, setShowExpiryFilterMenu] = useState(false)
-  const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
   // State for modals
@@ -723,216 +722,216 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
         </div>
       </div>
 
-      <button
-        onClick={() => setShowFilters(!showFilters)}
-        className="flex items-center bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200"
-      >
-        <Sliders className="h-5 w-5 mr-2" />
-        {showFilters ? "Hide Filters" : "Show Filters"}
-      </button>
 
-      {showFilters && (
-        <div className="bg-[#2a2a2a] rounded-lg p-4 mb-4">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search financial cards..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  console.log("Search applied")
-                }}
-                className="w-full pl-10 pr-4 py-2 bg-[#333] border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
-              />
-            </div>
 
-            <div className="flex flex-wrap gap-2">
-              <div className="relative">
-                <button
-                  className="flex items-center justify-between bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200 min-w-32"
-                  onClick={() => {
-                    setShowFilterMenu(!showFilterMenu)
-                    setShowExpiryFilterMenu(false)
-                  }}
-                >
-                  <span>
-                    {typeFilter === "all" ? "All Cards" : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
-                  </span>
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </button>
+      <div className="bg-[#2a2a2a] rounded-lg p-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search financial cards..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                console.log("Search applied")
+              }}
+              className="w-full pl-10 pr-4 py-2 bg-[#333] border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+            />
+          </div>
 
-                {showFilterMenu && (
-                  <div className="absolute z-10 mt-1 w-full bg-[#333] rounded-md shadow-lg py-1">
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "all" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("all")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied: All Cards")
-                      }}
-                    >
-                      All Cards
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "mastercard" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("mastercard")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied: Mastercard")
-                      }}
-                    >
-                      Mastercard
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "visa" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("visa")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied: Visa")
-                      }}
-                    >
-                      Visa
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "amex" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("amex")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied: American Express")
-                      }}
-                    >
-                      American Express
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "debit" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setTypeFilter("debit")
-                        setShowFilterMenu(false)
-                        console.log("Filter applied: Debit")
-                      }}
-                    >
-                      Debit
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <button
-                  className="flex items-center justify-between bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200 min-w-32"
-                  onClick={() => {
-                    setShowExpiryFilterMenu(!showExpiryFilterMenu)
-                    setShowFilterMenu(false)
-                  }}
-                >
-                  <span>
-                    {expiryFilter === "all"
-                      ? "All Expiry"
-                      : expiryFilter === "expiring-soon"
-                        ? "Expiring Soon"
-                        : "All Expiry"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </button>
-
-                {showExpiryFilterMenu && (
-                  <div className="absolute z-10 mt-1 w-full bg-[#333] rounded-md shadow-lg py-1">
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${expiryFilter === "all" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setExpiryFilter("all")
-                        setShowExpiryFilterMenu(false)
-                        console.log("Filter applied: All Expiry")
-                      }}
-                    >
-                      All Expiry
-                    </button>
-                    <button
-                      className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${expiryFilter === "expiring-soon" ? "bg-blue-600" : ""}`}
-                      onClick={() => {
-                        setExpiryFilter("expiring-soon")
-                        setShowExpiryFilterMenu(false)
-                        console.log("Filter applied: Expiring Soon")
-                      }}
-                    >
-                      Expiring Soon
-                    </button>
-                  </div>
-                )}
-              </div>
-
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
               <button
-                className="bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200"
+                className="flex items-center justify-between bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200 min-w-32"
                 onClick={() => {
-                  setTypeFilter("all")
-                  setExpiryFilter("all")
-                  setSearchQuery("")
-                  console.log("Filters reset")
+                  setShowFilterMenu(!showFilterMenu)
+                  setShowExpiryFilterMenu(false)
                 }}
               >
-                Reset Filters
+                <span>
+                  {typeFilter === "all" ? "All Cards" : typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
+                </span>
+                <ChevronDown className="h-4 w-4 ml-2" />
               </button>
+
+              {showFilterMenu && (
+                <div className="absolute z-10 mt-1 w-full bg-[#333] rounded-md shadow-lg py-1">
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "all" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setTypeFilter("all")
+                      setShowFilterMenu(false)
+                      console.log("Filter applied: All Cards")
+                    }}
+                  >
+                    All Cards
+                  </button>
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "mastercard" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setTypeFilter("mastercard")
+                      setShowFilterMenu(false)
+                      console.log("Filter applied: Mastercard")
+                    }}
+                  >
+                    Mastercard
+                  </button>
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "visa" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setTypeFilter("visa")
+                      setShowFilterMenu(false)
+                      console.log("Filter applied: Visa")
+                    }}
+                  >
+                    Visa
+                  </button>
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "amex" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setTypeFilter("amex")
+                      setShowFilterMenu(false)
+                      console.log("Filter applied: American Express")
+                    }}
+                  >
+                    American Express
+                  </button>
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${typeFilter === "debit" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setTypeFilter("debit")
+                      setShowFilterMenu(false)
+                      console.log("Filter applied: Debit")
+                    }}
+                  >
+                    Debit
+                  </button>
+                </div>
+              )}
             </div>
+
+            <div className="relative">
+              <button
+                className="flex items-center justify-between bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200 min-w-32"
+                onClick={() => {
+                  setShowExpiryFilterMenu(!showExpiryFilterMenu)
+                  setShowFilterMenu(false)
+                }}
+              >
+                <span>
+                  {expiryFilter === "all"
+                    ? "All Expiry"
+                    : expiryFilter === "expiring-soon"
+                      ? "Expiring Soon"
+                      : "All Expiry"}
+                </span>
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </button>
+
+              {showExpiryFilterMenu && (
+                <div className="absolute z-10 mt-1 w-full bg-[#333] rounded-md shadow-lg py-1">
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${expiryFilter === "all" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setExpiryFilter("all")
+                      setShowExpiryFilterMenu(false)
+                      console.log("Filter applied: All Expiry")
+                    }}
+                  >
+                    All Expiry
+                  </button>
+                  <button
+                    className={`w-full text-left px-4 py-2 hover:bg-gray-600 ${expiryFilter === "expiring-soon" ? "bg-blue-600" : ""}`}
+                    onClick={() => {
+                      setExpiryFilter("expiring-soon")
+                      setShowExpiryFilterMenu(false)
+                      console.log("Filter applied: Expiring Soon")
+                    }}
+                  >
+                    Expiring Soon
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              className="bg-[#333] hover:bg-gray-600 text-white px-4 py-2 rounded-md transition duration-200"
+              onClick={() => {
+                setTypeFilter("all")
+                setExpiryFilter("all")
+                setSearchQuery("")
+                console.log("Filters reset")
+              }}
+            >
+              Reset Filters
+            </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {viewMode === "list" ? (
-        <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#333] text-left">
-                  <th className="py-3 px-4 font-semibold">Type</th>
-                  <th className="py-3 px-4 font-semibold">Title</th>
-                  <th className="py-3 px-4 font-semibold">Name</th>
-                  <th className="py-3 px-4 font-semibold">Card Number</th>
-                  <th className="py-3 px-4 font-semibold">Expiry</th>
-                  <th className="py-3 px-4 font-semibold">CVV</th>
-                  <th className="py-3 px-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>{renderTableRows()}</tbody>
-            </table>
-          </div>
+      {
+    viewMode === "list" ? (
+      <div className="bg-[#2a2a2a] rounded-lg overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-[#333] text-left">
+                <th className="py-3 px-4 font-semibold">Type</th>
+                <th className="py-3 px-4 font-semibold">Title</th>
+                <th className="py-3 px-4 font-semibold">Name</th>
+                <th className="py-3 px-4 font-semibold">Card Number</th>
+                <th className="py-3 px-4 font-semibold">Expiry</th>
+                <th className="py-3 px-4 font-semibold">CVV</th>
+                <th className="py-3 px-4 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>{renderTableRows()}</tbody>
+          </table>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{renderGridItems()}</div>
-      )}
+      </div>
+    ) : (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{renderGridItems()}</div>
+  )
+  }
 
-      {/* Modal */}
-      {addModalOpen && <AddFinancialCardModal onClose={() => setAddModalOpen(false)} onAdd={handleAddCard} />}
+  {/* Modal */ }
+  { addModalOpen && <AddFinancialCardModal onClose={() => setAddModalOpen(false)} onAdd={handleAddCard} /> }
 
-      {/* Edit Card Modal */}
-      {editModalOpen && (
-        <EditFinancialCardModal
-          onClose={() => setEditModalOpen(false)}
-          onSave={handleSaveEditedCard}
-          cardData={selectedCard}
-        />
-      )}
+  {/* Edit Card Modal */ }
+  {
+    editModalOpen && (
+      <EditFinancialCardModal
+        onClose={() => setEditModalOpen(false)}
+        onSave={handleSaveEditedCard}
+        cardData={selectedCard}
+      />
+    )
+  }
 
-      {/* View Card Modal */}
-      {viewModalOpen && selectedCard && (
-        <ViewFinancialCardModal
-          cardData={selectedCard}
-          onClose={() => {
-            setViewModalOpen(false)
-            setSelectedCard(null)
-          }}
-        />
-      )}
+  {/* View Card Modal */ }
+  {
+    viewModalOpen && selectedCard && (
+      <ViewFinancialCardModal
+        cardData={selectedCard}
+        onClose={() => {
+          setViewModalOpen(false)
+          setSelectedCard(null)
+        }}
+      />
+    )
+  }
 
-      {/* Delete Confirmation Modal */}
-      {deleteConfirmModalOpen && (
-        <DeleteConfirmationModal
-          onClose={() => setDeleteConfirmModalOpen(false)}
-          onConfirm={handleDeleteConfirm}
-          itemName={selectedCard?.title || "this card"}
-        />
-      )}
-    </div>
+  {/* Delete Confirmation Modal */ }
+  {
+    deleteConfirmModalOpen && (
+      <DeleteConfirmationModal
+        onClose={() => setDeleteConfirmModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        itemName={selectedCard?.title || "this card"}
+      />
+    )
+  }
+    </div >
   )
 }

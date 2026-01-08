@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import Lightbox from "./media/lightbox"
+import Medications from "./medications"
 
 interface HealthDashboardProps {
     records: any[]
@@ -15,7 +16,7 @@ interface HealthDashboardProps {
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme }: HealthDashboardProps) {
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "vitals" | "calendar">("dashboard")
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar">("dashboard")
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital">("record")
 
@@ -34,7 +35,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const healthRecords = records.filter(r => (r.type === "health-record" || r.category === "Health Records" || r.item_metadata?.is_health_record) && !r.item_metadata?.is_vital)
     const vitalRecords = records.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital).sort((a, b) => new Date(a.item_metadata.date).getTime() - new Date(b.item_metadata.date).getTime())
     const diaryEntries = records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary).sort((a, b) => new Date(b.item_metadata.date).getTime() - new Date(a.item_metadata.date).getTime())
-    const activeMeds = records.filter(r => r.category === "Medications" && checkMedActive(r))
+    const activeMeds = records.filter(r => ((r.category && r.category === "Medications") || (r.type === "note" && r.category === "Medications")) && checkMedActive(r))
     const upcomingAppts = healthRecords.filter(r => r.item_metadata?.date && isAfter(new Date(r.item_metadata.date), new Date())).sort((a, b) => new Date(a.item_metadata.date).getTime() - new Date(b.item_metadata.date).getTime())
 
     function checkMedActive(r: any) {
@@ -140,7 +141,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     // --- VIEWS ---
     const renderDashboard = () => (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Quick Stats */}
+            {/* Quick Stats - ALWAYS AT TOP */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} border flex flex-col items-center justify-center text-center`}>
                     <div className="text-3xl font-bold text-blue-500 mb-1">{upcomingAppts.length}</div>
@@ -160,68 +161,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Weight Chart */}
-                <div className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
-                    <h3 className="font-bold mb-6 flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-orange-500" /> Weight Trend
-                    </h3>
-                    <div className="h-[250px] w-full">
-                        {weightData.length > 1 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={weightData}>
-                                    <defs>
-                                        <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                                            <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                    <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 5', 'dataMax + 5']} />
-                                    <RechartsTooltip
-                                        contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Area type="monotone" dataKey="value" stroke="#f97316" fillOpacity={1} fill="url(#colorWeight)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough data to graph</div>
-                        )}
-                    </div>
-                </div>
-
-                {/* BP Chart */}
-                <div className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
-                    <h3 className="font-bold mb-6 flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-red-500" /> Blood Pressure
-                    </h3>
-                    <div className="h-[250px] w-full">
-                        {bpData.length > 1 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={bpData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                    <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} domain={[60, 180]} />
-                                    <RechartsTooltip
-                                        contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: '8px' }}
-                                        itemStyle={{ color: '#fff' }}
-                                    />
-                                    <Line type="monotone" dataKey="systolic" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="diastolic" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough data to graph</div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Upcoming List */}
+            {/* Upcoming Appointments - BELOW STATS */}
             <div className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
-                <h3 className="font-bold mb-4">Upcoming Appointments</h3>
+                <h3 className="font-bold mb-4 flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5 text-blue-500" /> Upcoming Appointments
+                </h3>
                 <div className="space-y-3">
                     {upcomingAppts.length === 0 ? (
                         <p className="text-gray-500 text-sm">No upcoming appointments.</p>
@@ -240,70 +184,266 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     )}
                 </div>
             </div>
+
+            <div className="space-y-6">
+                {/* Weight Chart - Accordion */}
+                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-orange-500/50 transition-all`}>
+                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
+                        <div className="flex items-center gap-2">
+                            <TrendingUp className="h-5 w-5 text-orange-500" /> Weight Trend
+                        </div>
+                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="h-[250px] w-full">
+                            {weightData.length > 1 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={weightData}>
+                                        <defs>
+                                            <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
+                                                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 5', 'dataMax + 5']} />
+                                        <RechartsTooltip
+                                            contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: '8px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Area type="monotone" dataKey="value" stroke="#f97316" fillOpacity={1} fill="url(#colorWeight)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough data to graph</div>
+                            )}
+                        </div>
+                        {/* Note Input */}
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes on Progress</label>
+                            <textarea placeholder="Add observations about your weight trend..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-orange-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
+                        </div>
+                    </div>
+                </details>
+
+                {/* BP Chart - Accordion */}
+                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-blue-500/50 transition-all`}>
+                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
+                        <div className="flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-red-500" /> Blood Pressure
+                        </div>
+                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="h-[250px] w-full">
+                            {bpData.length > 1 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={bpData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                        <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
+                                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} domain={[60, 180]} />
+                                        <RechartsTooltip
+                                            contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: '8px' }}
+                                            itemStyle={{ color: '#fff' }}
+                                        />
+                                        <Line type="monotone" dataKey="systolic" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
+                                        <Line type="monotone" dataKey="diastolic" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough data to graph</div>
+                            )}
+                        </div>
+                        {/* Note Input */}
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Doctor's Notes</label>
+                            <textarea placeholder="Add observations about blood pressure..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-blue-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
+                        </div>
+                    </div>
+                </details>
+
+                {/* Blood Oxygen Accordion */}
+                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-cyan-500/50 transition-all`}>
+                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
+                        <div className="flex items-center gap-2">
+                            <Droplets className="h-5 w-5 text-cyan-500" /> Blood Oxygen (SpO2)
+                        </div>
+                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="h-[250px] w-full flex items-center justify-center text-gray-500 text-sm">
+                            {vitalRecords.filter(v => v.title === "Blood Oxygen").length > 0
+                                ? `Latest: ${vitalRecords.filter(v => v.title === "Blood Oxygen").slice(-1)[0]?.item_metadata?.value}%`
+                                : "Add blood oxygen readings in Vitals tab"}
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes</label>
+                            <textarea placeholder="Add observations about oxygen saturation..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-cyan-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
+                        </div>
+                    </div>
+                </details>
+
+                {/* Glucose Accordion */}
+                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-pink-500/50 transition-all`}>
+                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
+                        <div className="flex items-center gap-2">
+                            <Utensils className="h-5 w-5 text-pink-500" /> Blood Glucose
+                        </div>
+                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="h-[250px] w-full flex items-center justify-center text-gray-500 text-sm">
+                            {vitalRecords.filter(v => v.title === "Glucose").length > 0
+                                ? `Latest: ${vitalRecords.filter(v => v.title === "Glucose").slice(-1)[0]?.item_metadata?.value} mg/dL`
+                                : "Add glucose readings in Vitals tab"}
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes</label>
+                            <textarea placeholder="Add observations about glucose levels..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-pink-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
+                        </div>
+                    </div>
+                </details>
+
+                {/* Temperature Accordion */}
+                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-yellow-500/50 transition-all`}>
+                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
+                        <div className="flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-yellow-500" /> Temperature
+                        </div>
+                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
+                    </summary>
+                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="h-[250px] w-full flex items-center justify-center text-gray-500 text-sm">
+                            {vitalRecords.filter(v => v.title === "Temperature").length > 0
+                                ? `Latest: ${vitalRecords.filter(v => v.title === "Temperature").slice(-1)[0]?.item_metadata?.value}°F`
+                                : "Add temperature readings in Vitals tab"}
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-white/5">
+                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes</label>
+                            <textarea placeholder="Add observations about temperature..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-yellow-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
+                        </div>
+                    </div>
+                </details>
+            </div>
         </div>
     )
 
     const renderRecords = () => (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in slide-in-from-right-4 duration-300">
-            {healthRecords.map(item => (
-                <div key={item.id} className={`p-4 rounded-xl shadow-sm border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10 hover:border-white/20'} transition-all group relative`}>
-                    <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold flex items-center gap-2">
-                            {item.item_metadata?.url ? <FileText className="h-4 w-4 text-orange-500" /> : <User className="h-4 w-4 text-blue-400" />}
-                            {item.title}
-                        </h3>
-                        <button onClick={() => { if (confirm("Delete record?")) deleteItem(item.id) }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all">
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
-                    {item.item_metadata?.url ? (
-                        <div onClick={() => openLightbox(item)} className="aspect-video bg-black/20 rounded-lg mb-2 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                            <img src={item.item_metadata.url} alt="Document" className="w-full h-full object-cover" />
+        <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Medical Records</h2>
+                <button
+                    onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-md transition-all font-medium text-sm flex items-center gap-2"
+                >
+                    <Plus className="h-4 w-4" /> Add Record
+                </button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in slide-in-from-right-4 duration-300">
+                {healthRecords.map(item => (
+                    <div key={item.id} className={`p-4 rounded-xl shadow-sm border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10 hover:border-white/20'} transition-all group relative`}>
+                        <div className="flex justify-between items-start mb-2">
+                            <h3 className="font-bold flex items-center gap-2">
+                                {item.item_metadata?.url ? <FileText className="h-4 w-4 text-orange-500" /> : <User className="h-4 w-4 text-blue-400" />}
+                                {item.title}
+                            </h3>
+                            <button onClick={() => { if (confirm("Delete record?")) deleteItem(item.id) }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all">
+                                <X className="h-4 w-4" />
+                            </button>
                         </div>
-                    ) : (
-                        item.item_metadata?.doctor && (
-                            <div className="text-sm text-gray-400 mb-2 flex items-center gap-1">
-                                <User className="h-3 w-3" /> {item.item_metadata.doctor}
+                        {item.item_metadata?.url ? (
+                            <div onClick={() => openLightbox(item)} className="aspect-video bg-black/20 rounded-lg mb-2 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
+                                <img src={item.item_metadata.url} alt="Document" className="w-full h-full object-cover" />
                             </div>
-                        )
-                    )}
-                    <div className="text-xs text-gray-500 flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {item.item_metadata?.date ? format(new Date(item.item_metadata.date), 'PP') : 'No Date'}
+                        ) : (
+                            item.item_metadata?.doctor && (
+                                <div className="text-sm text-gray-400 mb-2 flex items-center gap-1">
+                                    <User className="h-3 w-3" /> {item.item_metadata.doctor}
+                                </div>
+                            )
+                        )}
+                        <div className="text-xs text-gray-500 flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {item.item_metadata?.date ? format(new Date(item.item_metadata.date), 'PP') : 'No Date'}
+                        </div>
                     </div>
+                ))}
+                <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`p-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${theme === 'light' ? 'border-gray-300 hover:bg-gray-50' : 'border-white/10 hover:bg-white/5'}`}
+                >
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,.pdf" />
+                    {uploading ? <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" /> : <Upload className="h-8 w-8 text-gray-500 mb-2" />}
+                    <span className="text-xs font-bold text-gray-500 uppercase">Upload Record</span>
                 </div>
-            ))}
-            <div
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${theme === 'light' ? 'border-gray-300 hover:bg-gray-50' : 'border-white/10 hover:bg-white/5'}`}
-            >
-                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,.pdf" />
-                {uploading ? <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" /> : <Upload className="h-8 w-8 text-gray-500 mb-2" />}
-                <span className="text-xs font-bold text-gray-500 uppercase">Upload Record</span>
             </div>
         </div>
     )
 
     const renderVitals = () => (
-        <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-            {vitalRecords.map(vital => (
-                <div key={vital.id} className={`p-4 rounded-xl border flex justify-between items-center ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
-                    <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-xl ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`}>
-                            {getVitalIcon(vital.title)}
+        <div className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Vitals</h2>
+                <button
+                    onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
+                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-all font-medium text-sm flex items-center gap-2"
+                >
+                    <Plus className="h-4 w-4" /> Log Vital
+                </button>
+            </div>
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+                {vitalRecords.map(vital => (
+                    <div key={vital.id} className={`p-4 rounded-xl border flex justify-between items-center ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
+                        <div className="flex items-center gap-4">
+                            <div className={`p-3 rounded-xl ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`}>
+                                {getVitalIcon(vital.title)}
+                            </div>
+                            <div>
+                                <h3 className="font-bold">{vital.title}</h3>
+                                <div className="text-xl font-mono text-blue-500">{vital.item_metadata?.value} <span className="text-xs text-gray-400">{vital.item_metadata?.unit}</span></div>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="font-bold">{vital.title}</h3>
-                            <div className="text-xl font-mono text-blue-500">{vital.item_metadata?.value} <span className="text-xs text-gray-400">{vital.item_metadata?.unit}</span></div>
+                        <div className="text-right">
+                            <div className="text-xs text-gray-500 mb-1">{format(new Date(vital.item_metadata.date), 'PP p')}</div>
+                            <button onClick={() => { if (confirm("Delete vital?")) deleteItem(vital.id) }} className="text-xs text-red-500 hover:text-red-400">Delete</button>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <div className="text-xs text-gray-500 mb-1">{format(new Date(vital.item_metadata.date), 'PP p')}</div>
-                        <button onClick={() => { if (confirm("Delete vital?")) deleteItem(vital.id) }} className="text-xs text-red-500 hover:text-red-400">Delete</button>
-                    </div>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     )
+
+    const renderMeds = () => {
+        const medRecords = records.filter(r => r.category === "Medications" || r.type === "medication")
+        return (
+            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+                {medRecords.length === 0 ? (
+                    <div className="text-center text-gray-500 py-8">No medications found.</div>
+                ) : (
+                    medRecords.map(med => (
+                        <div key={med.id} className={`p-4 rounded-xl border flex justify-between items-center ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`p-3 rounded-xl ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`}>
+                                    <Activity className="h-5 w-5 text-blue-500" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold">{med.title}</h3>
+                                    {med.item_metadata?.dosage && <div className="text-sm text-gray-400">Dosage: {med.item_metadata.dosage}</div>}
+                                    {med.item_metadata?.frequency && <div className="text-sm text-gray-400">Frequency: {med.item_metadata.frequency}</div>}
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                {med.item_metadata?.refillDate && (
+                                    <div className="text-xs text-gray-500 mb-1">Refill: {format(new Date(med.item_metadata.refillDate), 'PP')}</div>
+                                )}
+                                <button onClick={() => { if (confirm("Delete medication?")) deleteItem(med.id) }} className="text-xs text-red-500 hover:text-red-400">Delete</button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        )
+    }
 
     // Calendar logic same as before but wrapped
     const renderCalendarView = () => {
@@ -354,11 +494,12 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <Activity className="h-8 w-8 text-blue-400" /> Health Hub
                 </h1>
 
-                <div className="flex gap-4 border-b border-white/10 pb-4 justify-between items-center">
+                <div className="flex gap-4 border-b border-white/10 pb-4">
                     <div className="flex gap-2">
                         {[
                             { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
                             { id: 'records', label: 'Medical Records', icon: FileText },
+                            { id: 'meds', label: 'Meds', icon: Activity },
                             { id: 'vitals', label: 'Vitals', icon: Heart },
                             { id: 'calendar', label: 'Timeline', icon: CalendarIcon }
                         ].map((tab) => (
@@ -374,28 +515,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </button>
                         ))}
                     </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
-                            className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-all font-medium text-sm flex items-center gap-2"
-                        >
-                            <Plus className="h-4 w-4" /> Log Vital
-                        </button>
-                        <button
-                            onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
-                            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-md transition-all font-medium text-sm flex items-center gap-2"
-                        >
-                            <Plus className="h-4 w-4" /> Add Record
-                        </button>
-                    </div>
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
-                {activeTab === 'dashboard' && renderDashboard()}
-                {activeTab === 'records' && renderRecords()}
-                {activeTab === 'vitals' && renderVitals()}
-                {activeTab === 'calendar' && renderCalendarView()}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {activeTab === 'dashboard' && <div className="px-8 pb-8">{renderDashboard()}</div>}
+                {activeTab === 'records' && <div className="px-8 pb-8">{renderRecords()}</div>}
+                {activeTab === 'meds' && <Medications records={records} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />}
+                {activeTab === 'vitals' && <div className="px-8 pb-8">{renderVitals()}</div>}
+                {activeTab === 'calendar' && <div className="px-8 pb-8">{renderCalendarView()}</div>}
             </div>
 
             {/* Add Modals would go here - simplified for this turn to focus on structure */}

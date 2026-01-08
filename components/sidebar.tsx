@@ -53,10 +53,8 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
 
   const handleNavigation = (page: string) => {
     setActivePage(page)
-    // Close sidebar on mobile after selection
-    if (window.innerWidth < 768) {
-      setIsOpen(false)
-    }
+    // Close sidebar after selection
+    setIsOpen(false)
   }
 
   // Use imported sections
@@ -116,8 +114,6 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                       onClick={() => {
                         handleNavigation(`section-${section.id}`)
                         if (!expandedSections[section.id]) toggleSection(section.id)
-                        // Auto-close on mobile when a main section link is clicked
-                        if (window.innerWidth < 768) setIsOpen(false)
                       }}
                       className="flex-1 text-left text-gray-400 uppercase text-xs font-semibold hover:text-white transition-colors"
                     >
@@ -144,8 +140,6 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                           <button
                             onClick={() => {
                               handleNavigation(item.id)
-                              // Explicitly close sidebar on mobile for sub-items too
-                              if (window.innerWidth < 768) setIsOpen(false)
                             }}
                             className={`flex items-center w-full px-3 py-2 rounded-md text-sm ${activePage === item.id ? "bg-blue-600 text-white" : "text-gray-300 hover:bg-gray-700"
                               }`}

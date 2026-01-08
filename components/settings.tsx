@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useAuth } from "@/components/auth-provider"
 import {
   Lock,
   Unlock,
@@ -9,114 +10,98 @@ import {
   Database,
   Download,
   Upload,
+  Shield,
   Clock,
   ToggleLeft,
   ToggleRight,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Trash,
-  User,
-  Save,
-  Shield,
   Check,
   X,
-  FileJson
+  FileJson,
+  AlertCircle,
+  Save,
+  ChevronDown,
+  ChevronUp,
+  Trash,
+  ChevronRight
 } from "lucide-react"
 import CsvImporter from "./csv-importer"
 import JsonImporter from "./json-importer"
 import MockDataGenerator from "./mock-data-generator"
 import { VaultItem } from "@/hooks/use-vault"
 
-interface SettingsProps {
-  records: (VaultItem | any)[]
-  bulkAddItems?: (items: any[]) => Promise<any>
-  addFolder?: (name: string, parentId?: string) => Promise<any>
-  folders?: any[]
-  deleteItem?: (id: string, type?: string) => Promise<any>
-  updateItem?: (id: string, updates: any) => Promise<any>
-  addItem?: (item: any) => Promise<any>
-  theme: string
-}
-
-export default function Settings({ records, bulkAddItems, addFolder, folders, deleteItem, updateItem, addItem, theme }: SettingsProps) {
-  // Initialize profile info from localStorage or defaults
-  const [profileInfo, setProfileInfo] = useState(() => {
-    const saved = localStorage.getItem("profileInfo")
-    const initialProfile = saved
-      ? JSON.parse(saved)
-      : { username: "User123", email: "user123@example.com", phone: "555-5555" }
-
-    console.log("Profile Info initialized:", initialProfile)
-    return initialProfile
+export default function Settings({
+  records,
+  items,
+  folders,
+  addItem,
+  addFolder,
+  bulkAddItems,
+  updateItem,
+  deleteItem,
+  theme,
+  autoLockTimeout,
+  setAutoLockTimeout,
+  twoFactorEnabled,
+  setTwoFactorEnabled
+}: {
+  records: any[]
+  items: any[]
+  folders: any[]
+  addItem?: any
+  addFolder?: any
+  bulkAddItems?: any
+  updateItem?: any
+  deleteItem?: any
+  theme?: string
+  autoLockTimeout: number
+  setAutoLockTimeout: (value: number) => void
+  twoFactorEnabled: boolean
+  setTwoFactorEnabled: (enabled: boolean) => void
+}) {
+  // Security audit data (Mock for now, needs real calculation later)
+  const [securityAuditData, setSecurityAuditData] = useState({
+    score: 36,
+    reused: 138,
+    lastChange: "11 months ago",
+    passwordsData: [],
   })
 
-  // State for 2FA toggle
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
-
-  // State for auto-lock timeout
-  const [autoLockTimeout, setAutoLockTimeout] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem("auto_lock_timeout")
-      return saved ? parseInt(saved) : 15
-    }
-    return 15
-  })
-
-  // State for backup frequency
-  const [backupFrequency, setBackupFrequency] = useState("weekly")
-
-  // State for master password
+  // State for master password change
   const [masterPassword, setMasterPassword] = useState("")
   const [confirmMasterPassword, setConfirmMasterPassword] = useState("")
 
-  // State for Auto-Fill
+  // State for notification
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" })
+
+  // State for backup/restore
+  const [backupFrequency, setBackupFrequency] = useState("daily")
+
+  // State for auto-fill toggle
   const [autoFillEnabled, setAutoFillEnabled] = useState(false)
+
+  // State for Import Tool visibility
+  const [showImport, setShowImport] = useState(false)
   const [preferencesItemId, setPreferencesItemId] = useState<string | null>(null)
 
+  // State for import mode
+  const [importMode, setImportMode] = useState<"csv" | "json">("json")
+
   // Load User Preferences on mount
-  useState(() => {
+  useEffect(() => {
     // Find preference item
     const prefItem = records.find(r => r.title === "[SYSTEM] User Preferences")
     if (prefItem) {
       setPreferencesItemId(prefItem.id)
       setAutoFillEnabled(prefItem.item_metadata?.auto_fill_enabled === true)
     }
-  })
-
-  // State for notifications
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" })
-
-  // State for import section
-  const [showImport, setShowImport] = useState(false)
-  const [importMode, setImportMode] = useState<"csv" | "json">("json")
+  }, [records]) // Depend on records to re-evaluate if records change
 
   // Show notification
   const showNotification = (message: string, type = "success") => {
     setNotification({ show: true, message, type })
     setTimeout(() => {
-      setNotification({ show: false, message: "", type: "" })
+      setNotification({ show: false, message, type: "" })
     }, 3000)
-  }
-
-  // Handle saving profile info
-  const handleSaveProfileInfo = () => {
-    // Save to localStorage
-    localStorage.setItem("profileInfo", JSON.stringify(profileInfo))
-
-    // Show notification
-    showNotification("Profile information updated")
-
-    // Log for debugging
-    console.log("Profile Info updated and saved:", profileInfo)
-  }
-
-  // Handle profile field changes
-  const handleProfileChange = (field: string, value: string) => {
-    setProfileInfo((prev: any) => ({
-      ...prev,
-      [field]: value,
-    }))
   }
 
   // Handle toggling 2FA
@@ -168,7 +153,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
         await updateItem(preferencesItemId, {
           auto_fill_enabled: newState
         })
-        showNotification(`Auto-Fill turned ${newState ? "ON" : "OFF"}`)
+        showNotification(`Auto - Fill turned ${newState ? "ON" : "OFF"} `)
       } else if (addItem) {
         // Create new preference item
         // Use type="note" to avoid DB constraint violations.
@@ -179,7 +164,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
         })
         if (newItem) {
           setPreferencesItemId(newItem.id)
-          showNotification(`Auto-Fill turned ${newState ? "ON" : "OFF"}`)
+          showNotification(`Auto - Fill turned ${newState ? "ON" : "OFF"} `)
         }
       }
     } catch (e) {
@@ -213,7 +198,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `securelifehub-backup-${new Date().toISOString().split("T")[0]}.json`
+    a.download = `securelifehub - backup - ${new Date().toISOString().split("T")[0]}.json`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -255,207 +240,163 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">Settings</h1>
+      {/* Modern Header */}
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
+          ⚙️ Settings
+        </h1>
+        <p className="text-gray-400">Customize your SecureLifeHub experience</p>
+      </div>
 
       {/* Notification */}
       {notification.show && (
         <div
-          className={`fixed top - 4 right - 4 p - 4 rounded - md shadow - md z - 50 ${notification.type === "error" ? "bg-red-500 text-white" : "bg-green-500 text-white"
+          className={`fixed top - 4 right - 4 p - 4 rounded - xl shadow - 2xl z - 50 animate -in slide -in -from - top - 2 ${notification.type === "error"
+            ? "bg-gradient-to-r from-red-600 to-red-500 text-white border border-red-400"
+            : "bg-gradient-to-r from-green-600 to-emerald-500 text-white border border-green-400"
             } `}
         >
-          <div className="flex items-center">
-            {notification.type === "error" ? <X className="h-5 w-5 mr-2" /> : <Check className="h-5 w-5 mr-2" />}
-            <span>{notification.message}</span>
+          <div className="flex items-center gap-3">
+            {notification.type === "error" ? <X className="h-5 w-5" /> : <Check className="h-5 w-5" />}
+            <span className="font-medium">{notification.message}</span>
           </div>
         </div>
       )}
 
-      {/* Profile Information */}
-      <div className={`${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded - lg p - 6 shadow - md`}>
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <User className="h-5 w-5 mr-2" />
-          Profile Information
-        </h2>
-
-        <div className="space-y-4">
-          <div>
-            <label className={`block mb - 1 ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>Username</label>
-            <div className="flex">
-              <input
-                type="text"
-                value={profileInfo.username}
-                onChange={(e) => handleProfileChange("username", e.target.value)}
-                className={`flex - 1 px - 3 py - 2 rounded - md ${theme === "light"
-                  ? "border border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
-                  : "border border-gray-600 focus:border-blue-500 text-white bg-[#333]"
-                  } focus: outline - none`}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className={`block mb - 1 ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>Email</label>
-            <div className="flex">
-              <input
-                type="email"
-                value={profileInfo.email}
-                onChange={(e) => handleProfileChange("email", e.target.value)}
-                className={`flex - 1 px - 3 py - 2 rounded - md ${theme === "light"
-                  ? "border border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
-                  : "border border-gray-600 focus:border-blue-500 text-white bg-[#333]"
-                  } focus: outline - none`}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className={`block mb - 1 ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>Phone</label>
-            <div className="flex">
-              <input
-                type="tel"
-                value={profileInfo.phone}
-                onChange={(e) => handleProfileChange("phone", e.target.value)}
-                className={`flex - 1 px - 3 py - 2 rounded - md ${theme === "light"
-                  ? "border border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
-                  : "border border-gray-600 focus:border-blue-500 text-white bg-[#333]"
-                  } focus: outline - none`}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveProfileInfo}
-            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200"
-          >
-            <Save className="h-5 w-5 mr-2" />
-            Save Profile Information
-          </button>
-        </div>
-      </div>
-
       {/* Security Settings */}
-      <div className={`${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded - lg p - 6 shadow - md`}>
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <Shield className="h-5 w-5 mr-2" />
+      <div className={`rounded - 2xl p - 8 ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1e1e1e] border-white/10"} border shadow - xl`}>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-3 text-purple-400">
+          <Shield className="h-6 w-6" />
           Security Settings
         </h2>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Master Password */}
           <div>
-            <h3 className="text-lg font-medium mb-2 flex items-center">
-              <Lock className="h-4 w-4 mr-2" />
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Lock className="h-5 w-5" />
               Master Password
             </h3>
-            <p className={`mb - 4 ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
+            <p className={`mb - 4 text - sm ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
               Set a master password to encrypt your vault. This password will be required to access your vault.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className={`block mb - 1 ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>
+                <label className={`block mb - 2 font - medium ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>
                   New Master Password
                 </label>
                 <input
                   type="password"
                   value={masterPassword}
                   onChange={(e) => setMasterPassword(e.target.value)}
-                  className={`w - full px - 3 py - 2 rounded - md ${theme === "light"
-                    ? "border border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
-                    : "border border-gray-600 focus:border-blue-500 text-white bg-[#333]"
-                    } focus: outline - none`}
+                  className={`w - full px - 4 py - 3 rounded - xl transition - all ${theme === "light"
+                    ? "border-2 border-gray-300 focus:border-purple-500 text-gray-800 bg-white"
+                    : "border-2 border-gray-700 focus:border-purple-500 text-white bg-[#2a2a2a]"
+                    } focus: outline - none focus: ring - 2 focus: ring - purple - 500 / 50`}
                   placeholder="Enter new master password"
                 />
               </div>
 
               <div>
-                <label className={`block mb - 1 ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>
+                <label className={`block mb - 2 font - medium ${theme === "light" ? "text-gray-700" : "text-gray-300"} `}>
                   Confirm Master Password
                 </label>
                 <input
                   type="password"
                   value={confirmMasterPassword}
                   onChange={(e) => setConfirmMasterPassword(e.target.value)}
-                  className={`w - full px - 3 py - 2 rounded - md ${theme === "light"
-                    ? "border border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
-                    : "border border-gray-600 focus:border-blue-500 text-white bg-[#333]"
-                    } focus: outline - none`}
+                  className={`w - full px - 4 py - 3 rounded - xl transition - all ${theme === "light"
+                    ? "border-2 border-gray-300 focus:border-purple-500 text-gray-800 bg-white"
+                    : "border-2 border-gray-700 focus:border-purple-500 text-white bg-[#2a2a2a]"
+                    } focus: outline - none focus: ring - 2 focus: ring - purple - 500 / 50`}
                   placeholder="Confirm new master password"
                 />
               </div>
 
               <button
                 onClick={handleSaveMasterPassword}
-                className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200"
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-all transform hover:scale-105"
               >
-                <Save className="h-5 w-5 mr-2" />
+                <Save className="h-5 w-5" />
                 Save Master Password
               </button>
             </div>
           </div>
 
           {/* Two-Factor Authentication */}
-          <div>
-            <h3 className="text-lg font-medium mb-2">Two-Factor Authentication</h3>
-            <p className={`mb - 4 ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
+          <div className="pt-6 border-t border-gray-700">
+            <h3 className="text-lg font-bold mb-3">Two-Factor Authentication</h3>
+            <p className={`mb - 4 text - sm ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
               Enable two-factor authentication for an additional layer of security.
             </p>
 
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
               <button
                 onClick={handleToggle2FA}
-                className={`flex items - center ${twoFactorEnabled ? "text-green-500" : theme === "light" ? "text-gray-400" : "text-gray-500"
+                className={`relative inline - flex h - 12 w - 24 items - center rounded - full transition - all ${twoFactorEnabled ? "bg-gradient-to-r from-green-500 to-emerald-500" : "bg-gray-600"
                   } `}
               >
-                {twoFactorEnabled ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+                <span
+                  className={`inline - block h - 10 w - 10 transform rounded - full bg - white shadow - lg transition - transform ${twoFactorEnabled ? "translate-x-12" : "translate-x-1"
+                    } `}
+                />
               </button>
-              <span className="ml-2">{twoFactorEnabled ? "Enabled" : "Disabled"}</span>
+              <span className={`font - medium ${twoFactorEnabled ? "text-green-400" : "text-gray-400"} `}>
+                {twoFactorEnabled ? "Enabled" : "Disabled"}
+              </span>
             </div>
           </div>
 
           {/* Auto-Fill Settings */}
-          <div>
-            <h3 className="text-lg font-medium mb-2 flex items-center">
-              <ToggleRight className="h-4 w-4 mr-2" />
+          <div className="pt-6 border-t border-gray-700">
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <ToggleRight className="h-5 w-5" />
               Auto-Fill Settings
             </h3>
-            <p className={`mb - 4 ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
+            <p className={`mb - 4 text - sm ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
               Control whether the SecureLifeHub extension can automatically fill your passwords.
             </p>
-            <div className="flex items-center">
+            <div className="flex items-center gap-4">
               <button
                 onClick={handleToggleAutoFill}
-                className={`flex items - center ${autoFillEnabled ? "text-green-500" : theme === "light" ? "text-gray-400" : "text-gray-500"} `}
+                className={`relative inline - flex h - 12 w - 24 items - center rounded - full transition - all ${autoFillEnabled ? "bg-gradient-to-r from-blue-500 to-purple-500" : "bg-gray-600"
+                  } `}
               >
-                {autoFillEnabled ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8" />}
+                <span
+                  className={`inline - block h - 10 w - 10 transform rounded - full bg - white shadow - lg transition - transform ${autoFillEnabled ? "translate-x-12" : "translate-x-1"
+                    } `}
+                />
               </button>
-              <span className="ml-2">{autoFillEnabled ? "Auto-Fill ON" : "Auto-Fill OFF"}</span>
+              <span className={`font - medium ${autoFillEnabled ? "text-blue-400" : "text-gray-400"} `}>
+                {autoFillEnabled ? "Auto-Fill ON" : "Auto-Fill OFF"}
+              </span>
             </div>
             {!autoFillEnabled && (
-              <p className="text-xs text-yellow-500 mt-2">
+              <p className="text-xs text-yellow-500 mt-3 p-3 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                 Note: You will need to manually copy/paste passwords when this is off.
               </p>
             )}
           </div>
 
           {/* Auto-Lock Timeout */}
-          <div>
-            <h3 className="text-lg font-medium mb-2 flex items-center">
-              <Clock className="h-4 w-4 mr-2" />
+          <div className="pt-6 border-t border-gray-700">
+            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
               Auto-Lock Timeout
             </h3>
-            <p className={`mb - 4 ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
+            <p className={`mb - 4 text - sm ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
               Set the time (in minutes) after which the vault will automatically lock.
             </p>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center gap-4">
               <select
                 value={autoLockTimeout}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleAutoLockChange(parseInt(e.target.value))}
-                className={`flex-1 px-3 py-2 rounded-md ${theme === "light"
-                  ? "border border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
-                  : "border border-gray-600 focus:border-blue-500 text-white bg-[#333]"
-                  } focus: outline - none`}
+                className={`flex - 1 px - 4 py - 3 rounded - xl transition - all ${theme === "light"
+                  ? "border-2 border-gray-300 focus:border-blue-500 text-gray-800 bg-white"
+                  : "border-2 border-gray-700 focus:border-blue-500 text-white bg-[#2a2a2a]"
+                  } focus: outline - none focus: ring - 2 focus: ring - blue - 500 / 50`}
               >
                 <option value={5}>5 Minutes</option>
                 <option value={15}>15 Minutes</option>
@@ -465,9 +406,9 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
               </select>
               <button
                 onClick={handleSaveAutoLock}
-                className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200"
+                className="flex items-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-all"
               >
-                <Save className="h-5 w-5 mr-2" />
+                <Save className="h-5 w-5" />
                 Save
               </button>
             </div>
@@ -485,7 +426,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
           Lock specific sections of the application with a numeric PIN for enhanced privacy.
         </p>
 
-        <ModuleAccessSettings theme={theme} />
+        <ModuleAccessSettings theme={theme || "dark"} />
       </div>
 
       {/* Backup & Restore */}
@@ -559,13 +500,13 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
               <div className="flex gap-4 mb-4">
                 <button
                   onClick={() => setImportMode("json")}
-                  className={`px-4 py-2 rounded ${importMode === "json" ? "bg-yellow-600 text-white" : "bg-gray-700 text-gray-300"}`}
+                  className={`px - 4 py - 2 rounded ${importMode === "json" ? "bg-yellow-600 text-white" : "bg-gray-700 text-gray-300"} `}
                 >
                   JSON (Recommended)
                 </button>
                 <button
                   onClick={() => setImportMode("csv")}
-                  className={`px-4 py-2 rounded ${importMode === "csv" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"}`}
+                  className={`px - 4 py - 2 rounded ${importMode === "csv" ? "bg-blue-600 text-white" : "bg-gray-700 text-gray-300"} `}
                 >
                   CSV
                 </button>
@@ -628,11 +569,14 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
                 }
 
                 // Filter mock items
-                // Criteria: metadata is_mock OR title starts with [MOCK]
+                // Criteria: metadata is_mock OR title starts with [MOCK] OR notes contains "Mock medication"
                 const mockItems = records.filter(
                   (item) =>
                     item?.item_metadata?.is_mock ||
                     item?.title?.startsWith("[MOCK]") ||
+                    item?.title?.startsWith("Test Med") ||
+                    // Catch mock medications via their specific note signature
+                    item?.item_metadata?.notes?.includes("Mock medication for testing") ||
                     item?.website?.startsWith("[MOCK]") ||
                     item?.username?.startsWith("user_mock_") ||
                     // Catch existing generated mock data by common title prefixes
@@ -692,14 +636,14 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
       </div >
 
       {/* Danger Zone */}
-      <div className={`p-4 rounded-lg border ${theme === "light" ? "bg-red-50 border-red-200" : "bg-red-900/10 border-red-900/30"}`}>
+      <div className={`p - 4 rounded - lg border ${theme === "light" ? "bg-red-50 border-red-200" : "bg-red-900/10 border-red-900/30"} `}>
         <h3 className="text-lg font-medium text-red-600 mb-4 flex items-center">
           <Shield className="h-5 w-5 mr-2" />
           Danger Zone
         </h3>
 
         <div className="space-y-4">
-          <p className={`text-sm ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>
+          <p className={`text - sm ${theme === "light" ? "text-gray-600" : "text-gray-400"} `}>
             These actions are irreversible. Please be certain before proceeding.
           </p>
 
@@ -729,7 +673,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
                     }
 
                     const count = itemsToDelete.length
-                    if (window.confirm(`Found ${count} items. Confirm delete?`)) {
+                    if (window.confirm(`Found ${count} items.Confirm delete? `)) {
                       // Bulk delete using Promise.all for now as no bulk endpoint exists
                       // Execute in batches of 10 to prevent overwhelming the server
                       if (deleteItem) {
@@ -744,17 +688,17 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
                     }
                   }
                 }}
-                className={`px-4 py-2 rounded text-sm font-medium border transition-colors ${theme === "light"
+                className={`px - 4 py - 2 rounded text - sm font - medium border transition - colors ${theme === "light"
                   ? "border-red-200 text-red-600 hover:bg-red-50"
                   : "border-red-900/50 text-red-400 hover:bg-red-900/20"
-                  }`}
+                  } `}
               >
                 {action.label}
               </button>
             ))}
           </div>
 
-          <div className={`border-t my-4 ${theme === "light" ? "border-red-200" : "border-red-900/30"}`}></div>
+          <div className={`border - t my - 4 ${theme === "light" ? "border-red-200" : "border-red-900/30"} `}></div>
 
           <button
             onClick={async () => {
@@ -771,7 +715,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
 
                       // 2. Delete all vault items first (to clear FK references to folders)
                       if (vaultItems.length > 0) {
-                        // showNotification(`Deleting ${vaultItems.length} items...`, "success")
+                        // showNotification(`Deleting ${ vaultItems.length } items...`, "success")
                         const batchSize = 25
                         for (let i = 0; i < vaultItems.length; i += batchSize) {
                           const batch = vaultItems.slice(i, i + batchSize)
@@ -781,7 +725,7 @@ export default function Settings({ records, bulkAddItems, addFolder, folders, de
 
                       // 3. Delete folders (Sort by path depth descending)
                       if (folders.length > 0) {
-                        // showNotification(`Deleting ${folders.length} folders...`, "success")
+                        // showNotification(`Deleting ${ folders.length } folders...`, "success")
 
                         // Sort by path length desc (deepest first)
                         const sortedFolders = [...folders].sort((a, b) => {
@@ -956,7 +900,7 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
                         <span className="sr-only">Toggle lock</span>
                         <span
                           className={`${setting.isLocked ? "translate-x-6" : "translate-x-1"
-                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            } inline - block h - 4 w - 4 transform rounded - full bg - white transition - transform`}
                         />
                       </button>
                     </>

@@ -51,14 +51,32 @@ function HomeContent() {
   // Changed initial page to "dashboard" as requested
   const searchParams = useSearchParams()
   const initialPage = searchParams.get("page") || "dashboard"
-  const [activePage, setActivePage] = useState(initialPage)
+  const [activePage, setActivePage] = useState("dashboard") // ALWAYS start with dashboard
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Sync activePage with URL if it changes (optional, but good for back button)
+  // Force dashboard on mount if no explicit page in URL
   useEffect(() => {
     const page = searchParams.get("page")
+    if (!page) {
+      setActivePage("dashboard")
+      // Clear any URL params
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    } else if (page !== activePage) {
+      setActivePage(page)
+    }
+  }, [])
+
+  // Sync activePage with URL if it changes, but ALWAYS default to dashboard if no page param
+  useEffect(() => {
+    const page = searchParams.get("page")
+    // Only update if there's an explicit page param AND it's different
     if (page && page !== activePage) {
       setActivePage(page)
+    } else if (!page && activePage !== "dashboard") {
+      // If no page param, always go to dashboard
+      setActivePage("dashboard")
     }
   }, [searchParams])
 
