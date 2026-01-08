@@ -16,6 +16,14 @@ export default function Login() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
+  // Load last used email from localStorage
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('lastLoginEmail')
+    if (savedEmail) {
+      setEmail(savedEmail)
+    }
+  }, [])
+
   // SSO: Check for session token in URL and auto-login
   useEffect(() => {
     const handleSSO = async () => {
@@ -24,6 +32,28 @@ export default function Login() {
 
       if (accessToken && refreshToken) {
         setLoading(true)
+
+        // Extract email from JWT token to pre-fill the form
+        try {
+          const base64Url = accessToken.split('.')[1]
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          )
+          const payload = JSON.parse(jsonPayload)
+
+          // Pre-fill email from token
+          if (payload.email) {
+            setEmail(payload.email)
+            localStorage.setItem('lastLoginEmail', payload.email)
+          }
+        } catch (err) {
+          console.log('Could not decode token for email extraction', err)
+        }
+
         try {
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -32,15 +62,16 @@ export default function Login() {
 
           if (error) {
             console.error('SSO session restore failed:', error)
-            setError('Failed to restore session from extension')
+            // Don't show error to user - just let them log in normally
+            // The email is already pre-filled from the token
           } else {
-            // Session restored successfully, router.refresh() will redirect
+            // Session restored successfully, redirect to dashboard
             router.refresh()
             router.push('/dashboard')
           }
         } catch (err: any) {
           console.error('SSO error:', err)
-          setError('Session restore error')
+          // Silent fallback - email is pre-filled, user can log in manually
         } finally {
           setLoading(false)
         }
@@ -63,13 +94,17 @@ export default function Login() {
         })
         if (error) throw error
         setError("Check your email for the confirmation link!")
+        // Save email on signup too
+        localStorage.setItem('lastLoginEmail', email)
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         })
         if (error) throw error
-        router.refresh()
+        // Save email on successful login
+        localStorage.setItem('lastLoginEmail', email)
+        router.push('/?page=dashboard')
       }
     } catch (err: any) {
       setError(err.message)
@@ -107,6 +142,8 @@ export default function Login() {
               <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
               <input
                 type="email"
+                name="email"
+                autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

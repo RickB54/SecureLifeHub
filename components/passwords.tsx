@@ -1682,8 +1682,17 @@ export default function Passwords({
               placeholder="Search passwords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2 rounded-md ${theme === "light" ? "bg-white text-gray-900 border-gray-300" : "bg-[#2a2a2a] text-white border-gray-700"} border focus:outline-none focus:ring-2 focus:ring-blue-500`}
+              className={`w-full pl-10 pr-10 py-2 rounded-md ${theme === "light" ? "bg-white text-gray-900 border-gray-300" : "bg-[#2a2a2a] text-white border-gray-700"} border focus:outline-none focus:ring-2 focus:ring-blue-500`}
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500 hover:text-gray-700" : "text-gray-400 hover:text-gray-200"} transition-colors`}
+                title="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* Always Visible Dropdowns */}
