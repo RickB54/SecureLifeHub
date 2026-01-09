@@ -7,6 +7,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let user = null
 let allItems = [] // The full vault
 let filteredItems = [] // Currently shown in list
+let recentItemsIds = [] // IDs of recently used items
 let preferenceItem = null // System pref item
 let selectedItem = null // Currently viewed item
 
@@ -59,6 +60,10 @@ console.log("SecureLifeHub Popup v2 Loaded")
 
 async function init() {
     const { data: { session } } = await supabase.auth.getSession()
+
+    // Load Recents from local storage
+    const storage = await chrome.storage.local.get(['recentItemsIds'])
+    recentItemsIds = storage.recentItemsIds || []
 
     if (session) {
         user = session.user
@@ -136,24 +141,51 @@ function filterItems(query = "") {
         )
     )
 
-    if (filteredItems.length === 0) {
+    if (query === "") {
+        // Show Recents first
+        const recents = recentItemsIds
+            .map(id => allItems.find(i => i.id === id))
+            .filter(Boolean)
+
+        if (recents.length > 0) {
+            const header = document.createElement('div')
+            header.className = "px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#2d2d2d]"
+            header.textContent = "Recently Used"
+            itemsList.appendChild(header)
+
+            recents.forEach(item => {
+                const el = createListItem(item, true)
+                itemsList.appendChild(el)
+            })
+
+            const allHeader = document.createElement('div')
+            allHeader.className = "px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#2d2d2d] mt-2"
+            allHeader.textContent = "All Items"
+            itemsList.appendChild(allHeader)
+        }
+    }
+
+    if (filteredItems.length === 0 && query !== "") {
         itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No items found</div>`
         return
     }
 
     filteredItems.forEach(item => {
+        // Don't show again in "All Items" if it's already in "Recently Used" and we are not searching
+        if (query === "" && recentItemsIds.includes(item.id)) return
+
         const el = createListItem(item)
         itemsList.appendChild(el)
     })
 }
 
-function createListItem(item) {
+function createListItem(item, isRecent = false) {
     const div = document.createElement('div')
     // Highlight if selected
     const isSelected = selectedItem && selectedItem.id === item.id
     const bgClass = isSelected ? "bg-blue-900/40 border-l-2 border-blue-500" : "hover:bg-[#333] border-l-2 border-transparent"
 
-    div.className = `flex items-center gap-3 p-3 rounded-r cursor-pointer transition-colors ${bgClass}`
+    div.className = `flex items-center group gap-3 p-3 rounded-r cursor-pointer transition-colors ${bgClass}`
 
     // Icon
     const letter = (item.title || "?")[0].toUpperCase()
@@ -161,12 +193,24 @@ function createListItem(item) {
         <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
             ${letter}
         </div>
-        <div class="overflow-hidden">
+        <div class="overflow-hidden flex-1">
             <div class="text-sm font-medium text-gray-200 truncate">${item.title || "Untitled"}</div>
             <div class="text-xs text-gray-500 truncate">${item.username || ""}</div>
         </div>
+        ${isRecent ? `
+        <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+            </svg>
+        </div>` : ''}
     `
-    div.addEventListener('click', () => selectItem(item))
+
+    div.addEventListener('click', () => {
+        selectItem(item)
+        if (isRecent) {
+            launchItem(item)
+        }
+    })
     return div
 }
 
@@ -318,9 +362,17 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
 
 // Launch
 launchBtn.addEventListener('click', async () => {
-    if (selectedItem && selectedItem.website) {
-        let url = selectedItem.website
+    if (selectedItem) {
+        launchItem(selectedItem)
+    }
+})
+
+async function launchItem(item) {
+    if (item.website) {
+        let url = item.website
         if (!url.startsWith('http')) url = 'https://' + url
+
+        addToRecents(item)
 
         // Open tab
         chrome.tabs.create({ url }, (tab) => {
@@ -328,7 +380,20 @@ launchBtn.addEventListener('click', async () => {
             // But we can also send an explicit message to be safe.
         })
     }
-})
+}
+
+function addToRecents(item) {
+    // Remove if already exists
+    recentItemsIds = recentItemsIds.filter(id => id !== item.id)
+    // Add to front
+    recentItemsIds.unshift(item.id)
+    // Limit to 25
+    if (recentItemsIds.length > 25) {
+        recentItemsIds = recentItemsIds.slice(0, 25)
+    }
+    // Save
+    chrome.storage.local.set({ recentItemsIds })
+}
 
 // Toggle Password Visibility
 togglePassBtn.addEventListener('click', () => {
@@ -511,6 +576,27 @@ document.getElementById('open-vault-btn').addEventListener('click', async () => 
         const params = new URLSearchParams({
             access_token: session.access_token,
             refresh_token: session.refresh_token
+        })
+        url = `${WEB_VAULT_URL}?${params.toString()}`
+    }
+
+    chrome.tabs.create({ url })
+    closeMenu()
+})
+
+// Open Financial Cards
+document.getElementById('open-financial-btn').addEventListener('click', async () => {
+    // Get current session to enable SSO
+    const { data: { session } } = await supabase.auth.getSession()
+
+    let url = `${WEB_VAULT_URL}?page=financial-cards`
+
+    // If user is logged in, pass session tokens for SSO
+    if (session?.access_token && session?.refresh_token) {
+        const params = new URLSearchParams({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            page: 'financial-cards'
         })
         url = `${WEB_VAULT_URL}?${params.toString()}`
     }
