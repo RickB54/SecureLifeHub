@@ -65,9 +65,10 @@ export default function Login() {
             // Don't show error to user - just let them log in normally
             // The email is already pre-filled from the token
           } else {
-            // Session restored successfully, redirect to dashboard
+            // Session restored successfully, redirect to dashboard or requested page
+            const targetPage = searchParams.get('page') || 'dashboard'
             router.refresh()
-            router.push('/?page=dashboard')
+            router.push(`/?page=${targetPage}`)
           }
         } catch (err: any) {
           console.error('SSO error:', err)

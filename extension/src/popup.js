@@ -714,4 +714,9 @@ viewFavBtn.addEventListener('click', async () => {
     }
 })
 
+// Extension Reload
+document.getElementById('extension-reload-btn').addEventListener('click', () => {
+    chrome.runtime.reload()
+})
+
 init()
