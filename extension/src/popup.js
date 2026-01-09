@@ -8,6 +8,7 @@ let user = null
 let allItems = [] // The full vault
 let filteredItems = [] // Currently shown in list
 let recentItemsIds = [] // IDs of recently used items
+let currentView = 'vault' // 'vault' or 'sections'
 let currentMode = 'all' // 'all' or 'recents'
 let preferenceItem = null // System pref item
 let selectedItem = null // Currently viewed item
@@ -21,6 +22,10 @@ const itemsList = document.getElementById('items-list')
 const searchInput = document.getElementById('search')
 const addBtn = document.getElementById('add-btn')
 const menuBtn = document.getElementById('menu-btn')
+const vaultView = document.getElementById('vault-view')
+const sectionsView = document.getElementById('sections-view')
+const tabVault = document.getElementById('tab-vault')
+const tabSections = document.getElementById('tab-sections')
 
 // Main Panel (Views)
 const emptyState = document.getElementById('empty-state')
@@ -144,7 +149,7 @@ function filterItems(query = "") {
         }
 
         const header = document.createElement('div')
-        header.className = "px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#2d2d2d]"
+        header.className = "px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-[#252526] border-b border-[#3e3e42]"
         header.textContent = "Recently Used Passwords"
         itemsList.appendChild(header)
 
@@ -173,6 +178,82 @@ function filterItems(query = "") {
         const el = createListItem(item)
         itemsList.appendChild(el)
     })
+}
+
+function renderSections() {
+    sectionsView.innerHTML = ""
+
+    // High-level sections
+    const sections = [
+        { id: "dashboard", label: "Dashboard", icon: "🏠", page: "dashboard", color: "text-blue-400" },
+        { id: "all-items", label: "Full Vault", icon: "🔑", page: "all-items", color: "text-purple-400" },
+        { id: "favorites", label: "Favorites", icon: "⭐", page: "favorites", color: "text-yellow-400" },
+        { id: "payment-cards", label: "Financial Cards", icon: "💳", page: "financial-cards", color: "text-emerald-400" },
+        { id: "healthFitness", label: "Health Hub", icon: "🏥", page: "section-healthFitness", color: "text-red-400" },
+        { id: "vehicles", label: "Vehicles", icon: "🚗", page: "section-vehicles", color: "text-orange-400" },
+        { id: "business", label: "Business", icon: "💼", page: "section-business", color: "text-blue-500" },
+        { id: "digitalLife", label: "Digital Life", icon: "🌐", page: "section-digitalLife", color: "text-cyan-400" },
+        { id: "settings", label: "Settings", icon: "⚙️", page: "settings", color: "text-gray-400" }
+    ]
+
+    const header = document.createElement('div')
+    header.className = "px-2 py-1 text-[10px] font-bold text-gray-500 uppercase tracking-wider"
+    header.textContent = "Application Sections"
+    sectionsView.appendChild(header)
+
+    sections.forEach(sec => {
+        const div = document.createElement('div')
+        div.className = "flex items-center gap-3 p-2.5 hover:bg-[#333] rounded cursor-pointer transition-colors group"
+        div.innerHTML = `
+            <div class="w-8 h-8 rounded-lg bg-gray-800 flex items-center justify-center text-lg shadow-inner group-hover:scale-110 transition-transform">
+                ${sec.icon}
+            </div>
+            <div class="flex-1">
+                <div class="text-sm font-medium text-gray-200">${sec.label}</div>
+            </div>
+            <svg class="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        `
+        div.addEventListener('click', () => {
+            openInWebVault(sec.page)
+        })
+        sectionsView.appendChild(div)
+    })
+}
+
+async function openInWebVault(page = "dashboard") {
+    const { data: { session } } = await supabase.auth.getSession()
+    let url = `${WEB_VAULT_URL}`
+
+    const params = new URLSearchParams()
+    if (page !== "dashboard") params.append("page", page)
+
+    if (session?.access_token && session?.refresh_token) {
+        params.append("access_token", session.access_token)
+        params.append("refresh_token", session.refresh_token)
+    }
+
+    const finalUrl = params.toString() ? `${url}?${params.toString()}` : url
+    chrome.tabs.create({ url: finalUrl })
+    closeMenu()
+}
+
+function switchSidebarTab(tab) {
+    currentView = tab
+    if (tab === 'vault') {
+        tabVault.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-500 border-b-2 border-blue-500 transition-colors"
+        tabSections.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+        vaultView.classList.remove('hidden')
+        sectionsView.classList.add('hidden')
+        filterItems(searchInput.value)
+    } else {
+        tabVault.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+        tabSections.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-500 border-b-2 border-blue-500 transition-colors"
+        vaultView.classList.add('hidden')
+        sectionsView.classList.remove('hidden')
+        renderSections()
+    }
 }
 
 function createListItem(item, isRecent = false) {
@@ -415,9 +496,14 @@ cancelEditBtn.addEventListener('click', () => {
 searchInput.addEventListener('input', (e) => {
     if (e.target.value !== "") {
         currentMode = 'all'
+        switchSidebarTab('vault')
     }
     filterItems(e.target.value)
 })
+
+// Tabs
+tabVault.addEventListener('click', () => switchSidebarTab('vault'))
+tabSections.addEventListener('click', () => switchSidebarTab('sections'))
 
 // Matches
 async function checkForMatches() {
@@ -503,6 +589,7 @@ function closeMenu() {
 // Recents Menu Button
 document.getElementById('menu-recents-btn').addEventListener('click', () => {
     currentMode = 'recents'
+    switchSidebarTab('vault')
     filterItems("")
     closeMenu()
 })
@@ -573,44 +660,13 @@ async function toggleAutoFill(forceState = null) {
 }
 
 // Open Web Vault
-document.getElementById('open-vault-btn').addEventListener('click', async () => {
-    // Get current session to enable SSO
-    const { data: { session } } = await supabase.auth.getSession()
-
-    let url = WEB_VAULT_URL
-
-    // If user is logged in, pass session tokens for SSO
-    if (session?.access_token && session?.refresh_token) {
-        const params = new URLSearchParams({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token
-        })
-        url = `${WEB_VAULT_URL}?${params.toString()}`
-    }
-
-    chrome.tabs.create({ url })
-    closeMenu()
+document.getElementById('open-vault-btn').addEventListener('click', () => {
+    openInWebVault("dashboard")
 })
 
 // Open Financial Cards
-document.getElementById('open-financial-btn').addEventListener('click', async () => {
-    // Get current session to enable SSO
-    const { data: { session } } = await supabase.auth.getSession()
-
-    let url = `${WEB_VAULT_URL}?page=financial-cards`
-
-    // If user is logged in, pass session tokens for SSO
-    if (session?.access_token && session?.refresh_token) {
-        const params = new URLSearchParams({
-            access_token: session.access_token,
-            refresh_token: session.refresh_token,
-            page: 'financial-cards'
-        })
-        url = `${WEB_VAULT_URL}?${params.toString()}`
-    }
-
-    chrome.tabs.create({ url })
-    closeMenu()
+document.getElementById('open-financial-btn').addEventListener('click', () => {
+    openInWebVault("financial-cards")
 })
 
 // Generate Password (Simple)

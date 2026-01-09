@@ -72,9 +72,27 @@
         </div>
       </div>
 
-      <!-- List -->
-      <div id="items-list" class="flex-1 overflow-y-auto overflow-x-hidden space-y-0.5 p-2 custom-scrollbar">
-        <!-- Items injected here -->
+      <!-- Navigation Tabs -->
+      <div class="flex border-b border-[#3e3e42] bg-[#252526]">
+        <button id="tab-vault"
+          class="flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-500 border-b-2 border-blue-500 transition-colors">Vault</button>
+        <button id="tab-sections"
+          class="flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors">Sections</button>
+      </div>
+
+      <!-- Scrollable Area -->
+      <div class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
+        <!-- Vault View (Default) -->
+        <div id="vault-view" class="flex flex-col">
+          <div id="items-list" class="p-2 space-y-0.5">
+            <!-- Items injected here -->
+          </div>
+        </div>
+
+        <!-- Sections View (Menu Navigation) -->
+        <div id="sections-view" class="hidden p-2 space-y-4">
+          <!-- Categories injected here -->
+        </div>
       </div>
     </div>
 
