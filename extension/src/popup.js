@@ -8,6 +8,7 @@ let user = null
 let allItems = [] // The full vault
 let filteredItems = [] // Currently shown in list
 let recentItemsIds = [] // IDs of recently used items
+let currentMode = 'all' // 'all' or 'recents'
 let preferenceItem = null // System pref item
 let selectedItem = null // Currently viewed item
 
@@ -132,6 +133,28 @@ function filterItems(query = "") {
     itemsList.innerHTML = ""
     query = query.toLowerCase()
 
+    if (currentMode === 'recents' && query === "") {
+        const recents = recentItemsIds
+            .map(id => allItems.find(i => i.id === id))
+            .filter(item => item && item.type === 'password' && item.website)
+
+        if (recents.length === 0) {
+            itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No recent passwords</div>`
+            return
+        }
+
+        const header = document.createElement('div')
+        header.className = "px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#2d2d2d]"
+        header.textContent = "Recently Used Passwords"
+        itemsList.appendChild(header)
+
+        recents.forEach(item => {
+            const el = createListItem(item, true)
+            itemsList.appendChild(el)
+        })
+        return
+    }
+
     filteredItems = allItems.filter(item =>
         !item.title.startsWith("[SYSTEM]") &&
         (
@@ -141,39 +164,12 @@ function filterItems(query = "") {
         )
     )
 
-    if (query === "") {
-        // Show Recents first
-        const recents = recentItemsIds
-            .map(id => allItems.find(i => i.id === id))
-            .filter(Boolean)
-
-        if (recents.length > 0) {
-            const header = document.createElement('div')
-            header.className = "px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#2d2d2d]"
-            header.textContent = "Recently Used"
-            itemsList.appendChild(header)
-
-            recents.forEach(item => {
-                const el = createListItem(item, true)
-                itemsList.appendChild(el)
-            })
-
-            const allHeader = document.createElement('div')
-            allHeader.className = "px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-[#2d2d2d] mt-2"
-            allHeader.textContent = "All Items"
-            itemsList.appendChild(allHeader)
-        }
-    }
-
     if (filteredItems.length === 0 && query !== "") {
         itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No items found</div>`
         return
     }
 
     filteredItems.forEach(item => {
-        // Don't show again in "All Items" if it's already in "Recently Used" and we are not searching
-        if (query === "" && recentItemsIds.includes(item.id)) return
-
         const el = createListItem(item)
         itemsList.appendChild(el)
     })
@@ -416,7 +412,12 @@ cancelEditBtn.addEventListener('click', () => {
 })
 
 // Search
-searchInput.addEventListener('input', (e) => filterItems(e.target.value))
+searchInput.addEventListener('input', (e) => {
+    if (e.target.value !== "") {
+        currentMode = 'all'
+    }
+    filterItems(e.target.value)
+})
 
 // Matches
 async function checkForMatches() {
@@ -498,6 +499,13 @@ function closeMenu() {
     menuDropdown.classList.add('hidden')
     menuOverlay.classList.add('hidden')
 }
+
+// Recents Menu Button
+document.getElementById('menu-recents-btn').addEventListener('click', () => {
+    currentMode = 'recents'
+    filterItems("")
+    closeMenu()
+})
 
 // Login
 const loginForm = document.getElementById('login-form')
