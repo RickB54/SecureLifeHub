@@ -29,6 +29,7 @@ import Vehicles from "@/components/vehicles"
 import Business from "@/components/business"
 import Assets from "@/components/assets"
 import DigitalLife from "@/components/digital-life"
+import Diary from "@/components/diary"
 import Knowledge from "@/components/knowledge"
 import Travel from "@/components/travel"
 import Goals from "@/components/goals"
@@ -44,6 +45,10 @@ function HomeContent() {
     lastChange: "11 months ago",
     passwordsData: [],
   })
+
+  // Security & Settings State
+  const [autoLockTimeout, setAutoLockTimeout] = useState(30)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
 
   // Theme state
   const [theme, setTheme] = useState("dark")
@@ -84,6 +89,26 @@ function HomeContent() {
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
 
+  // -- Navigation History to fix Back Button --
+  const [navHistory, setNavHistory] = useState<string[]>([])
+
+  const handleNavigate = (page: string) => {
+    if (page === activePage) return
+    setNavHistory(prev => [...prev, activePage])
+    setActivePage(page)
+  }
+
+  const handleBack = () => {
+    if (navHistory.length === 0) {
+      setActivePage("dashboard")
+      return
+    }
+    const newHistory = [...navHistory]
+    const prevPage = newHistory.pop()
+    setNavHistory(newHistory)
+    if (prevPage) setActivePage(prevPage)
+  }
+
   // Load security settings on mount and when activePage changes (to ensure we have latest)
   useEffect(() => {
     try {
@@ -119,6 +144,16 @@ function HomeContent() {
   // Temporary bridge: Some components overwrite "records" state directly.
   // We need to pass the real handlers to them. 
   // Let's modify the props passed to children to use the new handlers.
+
+  // Handle global refresh events (from deep components like Settings optimized loops)
+  useEffect(() => {
+    const handleRefresh = () => {
+      console.log("🔄 Global vault refresh triggered")
+      refresh()
+    }
+    window.addEventListener('vault-refresh', handleRefresh)
+    return () => window.removeEventListener('vault-refresh', handleRefresh)
+  }, [refresh])
 
   // Apply theme to document body
   useEffect(() => {
@@ -168,16 +203,24 @@ function HomeContent() {
 
   const commonProps = {
     records,
-    setRecords: () => console.warn("Direct setRecords not supported in Supabase mode"), // Placeholder
+    items,
+    folders,
     addItem,
     addFolder,
     updateItem,
     updateFolder,
     deleteItem,
     bulkAddItems,
+    autoLockTimeout,
+    setAutoLockTimeout,
+    twoFactorEnabled,
+    setTwoFactorEnabled,
+    refresh,
     theme,
-    setActivePage // Added for dashboard navigation
+    setActivePage: handleNavigate, // Use history-aware navigation
+    setRecords: () => console.warn("Direct setRecords not supported in Supabase mode"), // Placeholder
   }
+
 
 
 
@@ -192,7 +235,7 @@ function HomeContent() {
           hashedPin={lockConfig.pin}
           theme={theme}
           onSuccess={() => setUnlockedModules(prev => [...prev, activePage])}
-          onCancel={() => setActivePage("dashboard")} // Go back to dashboard on cancel
+          onCancel={handleBack} // Go back to previous page on cancel
         />
       )
     }
@@ -225,15 +268,7 @@ function HomeContent() {
       // New Record Types Routing
       case "type-health-records":
       case "type-vitals":
-        return (
-          <HealthRecords
-            records={records.filter((r: any) => r.type === "health-record" || r.type === "vital")}
-            addItem={addItem}
-            updateItem={updateItem}
-            deleteItem={deleteItem}
-            theme={theme}
-          />
-        )
+        return <HealthRecords {...commonProps} />
       case "type-medications":
         return <Medications {...commonProps} />
       case "type-health-diary":
@@ -265,15 +300,6 @@ function HomeContent() {
         return <Passwords {...commonProps} initialCategoryFilter="Passports" />
       case "type-identity-cards":
         return <Passwords {...commonProps} initialCategoryFilter="Identity Cards" />
-      case "type-health-records":
-        return <HealthRecords {...commonProps} />
-      case "type-medications":
-        return <Medications {...commonProps} />
-      case "type-vitals":
-        // Vitals are now part of the main Health Dashboard
-        return <HealthRecords {...commonProps} />
-      case "type-health-diary":
-        return <HealthDiary {...commonProps} />
       case "type-medical":
         return <Passwords {...commonProps} initialCategoryFilter="Health Insurance" />
 
@@ -298,6 +324,8 @@ function HomeContent() {
       case "type-digital-life":
       case "type-social":
         return <DigitalLife {...commonProps} />
+      case "type-diary":
+        return <Diary {...commonProps} />
 
       // Knowledge
       case "type-knowledge":
@@ -350,7 +378,7 @@ function HomeContent() {
               <SubDashboard
                 section={section}
                 records={records}
-                setActivePage={setActivePage}
+                setActivePage={handleNavigate}
                 theme={theme}
               />
             )
@@ -369,7 +397,8 @@ function HomeContent() {
         <Header
           onLogout={handleLogout}
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onNavigate={setActivePage}
+          onNavigate={handleNavigate}
+          onBack={handleBack}
           theme={theme}
           toggleTheme={toggleTheme}
           activePage={activePage}
@@ -377,7 +406,7 @@ function HomeContent() {
         <div className="flex flex-1 overflow-hidden pt-16">
           <Sidebar
             activePage={activePage}
-            setActivePage={setActivePage}
+            setActivePage={handleNavigate}
             isOpen={sidebarOpen}
             setIsOpen={setSidebarOpen}
             theme={theme}

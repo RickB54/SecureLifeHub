@@ -33,6 +33,7 @@ import EditPasswordModal from "./modals/edit-password-modal"
 import DeleteConfirmationModal from "./delete-confirmation-modal"
 import AutoFill from "./auto-fill"
 import ViewPictureModal from "./modals/view-picture-modal"
+import { toast } from "sonner"
 
 interface PasswordsProps {
   records: any[]
@@ -46,6 +47,7 @@ interface PasswordsProps {
   showAllTypes?: boolean
   initialFavoriteFilter?: boolean
   initialArchivedFilter?: boolean
+  setRecords?: any
 }
 
 export default function Passwords({
@@ -59,7 +61,8 @@ export default function Passwords({
   initialCategoryFilter = "all",
   showAllTypes = false,
   initialFavoriteFilter = false,
-  initialArchivedFilter = false
+  initialArchivedFilter = false,
+  setRecords
 }: PasswordsProps) {
   // State for view mode (folder only now)
   const [viewMode, setViewMode] = useState("folder")
@@ -91,7 +94,7 @@ export default function Passwords({
   const [editPasswordModalOpen, setEditPasswordModalOpen] = useState(false)
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState<any>(null)
-  const [initialFolderPath, setInitialFolderPath] = useState("") // State for pre-selecting folder
+  const [initialFolderId, setInitialFolderId] = useState("") // State for pre-selecting folder
   const [initialParentFolderId, setInitialParentFolderId] = useState<string | undefined>(undefined)
   const [autoFillModalOpen, setAutoFillModalOpen] = useState(false)
   const [viewPictureModalOpen, setViewPictureModalOpen] = useState(false)
@@ -198,12 +201,12 @@ export default function Passwords({
 
   // Handle adding a new password
   const handleAddPassword = async (newPassword: any) => {
-    let folderId = null;
-
-    // If a new folder was created implicitly by path
-    if (newPassword.path) {
+    // If a new folder was created implicitly by path (legacy) or directly by selection
+    let folderId = undefined;
+    if (newPassword.folder_id) {
+      folderId = newPassword.folder_id;
+    } else if (newPassword.path) {
       const existingFolder = folders.find(f => f.path === newPassword.path);
-
       if (!existingFolder) {
         // Create new folder if it doesn't exist
         const folderName = newPassword.path.split("/").pop()
@@ -266,8 +269,9 @@ export default function Passwords({
   const handleToggleFavorite = async (id: string) => {
     const record = records.find(r => r.id === id)
     if (record) {
-      // Use is_favorite (snake_case) to match DB
-      await updateItem(id, { is_favorite: !record.is_favorite })
+      const newState = !record.is_favorite;
+      await updateItem(id, { is_favorite: newState })
+      toast.success(newState ? "Added to favorites" : "Removed from favorites")
     }
   }
 
@@ -275,8 +279,9 @@ export default function Passwords({
   const handleToggleArchive = async (id: string) => {
     const record = records.find(r => r.id === id)
     if (record) {
-      // Use is_archived (snake_case) to match DB
-      await updateItem(id, { is_archived: !record.is_archived })
+      const newState = !record.is_archived;
+      await updateItem(id, { is_archived: newState })
+      toast.success(newState ? "Item archived" : "Item unarchived")
     }
   }
 
@@ -387,35 +392,16 @@ export default function Passwords({
   ]
 
   // Build folder structure
-  const topLevelFolders = folders.filter((folder) => !folder.path.includes("/"))
+  const topLevelFolders = folders.filter((folder) => !folder.parent_id)
 
   // Function to get direct subfolders of a folder
-  const getSubfolders = (parentPath: string) => {
-    return folders.filter((folder) => {
-      const folderParts = folder.path.split("/")
-      return folderParts.length > 1 && folder.path.startsWith(parentPath + "/")
-    })
+  const getSubfolders = (parentId: string) => {
+    return folders.filter((folder) => folder.parent_id === parentId)
   }
 
   // Function to get direct passwords in a folder (not in subfolders) from a specific set of items
-  const getDirectPasswordsInFolder = (folderPath: string, items: any[] = passwords) => {
-    // Find the folder object that matches this path to get its ID
-    const folderObj = folders.find(f => f.path === folderPath)
-
-    return items.filter((password) => {
-      // For top-level folders, match exact path
-      if (!folderPath.includes("/")) {
-        const passwordParts = password.path ? password.path.split("/") : []
-        const isPathMatch = passwordParts.length === 1 && passwordParts[0] === folderPath;
-        const isIdMatch = folderObj && password.folder_id === folderObj.id;
-        return isPathMatch || isIdMatch
-      }
-
-      // For subfolders
-      const isPathMatch = password.path === folderPath || password.folder === folderPath;
-      const isIdMatch = folderObj && password.folder_id === folderObj.id;
-      return isPathMatch || isIdMatch
-    })
+  const getDirectPasswordsInFolder = (folderId: string, items: any[] = passwords) => {
+    return items.filter((password) => password.folder_id === folderId)
   }
 
   // Add a function to filter passwords based on selected filters and folder
@@ -424,10 +410,7 @@ export default function Passwords({
 
     // Filter by folder - ONLY if not ignored
     if (!ignoreFolder && selectedFolder) {
-      const folder = folders.find((f) => f.id === selectedFolder)
-      if (folder) {
-        filtered = filtered.filter((password) => password.path === folder.path || password.folder === folder.path)
-      }
+      filtered = filtered.filter((password) => password.folder_id === selectedFolder)
     }
 
     // Filter by type
@@ -729,7 +712,7 @@ export default function Passwords({
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{password.title || password.website || "Untitled"}</div>
-          <div className={`text-xs truncate ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
+          <div className={`text-xs truncate ${theme === "light" ? "text-gray-500" : "text-gray-300"}`}>
             {password.username || password.email || "No username"}
           </div>
         </div>
@@ -743,8 +726,8 @@ export default function Passwords({
       if (!searchQuery) return true
       const query = searchQuery.toLowerCase()
       const nameMatch = folder.name.toLowerCase().includes(query)
-      const hasDirectMatch = getDirectPasswordsInFolder(folder.path, items).length > 0
-      const subfolders = getSubfolders(folder.path)
+      const hasDirectMatch = getDirectPasswordsInFolder(folder.id, items).length > 0
+      const subfolders = getSubfolders(folder.id)
       const hasSubfolderMatch = subfolders.some(sub => shouldShowFolder(sub))
       return nameMatch || hasDirectMatch || hasSubfolderMatch
     }
@@ -754,19 +737,19 @@ export default function Passwords({
     return visibleFolders.map((folder) => {
       const isExpanded = expandedFolders[folder.id]
       const isSelected = selectedFolder === folder.id
-      const subfolders = getSubfolders(folder.path)
-      const directPasswords = getDirectPasswordsInFolder(folder.path, items)
+      const subfolders = getSubfolders(folder.id)
+      const directPasswords = getDirectPasswordsInFolder(folder.id, items)
 
       // Calculate count recursively based on provided items
-      const getFolderCount = (fPath: string): number => {
-        const direct = getDirectPasswordsInFolder(fPath, items).length
-        const subs = getSubfolders(fPath)
-        const subCounts = subs.reduce((acc, sub) => acc + getFolderCount(sub.path), 0)
+      const getFolderCount = (fId: string): number => {
+        const direct = getDirectPasswordsInFolder(fId, items).length
+        const subs = getSubfolders(fId)
+        const subCounts = subs.reduce((acc, sub) => acc + getFolderCount(sub.id), 0)
         return direct + subCounts
       }
 
       // Total count for this folder (direct + recursive subfolders)
-      const totalCount = getFolderCount(folder.path)
+      const totalCount = getFolderCount(folder.id)
       const countLabel = totalCount === 1 ? "1 Record" : `${totalCount} Records`
       const effectivelyExpanded = isExpanded || !!searchQuery
 
@@ -787,12 +770,12 @@ export default function Passwords({
                 }}
                 className="p-1 mr-2 flex-shrink-0"
               >
-                {effectivelyExpanded ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                {effectivelyExpanded ? <ChevronDown className="h-4 w-4 text-gray-300" /> : <ChevronRight className="h-4 w-4 text-gray-300" />}
               </button>
-              <Folder className={`h-6 w-6 mr-3 flex-shrink-0 ${isSelected ? 'text-blue-400' : 'text-purple-400'}`} />
+              <Folder className={`h-6 w-6 mr-3 flex-shrink-0 ${isSelected ? 'text-blue-400' : 'text-blue-400'}`} />
               <div className="flex-1 min-w-0">
-                <div className={`font-medium truncate ${isSelected ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>{folder.name}</div>
-                <div className="text-xs text-gray-400 truncate">{countLabel}</div>
+                <div className={`font-medium truncate ${isSelected ? 'text-blue-200 font-bold' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>{folder.name}</div>
+                <div className="text-xs text-gray-300 truncate">{countLabel}</div>
               </div>
             </div>
 
@@ -806,7 +789,7 @@ export default function Passwords({
                     setActiveMenu(`folder-${folder.id}`)
                   }
                 }}
-                className={`p-2 rounded-full ${activeMenu === `folder-${folder.id}` ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
+                className={`p-2 rounded-full ${activeMenu === `folder-${folder.id}` ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-300 hover:text-gray-100 dark:hover:text-white"}`}
               >
                 <MoreHorizontal className="h-5 w-5" />
               </button>
@@ -819,7 +802,7 @@ export default function Passwords({
                   <button
                     className={`flex items-center w-full px-4 py-3 text-sm text-left ${theme === "light" ? "hover:bg-gray-50 text-gray-700" : "hover:bg-white/5 text-gray-200"}`}
                     onClick={() => {
-                      setInitialFolderPath(folder.path)
+                      setInitialFolderId(folder.id)
                       setAddPasswordModalOpen(true)
                       setActiveMenu(null)
                     }}
@@ -870,23 +853,14 @@ export default function Passwords({
           </div >
 
           {effectivelyExpanded && (
-            <div>
-              {/* Display direct passwords in this folder */}
-              {directPasswords.length > 0 && (
-                <div className="ml-8 border-l border-gray-100 dark:border-gray-800">
-                  {directPasswords.map((password) => renderFolderListItem(password))}
-                </div>
-              )}
+            <div className="ml-4 border-l border-white/5">
+              {/* Display subfolders recursively */}
+              {subfolders.length > 0 && renderFolderStructure(subfolders, items, level + 1)}
 
-              {/* Display subfolders */}
-              {subfolders.length > 0 && (
-                <div>
-                  {renderFolderStructure(subfolders, items, level + 1)}
-                </div>
-              )}
+              {/* Display direct passwords in this folder */}
+              {directPasswords.map((password) => renderFolderListItem(password))}
             </div>
-          )
-          }
+          )}
         </div >
       )
     })
@@ -1403,15 +1377,15 @@ export default function Passwords({
 
             {/* Title Field */}
             <div className="group">
-              <label className="text-xs text-gray-500 block mb-1">Title</label>
-              <div className="text-sm font-medium p-2 -ml-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-text">
+              <label className="text-xs text-gray-300 block mb-1">Title</label>
+              <div className="text-sm font-medium p-2 -ml-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-text">
                 {record.title || "Untitled"}
               </div>
             </div>
 
             {/* Login Field */}
             <div className="group relative">
-              <label className="text-xs text-gray-500 block mb-1">Login</label>
+              <label className="text-xs text-gray-300 block mb-1">Login</label>
               <div
                 className="text-sm font-medium p-2 -ml-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer flex items-center justify-between"
                 onClick={(e) => {
@@ -1427,10 +1401,10 @@ export default function Passwords({
 
             {/* Password Field */}
             <div className="group relative">
-              <label className="text-xs text-gray-500 block mb-1">Password</label>
-              <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 -ml-1 sm:-ml-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <label className="text-xs text-gray-300 block mb-1">Password</label>
+              <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 -ml-1 sm:-ml-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                 <div
-                  className={`flex-1 font-mono text-sm cursor-pointer ${showPasswordInDetails ? 'text-gray-900 dark:text-gray-100 font-bold' : 'text-gray-500'} hover:text-blue-500`}
+                  className={`flex-1 font-mono text-sm cursor-pointer ${showPasswordInDetails ? 'bg-blue-600/30 text-white font-bold px-1 rounded' : 'text-gray-500'} hover:text-blue-500`}
                   onClick={() => navigator.clipboard.writeText(record.password || "")}
                   title="Click to Copy"
                   style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
@@ -1447,16 +1421,16 @@ export default function Passwords({
                   {showPasswordInDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <div className={`h-1 w-full bg-gray-200 mt-2 rounded-full overflow-hidden ${record.password ? "opacity-100" : "opacity-0"}`}>
+              <div className={`h-1 w-full bg-gray-700 mt-2 rounded-full overflow-hidden ${record.password ? "opacity-100" : "opacity-0"}`}>
                 <div className="h-full bg-orange-500 w-2/3"></div> {/* Mock strength meter */}
               </div>
-              <p className="text-xs text-gray-400 mt-1">Fair</p>
+              <p className="text-xs text-gray-300 mt-1">Fair</p>
             </div>
 
             {/* Website Field */}
             {record.website && (
               <div className="group">
-                <label className="text-xs text-gray-500 block mb-1">Website Address</label>
+                <label className="text-xs text-gray-300 block mb-1">Website Address</label>
                 <a
                   href={record.website.startsWith("http") ? record.website : `https://${record.website}`}
                   target="_blank"
@@ -1472,7 +1446,7 @@ export default function Passwords({
             {/* Picture Field - Show uploaded image */}
             {(record.image || record.picture) && (
               <div className="group">
-                <label className="text-xs text-gray-500 block mb-2">Picture</label>
+                <label className="text-xs text-gray-300 block mb-2">Picture</label>
                 <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
                   <img
                     src={record.image || record.picture}
@@ -1485,12 +1459,60 @@ export default function Passwords({
             )}
           </div>
 
-          {/* Mock "Custom Fields" or Notes can go here */}
+          {/* Custom Fields Section */}
+          {record.item_metadata?.customFields && record.item_metadata.customFields.length > 0 && (
+            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Custom Fields</h3>
+              <div className="space-y-3">
+                {record.item_metadata.customFields.map((field: any) => (
+                  <div key={field.id} className="group relative">
+                    <label className="text-xs text-gray-300 block mb-1">{field.label}</label>
+                    <div className="flex items-center gap-2 p-2 -ml-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                      <div
+                        className={`flex-1 text-sm cursor-pointer ${field.type === 'password' || field.type === 'pin' || field.type === 'hidden' ? 'font-mono' : ''} hover:text-blue-500`}
+                        onClick={() => navigator.clipboard.writeText(field.value || "")}
+                        title="Click to Copy"
+                        style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+                      >
+                        {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden')
+                          ? (activePasswordPopup === `custom-${field.id}` ? (
+                            <span className="bg-blue-600/30 text-white font-medium px-1 rounded">{field.value}</span>
+                          ) : "••••••••")
+                          : field.value || "—"}
+                      </div>
+
+                      {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setActivePasswordPopup(activePasswordPopup === `custom-${field.id}` ? null : `custom-${field.id}`)
+                          }}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded flex-shrink-0"
+                        >
+                          {activePasswordPopup === `custom-${field.id}` ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => navigator.clipboard.writeText(field.value || "")}
+                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500"
+                        title="Copy"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Notes */}
           {record.notes && (
             <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
               <div className="group">
-                <label className="text-xs text-gray-400 block mb-1">Notes</label>
-                <div className="text-sm whitespace-pre-wrap text-gray-600 dark:text-gray-100 leading-relaxed">
+                <label className="text-xs text-gray-300 block mb-1">Notes</label>
+                <div className="text-sm whitespace-pre-wrap text-gray-200 leading-relaxed">
                   {record.notes}
                 </div>
               </div>
@@ -1534,17 +1556,17 @@ export default function Passwords({
                   className={`flex items-center py-3 px-2 cursor-pointer rounded-lg transition-colors ${!selectedFolder ? 'bg-blue-600/20 dark:bg-blue-600/30' : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
                   onClick={() => setSelectedFolder("")}
                 >
-                  <Folder className="h-6 w-6 mr-3 text-gray-500" />
+                  <Folder className="h-6 w-6 mr-3 text-gray-400" />
                   <div className="flex-1">
                     <div className={`font-semibold ${!selectedFolder ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No Folder</div>
-                    <span className="text-xs text-gray-400">
-                      {itemsForStructure.filter((p) => !p.path && !p.folder).length} Records
+                    <span className="text-xs text-gray-300">
+                      {itemsForStructure.filter((p) => !p.folder_id).length} Records
                     </span>
                   </div>
                 </div>
 
                 <div className="pl-7 space-y-0 text-sm"> {/* Compact list for root items */}
-                  {itemsForStructure.filter((p) => !p.path && !p.folder).map((password) => renderFolderListItem(password))}
+                  {itemsForStructure.filter((p) => !p.folder_id).map((password) => renderFolderListItem(password))}
                 </div>
               </div>
             )}
@@ -1867,11 +1889,11 @@ export default function Passwords({
             onClose={() => setAddPasswordModalOpen(false)}
             onAdd={async (item: any) => {
               await handleAddPassword(item)
-              setInitialFolderPath("")
+              setInitialFolderId("")
             }}
             folders={folders}
             theme={theme}
-            initialPath={initialFolderPath}
+            initialFolderId={initialFolderId}
           />
         )
       }

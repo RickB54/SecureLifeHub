@@ -98,9 +98,10 @@ export const sidebarSections = [
     },
     {
         id: "digitalLife",
-        title: "Digital Life",
+        title: "Social Life",
         items: [
             { id: "type-digital-life", label: "Online Presence", icon: <Globe className="h-4 w-4" /> },
+            { id: "type-diary", label: "My Diary", icon: <Book className="h-4 w-4" /> },
             { id: "type-subscriptions", label: "Subscription Manager", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-social", label: "Social Media", icon: <Smartphone className="h-4 w-4" /> },
         ]

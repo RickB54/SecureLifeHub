@@ -31,7 +31,8 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   const vehicleCount = records.filter((r: any) => r.category === "Vehicles").length
   const bizCount = records.filter((r: any) => r.category === "Business").length
   const assetCount = records.filter((r: any) => r.category === "Assets").length
-  const digitalCount = records.filter((r: any) => r.category === "Digital Life").length
+  const digitalCount = records.filter((r: any) => r.category === "Digital Life" || r.category === "Social Life").length
+  const diaryCount = records.filter((r: any) => r.category === "My Diary").length
   const knowledgeCount = records.filter((r: any) => r.category === "Knowledge Vault").length
   const travelCount = records.filter((r: any) => r.category === "Travel").length
   const goalsCount = records.filter((r: any) => r.category === "Goals").length
@@ -196,14 +197,24 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           isLocked={securitySettings['type-assets']?.isLocked}
         />
         <ModuleCard
-          title="Digital Life"
+          title="Social Life"
           count={digitalCount}
-          description="Manage online presence and social media."
-          icon={<Globe className="h-6 w-6 text-cyan-500" />}
-          colorClass="border-cyan-500"
-          buttonColorClass="text-cyan-400 hover:bg-cyan-500"
+          description="Manage social media and online assets."
+          icon={<Globe className="h-6 w-6 text-pink-500" />}
+          colorClass="border-pink-500"
+          buttonColorClass="text-pink-400 hover:bg-pink-500"
           onClick={() => setActivePage('type-digital-life')}
           isLocked={securitySettings['type-digital-life']?.isLocked}
+        />
+        <ModuleCard
+          title="My Diary"
+          count={diaryCount}
+          description="Personal journal and daily thoughts."
+          icon={<Book className="h-6 w-6 text-rose-500" />}
+          colorClass="border-rose-500"
+          buttonColorClass="text-rose-400 hover:bg-rose-500"
+          onClick={() => setActivePage('type-diary')}
+          isLocked={securitySettings['diary']?.isLocked}
         />
         <ModuleCard
           title="Subscriptions"
@@ -358,7 +369,8 @@ function getIconForCategory(category: string) {
   if (category.includes("Vehicle")) return <Car className="h-4 w-4 text-blue-500" />
   if (category.includes("Business")) return <Briefcase className="h-4 w-4 text-orange-500" />
   if (category.includes("Asset")) return <Box className="h-4 w-4 text-emerald-500" />
-  if (category.includes("Digital")) return <Globe className="h-4 w-4 text-cyan-500" />
+  if (category.includes("Digital") || category.includes("Social")) return <Globe className="h-4 w-4 text-pink-500" />
+  if (category.includes("Diary")) return <Book className="h-4 w-4 text-rose-500" />
   if (category.includes("Knowledge")) return <Book className="h-4 w-4 text-yellow-500" />
   if (category.includes("Travel")) return <Plane className="h-4 w-4 text-indigo-500" />
   if (category.includes("Goal")) return <Target className="h-4 w-4 text-pink-500" />

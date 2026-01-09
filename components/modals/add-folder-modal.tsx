@@ -36,10 +36,10 @@ export default function AddFolderModal({ onClose, onAdd, folders, theme, initial
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`${theme === 'light' ? 'bg-white text-gray-900' : 'bg-[#2a2a2a] text-white'} rounded-lg shadow-lg w-full max-w-md`}>
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
-          <h2 className="text-xl font-semibold">Add New Folder</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+      <div className={`${theme === 'light' ? 'bg-white text-gray-900' : 'bg-black text-white border border-white/20'} rounded-lg shadow-lg w-full max-w-md`}>
+        <div className={`flex justify-between items-center p-4 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+          <h2 className="text-xl font-bold">Add New Folder</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -47,7 +47,7 @@ export default function AddFolderModal({ onClose, onAdd, folders, theme, initial
         <form onSubmit={handleSubmit} className="p-4">
           <div className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-1">
+              <label htmlFor="name" className="block text-sm font-bold text-gray-200 mb-1">
                 Folder Name
               </label>
               <input
@@ -63,7 +63,7 @@ export default function AddFolderModal({ onClose, onAdd, folders, theme, initial
             </div>
 
             <div>
-              <label htmlFor="parentFolder" className="block text-sm font-medium mb-1">
+              <label htmlFor="parentFolder" className="block text-sm font-bold text-gray-200 mb-1">
                 Parent Folder (Optional)
               </label>
               <select

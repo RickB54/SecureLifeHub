@@ -1,11 +1,13 @@
 "use client"
 
-import { useState, useRef } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown } from "lucide-react"
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter } from "date-fns"
+import { useState, useRef, useMemo } from "react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles } from "lucide-react"
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import Lightbox from "./media/lightbox"
-import Medications from "./medications"
+import Medications, { PillLibraryModal } from "./medications"
+import HealthAI from "./health-ai"
+import GoogleCalendarIntegration from "./google-calendar-integration"
 
 interface HealthDashboardProps {
     records: any[]
@@ -13,12 +15,15 @@ interface HealthDashboardProps {
     updateItem: (id: string, updates: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    setRecords?: any
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme }: HealthDashboardProps) {
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar">("dashboard")
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai">("dashboard")
     const [showAddModal, setShowAddModal] = useState(false)
-    const [addModalType, setAddModalType] = useState<"record" | "vital">("record")
+    const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
+    const [editingVital, setEditingVital] = useState<any>(null)
+    const [showPillLibrary, setShowPillLibrary] = useState(false)
 
     // Calendar State
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -32,18 +37,41 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [lightboxIndex, setLightboxIndex] = useState(0)
 
     // --- DATA FILTERING ---
-    const healthRecords = records.filter(r => (r.type === "health-record" || r.category === "Health Records" || r.item_metadata?.is_health_record) && !r.item_metadata?.is_vital)
-    const vitalRecords = records.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital).sort((a, b) => new Date(a.item_metadata.date).getTime() - new Date(b.item_metadata.date).getTime())
-    const diaryEntries = records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary).sort((a, b) => new Date(b.item_metadata.date).getTime() - new Date(a.item_metadata.date).getTime())
-    const activeMeds = records.filter(r => ((r.category && r.category === "Medications") || (r.type === "note" && r.category === "Medications")) && checkMedActive(r))
-    const upcomingAppts = healthRecords.filter(r => r.item_metadata?.date && isAfter(new Date(r.item_metadata.date), new Date())).sort((a, b) => new Date(a.item_metadata.date).getTime() - new Date(b.item_metadata.date).getTime())
+    const healthRecords = useMemo(() => {
+        return records.filter(r =>
+            (r.type === "health-record" || r.category === "Health Records" || r.item_metadata?.is_health_record)
+        ).sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
+    }, [records])
 
-    function checkMedActive(r: any) {
-        if (!r.item_metadata?.refillDate) return true
-        // Simple logic: if refill date is future, it's active? Or just count all meds for now. 
-        // Let's assume all "Medications" items are active prescriptions unless marked archived.
-        return true
-    }
+    const vitalRecords = useMemo(() => {
+        return records.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital)
+            .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
+    }, [records])
+
+    const diaryEntries = useMemo(() => {
+        return records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary)
+            .sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
+    }, [records])
+
+    const medRecords = useMemo(() => {
+        return records.filter(r => {
+            const specificNames = ["Hydroxyzine", "Prednisone", "Loratadine", "Famotidine"];
+            const isSpecificMed = specificNames.some(name => r.title?.includes(name));
+
+            return (r.category && r.category.toLowerCase() === "medications") ||
+                (r.type && r.type.toLowerCase() === "medication") ||
+                (r.type === "note" && r.category === "Medications") ||
+                (r.item_metadata?.notes === "Imported Prescription") ||
+                isSpecificMed
+        })
+    }, [records])
+
+    const upcomingAppts = useMemo(() => {
+        return healthRecords.filter(r =>
+            r.item_metadata?.date &&
+            isAfter(new Date(r.item_metadata.date), new Date())
+        ).sort((a, b) => new Date(a.item_metadata.date).getTime() - new Date(b.item_metadata.date).getTime())
+    }, [healthRecords])
 
     // --- ANALYTICS ---
     // Calculate Streak
@@ -74,14 +102,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }
 
     const weightData = vitalRecords.filter(r => r.title === "Weight").map(r => ({
-        date: format(new Date(r.item_metadata.date), 'MMM d'),
-        value: parseFloat(r.item_metadata.value)
+        date: r.item_metadata.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
+        value: parseFloat(r.item_metadata.value) || 0
     }))
 
     const bpData = vitalRecords.filter(r => r.title === "Blood Pressure").map(r => {
-        const [sys, dia] = r.item_metadata.value.split('/').map(Number)
+        const parts = (r.item_metadata.value || "0/0").split('/')
+        const sys = parseInt(parts[0]) || 0
+        const dia = parseInt(parts[1]) || 0
         return {
-            date: format(new Date(r.item_metadata.date), 'MMM d'),
+            date: r.item_metadata.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
             systolic: sys,
             diastolic: dia
         }
@@ -127,291 +157,391 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
     const openLightbox = (item: any) => {
         if (!item.item_metadata?.url) return
-        setLightboxItems([{
-            id: item.id,
-            title: item.title,
-            category: 'Health Document',
-            created_at: item.created_at,
-            item_metadata: item.item_metadata
-        }])
-        setLightboxIndex(0)
+
+        const recordImages = records
+            .filter(r => r.item_metadata?.url)
+            .map(r => ({
+                id: r.id,
+                title: r.title,
+                url: r.item_metadata.url,
+                description: r.item_metadata.notes || format(new Date(r.item_metadata.date || r.created_at), 'PPP')
+            }))
+
+        const index = recordImages.findIndex(img => img.id === item.id)
+        setLightboxItems(recordImages)
+        setLightboxIndex(index >= 0 ? index : 0)
         setLightboxOpen(true)
+    }
+
+    const loadMockData = async (target: 'vitals' | 'records' | 'meds' | 'all') => {
+        if (!confirm(`Generate mock ${target === 'all' ? 'data' : target} for testing?`)) return;
+
+        if (target === 'vitals' || target === 'all') {
+            const vitals = [
+                { title: 'Weight', value: '185', unit: 'lbs', date: subDays(new Date(), 14).toISOString() },
+                { title: 'Weight', value: '182', unit: 'lbs', date: subDays(new Date(), 7).toISOString() },
+                { title: 'Weight', value: '180', unit: 'lbs', date: new Date().toISOString() },
+                { title: 'Blood Pressure', value: '130/85', unit: 'mmHg', date: subDays(new Date(), 5).toISOString() },
+                { title: 'Blood Pressure', value: '118/78', unit: 'mmHg', date: new Date().toISOString() },
+                { title: 'Heart Rate', value: '72', unit: 'bpm', date: new Date().toISOString() },
+                { title: 'Glucose', value: '95', unit: 'mg/dL', date: new Date().toISOString() },
+            ];
+            for (const v of vitals) {
+                await addItem({
+                    type: "note",
+                    category: "Vitals",
+                    title: v.title,
+                    item_metadata: { is_vital: true, value: v.value, unit: v.unit, date: v.date, notes: 'Sample vital entry for dashboard testing.' }
+                });
+            }
+        }
+
+        if (target === 'records' || target === 'all') {
+            const records = [
+                { title: 'Annual Physical Examination', doctor: 'Dr. Sarah Smith', date: subMonths(new Date(), 2).toISOString(), notes: 'All metrics within normal range. Recommended increased Vitamin D intake.' },
+                { title: 'Dental Cleaning & X-Ray', doctor: 'City Dental Care', date: subMonths(new Date(), 1).toISOString(), notes: 'No cavities found. Next cleaning in 6 months.' }
+            ];
+            for (const r of records) {
+                await addItem({
+                    type: "note",
+                    title: r.title,
+                    category: "Health Records",
+                    item_metadata: { is_health_record: true, date: r.date, doctor: r.doctor, notes: r.notes, type: "Clinic Visit" }
+                });
+            }
+        }
+
+        if (target === 'meds' || target === 'all') {
+            const meds = [
+                { title: 'Lisinopril', dosage: '10mg', frequency: 'Once Daily', notes: 'For blood pressure management.' },
+                { title: 'Vitamin D3', dosage: '2000 IU', frequency: 'Daily', notes: 'Supplement for bone health.' }
+            ];
+            for (const m of meds) {
+                await addItem({
+                    type: 'note',
+                    title: m.title,
+                    category: 'Medications',
+                    item_metadata: { dosage: m.dosage, frequency: m.frequency, notes: m.notes }
+                });
+            }
+        }
     }
 
     // --- VIEWS ---
     const renderDashboard = () => (
         <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center px-1">
+                <h2 className="text-xl font-bold opacity-50 uppercase tracking-widest text-xs">Overview Dashboard</h2>
+                <button onClick={() => loadMockData('all')} className="text-[10px] font-black uppercase tracking-tighter text-blue-400 hover:text-blue-300 transition-colors">
+                    Initialize Test Environment
+                </button>
+            </div>
             {/* Quick Stats - ALWAYS AT TOP */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} border flex flex-col items-center justify-center text-center`}>
-                    <div className="text-3xl font-bold text-blue-500 mb-1">{upcomingAppts.length}</div>
-                    <div className="text-xs uppercase font-bold opacity-50">Appts</div>
+                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                    <div className="text-4xl font-black text-blue-500 mb-1">{upcomingAppts.length}</div>
+                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Appointments</div>
                 </div>
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} border flex flex-col items-center justify-center text-center`}>
-                    <div className="text-3xl font-bold text-purple-500 mb-1">{currentStreak}</div>
-                    <div className="text-xs uppercase font-bold opacity-50">Day Streak</div>
+                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                    <div className="text-4xl font-black text-emerald-500 mb-1">{currentStreak}</div>
+                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Day Streak</div>
                 </div>
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} border flex flex-col items-center justify-center text-center`}>
-                    <div className="text-3xl font-bold text-amber-500 mb-1">{activeMeds.length}</div>
-                    <div className="text-xs uppercase font-bold opacity-50">Meds</div>
+                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                    <div className="text-4xl font-black text-amber-500 mb-1">{medRecords.length}</div>
+                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Medications</div>
                 </div>
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} border flex flex-col items-center justify-center text-center`}>
-                    <div className="text-3xl font-bold text-orange-500 mb-1">{weightData.length > 0 ? weightData[weightData.length - 1].value : '--'}</div>
-                    <div className="text-xs uppercase font-bold opacity-50">Lbs</div>
-                </div>
-            </div>
-
-            {/* Upcoming Appointments - BELOW STATS */}
-            <div className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
-                <h3 className="font-bold mb-4 flex items-center gap-2">
-                    <CalendarIcon className="h-5 w-5 text-blue-500" /> Upcoming Appointments
-                </h3>
-                <div className="space-y-3">
-                    {upcomingAppts.length === 0 ? (
-                        <p className="text-gray-500 text-sm">No upcoming appointments.</p>
-                    ) : (
-                        upcomingAppts.slice(0, 3).map(apt => (
-                            <div key={apt.id} className="flex items-center gap-4 p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="p-2 bg-blue-500/20 text-blue-500 rounded-lg">
-                                    <CalendarIcon className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <h4 className="font-bold text-sm">{apt.title}</h4>
-                                    <p className="text-xs text-gray-400">{format(new Date(apt.item_metadata.date), 'PP p')} • {apt.item_metadata.doctor}</p>
-                                </div>
-                            </div>
-                        ))
-                    )}
+                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                    <div className="text-4xl font-black text-rose-500 mb-1">{healthRecords.length}</div>
+                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Records</div>
                 </div>
             </div>
 
-            <div className="space-y-6">
-                {/* Weight Chart - Accordion */}
-                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-orange-500/50 transition-all`}>
-                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
-                        <div className="flex items-center gap-2">
-                            <TrendingUp className="h-5 w-5 text-orange-500" /> Weight Trend
-                        </div>
-                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="h-[250px] w-full">
-                            {weightData.length > 1 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={weightData}>
-                                        <defs>
-                                            <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
-                                                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                        <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} domain={['dataMin - 5', 'dataMax + 5']} />
-                                        <RechartsTooltip
-                                            contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: '8px' }}
-                                            itemStyle={{ color: '#fff' }}
-                                        />
-                                        <Area type="monotone" dataKey="value" stroke="#f97316" fillOpacity={1} fill="url(#colorWeight)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough data to graph</div>
-                            )}
-                        </div>
-                        {/* Note Input */}
-                        <div className="mt-4 pt-4 border-t border-white/5">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes on Progress</label>
-                            <textarea placeholder="Add observations about your weight trend..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-orange-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
-                        </div>
-                    </div>
-                </details>
-
-                {/* BP Chart - Accordion */}
-                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-blue-500/50 transition-all`}>
-                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
-                        <div className="flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-red-500" /> Blood Pressure
-                        </div>
-                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="h-[250px] w-full">
-                            {bpData.length > 1 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={bpData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                                        <XAxis dataKey="date" stroke="#666" fontSize={12} tickLine={false} axisLine={false} />
-                                        <YAxis stroke="#666" fontSize={12} tickLine={false} axisLine={false} domain={[60, 180]} />
-                                        <RechartsTooltip
-                                            contentStyle={{ backgroundColor: '#1e1e1e', border: 'none', borderRadius: '8px' }}
-                                            itemStyle={{ color: '#fff' }}
-                                        />
-                                        <Line type="monotone" dataKey="systolic" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
-                                        <Line type="monotone" dataKey="diastolic" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-gray-500 text-sm">Not enough data to graph</div>
-                            )}
-                        </div>
-                        {/* Note Input */}
-                        <div className="mt-4 pt-4 border-t border-white/5">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Doctor's Notes</label>
-                            <textarea placeholder="Add observations about blood pressure..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-blue-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
-                        </div>
-                    </div>
-                </details>
-
-                {/* Blood Oxygen Accordion */}
-                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-cyan-500/50 transition-all`}>
-                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
-                        <div className="flex items-center gap-2">
-                            <Droplets className="h-5 w-5 text-cyan-500" /> Blood Oxygen (SpO2)
-                        </div>
-                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="h-[250px] w-full flex items-center justify-center text-gray-500 text-sm">
-                            {vitalRecords.filter(v => v.title === "Blood Oxygen").length > 0
-                                ? `Latest: ${vitalRecords.filter(v => v.title === "Blood Oxygen").slice(-1)[0]?.item_metadata?.value}%`
-                                : "Add blood oxygen readings in Vitals tab"}
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-white/5">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes</label>
-                            <textarea placeholder="Add observations about oxygen saturation..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-cyan-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
-                        </div>
-                    </div>
-                </details>
-
-                {/* Glucose Accordion */}
-                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-pink-500/50 transition-all`}>
-                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
-                        <div className="flex items-center gap-2">
-                            <Utensils className="h-5 w-5 text-pink-500" /> Blood Glucose
-                        </div>
-                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="h-[250px] w-full flex items-center justify-center text-gray-500 text-sm">
-                            {vitalRecords.filter(v => v.title === "Glucose").length > 0
-                                ? `Latest: ${vitalRecords.filter(v => v.title === "Glucose").slice(-1)[0]?.item_metadata?.value} mg/dL`
-                                : "Add glucose readings in Vitals tab"}
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-white/5">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes</label>
-                            <textarea placeholder="Add observations about glucose levels..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-pink-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
-                        </div>
-                    </div>
-                </details>
-
-                {/* Temperature Accordion */}
-                <details className={`group p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'} open:ring-1 open:ring-yellow-500/50 transition-all`}>
-                    <summary className="font-bold flex items-center justify-between cursor-pointer list-none">
-                        <div className="flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-yellow-500" /> Temperature
-                        </div>
-                        <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
-                    </summary>
-                    <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="h-[250px] w-full flex items-center justify-center text-gray-500 text-sm">
-                            {vitalRecords.filter(v => v.title === "Temperature").length > 0
-                                ? `Latest: ${vitalRecords.filter(v => v.title === "Temperature").slice(-1)[0]?.item_metadata?.value}°F`
-                                : "Add temperature readings in Vitals tab"}
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-white/5">
-                            <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Notes</label>
-                            <textarea placeholder="Add observations about temperature..." className="w-full p-4 bg-black/20 rounded-xl border border-white/5 focus:border-yellow-500/50 outline-none transition-colors text-sm" rows={3}></textarea>
-                        </div>
-                    </div>
-                </details>
-            </div>
-        </div>
-    )
-
-    const renderRecords = () => (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Medical Records</h2>
-                <button
-                    onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-md transition-all font-medium text-sm flex items-center gap-2"
-                >
-                    <Plus className="h-4 w-4" /> Add Record
-                </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in slide-in-from-right-4 duration-300">
-                {healthRecords.map(item => (
-                    <div key={item.id} className={`p-4 rounded-xl shadow-sm border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10 hover:border-white/20'} transition-all group relative`}>
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-bold flex items-center gap-2">
-                                {item.item_metadata?.url ? <FileText className="h-4 w-4 text-orange-500" /> : <User className="h-4 w-4 text-blue-400" />}
-                                {item.title}
-                            </h3>
-                            <button onClick={() => { if (confirm("Delete record?")) deleteItem(item.id) }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all">
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-                        {item.item_metadata?.url ? (
-                            <div onClick={() => openLightbox(item)} className="aspect-video bg-black/20 rounded-lg mb-2 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity">
-                                <img src={item.item_metadata.url} alt="Document" className="w-full h-full object-cover" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Upcoming Appointments */}
+                <div className={`lg:col-span-1 p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
+                    <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                            <CalendarIcon className="h-5 w-5 text-blue-500" /> Upcoming
+                        </span>
+                        <span className="text-xs font-normal text-gray-500">{upcomingAppts.length} found</span>
+                    </h3>
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                        {upcomingAppts.length === 0 ? (
+                            <div className="text-center py-12">
+                                <CalendarIcon className="h-12 w-12 text-gray-700 mx-auto mb-3 opacity-20" />
+                                <p className="text-gray-500 text-sm">No upcoming appointments scheduled.</p>
                             </div>
                         ) : (
-                            item.item_metadata?.doctor && (
-                                <div className="text-sm text-gray-400 mb-2 flex items-center gap-1">
-                                    <User className="h-3 w-3" /> {item.item_metadata.doctor}
+                            upcomingAppts.map(apt => (
+                                <div key={apt.id} className={`flex items-start gap-4 p-4 rounded-xl border ${theme === 'light' ? 'bg-gray-50 border-gray-100' : 'bg-white/5 border-white/5'} hover:border-blue-500/30 transition-all cursor-pointer`} onClick={() => setSelectedDate(new Date(apt.item_metadata.date))}>
+                                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                                        <CalendarIcon className="h-6 w-6" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="font-bold text-sm truncate">{apt.title}</h4>
+                                        <p className="text-xs text-blue-400 font-medium mb-1">{format(new Date(apt.item_metadata.date), 'MMM d, h:mm a')}</p>
+                                        <div className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black">
+                                            <User className="h-3 w-3" /> {apt.item_metadata.doctor || "Medical Provider"}
+                                        </div>
+                                    </div>
                                 </div>
-                            )
+                            ))
                         )}
-                        <div className="text-xs text-gray-500 flex items-center gap-1">
-                            <Clock className="h-3 w-3" /> {item.item_metadata?.date ? format(new Date(item.item_metadata.date), 'PP') : 'No Date'}
-                        </div>
                     </div>
-                ))}
-                <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`p-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${theme === 'light' ? 'border-gray-300 hover:bg-gray-50' : 'border-white/10 hover:bg-white/5'}`}
-                >
-                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept="image/*,.pdf" />
-                    {uploading ? <Loader2 className="h-8 w-8 text-blue-500 animate-spin mb-2" /> : <Upload className="h-8 w-8 text-gray-500 mb-2" />}
-                    <span className="text-xs font-bold text-gray-500 uppercase">Upload Record</span>
+                </div>
+
+                {/* Vitals Summary Chart */}
+                <div className={`lg:col-span-2 p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
+                    <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
+                        <span className="flex items-center gap-2">
+                            <Activity className="h-5 w-5 text-rose-500" /> Vital Statistics
+                        </span>
+                        <button onClick={() => setActiveTab('vitals')} className="text-xs text-blue-400 hover:underline">View All Trends</button>
+                    </h3>
+                    <div className="h-[300px] w-full">
+                        {weightData.length > 1 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={weightData}>
+                                    <defs>
+                                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                    <XAxis dataKey="date" stroke="#666" fontSize={10} axisLine={false} tickLine={false} />
+                                    <YAxis stroke="#666" fontSize={10} axisLine={false} tickLine={false} domain={['dataMin - 10', 'dataMax + 10']} />
+                                    <RechartsTooltip
+                                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '12px' }}
+                                        labelStyle={{ color: '#888', fontWeight: 'bold' }}
+                                    />
+                                    <Area type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-gray-600">
+                                <TrendingUp className="h-12 w-12 mb-3 opacity-20" />
+                                <p className="text-sm italic">Not enough data to generate trends yet.</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
     )
 
-    const renderVitals = () => (
-        <div className="space-y-4">
+
+
+    const renderRecords = () => (
+        <div className="space-y-6">
             <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Vitals</h2>
-                <button
-                    onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
-                    className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-xl transition-all font-medium text-sm flex items-center gap-2"
-                >
-                    <Plus className="h-4 w-4" /> Log Vital
-                </button>
+                <h2 className="text-2xl font-bold">Medical History Accordion</h2>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => loadMockData('records')}
+                        className="bg-white/5 hover:bg-white/10 text-gray-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase"
+                    >
+                        Load Samples
+                    </button>
+                    <button
+                        onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
+                    >
+                        <Plus className="h-4 w-4" /> Add Record
+                    </button>
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
+                    >
+                        <Upload className="h-4 w-4" /> Upload Picture
+                    </button>
+                    <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" />
+                </div>
             </div>
-            <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
-                {vitalRecords.map(vital => (
-                    <div key={vital.id} className={`p-4 rounded-xl border flex justify-between items-center ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
-                        <div className="flex items-center gap-4">
-                            <div className={`p-3 rounded-xl ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`}>
-                                {getVitalIcon(vital.title)}
-                            </div>
-                            <div>
-                                <h3 className="font-bold">{vital.title}</h3>
-                                <div className="text-xl font-mono text-blue-500">{vital.item_metadata?.value} <span className="text-xs text-gray-400">{vital.item_metadata?.unit}</span></div>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-xs text-gray-500 mb-1">{format(new Date(vital.item_metadata.date), 'PP p')}</div>
-                            <button onClick={() => { if (confirm("Delete vital?")) deleteItem(vital.id) }} className="text-xs text-red-500 hover:text-red-400">Delete</button>
-                        </div>
+
+            <div className="grid grid-cols-1 gap-3 animate-in fade-in slide-in-from-left-4 duration-500">
+                {healthRecords.length === 0 ? (
+                    <div className="text-center py-20 bg-black/20 rounded-3xl border border-dashed border-white/10">
+                        <FileText className="h-16 w-16 text-gray-700 mx-auto mb-4" />
+                        <p className="text-gray-500 italic">No medical records uploaded yet.</p>
                     </div>
-                ))}
+                ) : (
+                    healthRecords.map(item => (
+                        <details key={item.id} className={`group rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20 shadow-lg'} transition-all overflow-hidden`}>
+                            <summary className="p-5 flex items-center gap-4 cursor-pointer list-none">
+                                <div className={`p-3 rounded-xl ${item.item_metadata?.url ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                    {item.item_metadata?.url ? <Image className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-lg font-bold truncate group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.title}</h3>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase tracking-wider">
+                                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(new Date(item.item_metadata?.date || item.created_at), 'PPP p')}</span>
+                                        {item.item_metadata?.doctor && <span className="flex items-center gap-1 border-l border-white/10 pl-3"><User className="h-3 w-3" /> {item.item_metadata.doctor}</span>}
+                                    </div>
+                                </div>
+                                <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
+                            </summary>
+
+                            <div className="p-6 border-t border-white/5 bg-white/[0.02] space-y-6">
+                                {item.item_metadata?.url && (
+                                    <div className="max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group/img cursor-zoom-in" onClick={() => openLightbox(item)}>
+                                        <img src={item.item_metadata.url} alt={item.title} className="w-full h-auto object-contain bg-black" />
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                            <span className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full font-bold text-sm">Click to Expand</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="text-[10px] font-black uppercase text-blue-400 mb-2">Record Summary</h4>
+                                            <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap">
+                                                {item.item_metadata?.notes || "No detailed notes provided for this record."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <h4 className="text-[10px] font-black uppercase text-emerald-400 mb-2">Metadata Details</h4>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-3 rounded-xl bg-black/30 border border-white/5">
+                                                    <div className="text-[8px] uppercase text-gray-500 font-black">Initial Date</div>
+                                                    <div className="text-xs font-bold">{format(new Date(item.item_metadata?.date || item.created_at), 'PP')}</div>
+                                                </div>
+                                                <div className="p-3 rounded-xl bg-black/30 border border-white/5">
+                                                    <div className="text-[8px] uppercase text-gray-500 font-black">Logged At</div>
+                                                    <div className="text-xs font-bold">{format(new Date(item.created_at), 'PP')}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 justify-end pt-4">
+                                            <button onClick={() => { if (confirm("Delete this record permanently?")) deleteItem(item.id) }} className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest">
+                                                Delete Record
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    ))
+                )}
             </div>
         </div>
     )
+
+    const renderVitals = () => {
+        const vitalGroups = [
+            { id: 'bp', title: 'Blood Pressure', icon: Activity, color: 'rose', data: bpData, multi: true },
+            { id: 'weight', title: 'Weight', icon: Weight, color: 'orange', data: weightData },
+            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: vitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: vitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: vitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: vitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+        ]
+
+        return (
+            <div className="space-y-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold">Vital Sign Trends</h2>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => loadMockData('vitals')}
+                            className="bg-white/5 hover:bg-white/10 text-gray-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase"
+                        >
+                            Load Samples
+                        </button>
+                        <button
+                            onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
+                            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold flex items-center gap-2"
+                        >
+                            <Plus className="h-4 w-4" /> Log Vital
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
+                    {vitalGroups.map((group) => {
+                        const latest = vitalRecords.filter(v => v.title === group.title).slice(-1)[0]
+                        const colorMap: any = { rose: '#f43f5e', orange: '#f97316', yellow: '#eab308', cyan: '#06b6d4', red: '#ef4444', emerald: '#10b981' }
+                        const color = colorMap[group.color]
+
+                        return (
+                            <div key={group.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20'} transition-all shadow-xl group overflow-hidden relative`}>
+                                <div className={`absolute top-0 right-0 w-32 h-32 bg-${group.color}-500 opacity-[0.03] rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110 duration-500`}></div>
+
+                                <div className="flex justify-between items-start mb-6 relative z-10">
+                                    <div className={`p-3 rounded-2xl bg-${group.color}-500/10 text-${group.color}-500`}>
+                                        <group.icon className="h-6 w-6" />
+                                    </div>
+                                    <div className="text-right flex flex-col items-end">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <div className="text-xs font-black uppercase text-gray-500">{group.title}</div>
+                                            {latest && (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingVital(latest)
+                                                        setAddModalType('vital')
+                                                        setShowAddModal(true)
+                                                    }}
+                                                    className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Edit className="h-3 w-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="text-2xl font-black font-mono">
+                                            {latest ? latest.item_metadata.value : '--'}
+                                            <span className="text-xs text-gray-500 ml-1 font-normal uppercase">{latest?.item_metadata.unit || ""}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Graph Section */}
+                                <div className="h-32 w-full mb-6 mt-4">
+                                    {group.data.length > 1 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            {group.multi ? (
+                                                <LineChart data={group.data}>
+                                                    <Line type="monotone" dataKey="systolic" stroke="#ef4444" strokeWidth={3} dot={false} />
+                                                    <Line type="monotone" dataKey="diastolic" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                                                </LineChart>
+                                            ) : (
+                                                <AreaChart data={group.data}>
+                                                    <defs>
+                                                        <linearGradient id={`color-${group.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                                                            <stop offset="95%" stopColor={color} stopOpacity={0} />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <Area type="monotone" dataKey="value" stroke={color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${group.id})`} />
+                                                </AreaChart>
+                                            )}
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-xs text-gray-600 italic">Logging required for trend...</div>
+                                    )}
+                                </div>
+
+                                {/* Notes Section in Card */}
+                                <div className="pt-4 border-t border-white/5 space-y-2">
+                                    <h4 className="text-[10px] font-black uppercase text-gray-400">Notes & Observations</h4>
+                                    <p className="text-xs text-gray-300 line-clamp-2 italic">
+                                        {latest?.item_metadata?.notes || "No additional data recorded for latest entry."}
+                                    </p>
+                                    {latest?.item_metadata?.date && (
+                                        <div className="text-[10px] text-blue-400 font-bold uppercase mt-2">
+                                            Recorded {format(new Date(latest.item_metadata.date), 'LLL d, yyyy')}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+        )
+    }
 
     const renderMeds = () => {
         const medRecords = records.filter(r => r.category === "Medications" || r.type === "medication")
@@ -487,8 +617,85 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         )
     }
 
+    const renderAppointments = () => (
+        <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Google Calendar Integration */}
+            <GoogleCalendarIntegration
+                theme={theme}
+                existingAppointments={upcomingAppts}
+                onScheduleAppointment={() => { setAddModalType('appointment'); setShowAddModal(true) }}
+            />
+
+            {/* Divider */}
+            <div className="border-t border-white/10 my-8"></div>
+
+            <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Medical Appointments</h2>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => { setAddModalType('appointment'); setShowAddModal(true) }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
+                    >
+                        <Plus className="h-4 w-4" /> Schedule Visit
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {upcomingAppts.length === 0 ? (
+                    <div className="col-span-full text-center py-20 bg-black/20 rounded-3xl border border-dashed border-white/10">
+                        <CalendarIcon className="h-16 w-16 text-gray-700 mx-auto mb-4" />
+                        <p className="text-gray-500 italic">No upcoming appointments scheduled.</p>
+                    </div>
+                ) : (
+                    upcomingAppts.map(apt => (
+                        <div key={apt.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20 shadow-lg'} transition-all group relative overflow-hidden`}>
+                            <div className="absolute top-0 right-0 p-4 opacity-50">
+                                <CalendarIcon className="h-24 w-24 text-blue-500/10 -mr-6 -mt-6 transform rotate-12" />
+                            </div>
+
+                            <div className="relative z-10 space-y-4">
+                                <div className="flex items-start justify-between">
+                                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                                        <CalendarIcon className="h-6 w-6" />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => { setEditingVital(apt); setAddModalType('appointment'); setShowAddModal(true) }} className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-full transition-colors">
+                                            <Edit className="h-4 w-4" />
+                                        </button>
+                                        <button onClick={() => { if (confirm("Cancel this appointment?")) deleteItem(apt.id) }} className="p-2 hover:bg-red-500/10 text-red-500 rounded-full transition-colors">
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="text-lg font-bold mb-1 line-clamp-1">{apt.title}</h3>
+                                    <p className="text-sm text-blue-400 font-bold uppercase tracking-wider">{format(new Date(apt.item_metadata.date), 'MMMM d, yyyy')}</p>
+                                    <p className="text-xs text-gray-500 font-mono mt-1">{format(new Date(apt.item_metadata.date), 'h:mm a')}</p>
+                                </div>
+
+                                <div className="pt-4 border-t border-white/5 space-y-2">
+                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                        <User className="h-3 w-3" />
+                                        <span>{apt.item_metadata.doctor || "No provider specified"}</span>
+                                    </div>
+                                    {apt.item_metadata.notes && (
+                                        <div className="text-xs text-gray-500 italic line-clamp-2">
+                                            "{apt.item_metadata.notes}"
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    )
+
     return (
-        <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50' : 'bg-[#121212]'} text-white overflow-hidden`}>
+        <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-[#121212] text-white'} overflow-hidden`}>
             <div className="p-8 pb-4">
                 <h1 className="text-3xl font-bold mb-6 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                     <Activity className="h-8 w-8 text-blue-400" /> Health Hub
@@ -501,7 +708,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             { id: 'records', label: 'Medical Records', icon: FileText },
                             { id: 'meds', label: 'Meds', icon: Activity },
                             { id: 'vitals', label: 'Vitals', icon: Heart },
-                            { id: 'calendar', label: 'Timeline', icon: CalendarIcon }
+                            { id: 'appointments', label: 'Appointments', icon: Clock },
+                            { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
+                            { id: 'ai', label: 'AI Assistant', icon: Sparkles }
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -521,111 +730,278 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 {activeTab === 'dashboard' && <div className="px-8 pb-8">{renderDashboard()}</div>}
                 {activeTab === 'records' && <div className="px-8 pb-8">{renderRecords()}</div>}
-                {activeTab === 'meds' && <Medications records={records} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />}
+                {activeTab === 'meds' && (
+                    <div className="px-8 pb-8 space-y-4">
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowPillLibrary(true)}
+                                className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase flex items-center gap-2"
+                            >
+                                <Pill className="h-4 w-4" /> Pill Library
+                            </button>
+                            <button
+                                onClick={() => loadMockData('meds')}
+                                className="bg-white/5 hover:bg-white/10 text-gray-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase"
+                            >
+                                Load Samples
+                            </button>
+                        </div>
+                        <Medications records={records} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />
+                        {showPillLibrary && <PillLibraryModal isOpen={showPillLibrary} onClose={() => setShowPillLibrary(false)} theme={theme} addItem={addItem} />}
+                    </div>
+                )}
+
                 {activeTab === 'vitals' && <div className="px-8 pb-8">{renderVitals()}</div>}
                 {activeTab === 'calendar' && <div className="px-8 pb-8">{renderCalendarView()}</div>}
-            </div>
-
-            {/* Add Modals would go here - simplified for this turn to focus on structure */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                    <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'}`}>
-                        <h2 className="text-xl font-bold mb-4">{addModalType === 'vital' ? 'Log Vital' : 'Add Medical Record'}</h2>
-                        {addModalType === 'vital' ? (
-                            <form onSubmit={async (e: any) => {
-                                e.preventDefault()
-                                const fd = new FormData(e.target)
-                                await addItem({
-                                    type: "note",
-                                    category: "Vitals",
-                                    title: fd.get("type"),
-                                    item_metadata: {
-                                        is_vital: true,
-                                        value: fd.get("value"),
-                                        unit: fd.get("unit"),
-                                        date: fd.get("date"),
-                                        notes: fd.get("notes")
-                                    }
-                                })
-                                setShowAddModal(false)
-                            }} className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Type</label>
-                                    <select name="type" className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10">
-                                        <option>Blood Pressure</option>
-                                        <option>Weight</option>
-                                        <option>Heart Rate</option>
-                                        <option>Blood Oxygen</option>
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Value</label>
-                                        <input name="value" required placeholder="e.g. 120/80" className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10" />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Unit</label>
-                                        <input name="unit" placeholder="e.g. mmHg" className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Date</label>
-                                    <input type="datetime-local" name="date" required defaultValue={new Date().toISOString().slice(0, 16)} className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10" />
-                                </div>
-                                <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold mt-4">Save Entry</button>
-                            </form>
-                        ) : (
-                            <form onSubmit={async (e: any) => {
-                                e.preventDefault()
-                                const fd = new FormData(e.target)
-                                await addItem({
-                                    type: "health-record",
-                                    title: fd.get("title"),
-                                    category: "Health Records",
-                                    item_metadata: {
-                                        is_health_record: true,
-                                        date: fd.get("date"),
-                                        doctor: fd.get("doctor"),
-                                        notes: fd.get("notes")
-                                    }
-                                })
-                                setShowAddModal(false)
-                            }} className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Title</label>
-                                    <input name="title" required placeholder="e.g. Annual Checkup" className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Doctor</label>
-                                        <input name="doctor" placeholder="Dr. Smith" className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10" />
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase">Date</label>
-                                        <input type="datetime-local" name="date" required defaultValue={new Date().toISOString().slice(0, 16)} className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10" />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase">Notes</label>
-                                    <textarea name="notes" placeholder="Details..." className="w-full p-2 rounded bg-black/10 dark:bg-black/30 border border-transparent dark:border-white/10 h-24" />
-                                </div>
-                                <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold mt-4">Save Record</button>
-                            </form>
-                        )}
-                        <button onClick={() => setShowAddModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white"><X className="h-6 w-6" /></button>
+                {activeTab === 'appointments' && <div className="px-8 pb-8">{renderAppointments()}</div>}
+                {activeTab === 'ai' && (
+                    <div className="px-8 pb-8">
+                        <HealthAI
+                            theme={theme}
+                            records={records}
+                            onScheduleAppointment={() => {
+                                setAddModalType('appointment')
+                                setShowAddModal(true)
+                            }}
+                        />
                     </div>
-                </div>
-            )}
+                )}
+                {showAddModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-300">
+                        <div className={`w-full max-w-2xl rounded-[2.5rem] p-10 shadow-3xl overflow-hidden relative ${theme === 'light' ? 'bg-white' : 'bg-black border border-white/20'}`}>
+                            {/* Designer Background Gradient */}
+                            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-emerald-500 to-rose-500"></div>
 
-            {lightboxOpen && (
-                <Lightbox
-                    items={lightboxItems}
-                    currentIndex={lightboxIndex}
-                    onClose={() => setLightboxOpen(false)}
-                    onNext={() => { }}
-                    onPrev={() => { }}
-                />
-            )}
+                            <div className="flex justify-between items-center mb-8">
+                                <h2 className="text-3xl font-black italic uppercase tracking-tighter">
+                                    {addModalType === 'vital' ? (
+                                        <span className="flex items-center gap-3"><Activity className="h-8 w-8 text-rose-500" /> Log Vital</span>
+                                    ) : addModalType === 'appointment' ? (
+                                        <span className="flex items-center gap-3"><Clock className="h-8 w-8 text-blue-500" /> Schedule Visit</span>
+                                    ) : (
+                                        <span className="flex items-center gap-3"><FileText className="h-8 w-8 text-blue-500" /> Add Medical Record</span>
+                                    )}
+                                </h2>
+                                <button onClick={() => { setShowAddModal(false); setEditingVital(null) }} className="p-2 rounded-full hover:bg-white/10 transition-colors">
+                                    <X className="h-8 w-8 text-gray-500" />
+                                </button>
+                            </div>
+
+                            {addModalType === 'vital' ? (
+                                <form onSubmit={async (e: any) => {
+                                    e.preventDefault()
+                                    const fd = new FormData(e.target)
+                                    const type = fd.get("type") as string
+                                    const value = fd.get("value") as string
+
+                                    const units: any = { 'Blood Pressure': 'mmHg', 'Weight': 'lbs', 'Temperature': '°F', 'Blood Oxygen': '%', 'Heart Rate': 'bpm', 'Glucose': 'mg/dL' }
+
+                                    const payload = {
+                                        type: "note",
+                                        category: "Vitals",
+                                        title: type,
+                                        item_metadata: {
+                                            is_vital: true,
+                                            value: value,
+                                            unit: fd.get("unit") || units[type] || '',
+                                            date: fd.get("date"),
+                                            notes: fd.get("notes"),
+                                            // AI Fields
+                                            context: fd.get("context"),
+                                            mood: fd.get("mood")
+                                        }
+                                    }
+
+                                    if (editingVital) {
+                                        await updateItem(editingVital.id, payload)
+                                    } else {
+                                        await addItem(payload)
+                                    }
+                                    setShowAddModal(false)
+                                    setEditingVital(null)
+                                }} className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Vital Metric</label>
+                                            <select name="type" defaultValue={editingVital?.title || "Blood Pressure"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold">
+                                                <option>Blood Pressure</option>
+                                                <option>Weight</option>
+                                                <option>Heart Rate</option>
+                                                <option>Blood Oxygen</option>
+                                                <option>Glucose</option>
+                                                <option>Temperature</option>
+                                            </select>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Value</label>
+                                                <input name="value" required defaultValue={editingVital?.item_metadata?.value || ""} placeholder="120/80" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-mono font-bold" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Unit</label>
+                                                <input name="unit" defaultValue={editingVital?.item_metadata?.unit || ""} placeholder="mmHg" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all text-xs font-bold" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Timestamp</label>
+                                            <input type="datetime-local" name="date" required defaultValue={editingVital?.item_metadata?.date ? new Date(editingVital.item_metadata.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">State/Context (AI Informed)</label>
+                                            <select name="context" defaultValue={editingVital?.item_metadata?.context || "At Rest"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold">
+                                                <option>At Rest</option>
+                                                <option>Post Workout</option>
+                                                <option>Waking Up</option>
+                                                <option>Feeling Stress</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Current Mood/Feeling</label>
+                                        <div className="flex gap-4">
+                                            {['😊', '🤒', '😴', '😰', '⚡'].map(mood => (
+                                                <label key={mood} className="flex-1 cursor-pointer">
+                                                    <input type="radio" name="mood" value={mood} defaultChecked={editingVital?.item_metadata?.mood === mood} className="hidden peer" />
+                                                    <div className="p-4 text-2xl text-center rounded-2xl bg-white/5 border border-white/10 peer-checked:bg-rose-500/20 peer-checked:border-rose-500/50 transition-all">
+                                                        {mood}
+                                                    </div>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Detailed Observations</label>
+                                        <textarea name="notes" defaultValue={editingVital?.item_metadata?.notes || ""} placeholder="How are you feeling? Any specific symptoms? (AI will use this for analysis later)" className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all h-32 text-sm italic" />
+                                    </div>
+
+                                    <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-rose-600 to-red-600 text-white font-black italic uppercase tracking-tighter hover:from-rose-500 hover:to-red-500 transition-all shadow-2xl shadow-rose-500/20 active:scale-95">
+                                        {editingVital ? 'Update Vital' : 'Finalize Entry'}
+                                    </button>
+                                </form>
+                            ) : addModalType === 'appointment' ? (
+                                <form onSubmit={async (e: any) => {
+                                    e.preventDefault()
+                                    const fd = new FormData(e.target)
+                                    const payload = {
+                                        type: "note",
+                                        title: fd.get("title") as string,
+                                        category: "Health Records",
+                                        item_metadata: {
+                                            is_health_record: true,
+                                            type: "Appointment",
+                                            date: fd.get("date"),
+                                            doctor: fd.get("doctor"),
+                                            location: fd.get("location"),
+                                            specialty: fd.get("specialty"),
+                                            notes: fd.get("notes"),
+                                            priority: fd.get("priority")
+                                        }
+                                    }
+
+                                    if (editingVital) {
+                                        await updateItem(editingVital.id, payload)
+                                    } else {
+                                        await addItem(payload)
+                                    }
+                                    setShowAddModal(false)
+                                    setEditingVital(null)
+                                }} className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Reason for Visit</label>
+                                        <input name="title" required defaultValue={editingVital?.title || ""} placeholder="e.g. Annual Checkup" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Date & Time</label>
+                                            <input type="datetime-local" name="date" required defaultValue={editingVital?.item_metadata?.date || new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Doctor / Provider</label>
+                                            <input name="doctor" defaultValue={editingVital?.item_metadata?.doctor || ""} placeholder="Dr. Smith" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Location</label>
+                                            <div className="relative">
+                                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+                                                <input name="location" defaultValue={editingVital?.item_metadata?.location || ""} placeholder="123 Medic Lane" className="w-full p-4 pl-12 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Specialty</label>
+                                            <input name="specialty" defaultValue={editingVital?.item_metadata?.specialty || ""} placeholder="Cardiology" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Notes & Instructions</label>
+                                        <textarea name="notes" defaultValue={editingVital?.item_metadata?.notes || ""} placeholder="Bring ID, insurance card, etc." className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm italic" />
+                                    </div>
+                                    <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
+                                        {editingVital ? 'Update Appointment' : 'Confirm Appointment'}
+                                    </button>
+                                </form>
+                            ) : (
+                                <form onSubmit={async (e: any) => {
+                                    e.preventDefault()
+                                    const fd = new FormData(e.target)
+                                    await addItem({
+                                        type: "note",
+                                        title: fd.get("title") as string,
+                                        category: "Health Records",
+                                        item_metadata: {
+                                            is_health_record: true,
+                                            date: fd.get("date"),
+                                            doctor: fd.get("doctor"),
+                                            notes: fd.get("notes"),
+                                            type: "Manual Entry"
+                                        }
+                                    })
+                                    setShowAddModal(false)
+                                }} className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Record Title</label>
+                                        <input name="title" required placeholder="e.g. Annual Cardiovascular Screening" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Doctor/Facility</label>
+                                            <input name="doctor" placeholder="Dr. Sarah Johnson" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Record Date</label>
+                                            <input type="datetime-local" name="date" required defaultValue={new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Diagnostic Summarization</label>
+                                        <textarea name="notes" placeholder="Summarize findings, outcomes, and next steps..." className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm" />
+                                    </div>
+                                    <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
+                                        Securely Store Record
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {
+                    lightboxOpen && (
+                        <Lightbox
+                            items={lightboxItems}
+                            currentIndex={lightboxIndex}
+                            onClose={() => setLightboxOpen(false)}
+                            onNext={() => setLightboxIndex((prev) => (prev + 1) % lightboxItems.length)}
+                            onPrev={() => setLightboxIndex((prev) => (prev - 1 + lightboxItems.length) % lightboxItems.length)}
+                        />
+                    )}
+            </div>
         </div>
     )
 }

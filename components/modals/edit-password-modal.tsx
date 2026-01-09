@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Image, X } from "lucide-react"
 import { PasswordInput } from "@/components/ui/password-input"
+import CustomFieldsSection, { CustomField } from "./custom-fields-section"
 
 export default function EditPasswordModal({ onClose, onSave, passwordData, folders, theme }: { onClose: () => void, onSave: (data: any) => void, passwordData: any, folders: any[], theme: string }) {
   const [formData, setFormData] = useState({
@@ -12,10 +13,12 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
     password: "",
     notes: "",
     category: "General",
-    path: "",
+    folder_id: "",
     picture: "",
+    customFields: [] as CustomField[]
   })
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Categories list
@@ -45,12 +48,13 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
         password: passwordData.password || "",
         notes: passwordData.notes || "",
         category: passwordData.category || "General",
-        path: passwordData.path || "",
+        folder_id: passwordData.folder_id || "",
         picture: passwordData.picture || "",
+        customFields: passwordData.item_metadata?.customFields || []
       })
 
-      if (passwordData.picture) {
-        setPreviewImage(passwordData.picture)
+      if (passwordData.picture || passwordData.item_metadata?.picture) {
+        setPreviewImage(passwordData.picture || passwordData.item_metadata?.picture)
       }
     }
   }, [passwordData])
@@ -60,6 +64,13 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
     setFormData({
       ...formData,
       [name]: value,
+    })
+  }
+
+  const handleCustomFieldsChange = (fields: CustomField[]) => {
+    setFormData({
+      ...formData,
+      customFields: fields
     })
   }
 
@@ -85,11 +96,22 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      onSave(formData)
-      console.log("Edit clicked")
-      if (formData.picture) {
-        console.log("Picture uploaded: " + formData.website)
+      // Find selected folder to get its path for compatibility
+      const selectedFolder = folders.find(f => f.id === formData.folder_id)
+      const folderPath = selectedFolder ? selectedFolder.path : ""
+
+      // Merge customFields into item_metadata for saving
+      const dataToSave = {
+        ...formData,
+        path: folderPath, // Set path for compatibility
+        item_metadata: {
+          ...passwordData.item_metadata,
+          customFields: formData.customFields,
+          picture: formData.picture || passwordData.item_metadata?.picture
+        }
       }
+      onSave(dataToSave)
+      console.log("Edit clicked")
     } catch (error) {
       console.log("Edit password error:", error)
     }
@@ -97,7 +119,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar">
         <div className="flex justify-between items-center p-4 border-b border-gray-700 sticky top-0 bg-[#2a2a2a] z-10">
           <h2 className="text-xl font-semibold">Edit Password</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
@@ -190,16 +212,16 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 Folder
               </label>
               <select
-                id="path"
-                name="path"
-                value={formData.path}
+                id="folder_id"
+                name="folder_id"
+                value={formData.folder_id}
                 onChange={handleChange}
                 className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
               >
                 <option value="">No folder (Root)</option>
                 {folders.map((folder) => (
-                  <option key={folder.id} value={folder.path}>
-                    {folder.path}
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name || folder.path}
                   </option>
                 ))}
               </select>
@@ -231,6 +253,11 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 </div>
               )}
             </div>
+
+            <CustomFieldsSection
+              fields={formData.customFields}
+              onChange={handleCustomFieldsChange}
+            />
 
             <div>
               <label htmlFor="notes" className="block text-sm font-medium mb-1">

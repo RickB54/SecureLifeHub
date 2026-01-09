@@ -9,12 +9,13 @@ interface HeaderProps {
   onLogout: () => void
   toggleSidebar: () => void
   onNavigate: (page: string) => void
+  onBack: () => void
   theme: string
   toggleTheme: () => void
   activePage: string
 }
 
-export default function Header({ onLogout, toggleSidebar, onNavigate, theme, toggleTheme, activePage }: HeaderProps) {
+export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const { user } = useAuth()
@@ -51,9 +52,9 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, theme, tog
 
           {activePage !== "dashboard" && (
             <button
-              onClick={() => onNavigate("dashboard")}
+              onClick={onBack}
               className={`mr-3 flex items-center ${theme === "light" ? "text-gray-600 hover:text-gray-900" : "text-gray-300 hover:text-white"}`}
-              title="Back to Dashboard"
+              title="Go Back"
             >
               <ArrowLeft className="h-5 w-5 mr-1" />
               <span className="text-sm font-medium">Back</span>

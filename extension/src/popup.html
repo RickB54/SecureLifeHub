@@ -218,6 +218,14 @@
             </div>
           </div>
 
+          <!-- Custom Fields Container -->
+          <div id="view-custom-fields-container" class="space-y-4 pt-4 border-t border-[#333] hidden">
+            <label class="block text-[10px] text-gray-500 uppercase font-bold mb-1">Custom Fields</label>
+            <div id="custom-fields-list" class="space-y-3">
+              <!-- Populated via JS -->
+            </div>
+          </div>
+
           <!-- Notes -->
           <div class="group flex-1 flex flex-col min-h-[100px]">
             <label class="block text-xs text-gray-500 uppercase font-semibold mb-1">Notes</label>
@@ -276,6 +284,62 @@
             <label class="block text-xs text-gray-400 mb-1">Website</label>
             <input type="text" id="edit-website"
               class="w-full bg-[#2d2d2d] border border-gray-700 rounded p-2 text-sm text-white focus:border-blue-500 focus:outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Category</label>
+              <select id="edit-category"
+                class="w-full bg-[#2d2d2d] border border-gray-700 rounded p-2 text-sm text-white focus:border-blue-500 focus:outline-none">
+                <option value="General">General</option>
+                <option value="Work">Work</option>
+                <option value="Personal">Personal</option>
+                <option value="Finance">Finance</option>
+                <option value="Social">Social</option>
+                <option value="Servers">Servers</option>
+                <option value="Health Insurance">Health Insurance</option>
+                <option value="Memberships">Memberships</option>
+                <option value="Secure Notes">Secure Notes</option>
+                <option value="Passports">Passports</option>
+                <option value="Identity Cards">Identity Cards</option>
+                <option value="Software Licenses">Software Licenses</option>
+                <option value="SSH Keys">SSH Keys</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">Folder</label>
+              <select id="edit-folder"
+                class="w-full bg-[#2d2d2d] border border-gray-700 rounded p-2 text-sm text-white focus:border-blue-500 focus:outline-none">
+                <option value="">None</option>
+                <!-- Folders filled via JS -->
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs text-gray-400 mb-1">Picture</label>
+            <div class="flex items-center gap-4">
+              <div id="edit-picture-preview"
+                class="w-12 h-12 rounded bg-[#333] border border-gray-700 flex items-center justify-center overflow-hidden">
+                <span class="text-[10px] text-gray-500">No Image</span>
+              </div>
+              <input type="file" id="edit-picture-input" accept="image/*" class="hidden">
+              <button type="button" onclick="document.getElementById('edit-picture-input').click()"
+                class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-[10px] text-white transition-colors">Choose
+                File</button>
+            </div>
+          </div>
+          <!-- Custom Fields Edit Section -->
+          <div id="edit-custom-fields-section" class="pt-2">
+            <label class="block text-xs text-gray-400 mb-2">Custom Fields</label>
+            <div id="edit-custom-fields-list" class="space-y-3 mb-3">
+              <!-- Custom fields inputs -->
+            </div>
+            <button type="button" id="add-custom-field-btn"
+              class="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs font-semibold">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Add Custom Field
+            </button>
           </div>
           <div class="flex-1 flex flex-col">
             <label class="block text-xs text-gray-400 mb-1">Notes</label>

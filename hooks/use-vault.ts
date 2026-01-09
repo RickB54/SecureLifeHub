@@ -85,6 +85,9 @@ export function useVault() {
             setItems(mappedItems as any) // Type assertion for transition
         } catch (error: any) {
             console.error("Error fetching vault:", error)
+            // Log more details if it's a supabase error
+            if (error?.message) console.error("Error Message:", error.message)
+            if (error?.details) console.error("Error Details:", error.details)
             toast.error("Failed to load vault items")
         } finally {
             setLoading(false)
@@ -121,7 +124,7 @@ export function useVault() {
         }
     }
 
-    const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }) => {
+    const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }, options?: { skipRefresh?: boolean }) => {
         if (!user) return
         try {
             // Prepare payload (remove UI specific fields if any)
@@ -174,7 +177,7 @@ export function useVault() {
             })
 
             toast.success("Item added")
-            await fetchData() // Force sync
+            if (!options?.skipRefresh) await fetchData() // Force sync
             return newItem
         } catch (error: any) {
             console.error("=== CAUGHT ERROR IN addItem ===")
@@ -300,7 +303,7 @@ export function useVault() {
         }
     }
 
-    const deleteItem = async (id: string, type: string = "item") => {
+    const deleteItem = async (id: string, type: string = "item", options?: { skipRefresh?: boolean }) => {
         try {
             const table = type === "folder" ? "folders" : "vault_items"
             const { error } = await supabase
@@ -316,7 +319,7 @@ export function useVault() {
                 setItems(prev => prev.filter(i => i.id !== id))
             }
             toast.success(`${type === 'folder' ? 'Folder' : 'Item'} deleted`)
-            await fetchData() // Force sync
+            if (!options?.skipRefresh) await fetchData() // Force sync
         } catch (error: any) {
             console.error("Delete operation failed:", JSON.stringify(error, null, 2))
             toast.error(`Failed to delete ${type}: ${error.message || "Unknown error"}`)

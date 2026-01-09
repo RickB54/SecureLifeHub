@@ -3,23 +3,25 @@
 import { useState, useRef } from "react"
 import { Image, X } from "lucide-react"
 import { PasswordInput } from "@/components/ui/password-input"
+import CustomFieldsSection, { CustomField } from "./custom-fields-section"
 
-
-// Update the component to accept folders prop and initialPath
-export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialPath = "" }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialPath?: string }) {
+// Update the component to accept folders prop and initialFolderId
+export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialFolderId = "" }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialFolderId?: string }) {
   const [formData, setFormData] = useState({
     website: "",
     username: "",
     password: "",
     notes: "",
     category: "General",
-    path: initialPath, // Use initialPath
+    folder_id: initialFolderId, // Use initialFolderId
     picture: "", // Add picture field
+    customFields: [] as CustomField[]
   })
 
   const [showNewFolder, setShowNewFolder] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false) // Visibility state
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Categories list
@@ -47,6 +49,13 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
     })
   }
 
+  const handleCustomFieldsChange = (fields: CustomField[]) => {
+    setFormData({
+      ...formData,
+      customFields: fields
+    })
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
@@ -69,29 +78,35 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      // If creating a new folder
-      if (showNewFolder && newFolderName.trim()) {
-        // Use the new folder name as the path
-        onAdd({
-          ...formData,
-          path: newFolderName.trim(),
-        })
-      } else {
-        // Use the selected path
-        onAdd(formData)
+      // Prepare metadata
+      const item_metadata = {
+        customFields: formData.customFields,
+        picture: formData.picture
       }
-      console.log("Picture uploaded: " + formData.website)
+
+      // If creating a new folder
+      const selectedFolder = folders.find(f => f.id === formData.folder_id)
+      const folderPath = showNewFolder ? newFolderName.trim() : (selectedFolder ? selectedFolder.path : "")
+
+      const finalData = {
+        ...formData,
+        item_metadata,
+        path: folderPath
+      }
+
+      onAdd(finalData)
+      console.log("Add clicked")
     } catch (error) {
       console.log("Add password error:", error)
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md">
-        <div className="flex justify-between items-center p-4 border-b border-gray-700">
-          <h2 className="text-xl font-semibold">Add New Password</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className={`${theme === 'light' ? 'bg-white text-gray-900' : 'bg-black text-white border border-white/20'} rounded-lg shadow-lg w-full max-w-2xl my-8`}>
+        <div className={`flex justify-between items-center p-4 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+          <h2 className="text-xl font-bold">Add New Password</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2">
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -99,7 +114,7 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
         <form onSubmit={handleSubmit} className="p-4">
           <div className="space-y-4">
             <div>
-              <label htmlFor="website" className="block text-sm font-medium mb-1">
+              <label htmlFor="website" className="block text-sm font-bold text-gray-200 mb-1">
                 Website
               </label>
               <input
@@ -114,7 +129,7 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
             </div>
 
             <div>
-              <label htmlFor="username" className="block text-sm font-medium mb-1">
+              <label htmlFor="username" className="block text-sm font-bold text-gray-200 mb-1">
                 Username
               </label>
               <input
@@ -168,16 +183,16 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
               {!showNewFolder ? (
                 <div className="space-y-2">
                   <select
-                    id="path"
-                    name="path"
-                    value={formData.path}
+                    id="folder_id"
+                    name="folder_id"
+                    value={formData.folder_id}
                     onChange={handleChange}
                     className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
                   >
                     <option value="">No folder (Root)</option>
                     {folders.map((folder) => (
-                      <option key={folder.id} value={folder.path}>
-                        {folder.path}
+                      <option key={folder.id} value={folder.id}>
+                        {folder.name || folder.path}
                       </option>
                     ))}
                   </select>
@@ -235,6 +250,11 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
                 </div>
               )}
             </div>
+
+            <CustomFieldsSection
+              fields={formData.customFields}
+              onChange={handleCustomFieldsChange}
+            />
 
             <div>
               <label htmlFor="notes" className="block text-sm font-medium mb-1">

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
-import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText } from "lucide-react"
+import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle } from "lucide-react"
 import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, startOfDay, endOfDay, eachHourOfInterval, addWeeks, subWeeks, addMonths, subMonths } from "date-fns"
 
 // Pill shapes and their icon components
@@ -14,6 +14,10 @@ const PILL_SHAPES = [
     { id: 'liquid', label: 'Liquid', icon: Droplets },
     { id: 'spray', label: 'Spray', icon: Droplets },
     { id: 'inhaler', label: 'Inhaler', icon: Package },
+    { id: 'triangle', label: 'Triangle', icon: Triangle },
+    { id: 'hexagon', label: 'Hexagon', icon: Hexagon },
+    { id: 'star', label: 'Star', icon: Sparkles },
+    { id: 'diamond', label: 'Diamond', icon: MapPin },
 ]
 
 // Common pill colors
@@ -59,6 +63,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const [currentDate, setCurrentDate] = useState(new Date())
     const [viewMode, setViewMode] = useState<"list" | "timeline">("list")
     const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("day")
+    const [showFullTimeline, setShowFullTimeline] = useState(false) // NEW: Toggle full timeline view
+    const [showDiagnostics, setShowDiagnostics] = useState(false) // NEW: Toggle diagnostic panel
 
     // AI Drug Lookup Function
     const handleDrugLookup = async (medName: string) => {
@@ -155,11 +161,62 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     setActiveReminder(med)
                     setLastReminderTime(currentTime)
 
-                    // Play Sound
+                    // Play 3 LOUD beeps using Web Audio API (no external files!)
                     try {
-                        const audio = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg")
-                        audio.play()
-                    } catch (e) { console.error("Audio play failed", e) }
+                        const playBeeps = () => {
+                            // Create audio context
+                            const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+                            const audioContext = new AudioContext()
+
+                            let currentBeep = 0
+
+                            const playBeep = () => {
+                                if (currentBeep >= 3) {
+                                    audioContext.close()
+                                    return
+                                }
+
+                                // Create oscillator (tone generator)
+                                const oscillator = audioContext.createOscillator()
+                                const gainNode = audioContext.createGain()
+
+                                oscillator.connect(gainNode)
+                                gainNode.connect(audioContext.destination)
+
+                                // Set beep properties
+                                oscillator.frequency.value = 800 // 800 Hz - high pitched beep
+                                oscillator.type = 'sine'
+
+                                // Set volume
+                                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+                                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+
+                                // Play beep for 0.5 seconds
+                                oscillator.start(audioContext.currentTime)
+                                oscillator.stop(audioContext.currentTime + 0.5)
+
+                                currentBeep++
+
+                                // Schedule next beep
+                                if (currentBeep < 3) {
+                                    setTimeout(playBeep, 700) // Wait 700ms between beeps
+                                }
+                            }
+
+                            playBeep()
+                        }
+
+                        playBeeps()
+                    } catch (e) {
+                        console.error("Audio play failed", e)
+                        // Fallback: Browser notification
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            new Notification(`💊 Medication Reminder`, {
+                                body: `Time to take ${med.title}`,
+                                icon: "/pill-icon.png"
+                            })
+                        }
+                    }
                 }
             })
         }
@@ -280,11 +337,17 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         if (!selectedMed || !rescheduleDate || !rescheduleTime) return
 
         const newDateTime = new Date(`${rescheduleDate}T${rescheduleTime}`)
+        const newTimeString = format(newDateTime, 'HH:mm') // e.g., "18:28"
+
+        // Get existing reminders and add the new time
+        const existingReminders = selectedMed.item_metadata?.reminders || []
+        const updatedReminders = [...existingReminders, newTimeString]
 
         await updateItem(selectedMed.id, {
             item_metadata: {
                 ...selectedMed.item_metadata,
-                nextDose: newDateTime.toISOString()
+                nextDose: newDateTime.toISOString(),
+                reminders: updatedReminders // Add to reminders array so alarm will trigger
             }
         })
 
@@ -351,7 +414,14 @@ ${selectedMed ? `
                 .map((log: any) => ({ ...med, eventType: 'taken', eventTime: new Date(log.timestamp) }))
         })
 
-        // 2. Get Scheduled Reminders
+        // 2. Get Skipped Logs
+        const skippedMeds = medRecords.flatMap(med => {
+            const skippedLog = med.item_metadata?.skippedLog || []
+            return skippedLog.filter((log: any) => isSameDay(new Date(log.timestamp), currentDate))
+                .map((log: any) => ({ ...med, eventType: 'skipped', eventTime: new Date(log.timestamp) }))
+        })
+
+        // 3. Get Scheduled Reminders
         const scheduledMeds = medRecords.flatMap(med => {
             const reminders = med.item_metadata?.reminders || []
             return reminders.map((timeStr: string) => {
@@ -362,7 +432,16 @@ ${selectedMed ? `
             })
         })
 
-        const allEvents = [...takenMeds, ...scheduledMeds]
+        const allEvents = [...takenMeds, ...skippedMeds, ...scheduledMeds]
+
+        // Filter hours to only show those with medications (accordion mode)
+        const hoursWithMeds = hours.filter(hour => {
+            const hourEvents = allEvents.filter(e => e.eventTime.getHours() === hour.getHours())
+            return hourEvents.length > 0
+        })
+
+        // Use filtered or full list based on toggle
+        const displayHours = showFullTimeline ? hours : hoursWithMeds
 
         return (
             <div className={`rounded-2xl p-6 border w-full ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
@@ -378,35 +457,84 @@ ${selectedMed ? `
                         </button>
                     </div>
                 </div>
+
+                {/* Toggle Full Timeline Button */}
+                <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-400">
+                        {showFullTimeline
+                            ? `Showing all ${hours.length} hours`
+                            : `Showing ${hoursWithMeds.length} hour${hoursWithMeds.length !== 1 ? 's' : ''} with medications`
+                        }
+                    </div>
+                    <button
+                        onClick={() => setShowFullTimeline(!showFullTimeline)}
+                        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${showFullTimeline
+                            ? 'bg-purple-500/20 text-purple-400 hover:bg-purple-500/30'
+                            : 'bg-blue-500/20 text-blue-400 hover:bg-blue-500/30'
+                            }`}
+                    >
+                        {showFullTimeline ? 'Show Only Med Hours' : 'Expand Full Timeline'}
+                    </button>
+                </div>
+
                 <div className="space-y-2">
-                    {hours.map((hour, i) => {
+                    {displayHours.map((hour, i) => {
                         const hourEvents = allEvents.filter(e => e.eventTime.getHours() === hour.getHours())
                         return (
                             <div key={i} className="flex gap-4 border-b border-white/5 pb-2 min-h-[50px]">
                                 <div className="w-20 text-sm text-gray-400 pt-1 font-mono">{format(hour, 'h:mm a')}</div>
                                 <div className="flex-1 space-y-2">
-                                    {hourEvents.map((med, idx) => (
-                                        <div key={idx} className={`p-3 rounded-lg border flex items-center gap-3 ${med.eventType === 'taken' ? 'bg-green-500/10 border-green-500/20' : 'bg-purple-500/10 border-purple-500/20'}`}>
-                                            {getPillIcon(med)}
-                                            <div className="flex-1">
-                                                <div className="font-bold flex items-center gap-2">
-                                                    {med.title}
-                                                    {med.eventType === 'taken' ? (
-                                                        <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Taken</span>
-                                                    ) : (
-                                                        <span className="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">Scheduled</span>
+                                    {hourEvents.map((med, idx) => {
+                                        // Determine colors and labels based on event type
+                                        const statusConfig = {
+                                            taken: {
+                                                bg: 'bg-green-500/10',
+                                                border: 'border-green-500/20',
+                                                badge: 'bg-green-500 text-white',
+                                                label: 'Taken',
+                                                icon: Check
+                                            },
+                                            skipped: {
+                                                bg: 'bg-orange-500/10',
+                                                border: 'border-orange-500/20',
+                                                badge: 'bg-orange-500 text-white',
+                                                label: 'Skipped',
+                                                icon: X
+                                            },
+                                            scheduled: {
+                                                bg: 'bg-purple-500/10',
+                                                border: 'border-purple-500/20',
+                                                badge: 'bg-purple-500 text-white',
+                                                label: 'Scheduled',
+                                                icon: Bell
+                                            }
+                                        }
+
+                                        const config = statusConfig[med.eventType as keyof typeof statusConfig] || statusConfig.scheduled
+                                        const StatusIcon = config.icon
+
+                                        return (
+                                            <div key={idx} className={`p-3 rounded-lg border flex items-center gap-3 ${config.bg} ${config.border}`}>
+                                                {getPillIcon(med)}
+                                                <div className="flex-1">
+                                                    <div className="font-bold flex items-center gap-2">
+                                                        {med.title}
+                                                        <span className={`text-[10px] ${config.badge} px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider flex items-center gap-1`}>
+                                                            <StatusIcon className="h-2.5 w-2.5" />
+                                                            {config.label}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-sm text-gray-400">{med.item_metadata?.dosage}</div>
+                                                    {med.eventType === 'scheduled' && med.item_metadata?.rxInstructions && (
+                                                        <div className="text-xs text-gray-500 italic mt-1">{med.item_metadata.rxInstructions}</div>
                                                     )}
                                                 </div>
-                                                <div className="text-sm text-gray-400">{med.item_metadata?.dosage}</div>
-                                                {med.eventType === 'scheduled' && med.item_metadata?.rxInstructions && (
-                                                    <div className="text-xs text-gray-500 italic mt-1">{med.item_metadata.rxInstructions}</div>
-                                                )}
+                                                <span className={`ml-auto text-xs font-mono font-bold ${med.eventType === 'taken' ? 'text-green-400' : 'text-purple-400'}`}>
+                                                    {format(med.eventTime, 'h:mm a')}
+                                                </span>
                                             </div>
-                                            <span className={`ml-auto text-xs font-mono font-bold ${med.eventType === 'taken' ? 'text-green-400' : 'text-purple-400'}`}>
-                                                {format(med.eventTime, 'h:mm a')}
-                                            </span>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         )
@@ -574,57 +702,71 @@ ${selectedMed ? `
                     </div>
                 </div>
 
-                {/* Debug Panel - Temporary */}
-                <div className="mb-6 p-4 bg-yellow-900/40 border border-yellow-500 rounded-xl font-mono text-xs">
-                    <h3 className="text-yellow-400 font-bold mb-2">🔍 DIAGNOSTIC DATA</h3>
-                    <div className="grid grid-cols-2 gap-4 text-gray-300">
-                        <div>
-                            <div>Raw Records: <span className="text-white font-bold">{records.length}</span></div>
-                            <div>Filtered Meds: <span className="text-white font-bold">{medRecords.length}</span></div>
-                            <div className="mt-2 mb-2 text-cyan-400">User ID: {user?.id || "NOT LOGGED IN"}</div>
-                            <div className="text-xs text-gray-500 break-all">DB: {(supabase as any).supabaseUrl}</div>
-                            <div className="mt-2 text-yellow-500/80">Filter Criteria:</div>
-                            <ul className="list-disc pl-4">
-                                <li>Category == "Medications"</li>
-                                <li>Type == "medication"</li>
-                                <li>Note (Metadata) == "Imported Prescription"</li>
-                                <li>Titles: Hydroxyzine, Prednisone, Loratadine, Famotidine</li>
-                            </ul>
-                            <div className="mt-4">
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const { data, error } = await supabase.from("vault_items").insert({
-                                                user_id: user?.id,
-                                                type: "note",
-                                                title: "DEBUG_PROBE_" + Date.now(),
-                                                category: "Medications",
-                                                item_metadata: { notes: "Imported Prescription" }
-                                            }).select().single()
+                {/* Diagnostic Panel - Accordion */}
+                <div className={`mb-6 rounded-xl border overflow-hidden transition-all ${showDiagnostics ? 'border-yellow-500' : 'border-yellow-500/30'}`}>
+                    <button
+                        onClick={() => setShowDiagnostics(!showDiagnostics)}
+                        className="w-full p-4 bg-yellow-900/20 hover:bg-yellow-900/30 transition-all flex justify-between items-center"
+                    >
+                        <h3 className="text-yellow-400 font-bold flex items-center gap-2">
+                            🔍 DIAGNOSTIC DATA
+                            <span className="text-xs opacity-60">(for debugging only)</span>
+                        </h3>
+                        <ChevronDown className={`h-5 w-5 transition-transform ${showDiagnostics ? 'rotate-180' : ''}`} />
+                    </button>
 
-                                            if (error) alert("❌ WRITE FAILED:\n" + JSON.stringify(error, null, 2))
-                                            else alert("✅ WRITE SUCCESS!\nID: " + data.id + "\n(Refresh page to see if it appears)")
-                                        } catch (e: any) {
-                                            alert("❌ CRASH: " + e.message)
-                                        }
-                                    }}
-                                    className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded font-bold uppercase text-[10px]"
-                                >
-                                    Force Test Write
-                                </button>
+                    {showDiagnostics && (
+                        <div className="p-4 bg-yellow-900/40 border-t border-yellow-500/30 font-mono text-xs">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
+                                <div>
+                                    <div>Raw Records: <span className="text-white font-bold">{records.length}</span></div>
+                                    <div>Filtered Meds: <span className="text-white font-bold">{medRecords.length}</span></div>
+                                    <div className="mt-2 mb-2 text-cyan-400">User ID: {user?.id || "NOT LOGGED IN"}</div>
+                                    <div className="text-xs text-gray-500 break-all">DB: {(supabase as any).supabaseUrl}</div>
+                                    <div className="mt-2 text-yellow-500/80">Filter Criteria:</div>
+                                    <ul className="list-disc pl-4">
+                                        <li>Category == "Medications"</li>
+                                        <li>Type == "medication"</li>
+                                        <li>Note (Metadata) == "Imported Prescription"</li>
+                                        <li>Titles: Hydroxyzine, Prednisone, Loratadine, Famotidine</li>
+                                    </ul>
+                                    <div className="mt-4">
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const { data, error } = await supabase.from("vault_items").insert({
+                                                        user_id: user?.id,
+                                                        type: "note",
+                                                        title: "DEBUG_PROBE_" + Date.now(),
+                                                        category: "Medications",
+                                                        item_metadata: { notes: "Imported Prescription" }
+                                                    }).select().single()
+
+                                                    if (error) alert("❌ WRITE FAILED:\n" + JSON.stringify(error, null, 2))
+                                                    else alert("✅ WRITE SUCCESS!\nID: " + data.id + "\n(Refresh page to see if it appears)")
+                                                } catch (e: any) {
+                                                    alert("❌ CRASH: " + e.message)
+                                                }
+                                            }}
+                                            className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded font-bold uppercase text-[10px]"
+                                        >
+                                            Force Test Write
+                                        </button>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div className="mb-1 text-white">Raw Item Dump (First 5):</div>
+                                    {records.slice(0, 5).map((r: any, i: number) => (
+                                        <div key={i} className="mb-1 border-b border-white/10 pb-1">
+                                            [{i}] <span className="text-cyan-400">{r.title}</span> <span className="text-gray-500">({r.category}, {r.type})</span>
+                                            <br />
+                                            MetaNote: {r.item_metadata?.notes || "N/A"}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                        <div>
-                            <div className="mb-1 text-white">Raw Item Dump (First 5):</div>
-                            {records.slice(0, 5).map((r: any, i: number) => (
-                                <div key={i} className="mb-1 border-b border-white/10 pb-1">
-                                    [{i}] <span className="text-cyan-400">{r.title}</span> <span className="text-gray-500">({r.category}, {r.type})</span>
-                                    <br />
-                                    MetaNote: {r.item_metadata?.notes || "N/A"}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Search and Views */}
@@ -1404,9 +1546,12 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
 }
 
 // Pill Library Modal - View all available icons
-function PillLibraryModal({ isOpen, onClose, theme }: any) {
+export function PillLibraryModal({ isOpen, onClose, theme, addItem }: any) {
     const [selectedShape, setSelectedShape] = useState<string | null>(null)
     const [selectedColor, setSelectedColor] = useState<string | null>(null)
+    const [quickAddName, setQuickAddName] = useState("")
+    const [quickAddDosage, setQuickAddDosage] = useState("")
+    const [isSaving, setIsSaving] = useState(false)
 
     const mgSizes = ["5mg", "10mg", "20mg", "25mg", "50mg", "75mg", "100mg", "150mg", "200mg", "250mg", "300mg", "500mg", "1000mg"]
 
@@ -1461,18 +1606,79 @@ function PillLibraryModal({ isOpen, onClose, theme }: any) {
                     </div>
                 </div>
 
-                {/* Preview */}
+                {/* Preview & Quick Add */}
                 {selectedShape && selectedColor && (
-                    <div className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/40 to-pink-900/40 border border-purple-500/30">
-                        <h3 className="text-lg font-bold mb-4 text-center">Preview</h3>
-                        <div className="flex justify-center items-center gap-6">
-                            {(() => {
-                                const Icon = PILL_SHAPES.find(s => s.id === selectedShape)?.icon || Circle
-                                return <Icon className="h-24 w-24" fill={selectedColor} stroke="#333" strokeWidth={1} />
-                            })()}
-                            <div className="text-center">
-                                <div className="text-xl font-bold">{PILL_SHAPES.find(s => s.id === selectedShape)?.label}</div>
-                                <div className="text-sm text-gray-400">{PILL_COLORS.find(c => c.hex === selectedColor)?.label}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 rounded-3xl bg-gradient-to-br from-purple-900/40 via-blue-900/20 to-pink-900/40 border border-white/10 shadow-inner">
+                        <div className="flex flex-col items-center justify-center p-6 bg-black/40 rounded-3xl border border-white/5">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-purple-400 mb-6">Pill Visualizer</h3>
+                            <div className="relative group">
+                                <div className="absolute inset-0 bg-white blur-3xl opacity-10 group-hover:opacity-20 transition-opacity rounded-full"></div>
+                                {(() => {
+                                    const Icon = PILL_SHAPES.find(s => s.id === selectedShape)?.icon || Circle
+                                    return <Icon className="h-40 w-40 relative z-10 transition-transform duration-700" fill={selectedColor} stroke="white" strokeWidth={0.5} />
+                                })()}
+                            </div>
+                            <div className="mt-8 text-center">
+                                <div className="text-2xl font-black italic tracking-tighter uppercase">{PILL_SHAPES.find(s => s.id === selectedShape)?.label}</div>
+                                <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">{PILL_COLORS.find(c => c.hex === selectedColor)?.label} Finish</div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col justify-center">
+                            <h3 className="text-xl font-black italic uppercase tracking-tight mb-2">Fast Import</h3>
+                            <p className="text-sm text-gray-400 mb-6">Add this medication to your list instantly with these visuals.</p>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Medication Name</label>
+                                    <input
+                                        placeholder="e.g. Advil"
+                                        value={quickAddName}
+                                        onChange={e => setQuickAddName(e.target.value)}
+                                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-purple-500/50 transition-all font-bold"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Dosage</label>
+                                    <input
+                                        placeholder="e.g. 200mg"
+                                        value={quickAddDosage}
+                                        onChange={e => setQuickAddDosage(e.target.value)}
+                                        className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-purple-500/50 transition-all font-bold"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={async () => {
+                                        if (!quickAddName || !quickAddDosage) return alert("Please enter name and dosage")
+                                        setIsSaving(true)
+                                        try {
+                                            await addItem({
+                                                type: "note",
+                                                category: "Medications",
+                                                title: quickAddName,
+                                                item_metadata: {
+                                                    dosage: quickAddDosage,
+                                                    pillShape: selectedShape,
+                                                    pillColor: selectedColor,
+                                                    notes: "Quick added from Pill Library"
+                                                }
+                                            })
+                                            alert(`${quickAddName} added to your list!`)
+                                            setQuickAddName("")
+                                            setQuickAddDosage("")
+                                        } catch (e) {
+                                            console.error(e)
+                                            alert("Failed to add medication")
+                                        } finally {
+                                            setIsSaving(false)
+                                        }
+                                    }}
+                                    disabled={isSaving}
+                                    className="w-full py-5 rounded-3xl bg-white text-black font-black uppercase italic tracking-tighter hover:bg-gray-200 transition-all flex items-center justify-center gap-3 shadow-2xl disabled:opacity-50"
+                                >
+                                    {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Plus className="h-5 w-5" /> Add to My List</>}
+                                </button>
                             </div>
                         </div>
                     </div>

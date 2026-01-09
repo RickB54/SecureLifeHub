@@ -7,11 +7,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 let user = null
 let allItems = [] // The full vault
 let filteredItems = [] // Currently shown in list
+let folders = [] // The folders
 let recentItemsIds = [] // IDs of recently used items
 let currentView = 'vault' // 'vault' or 'sections'
 let currentMode = 'all' // 'all' or 'recents'
 let preferenceItem = null // System pref item
 let selectedItem = null // Currently viewed item
+let currentCustomFields = [] // Custom fields in edit form
 
 // -- Elements --
 const authSection = document.getElementById('auth-section')
@@ -50,6 +52,12 @@ const editTitle = document.getElementById('edit-title')
 const editUsername = document.getElementById('edit-username')
 const editPassword = document.getElementById('edit-password')
 const editWebsite = document.getElementById('edit-website')
+const editCategory = document.getElementById('edit-category')
+const editFolder = document.getElementById('edit-folder')
+const editPictureInput = document.getElementById('edit-picture-input')
+const editPicturePreview = document.getElementById('edit-picture-preview')
+const editCustomFieldsList = document.getElementById('edit-custom-fields-list')
+const addCustomFieldBtn = document.getElementById('add-custom-field-btn')
 const editNotes = document.getElementById('edit-notes')
 const genPassBtn = document.getElementById('gen-pass-btn')
 const cancelEditBtn = document.getElementById('cancel-edit-btn')
@@ -93,13 +101,20 @@ function showVault() {
 
 // -- Data Access --
 async function fetchItems() {
-    const { data, error } = await supabase
+    // Fetch Items
+    const { data: itemData, error: itemError } = await supabase
         .from('vault_items')
         .select('*')
         .order('created_at', { ascending: false })
 
-    if (data) {
-        allItems = data
+    // Fetch Folders
+    const { data: folderData, error: folderError } = await supabase
+        .from('folders')
+        .select('*')
+        .order('name')
+
+    if (itemData) {
+        allItems = itemData
         preferenceItem = allItems.find(i => i.title === "[SYSTEM] User Preferences")
         cacheData(allItems)
 
@@ -109,6 +124,22 @@ async function fetchItems() {
         // Check for current tab match to auto-select or highlight
         checkForMatches()
     }
+
+    if (folderData) {
+        folders = folderData
+        populateFolderDropdown()
+    }
+}
+
+function populateFolderDropdown() {
+    if (!editFolder) return
+    editFolder.innerHTML = '<option value="">None</option>'
+    folders.forEach(f => {
+        const opt = document.createElement('option')
+        opt.value = f.id
+        opt.textContent = f.name
+        editFolder.appendChild(opt)
+    })
 }
 
 function cacheData(items) {
@@ -141,16 +172,16 @@ function filterItems(query = "") {
     if (currentMode === 'recents' && query === "") {
         const recents = recentItemsIds
             .map(id => allItems.find(i => i.id === id))
-            .filter(item => item && item.type === 'password' && item.website)
+            .filter(item => item && item.type === 'password' && item.website && item.website.includes('.'))
 
         if (recents.length === 0) {
-            itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No recent passwords</div>`
+            itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No recent items with URLs</div>`
             return
         }
 
         const header = document.createElement('div')
         header.className = "px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-[#252526] border-b border-[#3e3e42]"
-        header.textContent = "Recently Used Passwords"
+        header.textContent = "Recent URLs"
         itemsList.appendChild(header)
 
         recents.forEach(item => {
@@ -161,6 +192,7 @@ function filterItems(query = "") {
     }
 
     filteredItems = allItems.filter(item =>
+        item.type === 'password' &&
         !item.title.startsWith("[SYSTEM]") &&
         (
             (item.title && item.title.toLowerCase().includes(query)) ||
@@ -186,10 +218,11 @@ function renderSections() {
     // High-level sections
     const sections = [
         { id: "dashboard", label: "Dashboard", icon: "🏠", page: "dashboard", color: "text-blue-400" },
-        { id: "all-items", label: "Full Vault", icon: "🔑", page: "all-items", color: "text-purple-400" },
         { id: "favorites", label: "Favorites", icon: "⭐", page: "favorites", color: "text-yellow-400" },
         { id: "payment-cards", label: "Financial Cards", icon: "💳", page: "financial-cards", color: "text-emerald-400" },
-        { id: "healthFitness", label: "Health Hub", icon: "🏥", page: "section-healthFitness", color: "text-red-400" },
+        { id: "personal-info", label: "Personal Info", icon: "👤", page: "personal-info", color: "text-indigo-400" },
+        { id: "private-notes", label: "Private Notes", icon: "📝", page: "private-notes", color: "text-amber-400" },
+        { id: "healthHub", label: "Health Hub", icon: "🏥", page: "section-healthFitness", color: "text-red-400" },
         { id: "vehicles", label: "Vehicles", icon: "🚗", page: "section-vehicles", color: "text-orange-400" },
         { id: "business", label: "Business", icon: "💼", page: "section-business", color: "text-blue-500" },
         { id: "digitalLife", label: "Digital Life", icon: "🌐", page: "section-digitalLife", color: "text-cyan-400" },
@@ -325,6 +358,71 @@ function renderDetailView(item) {
     } else {
         viewFavBtn.classList.remove('text-yellow-500')
     }
+
+    // Custom Fields
+    const customFieldsContainer = document.getElementById('view-custom-fields-container')
+    const customFieldsList = document.getElementById('custom-fields-list')
+    const customFields = item.item_metadata?.customFields || []
+
+    if (customFields.length > 0) {
+        customFieldsContainer.classList.remove('hidden')
+        customFieldsList.innerHTML = ""
+        customFields.forEach(field => {
+            const fieldDiv = document.createElement('div')
+            fieldDiv.className = "group"
+
+            const isSensitive = field.type === 'password' || field.type === 'pin' || field.type === 'hidden'
+            const displayValue = isSensitive ? "••••••••" : (field.value || "---")
+            const fieldId = `custom-${field.id}`
+
+            fieldDiv.innerHTML = `
+                <label class="block text-[10px] text-gray-500 uppercase font-bold mb-0.5">${field.label}</label>
+                <div class="flex items-center justify-between text-gray-200 text-sm py-1 border-b border-[#333] group-hover:border-gray-500 transition-colors">
+                    <span id="${fieldId}" class="${isSensitive ? 'tracking-widest' : 'truncate'} select-all mr-2">${displayValue}</span>
+                    <div class="flex gap-1 shrink-0">
+                        ${isSensitive ? `
+                            <button class="toggle-custom-btn text-gray-500 hover:text-white p-1" data-id="${field.id}" data-value="${field.value}">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </button>
+                        ` : ''}
+                        <button class="copy-custom-btn text-gray-500 hover:text-white p-1" data-value="${field.value}">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            `
+            customFieldsList.appendChild(fieldDiv)
+        })
+
+        // Add Listeners for custom field buttons
+        customFieldsList.querySelectorAll('.toggle-custom-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const span = document.getElementById(`custom-${btn.dataset.id}`)
+                const val = btn.dataset.value
+                if (span.textContent === "••••••••") {
+                    span.textContent = val
+                    span.classList.remove('tracking-widest')
+                    span.classList.add('bg-blue-600', 'px-1', 'rounded', 'text-white', 'font-medium')
+                } else {
+                    span.textContent = "••••••••"
+                    span.classList.add('tracking-widest')
+                    span.classList.remove('bg-blue-600', 'px-1', 'rounded', 'font-medium')
+                }
+            })
+        })
+
+        customFieldsList.querySelectorAll('.copy-custom-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                navigator.clipboard.writeText(btn.dataset.value)
+                const originalHTML = btn.innerHTML
+                btn.innerHTML = `<svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                setTimeout(() => btn.innerHTML = originalHTML, 1500)
+            })
+        })
+
+    } else {
+        customFieldsContainer.classList.add('hidden')
+    }
 }
 
 function renderEditForm(item = null) {
@@ -339,7 +437,22 @@ function renderEditForm(item = null) {
         editUsername.value = item.username || ""
         editPassword.value = item.password || ""
         editWebsite.value = item.website || ""
+        editCategory.value = item.category || "General"
+        editFolder.value = item.folder_id || ""
         editNotes.value = item.notes || ""
+
+        // Handle Picture
+        const picture = item.picture || item.item_metadata?.picture
+        if (picture) {
+            editPicturePreview.innerHTML = `<img src="${picture}" class="w-full h-full object-contain">`
+        } else {
+            editPicturePreview.innerHTML = `<span class="text-[10px] text-gray-500">No Image</span>`
+        }
+
+        // Handle Custom Fields
+        currentCustomFields = JSON.parse(JSON.stringify(item.item_metadata?.customFields || []))
+        renderEditCustomFields()
+
         deleteBtn.classList.remove('hidden')
     } else {
         document.getElementById('form-title').textContent = "New Item"
@@ -348,24 +461,103 @@ function renderEditForm(item = null) {
         editUsername.value = ""
         editPassword.value = ""
         editWebsite.value = ""
+        editCategory.value = "General"
+        editFolder.value = ""
         editNotes.value = ""
+        editPicturePreview.innerHTML = `<span class="text-[10px] text-gray-500">No Image</span>`
+        currentCustomFields = []
+        renderEditCustomFields()
         deleteBtn.classList.add('hidden') // Can't delete what doesn't exist yet
     }
 }
+
+function renderEditCustomFields() {
+    editCustomFieldsList.innerHTML = ""
+    currentCustomFields.forEach((field, index) => {
+        const div = document.createElement('div')
+        div.className = "space-y-1 p-2 bg-[#252526] rounded border border-[#333]"
+        div.innerHTML = `
+            <div class="flex items-center justify-between gap-2">
+                <input type="text" value="${field.label}" placeholder="Label" class="bg-transparent border-b border-gray-700 text-[10px] text-blue-400 font-medium py-0 focus:outline-none focus:border-blue-500 w-1/2 custom-label" data-index="${index}">
+                <button type="button" class="text-gray-500 hover:text-red-400 delete-custom-field" data-index="${index}">
+                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+            <input type="text" value="${field.value}" placeholder="Value" class="w-full bg-[#333] border border-gray-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500 custom-value" data-index="${index}">
+        `
+        editCustomFieldsList.appendChild(div)
+    })
+
+    // Listeners for custom field edits
+    editCustomFieldsList.querySelectorAll('.custom-label').forEach(input => {
+        input.addEventListener('change', (e) => {
+            currentCustomFields[e.target.dataset.index].label = e.target.value
+        })
+    })
+    editCustomFieldsList.querySelectorAll('.custom-value').forEach(input => {
+        input.addEventListener('change', (e) => {
+            currentCustomFields[e.target.dataset.index].value = e.target.value
+        })
+    })
+    editCustomFieldsList.querySelectorAll('.delete-custom-field').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const index = btn.closest('button').dataset.index
+            currentCustomFields.splice(index, 1)
+            renderEditCustomFields()
+        })
+    })
+}
+
+// Picture upload handling
+editPictureInput.addEventListener('change', (e) => {
+    const file = e.target.files[0]
+    if (file) {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+            const base64String = event.target.result
+            editPicturePreview.innerHTML = `<img src="${base64String}" class="w-full h-full object-contain">`
+            // Store temporarily in a property or data attribute? 
+            // We'll pull from preview's img src on save.
+        }
+        reader.readAsDataURL(file)
+    }
+})
+
+// Add custom field
+addCustomFieldBtn.addEventListener('click', () => {
+    currentCustomFields.push({ id: Math.random().toString(36).substring(2, 9), label: "New Field", value: "", type: "text" })
+    renderEditCustomFields()
+})
 
 // -- Actions --
 
 // Save
 saveBtn.addEventListener('click', async () => {
     const isNew = !editId.value
+
+    // Get picture from preview
+    const pictureImg = editPicturePreview.querySelector('img')
+    const pictureData = pictureImg ? pictureImg.src : null
+
+    // Prepare metadata
+    const existingMetadata = selectedItem?.item_metadata || {}
+    const item_metadata = {
+        ...existingMetadata,
+        customFields: currentCustomFields,
+        picture: pictureData
+    }
+
     const payload = {
         user_id: user.id,
         title: editTitle.value,
         username: editUsername.value,
         password: editPassword.value,
         website: editWebsite.value,
+        category: editCategory.value,
+        folder_id: editFolder.value || null,
         notes: editNotes.value,
-        type: 'password' // Default type
+        type: 'password', // Default type
+        item_metadata: item_metadata
     }
 
     // Optimistic Update
@@ -375,14 +567,19 @@ saveBtn.addEventListener('click', async () => {
     let error = null
     let resultItem = null
 
-    if (isNew) {
-        const { data, error: err } = await supabase.from('vault_items').insert(payload).select().single()
+    try {
+        if (isNew) {
+            const { data, error: err } = await supabase.from('vault_items').insert(payload).select().single()
+            error = err
+            resultItem = data
+        } else {
+            const { data, error: err } = await supabase.from('vault_items').update(payload).eq('id', editId.value).select().single()
+            error = err
+            resultItem = data
+        }
+    } catch (err) {
+        console.error("Supabase error:", err)
         error = err
-        resultItem = data
-    } else {
-        const { data, error: err } = await supabase.from('vault_items').update(payload).eq('id', editId.value).select().single()
-        error = err
-        resultItem = data
     }
 
     saveBtn.textContent = "Save"
@@ -399,7 +596,7 @@ saveBtn.addEventListener('click', async () => {
         selectItem(resultItem) // Go back to view
     } else {
         console.error("Save failed", error)
-        alert("Failed to save item.")
+        alert("Failed to save item: " + (error?.message || "Unknown error"))
     }
 })
 
@@ -476,8 +673,10 @@ function addToRecents(item) {
 togglePassBtn.addEventListener('click', () => {
     if (viewPassword.classList.contains('blur-[4px]')) {
         viewPassword.classList.remove('blur-[4px]')
+        viewPassword.classList.add('bg-blue-600', 'px-1', 'rounded', 'text-white', 'font-medium')
     } else {
         viewPassword.classList.add('blur-[4px]')
+        viewPassword.classList.remove('bg-blue-600', 'px-1', 'rounded', 'font-medium')
     }
 })
 
@@ -614,6 +813,9 @@ loginForm.addEventListener('submit', async (e) => {
 // Logout
 document.getElementById('logout-menu-btn').addEventListener('click', async () => {
     await supabase.auth.signOut()
+
+    // Sync logout to web app via background script
+    chrome.runtime.sendMessage({ type: 'LOGOUT_SESSIONS' });
 
     // Clear Local Cache
     chrome.storage.local.clear()

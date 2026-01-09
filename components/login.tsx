@@ -27,52 +27,75 @@ export default function Login() {
   // SSO: Check for session token in URL and auto-login
   useEffect(() => {
     const handleSSO = async () => {
-      const accessToken = searchParams.get('access_token')
-      const refreshToken = searchParams.get('refresh_token')
+      // 1. Check if we ALREADY have a session. If so, just go to dashboard.
+      const { data: { session: existingSession } } = await supabase.auth.getSession()
+      if (existingSession) {
+        console.log('SSO: Active session already found, jumping to dashboard.')
+        const page = searchParams.get('page') || 'dashboard'
+        router.push(`/?page=${page}`)
+        return
+      }
+
+      // 2. Check both search params and hash (Supabase sometimes puts tokens in hash)
+      const params = new URLSearchParams(window.location.search)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+
+      const accessToken = params.get('access_token') || hashParams.get('access_token')
+      const refreshToken = params.get('refresh_token') || hashParams.get('refresh_token')
+      const targetPage = params.get('page') || hashParams.get('page') || 'dashboard'
 
       if (accessToken && refreshToken) {
         setLoading(true)
-
-        // Extract email from JWT token to pre-fill the form
-        try {
-          const base64Url = accessToken.split('.')[1]
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-          const jsonPayload = decodeURIComponent(
-            atob(base64)
-              .split('')
-              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-              .join('')
-          )
-          const payload = JSON.parse(jsonPayload)
-
-          // Pre-fill email from token
-          if (payload.email) {
-            setEmail(payload.email)
-            localStorage.setItem('lastLoginEmail', payload.email)
-          }
-        } catch (err) {
-          console.log('Could not decode token for email extraction', err)
-        }
+        console.log('SSO: Tokens detected in URL (Access: ' + accessToken.substring(0, 5) + '..., Refresh: ' + refreshToken.substring(0, 5) + '...)')
 
         try {
-          const { error } = await supabase.auth.setSession({
+          // 3. Set the session from tokens
+          const { data, error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
           })
 
           if (error) {
-            console.error('SSO session restore failed:', error)
-            // Don't show error to user - just let them log in normally
-            // The email is already pre-filled from the token
-          } else {
-            // Session restored successfully, redirect to dashboard or requested page
-            const targetPage = searchParams.get('page') || 'dashboard'
-            router.refresh()
-            router.push(`/?page=${targetPage}`)
+            console.error('SSO: Supabase setSession error:', error.message)
+            // Clear tokens even on error to stop the loop
+            window.history.replaceState({}, '', window.location.pathname)
+
+            if (error.message.includes("session missing") || error.message.includes("not found")) {
+              setError("Session expired or invalid. Please sign in manually.")
+            } else {
+              setError(`SSO Failed: ${error.message}`)
+            }
+            return
           }
+
+          if (!data.session) {
+            console.warn('SSO: setSession completed but no session object returned.')
+            const { data: { session: recheckSession } } = await supabase.auth.getSession()
+            if (!recheckSession) {
+              window.history.replaceState({}, '', window.location.pathname)
+              setError("Could not establish session. Please sign in manually.")
+              return
+            }
+          }
+
+          console.log('SSO: Login success!')
+
+          // Pre-fill email for UI consistency
+          const userSession = data.session || (await supabase.auth.getSession()).data.session
+          const userEmail = userSession?.user?.email
+          if (userEmail) {
+            setEmail(userEmail)
+            localStorage.setItem('lastLoginEmail', userEmail)
+          }
+
+          // 4. Clear tokens from URL and redirect
+          window.history.replaceState({}, '', window.location.pathname)
+          router.push(`/?page=${targetPage}`)
+
         } catch (err: any) {
-          console.error('SSO error:', err)
-          // Silent fallback - email is pre-filled, user can log in manually
+          console.error('SSO: Critical catch error:', err)
+          window.history.replaceState({}, '', window.location.pathname)
+          setError("Session sync failed. Please sign in manually.")
         } finally {
           setLoading(false)
         }
@@ -80,7 +103,7 @@ export default function Login() {
     }
 
     handleSSO()
-  }, [searchParams, router])
+  }, [router, searchParams])
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
