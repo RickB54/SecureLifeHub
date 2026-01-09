@@ -59,8 +59,8 @@ function HomeContent() {
     const page = searchParams.get("page")
     if (!page) {
       setActivePage("dashboard")
-      // Clear any URL params
-      if (typeof window !== 'undefined') {
+      // Clear any URL params, EXCEPT for SSO tokens which the Login component needs
+      if (typeof window !== 'undefined' && !searchParams.get('access_token')) {
         window.history.replaceState({}, '', window.location.pathname)
       }
     } else if (page !== activePage) {

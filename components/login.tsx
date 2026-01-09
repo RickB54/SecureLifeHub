@@ -67,7 +67,7 @@ export default function Login() {
           } else {
             // Session restored successfully, redirect to dashboard
             router.refresh()
-            router.push('/dashboard')
+            router.push('/?page=dashboard')
           }
         } catch (err: any) {
           console.error('SSO error:', err)
