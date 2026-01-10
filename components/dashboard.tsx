@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
-  Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock
+  Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle
 } from "lucide-react"
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
@@ -16,9 +16,10 @@ interface DashboardProps {
   addItem: (item: any) => Promise<any>
   addFolder: (name: string, parentId?: string) => Promise<any>
   securitySettings?: Record<string, { isLocked: boolean }>
+  setHelpOpen?: () => void
 }
 
-export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, addFolder, securitySettings = {} }: DashboardProps) {
+export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, addFolder, securitySettings = {}, setHelpOpen }: DashboardProps) {
   const [addPasswordModalOpen, setAddPasswordModalOpen] = useState(false)
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
 
@@ -61,10 +62,19 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
       {/* Header & Life Pulse */}
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Welcome Section */}
-        <div className="flex-1 space-y-2">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-            Secure Life Hub
-          </h1>
+        <div className="flex-1 space-y-2 relative">
+          <div className="flex justify-between items-start">
+            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+              Secure Life Hub
+            </h1>
+            <button
+              onClick={setHelpOpen}
+              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all shadow-xl"
+              title="Open Manual"
+            >
+              <HelpCircle className="h-6 w-6" />
+            </button>
+          </div>
           <p className="text-gray-400 text-lg">Your entire digital and physical life, centralized.</p>
 
           <div className="flex gap-3 mt-6">
@@ -309,6 +319,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
             setAddPasswordModalOpen(false)
           }}
           folders={folders}
+          theme={theme}
         />
       )}
       {addFolderModalOpen && (
@@ -319,6 +330,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
             setAddFolderModalOpen(false)
           }}
           folders={folders}
+          theme={theme}
         />
       )}
     </div>

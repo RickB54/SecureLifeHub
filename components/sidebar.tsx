@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash } from "lucide-react"
+import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, HelpCircle } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 
 interface SidebarProps {
@@ -10,9 +10,10 @@ interface SidebarProps {
   isOpen: boolean
   setIsOpen: (isOpen: boolean) => void
   theme: string
+  onOpenHelp: () => void
 }
 
-export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, theme }: SidebarProps) {
+export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, theme, onOpenHelp }: SidebarProps) {
   // Default expanded state: all false (collapsed) as requested
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     dashboard: false,
@@ -154,6 +155,17 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                 </div>
               )
             })}
+
+            {/* Direct Help Link at bottom of nav */}
+            <div className="mt-8 pt-4 border-t border-gray-800">
+              <button
+                onClick={onOpenHelp}
+                className={`flex items-center w-full px-3 py-2.5 rounded-md text-sm font-bold text-blue-400 hover:bg-blue-600/10 transition-all`}
+              >
+                <HelpCircle className="h-5 w-5" />
+                <span className="ml-3">Help & Manual</span>
+              </button>
+            </div>
           </nav>
         </div>
       </aside>

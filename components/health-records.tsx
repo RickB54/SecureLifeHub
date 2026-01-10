@@ -334,26 +334,26 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
     const renderRecords = () => (
         <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">Medical History Accordion</h2>
-                <div className="flex gap-2">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <h2 className="text-xl md:text-2xl font-bold uppercase tracking-widest text-[10px] md:text-sm opacity-50">Medical History Accordion</h2>
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     <button
                         onClick={() => loadMockData('records')}
-                        className="bg-white/5 hover:bg-white/10 text-gray-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase"
+                        className="flex-1 md:flex-none bg-white/5 hover:bg-white/10 text-gray-400 px-3 py-1.5 rounded-xl transition-all font-bold text-[10px] uppercase"
                     >
                         Load Samples
                     </button>
                     <button
                         onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
+                        className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-lg transition-all font-bold text-xs flex items-center justify-center gap-2"
                     >
                         <Plus className="h-4 w-4" /> Add Record
                     </button>
                     <button
                         onClick={() => fileInputRef.current?.click()}
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
+                        className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl shadow-lg transition-all font-bold text-xs flex items-center justify-center gap-2"
                     >
-                        <Upload className="h-4 w-4" /> Upload Picture
+                        <Upload className="h-4 w-4" /> Upload
                     </button>
                     <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileUpload} accept="image/*" />
                 </div>
@@ -696,42 +696,40 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
     return (
         <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-[#121212] text-white'} overflow-hidden`}>
-            <div className="p-8 pb-4">
-                <h1 className="text-3xl font-bold mb-6 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+            <div className="p-4 md:p-8 pb-4">
+                <h1 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                     <Activity className="h-8 w-8 text-blue-400" /> Health Hub
                 </h1>
 
-                <div className="flex gap-4 border-b border-white/10 pb-4">
-                    <div className="flex gap-2">
-                        {[
-                            { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-                            { id: 'records', label: 'Medical Records', icon: FileText },
-                            { id: 'meds', label: 'Meds', icon: Activity },
-                            { id: 'vitals', label: 'Vitals', icon: Heart },
-                            { id: 'appointments', label: 'Appointments', icon: Clock },
-                            { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
-                            { id: 'ai', label: 'AI Assistant', icon: Sparkles }
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
-                                className={`px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === tab.id
-                                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                    : "text-gray-400 hover:text-white hover:bg-white/5"
-                                    }`}
-                            >
-                                <tab.icon className="h-4 w-4" /> {tab.label}
-                            </button>
-                        ))}
-                    </div>
+                <div className={`flex flex-wrap gap-2 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'} pb-4`}>
+                    {[
+                        { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+                        { id: 'records', label: 'Medical Records', icon: FileText },
+                        { id: 'meds', label: 'Meds', icon: Activity },
+                        { id: 'vitals', label: 'Vitals', icon: Heart },
+                        { id: 'appointments', label: 'Appointments', icon: Clock },
+                        { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
+                        { id: 'ai', label: 'AI Assistant', icon: Sparkles }
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id as any)}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id
+                                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                : theme === 'light' ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "text-gray-400 hover:text-white hover:bg-white/5"
+                                }`}
+                        >
+                            <tab.icon className="h-4 w-4" /> {tab.label}
+                        </button>
+                    ))}
                 </div>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {activeTab === 'dashboard' && <div className="px-8 pb-8">{renderDashboard()}</div>}
-                {activeTab === 'records' && <div className="px-8 pb-8">{renderRecords()}</div>}
+                {activeTab === 'dashboard' && <div className="px-4 md:px-8 pb-8">{renderDashboard()}</div>}
+                {activeTab === 'records' && <div className="px-4 md:px-8 pb-8">{renderRecords()}</div>}
                 {activeTab === 'meds' && (
-                    <div className="px-8 pb-8 space-y-4">
+                    <div className="px-4 md:px-8 pb-8 space-y-4">
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setShowPillLibrary(true)}
@@ -751,11 +749,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     </div>
                 )}
 
-                {activeTab === 'vitals' && <div className="px-8 pb-8">{renderVitals()}</div>}
-                {activeTab === 'calendar' && <div className="px-8 pb-8">{renderCalendarView()}</div>}
-                {activeTab === 'appointments' && <div className="px-8 pb-8">{renderAppointments()}</div>}
+                {activeTab === 'vitals' && <div className="px-4 md:px-8 pb-8">{renderVitals()}</div>}
+                {activeTab === 'calendar' && <div className="px-4 md:px-8 pb-8">{renderCalendarView()}</div>}
+                {activeTab === 'appointments' && <div className="px-4 md:px-8 pb-8">{renderAppointments()}</div>}
                 {activeTab === 'ai' && (
-                    <div className="px-8 pb-8">
+                    <div className="px-4 md:px-8 pb-8">
                         <HealthAI
                             theme={theme}
                             records={records}
@@ -823,23 +821,23 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Vital Metric</label>
-                                            <select name="type" defaultValue={editingVital?.title || "Blood Pressure"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold">
-                                                <option>Blood Pressure</option>
-                                                <option>Weight</option>
-                                                <option>Heart Rate</option>
-                                                <option>Blood Oxygen</option>
-                                                <option>Glucose</option>
-                                                <option>Temperature</option>
+                                            <select name="type" defaultValue={editingVital?.title || "Blood Pressure"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }}>
+                                                <option className="bg-[#1a1a1a]">Blood Pressure</option>
+                                                <option className="bg-[#1a1a1a]">Weight</option>
+                                                <option className="bg-[#1a1a1a]">Heart Rate</option>
+                                                <option className="bg-[#1a1a1a]">Blood Oxygen</option>
+                                                <option className="bg-[#1a1a1a]">Glucose</option>
+                                                <option className="bg-[#1a1a1a]">Temperature</option>
                                             </select>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Value</label>
-                                                <input name="value" required defaultValue={editingVital?.item_metadata?.value || ""} placeholder="120/80" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-mono font-bold" />
+                                                <input name="value" required defaultValue={editingVital?.item_metadata?.value || ""} placeholder="120/80" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-mono font-bold text-white" />
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Unit</label>
-                                                <input name="unit" defaultValue={editingVital?.item_metadata?.unit || ""} placeholder="mmHg" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all text-xs font-bold" />
+                                                <input name="unit" defaultValue={editingVital?.item_metadata?.unit || ""} placeholder="mmHg" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all text-xs font-bold text-white" />
                                             </div>
                                         </div>
                                     </div>
@@ -847,15 +845,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Timestamp</label>
-                                            <input type="datetime-local" name="date" required defaultValue={editingVital?.item_metadata?.date ? new Date(editingVital.item_metadata.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold" />
+                                            <input type="datetime-local" name="date" required defaultValue={editingVital?.item_metadata?.date ? new Date(editingVital.item_metadata.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }} />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">State/Context (AI Informed)</label>
-                                            <select name="context" defaultValue={editingVital?.item_metadata?.context || "At Rest"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold">
-                                                <option>At Rest</option>
-                                                <option>Post Workout</option>
-                                                <option>Waking Up</option>
-                                                <option>Feeling Stress</option>
+                                            <select name="context" defaultValue={editingVital?.item_metadata?.context || "At Rest"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }}>
+                                                <option className="bg-[#1a1a1a]">At Rest</option>
+                                                <option className="bg-[#1a1a1a]">Post Workout</option>
+                                                <option className="bg-[#1a1a1a]">Waking Up</option>
+                                                <option className="bg-[#1a1a1a]">Feeling Stress</option>
                                             </select>
                                         </div>
                                     </div>

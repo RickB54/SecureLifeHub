@@ -36,6 +36,7 @@ import Goals from "@/components/goals"
 import BudgetManager from "@/components/budget-manager"
 import SubDashboard from "@/components/sub-dashboard"
 import { sidebarSections } from "@/lib/sidebar-config"
+import HelpModal from "@/components/modals/help-modal"
 
 function HomeContent() {
   // Security audit data (Mock for now, needs real calculation later)
@@ -56,20 +57,19 @@ function HomeContent() {
   // Changed initial page to "dashboard" as requested
   const searchParams = useSearchParams()
   const initialPage = searchParams.get("page") || "dashboard"
-  const [activePage, setActivePage] = useState("dashboard") // ALWAYS start with dashboard
+  const [activePage, setActivePage] = useState(initialPage) // Initialize directly from URL
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Force dashboard on mount if no explicit page in URL
   useEffect(() => {
     const page = searchParams.get("page")
     if (!page) {
-      setActivePage("dashboard")
+      if (activePage !== "dashboard") setActivePage("dashboard")
       // Clear any URL params, EXCEPT for SSO tokens which the Login component needs
       if (typeof window !== 'undefined' && !searchParams.get('access_token')) {
         window.history.replaceState({}, '', window.location.pathname)
       }
-    } else if (page !== activePage) {
-      setActivePage(page)
     }
   }, [])
 
@@ -219,6 +219,7 @@ function HomeContent() {
     theme,
     setActivePage: handleNavigate, // Use history-aware navigation
     setRecords: () => console.warn("Direct setRecords not supported in Supabase mode"), // Placeholder
+    setHelpOpen: () => setHelpOpen(true)
   }
 
 
@@ -402,6 +403,7 @@ function HomeContent() {
           theme={theme}
           toggleTheme={toggleTheme}
           activePage={activePage}
+          onOpenHelp={() => setHelpOpen(true)}
         />
         <div className="flex flex-1 overflow-hidden pt-16">
           <Sidebar
@@ -410,9 +412,11 @@ function HomeContent() {
             isOpen={sidebarOpen}
             setIsOpen={setSidebarOpen}
             theme={theme}
+            onOpenHelp={() => setHelpOpen(true)}
           />
           <main className="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar h-full">{renderActivePage()}</main>
         </div>
+        <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} />
       </div>
     </ErrorBoundary>
   )

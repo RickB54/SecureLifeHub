@@ -144,6 +144,36 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         return filtered
     }, [records]) // Re-run whenever records changes!
 
+    // Helper: Get dose for current day based on schedule
+    const getCurrentDose = (med: any) => {
+        const schedule = med.item_metadata?.doseSchedule || []
+        const startDateStr = med.item_metadata?.scheduleStartDate || med.created_at || med.item_metadata?.createdAt
+
+        if (schedule.length === 0 || !startDateStr) return med.item_metadata?.dosage
+
+        try {
+            const start = startOfDay(new Date(startDateStr))
+            const today = startOfDay(new Date())
+
+            // Calculate day index (Day 1 = 0, Day 2 = 1...)
+            const diffInMs = today.getTime() - start.getTime()
+            const dayIndex = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
+
+            // Find schedule entry for this day
+            const entry = schedule.find((s: any) => s.dayIndex === dayIndex + 1)
+
+            if (entry) {
+                return `${entry.quantity} pill(s)`
+            }
+
+            // Default if beyond schedule? Or show "Completed"? 
+            // For now show original dosage as fallback
+            return med.item_metadata?.dosage
+        } catch (e) {
+            return med.item_metadata?.dosage
+        }
+    }
+
     // Reminder Logic
     const [activeReminder, setActiveReminder] = useState<any>(null)
     const [lastReminderTime, setLastReminderTime] = useState<string>("")
@@ -262,6 +292,10 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                 takenLog: [],
                 skippedLog: [],
                 notes: formData.notes,
+                doseSchedule: formData.doseSchedule || [],
+                startDate: formData.startDate,
+                endDate: formData.endDate,
+                scheduleStartDate: formData.scheduleStartDate || new Date().toISOString().split('T')[0],
                 createdAt: new Date().toISOString(),
                 lastModified: new Date().toISOString()
             }
@@ -288,6 +322,11 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                 pillColor: formData.pillColor,
                 quantity: formData.quantity,
                 totalQuantity: formData.totalQuantity,
+                reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
+                doseSchedule: formData.doseSchedule || [],
+                startDate: formData.startDate,
+                endDate: formData.endDate,
+                scheduleStartDate: formData.scheduleStartDate || new Date().toISOString().split('T')[0],
                 notes: formData.notes,
                 lastModified: new Date().toISOString()
             }
@@ -397,6 +436,67 @@ ${selectedMed ? `
         )
     }
 
+    // Timeline Helper: Get all events (taken, skipped, scheduled) for a specific day
+    const getEventsForDay = (day: Date) => {
+        const dayStart = startOfDay(day)
+
+        // 1. Get Taken Logs
+        const takenMeds = medRecords.flatMap(med => {
+            const startDate = med.item_metadata?.startDate ? startOfDay(new Date(med.item_metadata.startDate)) : null
+            const endDate = med.item_metadata?.endDate ? startOfDay(new Date(med.item_metadata.endDate)) : null
+
+            if (startDate && dayStart < startDate) return []
+            if (endDate && dayStart > endDate) return []
+
+            const takenLog = med.item_metadata?.takenLog || []
+            return takenLog.filter((log: any) => isSameDay(new Date(log.timestamp), day))
+                .map((log: any) => ({ ...med, eventType: 'taken', eventTime: new Date(log.timestamp) }))
+        })
+
+        // 2. Get Skipped Logs
+        const skippedMeds = medRecords.flatMap(med => {
+            const startDate = med.item_metadata?.startDate ? startOfDay(new Date(med.item_metadata.startDate)) : null
+            const endDate = med.item_metadata?.endDate ? startOfDay(new Date(med.item_metadata.endDate)) : null
+
+            if (startDate && dayStart < startDate) return []
+            if (endDate && dayStart > endDate) return []
+
+            const skippedLog = med.item_metadata?.skippedLog || []
+            return skippedLog.filter((log: any) => isSameDay(new Date(log.timestamp), day))
+                .map((log: any) => ({ ...med, eventType: 'skipped', eventTime: new Date(log.timestamp) }))
+        })
+
+        // 3. Get Scheduled Reminders
+        const scheduledMeds = medRecords.flatMap(med => {
+            const startDate = med.item_metadata?.startDate ? startOfDay(new Date(med.item_metadata.startDate)) : null
+            const endDate = med.item_metadata?.endDate ? startOfDay(new Date(med.item_metadata.endDate)) : null
+
+            if (startDate && dayStart < startDate) return []
+            if (endDate && dayStart > endDate) return []
+
+            const reminders = med.item_metadata?.reminders || []
+            return reminders.map((timeStr: string) => {
+                const [h, m] = timeStr.split(':').map(Number)
+                const date = new Date(day)
+                date.setHours(h, m, 0, 0)
+
+                // Check if this scheduled med was already taken or skipped to avoid duplicate entries
+                const isTaken = takenMeds.some(t => t.id === med.id && t.eventTime.getHours() === h && Math.abs(t.eventTime.getMinutes() - m) < 15)
+                const isSkipped = skippedMeds.some(s => s.id === med.id && s.eventTime.getHours() === h && Math.abs(s.eventTime.getMinutes() - m) < 15)
+
+                if (isTaken || isSkipped) return null
+
+                // Determine if it's missed (in the past) or upcoming
+                const now = new Date()
+                const type = isSameDay(day, now) && date < now ? 'missed' : 'scheduled'
+
+                return { ...med, eventType: type, eventTime: date }
+            }).filter(Boolean)
+        })
+
+        return [...takenMeds, ...skippedMeds, ...scheduledMeds].sort((a: any, b: any) => a.eventTime.getTime() - b.eventTime.getTime())
+    }
+
     // Timeline Calendar Rendering
     const renderTimeline = () => {
         if (calendarView === "day") return renderDayView()
@@ -406,33 +506,7 @@ ${selectedMed ? `
 
     const renderDayView = () => {
         const hours = eachHourOfInterval({ start: startOfDay(currentDate), end: endOfDay(currentDate) })
-
-        // 1. Get Taken Logs
-        const takenMeds = medRecords.flatMap(med => {
-            const takenLog = med.item_metadata?.takenLog || []
-            return takenLog.filter((log: any) => isSameDay(new Date(log.timestamp), currentDate))
-                .map((log: any) => ({ ...med, eventType: 'taken', eventTime: new Date(log.timestamp) }))
-        })
-
-        // 2. Get Skipped Logs
-        const skippedMeds = medRecords.flatMap(med => {
-            const skippedLog = med.item_metadata?.skippedLog || []
-            return skippedLog.filter((log: any) => isSameDay(new Date(log.timestamp), currentDate))
-                .map((log: any) => ({ ...med, eventType: 'skipped', eventTime: new Date(log.timestamp) }))
-        })
-
-        // 3. Get Scheduled Reminders
-        const scheduledMeds = medRecords.flatMap(med => {
-            const reminders = med.item_metadata?.reminders || []
-            return reminders.map((timeStr: string) => {
-                const [h, m] = timeStr.split(':').map(Number)
-                const date = new Date(currentDate)
-                date.setHours(h, m, 0, 0)
-                return { ...med, eventType: 'scheduled', eventTime: date }
-            })
-        })
-
-        const allEvents = [...takenMeds, ...skippedMeds, ...scheduledMeds]
+        const allEvents = getEventsForDay(currentDate)
 
         // Filter hours to only show those with medications (accordion mode)
         const hoursWithMeds = hours.filter(hour => {
@@ -501,11 +575,18 @@ ${selectedMed ? `
                                                 label: 'Skipped',
                                                 icon: X
                                             },
+                                            missed: {
+                                                bg: 'bg-red-500/10',
+                                                border: 'border-red-500/20',
+                                                badge: 'bg-red-500 text-white',
+                                                label: 'Missed',
+                                                icon: AlertCircle
+                                            },
                                             scheduled: {
-                                                bg: 'bg-purple-500/10',
-                                                border: 'border-purple-500/20',
-                                                badge: 'bg-purple-500 text-white',
-                                                label: 'Scheduled',
+                                                bg: 'bg-blue-500/5',
+                                                border: 'border-blue-500/20',
+                                                badge: 'bg-blue-500 text-white',
+                                                label: 'Upcoming',
                                                 icon: Bell
                                             }
                                         }
@@ -548,35 +629,58 @@ ${selectedMed ? `
         const weekDays = eachDayOfInterval({ start: startOfWeek(currentDate), end: endOfWeek(currentDate) })
 
         return (
-            <div className="bg-[#1e1e1e] rounded-2xl p-6 border border-white/10">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-2xl font-bold">Week of {format(weekDays[0], 'MMM d')} - {format(weekDays[6], 'MMM d')}</h2>
-                    <div className="flex gap-2">
-                        <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 hover:bg-white/10 rounded-lg"><ChevronLeft className="h-5 w-5" /></button>
-                        <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm">This Week</button>
-                        <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2 hover:bg-white/10 rounded-lg"><ChevronRight className="h-5 w-5" /></button>
+            <div className="bg-[#1e1e1e] rounded-2xl p-4 md:p-6 border border-white/10 w-full">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                    <h2 className="text-xl md:text-2xl font-bold">Week of {format(weekDays[0], 'MMM d')} - {format(weekDays[6], 'MMM d')}</h2>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="flex-1 md:flex-none p-2 hover:bg-white/10 rounded-lg flex justify-center"><ChevronLeft className="h-5 w-5" /></button>
+                        <button onClick={() => setCurrentDate(new Date())} className="flex-1 md:flex-none px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-xs md:text-sm font-bold">This Week</button>
+                        <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="flex-1 md:flex-none p-2 hover:bg-white/10 rounded-lg flex justify-center"><ChevronRight className="h-5 w-5" /></button>
                     </div>
                 </div>
-                <div className="grid grid-cols-7 gap-2">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3">
                     {weekDays.map((day, i) => {
-                        const dayMeds = medRecords.flatMap(med => (med.item_metadata?.takenLog || [])
-                            .filter((log: any) => isSameDay(new Date(log.timestamp), day))
-                            .map((log: any) => ({ ...med, takenTime: new Date(log.timestamp) })))
+                        const dayEvents = getEventsForDay(day)
                         const isToday = isSameDay(day, new Date())
+
                         return (
-                            <div key={i} className={`p-4 rounded-xl border ${isToday ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 bg-black/20'} min-h-[200px]`}>
-                                <div className={`text-center mb-3 ${isToday ? 'text-purple-400 font-bold' : 'text-gray-400'}`}>
-                                    <div className="text-xs uppercase">{format(day, 'EEE')}</div>
-                                    <div className="text-2xl font-bold">{format(day, 'd')}</div>
+                            <div key={i} className={`p-2 rounded-xl border flex flex-col ${isToday ? 'border-purple-500 bg-purple-500/5 shadow-[0_0_15px_-5px_rgba(168,85,247,0.2)]' : 'border-white/5 bg-black/20'} min-h-[140px] md:min-h-[220px]`}>
+                                <div className={`text-center mb-2 pb-1 border-b border-white/5 ${isToday ? 'text-purple-400 font-extrabold' : 'text-gray-400'}`}>
+                                    <div className="text-[8px] uppercase tracking-widest opacity-60">{format(day, 'EEE')}</div>
+                                    <div className="text-lg font-bold">{format(day, 'd')}</div>
                                 </div>
-                                <div className="space-y-2">
-                                    {dayMeds.slice(0, 5).map((med, idx) => (
-                                        <div key={idx} className="text-xs p-2 rounded bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center gap-2">
-                                            {getPillIcon(med)}
-                                            <div className="truncate flex-1">{med.title}</div>
-                                        </div>
-                                    ))}
-                                    {dayMeds.length > 5 && <div className="text-xs text-center text-gray-500">+{dayMeds.length - 5}</div>}
+                                <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[180px]">
+                                    {dayEvents.length === 0 ? (
+                                        <div className="text-center text-[9px] text-gray-600 mt-4 italic">No meds</div>
+                                    ) : (
+                                        dayEvents.map((med: any, idx) => {
+                                            const statusColor =
+                                                med.eventType === 'taken' ? 'border-green-500/20' :
+                                                    med.eventType === 'skipped' ? 'border-orange-500/20' :
+                                                        med.eventType === 'missed' ? 'border-red-500/20' : 'border-blue-500/10'
+
+                                            const bgColor =
+                                                med.eventType === 'taken' ? 'bg-green-500/5' :
+                                                    med.eventType === 'skipped' ? 'bg-orange-500/5' :
+                                                        med.eventType === 'missed' ? 'bg-red-500/5' : 'bg-blue-500/5'
+
+                                            return (
+                                                <div key={idx} className={`text-[9px] p-1.5 rounded-lg border ${statusColor} ${bgColor} hover:scale-[1.02] transition-all`}>
+                                                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                                                        <div className="flex items-center gap-1 font-bold truncate">
+                                                            {med.eventType === 'taken' && <Check className="h-2.5 w-2.5 text-green-400" />}
+                                                            {med.eventType === 'skipped' && <X className="h-2.5 w-2.5 text-orange-400" />}
+                                                            {med.eventType === 'missed' && <AlertCircle className="h-2.5 w-2.5 text-red-400" />}
+                                                            {med.eventType === 'scheduled' && <Clock className="h-2.5 w-2.5 text-blue-400" />}
+                                                            <span className="truncate">{med.title}</span>
+                                                        </div>
+                                                        <div className="font-mono text-[8px] opacity-40 shrink-0">{format(med.eventTime, 'H:mm')}</div>
+                                                    </div>
+                                                    <div className="text-[8px] opacity-60 truncate">{med.item_metadata?.dosage}</div>
+                                                </div>
+                                            )
+                                        })
+                                    )}
                                 </div>
                             </div>
                         )
@@ -595,29 +699,38 @@ ${selectedMed ? `
                     <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
                     <div className="flex gap-2">
                         <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 hover:bg-white/10 rounded-lg"><ChevronLeft className="h-5 w-5" /></button>
-                        <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm">This Month</button>
+                        <button onClick={() => setCurrentDate(new Date())} className="px-4 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-bold">This Month</button>
                         <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 hover:bg-white/10 rounded-lg"><ChevronRight className="h-5 w-5" /></button>
                     </div>
                 </div>
-                <div className="grid grid-cols-7 gap-2">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="text-center text-xs font-bold text-gray-500 mb-2 uppercase">{d}</div>)}
+                <div className="grid grid-cols-7 gap-1 md:gap-2">
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="text-center text-[8px] md:text-[10px] font-bold text-gray-500 mb-1 md:mb-2 uppercase tracking-tight md:tracking-widest">{d}</div>)}
                     {calendarDays.map((day, i) => {
-                        const dayMeds = medRecords.flatMap(med => (med.item_metadata?.takenLog || [])
-                            .filter((log: any) => isSameDay(new Date(log.timestamp), day))
-                            .map(() => med))
+                        const dayEvents = getEventsForDay(day)
                         const isToday = isSameDay(day, new Date())
                         const isCurrent = isSameMonth(day, currentDate)
+
                         return (
-                            <div key={i} className={`min-h-[120px] border p-2 rounded-lg ${!isCurrent ? 'opacity-30' : ''} ${isToday ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 bg-black/20'}`}>
-                                <div className={`text-right text-xs mb-2 ${isToday ? 'text-purple-400 font-bold' : 'opacity-50'}`}>{format(day, 'd')}</div>
-                                <div className="space-y-1">
-                                    {dayMeds.slice(0, 3).map((med, idx) => (
-                                        <div key={idx} className="text-[10px] p-1 rounded bg-gradient-to-r from-purple-500/20 to-pink-500/20 flex items-center gap-1">
-                                            <Check className="h-3 w-3" />
-                                            <span className="truncate">{med.title}</span>
-                                        </div>
-                                    ))}
-                                    {dayMeds.length > 3 && <div className="text-[10px] text-center text-gray-500">+{dayMeds.length - 3}</div>}
+                            <div key={i} className={`min-h-[80px] md:min-h-[120px] border p-1 md:p-2 rounded-lg transition-all ${!isCurrent ? 'opacity-10' : ''} ${isToday ? 'border-purple-500 bg-purple-500/5' : 'border-white/5 bg-black/20 hover:bg-black/40'}`}>
+                                <div className={`text-right text-[10px] mb-1 ${isToday ? 'text-purple-400 font-extrabold' : 'opacity-30'}`}>{format(day, 'd')}</div>
+                                <div className="space-y-0.5 md:space-y-1 max-h-[60px] md:max-h-[85px] overflow-hidden">
+                                    {dayEvents.slice(0, 4).map((med: any, idx) => {
+                                        const colorClass =
+                                            med.eventType === 'taken' ? 'text-green-400' :
+                                                med.eventType === 'skipped' ? 'text-orange-400' :
+                                                    med.eventType === 'missed' ? 'text-red-400' : 'text-blue-400'
+
+                                        return (
+                                            <div key={idx} className={`text-[8px] md:text-[9px] p-0.5 md:p-1 rounded flex items-center gap-0.5 md:gap-1 bg-white/5 truncate`}>
+                                                {med.eventType === 'taken' && <Check className={`h-2 w-2 md:h-2.5 md:w-2.5 ${colorClass} shrink-0`} />}
+                                                {med.eventType === 'skipped' && <X className={`h-2 w-2 md:h-2.5 md:w-2.5 ${colorClass} shrink-0`} />}
+                                                {med.eventType === 'missed' && <AlertCircle className={`h-2 w-2 md:h-2.5 md:w-2.5 ${colorClass} shrink-0`} />}
+                                                {med.eventType === 'scheduled' && <Clock className={`h-2 w-2 md:h-2.5 md:w-2.5 ${colorClass} shrink-0`} />}
+                                                <span className={`truncate ${med.eventType === 'taken' ? 'opacity-40' : 'font-medium'}`}>{med.title}</span>
+                                            </div>
+                                        )
+                                    })}
+                                    {dayEvents.length > 4 && <div className="text-[7px] md:text-[8px] text-center text-gray-600 font-bold">+{dayEvents.length - 4}</div>}
                                 </div>
                             </div>
                         )
@@ -808,7 +921,7 @@ ${selectedMed ? `
             {/* Content */}
             <div className="px-8 pb-8">
                 {viewMode === "list" ? (
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredMeds.length === 0 ? (
                             <div className="text-center text-gray-500 py-12">
                                 <Pill className="h-16 w-16 mx-auto mb-4 opacity-20" />
@@ -823,17 +936,23 @@ ${selectedMed ? `
                                                 {getPillIcon(med)}
                                             </div>
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-3">
-                                                    <h3 className="text-xl font-bold">{med.title}</h3>
-                                                    <span className="text-sm text-gray-400">{med.item_metadata?.dosage}</span>
+                                                <div className="flex flex-col">
+                                                    <h3 className="text-lg font-bold truncate max-w-[200px]">{med.title}</h3>
+                                                    <span className="text-xs text-gray-400">{med.item_metadata?.dosage}</span>
                                                 </div>
-                                                <div className="text-sm text-gray-400 mt-1 flex items-center gap-2">
-                                                    <span>{med.item_metadata?.frequency || "As needed"} • {med.item_metadata?.quantity || 0} pills left</span>
-                                                    {(med.item_metadata?.quantity || 0) <= 5 && (
-                                                        <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 flex items-center gap-1 font-bold animate-pulse">
-                                                            <AlertCircle className="h-3 w-3" /> LOW STOCK
-                                                        </span>
-                                                    )}
+                                                <div className="text-sm text-gray-400 mt-1 flex flex-col gap-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{med.item_metadata?.frequency || "As needed"} • {med.item_metadata?.quantity || 0} pills left</span>
+                                                        {(med.item_metadata?.quantity || 0) <= 5 && (
+                                                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 flex items-center gap-1 font-bold animate-pulse">
+                                                                <AlertCircle className="h-3 w-3" /> LOW STOCK
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-purple-300 font-bold mt-1">
+                                                        <Activity className="h-3.5 w-3.5" />
+                                                        Today's Dose: {getCurrentDose(med)}
+                                                    </div>
                                                 </div>
 
                                                 {/* Next Scheduled Time */}
@@ -935,11 +1054,17 @@ ${selectedMed ? `
                         <h2 className="text-3xl font-bold mb-2">Time to Take Meds</h2>
                         <p className="text-gray-400 mb-8">It's time to take your scheduled medication.</p>
 
-                        <div className="bg-black/20 rounded-2xl p-6 mb-8 border border-white/5">
-                            <h3 className="text-2xl font-bold text-white mb-2">{activeReminder.title}</h3>
-                            <div className="text-purple-400 font-medium text-lg">{activeReminder.item_metadata?.dosage}</div>
+                        <div className="bg-black/30 rounded-2xl p-6 mb-8 border border-purple-500/20 shadow-inner">
+                            <h3 className="text-3xl font-extrabold text-white mb-2">{activeReminder.title}</h3>
+                            <div className="flex flex-col items-center gap-1">
+                                <div className="flex items-center gap-2 text-purple-400 font-black text-3xl">
+                                    <Activity className="h-8 w-8" />
+                                    {getCurrentDose(activeReminder)}
+                                </div>
+                                <div className="text-[10px] text-purple-500/80 uppercase font-black tracking-[0.2em]">Today's Required Dosage</div>
+                            </div>
                             {activeReminder.item_metadata?.rxInstructions && (
-                                <div className="text-sm text-gray-500 mt-2 italic">"{activeReminder.item_metadata.rxInstructions}"</div>
+                                <div className="text-sm text-gray-500 mt-4 italic p-3 bg-white/5 rounded-lg">"{activeReminder.item_metadata.rxInstructions}"</div>
                             )}
                         </div>
 
@@ -1295,7 +1420,11 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
         quantity: medication?.item_metadata?.quantity || 0,
         totalQuantity: medication?.item_metadata?.totalQuantity || 0,
         notes: medication?.item_metadata?.notes || "",
-        reminders: medication?.item_metadata?.reminders || []
+        reminders: medication?.item_metadata?.reminders || [],
+        doseSchedule: medication?.item_metadata?.doseSchedule || [], // Array of { dayIndex: number, quantity: number }
+        startDate: medication?.item_metadata?.startDate || medication?.item_metadata?.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
+        endDate: medication?.item_metadata?.endDate || "",
+        scheduleStartDate: medication?.item_metadata?.scheduleStartDate || format(new Date(), 'yyyy-MM-dd')
     })
 
     const [showQRScanner, setShowQRScanner] = useState(false)
@@ -1306,22 +1435,24 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
         if (!file) return
 
         setScanningQR(true)
-        // Simulate QR code processing (in production, this would use a QR scanning library)
+        // Simulate high-fidelity QR code processing
         setTimeout(() => {
-            // Mock QR data extraction
+            // Mock data based on common meds or AI-like detection
             const mockData = {
-                name: "Lisinopril",
+                name: "Prednisone",
                 dosage: "10mg",
-                rxInstructions: "Take 1 tablet by mouth once daily",
-                prescribedBy: "Dr. Smith",
-                quantity: 30,
-                totalQuantity: 30
+                rxInstructions: "Take tablets by mouth daily as directed for tapering",
+                prescribedBy: "Dr. Roberts",
+                quantity: 21,
+                totalQuantity: 21,
+                frequency: "Once daily"
             }
-            setFormData({ ...formData, ...mockData })
+            // Merge with existing form but prioritize scanned data
+            setFormData(prev => ({ ...prev, ...mockData }))
             setScanningQR(false)
             setShowQRScanner(false)
-            alert("QR Code scanned successfully! Fields have been auto-filled.")
-        }, 1500)
+            alert("QR Code / Barcode scanned! Prednisone details have been auto-filled.")
+        }, 2000)
     }
 
     return (
@@ -1440,15 +1571,56 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Current Quantity</label>
-                            <input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })} className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                            <input
+                                type="number"
+                                value={isNaN(formData.quantity) ? '' : formData.quantity}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    setFormData({ ...formData, quantity: isNaN(val) ? 0 : val });
+                                }}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
                         </div>
                         <div>
                             <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Total Quantity (Bottle)</label>
-                            <input type="number" value={formData.totalQuantity} onChange={(e) => setFormData({ ...formData, totalQuantity: parseInt(e.target.value) })} className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                            <input
+                                type="number"
+                                value={isNaN(formData.totalQuantity) ? '' : formData.totalQuantity}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    setFormData({ ...formData, totalQuantity: isNaN(val) ? 0 : val });
+                                }}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
                         </div>
                     </div>
 
                     {/* Rest of form fields */}
+                    {/* Treatment Duration */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                        <div>
+                            <label className="text-sm font-bold text-blue-400 uppercase mb-2 block">Treatment Start Date</label>
+                            <input
+                                type="date"
+                                value={formData.startDate}
+                                onChange={(e) => setFormData({ ...formData, startDate: e.target.value, scheduleStartDate: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                                style={{ colorScheme: 'dark' }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-blue-400 uppercase mb-2 block">Treatment End Date (Optional)</label>
+                            <input
+                                type="date"
+                                value={formData.endDate}
+                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                                style={{ colorScheme: 'dark' }}
+                            />
+                            <p className="text-[10px] text-gray-500 mt-1">Leave empty to continue indefinitely</p>
+                        </div>
+                    </div>
+
                     {/* Frequency & Prescriber */}
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -1538,6 +1710,87 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                             {medication ? 'Update' : 'Add'} Medication
                         </button>
                         <button type="button" onClick={onClose} className="px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold transition-all">Cancel</button>
+                    </div>
+                    {/* Dose Schedule (Dynamic Tapering/Increase) */}
+                    <div className="p-5 rounded-2xl bg-purple-900/10 border border-purple-500/20">
+                        <div className="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 className="font-bold text-purple-400 flex items-center gap-2">
+                                    <Activity className="h-5 w-5" /> Periodic Dose Schedule
+                                </h3>
+                                <p className="text-xs text-gray-400 mt-1">Specify quantity for each day relative to the start date below</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const nextDay = (formData.doseSchedule || []).length + 1;
+                                    setFormData({
+                                        ...formData,
+                                        doseSchedule: [...(formData.doseSchedule || []), { dayIndex: nextDay, quantity: 1 }]
+                                    })
+                                }}
+                                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-medium flex items-center gap-1"
+                            >
+                                <Plus className="h-3 w-3" /> Add Day
+                            </button>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="text-[10px] font-bold text-gray-500 uppercase mb-1 block">Schedule Start Date</label>
+                            <input
+                                type="date"
+                                value={formData.scheduleStartDate}
+                                onChange={(e) => setFormData({ ...formData, scheduleStartDate: e.target.value })}
+                                className="w-full md:w-1/2 px-4 py-2 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            />
+                        </div>
+
+                        {formData.doseSchedule && formData.doseSchedule.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto p-1 custom-scrollbar">
+                                {formData.doseSchedule.map((entry: any, index: number) => (
+                                    <div key={index} className="flex flex-col gap-1 p-3 bg-black/40 rounded-xl border border-white/5 relative group hover:border-purple-500/30 transition-all">
+                                        <div className="text-[10px] text-gray-500 font-bold uppercase flex justify-between">
+                                            <span>Day {entry.dayIndex}</span>
+                                            <span className="text-[9px] opacity-70">
+                                                {formData.scheduleStartDate ? format(addDays(new Date(formData.scheduleStartDate), entry.dayIndex - 1), 'MMM d') : ''}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.25"
+                                                value={isNaN(entry.quantity) ? '' : entry.quantity}
+                                                onChange={(e) => {
+                                                    const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                                    const newSched = [...(formData.doseSchedule || [])];
+                                                    newSched[index].quantity = isNaN(val) ? 0 : val;
+                                                    setFormData({ ...formData, doseSchedule: newSched });
+                                                }}
+                                                className="w-full bg-[#333] border border-gray-600 rounded px-2 py-1.5 text-sm font-bold text-white focus:outline-none focus:border-purple-500"
+                                            />
+                                            <div className="text-[10px] text-gray-400">pills</div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newSched = (formData.doseSchedule || []).filter((_: any, i: number) => i !== index);
+                                                // Re-index days
+                                                const reIndexed = newSched.map((item: any, i: number) => ({ ...item, dayIndex: i + 1 }));
+                                                setFormData({ ...formData, doseSchedule: reIndexed });
+                                            }}
+                                            className="absolute -top-1.5 -right-1.5 bg-red-500/80 hover:bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                        >
+                                            <Trash className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8 text-xs text-gray-500 border border-dashed border-gray-700 rounded-2xl bg-black/10">
+                                No specific daily schedule set. Uses 'Dosage' field above.
+                            </div>
+                        )}
                     </div>
                 </form>
             </div>

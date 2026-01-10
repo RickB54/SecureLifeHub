@@ -115,6 +115,7 @@ async function fetchItems() {
 
     if (itemData) {
         allItems = itemData
+        console.log("Fetched items:", allItems.length)
         preferenceItem = allItems.find(i => i.title === "[SYSTEM] User Preferences")
         cacheData(allItems)
 
@@ -123,6 +124,11 @@ async function fetchItems() {
 
         // Check for current tab match to auto-select or highlight
         checkForMatches()
+    }
+
+    if (itemError) {
+        console.error("Error fetching items:", itemError)
+        alert("Sync failed: " + itemError.message)
     }
 
     if (folderData) {
@@ -167,46 +173,66 @@ function updateAutoFillBadge(enabled) {
 // -- Sidebar Rendering --
 function filterItems(query = "") {
     itemsList.innerHTML = ""
-    query = query.toLowerCase()
+    query = query.toLowerCase().trim()
 
-    if (currentMode === 'recents' && query === "") {
-        const recents = recentItemsIds
-            .map(id => allItems.find(i => i.id === id))
-            .filter(item => item && item.type === 'password' && item.website && item.website.includes('.'))
-
-        if (recents.length === 0) {
-            itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No recent items with URLs</div>`
-            return
-        }
-
-        const header = document.createElement('div')
-        header.className = "px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-[#252526] border-b border-[#3e3e42]"
-        header.textContent = "Recent URLs"
-        itemsList.appendChild(header)
-
-        recents.forEach(item => {
-            const el = createListItem(item, true)
-            itemsList.appendChild(el)
-        })
-        return
-    }
-
-    filteredItems = allItems.filter(item =>
+    // 1. Get filtered passwords
+    const passwordItems = allItems.filter(item =>
         item.type === 'password' &&
-        !item.title.startsWith("[SYSTEM]") &&
+        item.category !== 'Medications' &&
+        item.category !== 'Health Records' && // STRICT EXCLUSION
+        !item.title?.startsWith("[SYSTEM]") &&
         (
-            (item.title && item.title.toLowerCase().includes(query)) ||
-            (item.username && item.username.toLowerCase().includes(query)) ||
-            (item.website && item.website.toLowerCase().includes(query))
+            item.title?.toLowerCase().includes(query) ||
+            item.username?.toLowerCase().includes(query) ||
+            item.website?.toLowerCase().includes(query)
         )
     )
 
-    if (filteredItems.length === 0 && query !== "") {
-        itemsList.innerHTML = `<div class="text-center text-gray-500 py-4 text-xs">No items found</div>`
+    // 2. If no query, show Recents at the top
+    if (query === "" && recentItemsIds.length > 0) {
+        const recents = recentItemsIds
+            .map(id => allItems.find(i => i.id === id))
+            .filter(item =>
+                item &&
+                item.type === 'password' &&
+                item.category !== 'Medications' &&
+                item.category !== 'Health Records'
+            )
+            .slice(0, 5) // Show top 5 recents
+
+        if (recents.length > 0) {
+            const header = document.createElement('div')
+            header.className = "px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-[#252526] border-b border-[#3e3e42]"
+            header.textContent = "Quick Access (Recents)"
+            itemsList.appendChild(header)
+
+            recents.forEach(item => {
+                const el = createListItem(item, true)
+                itemsList.appendChild(el)
+            })
+
+            const spacer = document.createElement('div')
+            spacer.className = "h-4"
+            itemsList.appendChild(spacer)
+
+            const allHeader = document.createElement('div')
+            allHeader.className = "px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-[#252526] border-b border-[#3e3e42]"
+            allHeader.textContent = "Vault Items"
+            itemsList.appendChild(allHeader)
+        }
+    }
+
+    // 3. Render the list
+    if (passwordItems.length === 0) {
+        if (query !== "") {
+            itemsList.innerHTML += `<div class="text-center text-gray-500 py-8 text-xs">No passwords found for "${query}"</div>`
+        } else {
+            itemsList.innerHTML += `<div class="text-center text-gray-500 py-8 text-xs">No passwords in vault</div>`
+        }
         return
     }
 
-    filteredItems.forEach(item => {
+    passwordItems.forEach(item => {
         const el = createListItem(item)
         itemsList.appendChild(el)
     })
@@ -256,20 +282,28 @@ function renderSections() {
 }
 
 async function openInWebVault(page = "dashboard") {
-    const { data: { session } } = await supabase.auth.getSession()
-    let url = `${WEB_VAULT_URL}`
+    console.log("Opening web vault to page:", page);
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        let url = `${WEB_VAULT_URL}`
 
-    const params = new URLSearchParams()
-    if (page !== "dashboard") params.append("page", page)
+        const params = new URLSearchParams()
+        if (page !== "dashboard") params.append("page", page)
 
-    if (session?.access_token && session?.refresh_token) {
-        params.append("access_token", session.access_token)
-        params.append("refresh_token", session.refresh_token)
+        if (session?.access_token && session?.refresh_token) {
+            params.append("access_token", session.access_token)
+            params.append("refresh_token", session.refresh_token)
+        }
+
+        const finalUrl = params.toString() ? `${url}?${params.toString()}` : url
+        console.log("Final URL:", finalUrl);
+        chrome.tabs.create({ url: finalUrl })
+        closeMenu()
+    } catch (err) {
+        console.error("Failed to open web vault:", err);
+        // Fallback: just open the URL
+        chrome.tabs.create({ url: WEB_VAULT_URL })
     }
-
-    const finalUrl = params.toString() ? `${url}?${params.toString()}` : url
-    chrome.tabs.create({ url: finalUrl })
-    closeMenu()
 }
 
 function switchSidebarTab(tab) {
@@ -787,8 +821,8 @@ function closeMenu() {
 
 // Recents Menu Button
 document.getElementById('menu-recents-btn').addEventListener('click', () => {
-    currentMode = 'recents'
     switchSidebarTab('vault')
+    searchInput.value = ""
     filterItems("")
     closeMenu()
 })
@@ -920,5 +954,46 @@ viewFavBtn.addEventListener('click', async () => {
 document.getElementById('extension-reload-btn').addEventListener('click', () => {
     chrome.runtime.reload()
 })
+
+// Sync Now (Menu Item)
+const quickSyncBtn = document.getElementById('quick-sync')
+if (quickSyncBtn) {
+    quickSyncBtn.addEventListener('click', async () => {
+        const originalHTML = quickSyncBtn.innerHTML
+        quickSyncBtn.innerHTML = `
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 animate-spin text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Syncing Data...</span>
+            </div>
+        `
+        try {
+            await fetchItems()
+            quickSyncBtn.innerHTML = `
+                <div class="flex items-center gap-3 text-green-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span>Sync Complete!</span>
+                </div>
+            `
+        } catch (e) {
+            console.error("Sync error:", e)
+            quickSyncBtn.innerHTML = `
+                <div class="flex items-center gap-3 text-red-400">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    <span>Sync Failed</span>
+                </div>
+            `
+        }
+        setTimeout(() => {
+            quickSyncBtn.innerHTML = originalHTML
+            closeMenu()
+        }, 1500)
+    })
+}
 
 init()

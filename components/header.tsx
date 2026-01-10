@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize } from "lucide-react"
+import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize, HelpCircle } from "lucide-react"
 
 import { useAuth } from "./auth-provider"
 
@@ -13,9 +13,10 @@ interface HeaderProps {
   theme: string
   toggleTheme: () => void
   activePage: string
+  onOpenHelp: () => void
 }
 
-export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage }: HeaderProps) {
+export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage, onOpenHelp }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const { user } = useAuth()
@@ -67,6 +68,14 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          <button
+            onClick={onOpenHelp}
+            className={`${theme === "light" ? "text-gray-800 hover:text-blue-500" : "text-white hover:text-blue-400"} transition-colors`}
+            aria-label="Help"
+            title="App Manual & Help"
+          >
+            <HelpCircle className="h-5 w-5" />
+          </button>
           <button
             onClick={() => onNavigate("settings")}
             className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}

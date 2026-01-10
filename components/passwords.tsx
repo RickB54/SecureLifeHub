@@ -1762,7 +1762,7 @@ export default function Passwords({
             </div>
 
             {/* Functions Dropdown */}
-            <div className="relative">
+            <div className="relative flex items-center gap-2">
               <button
                 className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
                 onClick={() => {
@@ -1773,6 +1773,22 @@ export default function Passwords({
                 <span>Functions</span>
                 <ChevronDown className="h-4 w-4 ml-2" />
               </button>
+
+              {/* Quick Clear Filter Button */}
+              {(categoryFilter !== "all" || favoriteFilter || archivedFilter) && (
+                <button
+                  onClick={() => {
+                    setCategoryFilter("all")
+                    setFavoriteFilter(false)
+                    setArchivedFilter(false)
+                    toast.success("Filters cleared")
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md font-bold text-xs uppercase tracking-tight transition-all ${theme === 'light' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
+                  title="Clear all active filters"
+                >
+                  <X className="h-3 w-3" /> Clear
+                </button>
+              )}
 
               {showStatusFilterMenu && (
                 <div
