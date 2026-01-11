@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   Database,
+  Activity,
   Download,
   Upload,
   Shield,
@@ -383,7 +384,7 @@ export default function Settings({
       {/* Advanced & Danger Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <SettingsCard title="Test Data" icon={Database} color="yellow">
-          <MockDataGenerator bulkAddItems={bulkAddItems} />
+          <MockDataGenerator bulkAddItems={bulkAddItems} records={records} deleteItem={deleteItem} updateItem={updateItem} />
         </SettingsCard>
 
         <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20">
@@ -437,6 +438,27 @@ export default function Settings({
                   className="w-full py-4 bg-red-900/20 border border-red-500/50 hover:bg-red-900/40 text-red-400 rounded-xl font-bold flex items-center justify-center gap-2"
                 >
                   <Trash className="h-5 w-5" /> Delete All Data (Keep Passwords)
+                </button>
+
+                <button
+                  onClick={async () => {
+                    if (confirm("CRITICAL: Delete ALL Medications only? This cannot be undone.")) {
+                      if (!deleteItem) return;
+                      const meds = records.filter(r => {
+                        const cat = r.category?.toLowerCase() || ""
+                        return cat === "medications" || cat === "health records" || r.type === "medication"
+                      })
+                      if (meds.length === 0) return alert("No medications found to delete.")
+                      if (confirm(`You are about to delete ${meds.length} medications. Confirm?`)) {
+                        for (const m of meds) await deleteItem(m.id, "item", { skipRefresh: true })
+                        window.dispatchEvent(new CustomEvent('vault-refresh'))
+                        alert("All medications removed.")
+                      }
+                    }
+                  }}
+                  className="w-full py-4 bg-orange-900/20 border border-orange-500/50 hover:bg-orange-900/40 text-orange-400 rounded-xl font-bold flex items-center justify-center gap-2"
+                >
+                  <Activity className="h-5 w-5" /> Remove All Meds
                 </button>
 
                 <button

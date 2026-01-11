@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
+import { toast } from "sonner"
 import Lightbox from "./media/lightbox"
 import Medications, { PillLibraryModal } from "./medications"
 import HealthAI from "./health-ai"
@@ -35,6 +36,60 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [lightboxOpen, setLightboxOpen] = useState(false)
     const [lightboxItems, setLightboxItems] = useState<any[]>([])
     const [lightboxIndex, setLightboxIndex] = useState(0)
+    const [isListening, setIsListening] = useState(false)
+    const [activeField, setActiveField] = useState<string | null>(null)
+    const [apptFormData, setApptFormData] = useState({
+        title: "",
+        notes: "",
+        doctor: "",
+        location: "",
+        specialty: "",
+        date: new Date().toISOString().slice(0, 16)
+    })
+
+    // Speech Recognition Setup
+    const startSpeechToText = (field: keyof typeof apptFormData) => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        if (!SpeechRecognition) {
+            toast.error("Speech recognition is not supported in this browser.")
+            return
+        }
+
+        const recognition = new SpeechRecognition()
+        recognition.continuous = false
+        recognition.interimResults = false
+        recognition.lang = 'en-US'
+
+        recognition.onstart = () => {
+            setIsListening(true)
+            setActiveField(field)
+            toast.info(`Listening for ${field}...`)
+        }
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript
+            setApptFormData(prev => ({
+                ...prev,
+                [field]: prev[field] ? prev[field] + " " + transcript : transcript
+            }))
+            setIsListening(false)
+            setActiveField(null)
+        }
+
+        recognition.onerror = (event: any) => {
+            console.error(event.error)
+            setIsListening(false)
+            setActiveField(null)
+            toast.error("Error recognizing speech.")
+        }
+
+        recognition.onend = () => {
+            setIsListening(false)
+            setActiveField(null)
+        }
+
+        recognition.start()
+    }
 
     // --- DATA FILTERING ---
     const healthRecords = useMemo(() => {
@@ -191,7 +246,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     type: "note",
                     category: "Vitals",
                     title: v.title,
-                    item_metadata: { is_vital: true, value: v.value, unit: v.unit, date: v.date, notes: 'Sample vital entry for dashboard testing.' }
+                    item_metadata: { is_vital: true, value: v.value, unit: v.unit, date: v.date, notes: 'Sample vital entry for dashboard testing.', is_mock: true }
                 });
             }
         }
@@ -206,7 +261,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     type: "note",
                     title: r.title,
                     category: "Health Records",
-                    item_metadata: { is_health_record: true, date: r.date, doctor: r.doctor, notes: r.notes, type: "Clinic Visit" }
+                    item_metadata: { is_health_record: true, date: r.date, doctor: r.doctor, notes: r.notes, type: "Clinic Visit", is_mock: true }
                 });
             }
         }
@@ -221,7 +276,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     type: 'note',
                     title: m.title,
                     category: 'Medications',
-                    item_metadata: { dosage: m.dosage, frequency: m.frequency, notes: m.notes }
+                    item_metadata: { dosage: m.dosage, frequency: m.frequency, notes: m.notes, is_mock: true }
                 });
             }
         }
@@ -633,7 +688,18 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 <h2 className="text-2xl font-bold">Medical Appointments</h2>
                 <div className="flex gap-2">
                     <button
-                        onClick={() => { setAddModalType('appointment'); setShowAddModal(true) }}
+                        onClick={() => {
+                            setApptFormData({
+                                title: "",
+                                notes: "",
+                                doctor: "",
+                                location: "",
+                                specialty: "",
+                                date: new Date().toISOString().slice(0, 16)
+                            })
+                            setAddModalType('appointment')
+                            setShowAddModal(true)
+                        }}
                         className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
                     >
                         <Plus className="h-4 w-4" /> Schedule Visit
@@ -660,7 +726,22 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         <CalendarIcon className="h-6 w-6" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => { setEditingVital(apt); setAddModalType('appointment'); setShowAddModal(true) }} className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-full transition-colors">
+                                        <button
+                                            onClick={() => {
+                                                setEditingVital(apt)
+                                                setApptFormData({
+                                                    title: apt.title || "",
+                                                    notes: apt.item_metadata?.notes || "",
+                                                    doctor: apt.item_metadata?.doctor || "",
+                                                    location: apt.item_metadata?.location || "",
+                                                    specialty: apt.item_metadata?.specialty || "",
+                                                    date: apt.item_metadata?.date ? new Date(apt.item_metadata.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
+                                                })
+                                                setAddModalType('appointment')
+                                                setShowAddModal(true)
+                                            }}
+                                            className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-full transition-colors"
+                                        >
                                             <Edit className="h-4 w-4" />
                                         </button>
                                         <button onClick={() => { if (confirm("Cancel this appointment?")) deleteItem(apt.id) }} className="p-2 hover:bg-red-500/10 text-red-500 rounded-full transition-colors">
@@ -786,7 +867,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </div>
 
                             {addModalType === 'vital' ? (
-                                <form onSubmit={async (e: any) => {
+                                <form key="vital-form" onSubmit={async (e: any) => {
                                     e.preventDefault()
                                     const fd = new FormData(e.target)
                                     const type = fd.get("type") as string
@@ -882,22 +963,20 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </button>
                                 </form>
                             ) : addModalType === 'appointment' ? (
-                                <form onSubmit={async (e: any) => {
+                                <form key="appointment-form" onSubmit={async (e: any) => {
                                     e.preventDefault()
-                                    const fd = new FormData(e.target)
                                     const payload = {
                                         type: "note",
-                                        title: fd.get("title") as string,
+                                        title: apptFormData.title,
                                         category: "Health Records",
                                         item_metadata: {
                                             is_health_record: true,
                                             type: "Appointment",
-                                            date: fd.get("date"),
-                                            doctor: fd.get("doctor"),
-                                            location: fd.get("location"),
-                                            specialty: fd.get("specialty"),
-                                            notes: fd.get("notes"),
-                                            priority: fd.get("priority")
+                                            date: apptFormData.date,
+                                            doctor: apptFormData.doctor,
+                                            location: apptFormData.location,
+                                            specialty: apptFormData.specialty,
+                                            notes: apptFormData.notes,
                                         }
                                     }
 
@@ -910,17 +989,48 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     setEditingVital(null)
                                 }} className="space-y-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Reason for Visit</label>
-                                        <input name="title" required defaultValue={editingVital?.title || ""} placeholder="e.g. Annual Checkup" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Reason for Visit</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => startSpeechToText('title')}
+                                                className={`p-1.5 rounded-full transition-all ${isListening && activeField === 'title' ? 'bg-red-500 text-white animate-pulse' : 'text-blue-500 hover:bg-blue-500/10'}`}
+                                                title="Use Voice to Text"
+                                            >
+                                                <Mic className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        <input
+                                            name="title"
+                                            required
+                                            value={apptFormData.title || ''}
+                                            onChange={(e) => setApptFormData({ ...apptFormData, title: e.target.value })}
+                                            placeholder="e.g. Annual Checkup"
+                                            className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
+                                        />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Date & Time</label>
-                                            <input type="datetime-local" name="date" required defaultValue={editingVital?.item_metadata?.date || new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                            <input
+                                                type="datetime-local"
+                                                name="date"
+                                                required
+                                                value={apptFormData.date || ''}
+                                                onChange={(e) => setApptFormData({ ...apptFormData, date: e.target.value })}
+                                                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
+                                                style={{ colorScheme: 'dark' }}
+                                            />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Doctor / Provider</label>
-                                            <input name="doctor" defaultValue={editingVital?.item_metadata?.doctor || ""} placeholder="Dr. Smith" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                            <input
+                                                name="doctor"
+                                                value={apptFormData.doctor || ''}
+                                                onChange={(e) => setApptFormData({ ...apptFormData, doctor: e.target.value })}
+                                                placeholder="Dr. Smith"
+                                                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
+                                            />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -928,24 +1038,52 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Location</label>
                                             <div className="relative">
                                                 <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
-                                                <input name="location" defaultValue={editingVital?.item_metadata?.location || ""} placeholder="123 Medic Lane" className="w-full p-4 pl-12 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                                <input
+                                                    name="location"
+                                                    value={apptFormData.location || ''}
+                                                    onChange={(e) => setApptFormData({ ...apptFormData, location: e.target.value })}
+                                                    placeholder="123 Medic Lane"
+                                                    className="w-full p-4 pl-12 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
+                                                />
                                             </div>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Specialty</label>
-                                            <input name="specialty" defaultValue={editingVital?.item_metadata?.specialty || ""} placeholder="Cardiology" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                            <input
+                                                name="specialty"
+                                                value={apptFormData.specialty || ''}
+                                                onChange={(e) => setApptFormData({ ...apptFormData, specialty: e.target.value })}
+                                                placeholder="Cardiology"
+                                                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Notes & Instructions</label>
-                                        <textarea name="notes" defaultValue={editingVital?.item_metadata?.notes || ""} placeholder="Bring ID, insurance card, etc." className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm italic" />
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Notes & Instructions</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => startSpeechToText('notes')}
+                                                className={`p-1.5 rounded-full transition-all ${isListening && activeField === 'notes' ? 'bg-red-500 text-white animate-pulse' : 'text-blue-500 hover:bg-blue-500/10'}`}
+                                                title="Use Voice to Text"
+                                            >
+                                                <Mic className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            name="notes"
+                                            value={apptFormData.notes || ''}
+                                            onChange={(e) => setApptFormData({ ...apptFormData, notes: e.target.value })}
+                                            placeholder="Bring ID, insurance card, etc."
+                                            className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm italic custom-scrollbar"
+                                        />
                                     </div>
                                     <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
                                         {editingVital ? 'Update Appointment' : 'Confirm Appointment'}
                                     </button>
                                 </form>
                             ) : (
-                                <form onSubmit={async (e: any) => {
+                                <form key="manual-form" onSubmit={async (e: any) => {
                                     e.preventDefault()
                                     const fd = new FormData(e.target)
                                     await addItem({

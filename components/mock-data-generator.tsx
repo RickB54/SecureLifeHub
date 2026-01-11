@@ -1,15 +1,22 @@
 "use client"
 
 import { useState } from "react"
-import { Database, Loader2, Check } from "lucide-react"
+import { Database, Loader2, Check, Trash, Sparkles } from "lucide-react"
 
 interface MockDataGeneratorProps {
     bulkAddItems?: (items: any[]) => Promise<any>
+    records: any[]
+    deleteItem?: (id: string) => Promise<any>
+    updateItem?: (id: string, updates: any) => Promise<any>
 }
 
-export default function MockDataGenerator({ bulkAddItems }: MockDataGeneratorProps) {
+export default function MockDataGenerator({ bulkAddItems, records, deleteItem, updateItem }: MockDataGeneratorProps) {
     const [generating, setGenerating] = useState(false)
+    const [removing, setRemoving] = useState(false)
+    const [repairing, setRepairing] = useState(false)
     const [done, setDone] = useState(false)
+    const [removedDone, setRemovedDone] = useState(false)
+    const [repairDone, setRepairDone] = useState(false)
 
     const generateData = async () => {
         if (!bulkAddItems) return
@@ -267,37 +274,161 @@ export default function MockDataGenerator({ bulkAddItems }: MockDataGeneratorPro
         }
     }
 
+    const removeMockData = async () => {
+        if (!deleteItem) return
+        if (!confirm("Are you sure you want to remove all mock data? This will only remove data marked as mock data.")) return
+
+        setRemoving(true)
+        try {
+            const mockItems = records.filter(r => r.item_metadata?.is_mock === true)
+            for (const item of mockItems) {
+                await deleteItem(item.id)
+            }
+            setRemovedDone(true)
+            setTimeout(() => setRemovedDone(false), 3000)
+        } catch (e) {
+            console.error("Failed to remove mock data", e)
+        } finally {
+            setRemoving(false)
+        }
+    }
+
+    const isMisclassifiedMed = (r: any) => {
+        const cat = r.category?.toLowerCase();
+        const specificNames = ["Hydroxyzine", "Prednisone", "Loratadine", "Famotidine"];
+        const isSpecificMed = specificNames.some(name => r.title?.toLowerCase().includes(name.toLowerCase()));
+
+        const hasMedMetadata = r.item_metadata && (
+            r.item_metadata.dosage ||
+            r.item_metadata.frequency ||
+            r.item_metadata.pillShape ||
+            r.item_metadata.pillColor
+        );
+
+        const isMed = cat === "medications" ||
+            cat === "health records" ||
+            r.type === "medication" ||
+            r.item_metadata?.notes === "Imported Prescription" ||
+            isSpecificMed ||
+            hasMedMetadata;
+
+        return isMed && r.type === "password"
+    }
+
+    const repairVault = async () => {
+        if (!updateItem) return
+        setRepairing(true)
+        try {
+            const misclassified = records.filter(isMisclassifiedMed)
+            for (const item of misclassified) {
+                await updateItem(item.id, { type: "note" })
+            }
+            setRepairDone(true)
+            setTimeout(() => setRepairDone(false), 3000)
+        } catch (e) {
+            console.error("Failed to repair vault", e)
+        } finally {
+            setRepairing(false)
+        }
+    }
+
+    const misclassifiedCount = records.filter(isMisclassifiedMed).length
+
+    console.log("🛠️ Vault Repair Check:", {
+        recordsCount: records.length,
+        misclassifiedCount,
+        samplePasswords: records.filter(r => r.type === 'password').slice(0, 5).map(r => ({ title: r.title, cat: r.category }))
+    });
+
     return (
         <div className="border-t border-gray-700 pt-6 mt-6">
             <h3 className="text-lg font-medium mb-4 flex items-center text-yellow-500">
                 <Database className="h-5 w-5 mr-2" />
                 Demo Data
             </h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-gray-400 mb-6">
                 Populate your vault with robust sample data matching Keeper Security record types.
             </p>
-            <button
-                onClick={generateData}
-                disabled={generating}
-                className="flex items-center bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md transition duration-200 disabled:opacity-50"
-            >
-                {generating ? (
-                    <>
-                        <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                        Generating...
-                    </>
-                ) : done ? (
-                    <>
-                        <Check className="h-5 w-5 mr-2" />
-                        Data Added
-                    </>
-                ) : (
-                    <>
-                        <Database className="h-5 w-5 mr-2" />
-                        Generate Mock Data (Full Suite)
-                    </>
-                )}
-            </button>
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-3">
+                    <button
+                        onClick={generateData}
+                        disabled={generating || removing || repairing}
+                        className="flex-1 min-w-[200px] flex items-center justify-center bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-xl font-bold transition-all duration-200 disabled:opacity-50 shadow-lg shadow-yellow-900/20"
+                    >
+                        {generating ? (
+                            <>
+                                <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                                Creating...
+                            </>
+                        ) : done ? (
+                            <>
+                                <Check className="h-5 w-5 mr-2" />
+                                Data Added
+                            </>
+                        ) : (
+                            <>
+                                <Database className="h-5 w-5 mr-2" />
+                                Generate Full Suite
+                            </>
+                        )}
+                    </button>
+
+                    <button
+                        onClick={removeMockData}
+                        disabled={generating || removing || repairing}
+                        className="flex-1 min-w-[200px] flex items-center justify-center bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-500/30 px-4 py-3 rounded-xl font-bold transition-all duration-200 disabled:opacity-50"
+                    >
+                        {removing ? (
+                            <>
+                                <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                                Removing...
+                            </>
+                        ) : removedDone ? (
+                            <>
+                                <Check className="h-5 w-5 mr-2" />
+                                Cleaned!
+                            </>
+                        ) : (
+                            <>
+                                <Trash className="h-5 w-5 mr-2 opacity-50" />
+                                Remove All Mock Data
+                            </>
+                        )}
+                    </button>
+                </div>
+
+                <button
+                    onClick={repairVault}
+                    disabled={repairing}
+                    className={`w-full flex items-center justify-center border px-4 py-3 rounded-xl font-bold transition-all ${misclassifiedCount > 0
+                            ? "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border-blue-500/30 animate-pulse-slow"
+                            : "bg-gray-500/5 hover:bg-gray-500/10 text-gray-500 border-gray-700"
+                        }`}
+                >
+                    {repairing ? (
+                        <>
+                            <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                            Repairing {misclassifiedCount} items...
+                        </>
+                    ) : repairDone ? (
+                        <>
+                            <Check className="h-5 w-5 mr-2" />
+                            Vault Repaired!
+                        </>
+                    ) : misclassifiedCount > 0 ? (
+                        <>
+                            <Sparkles className="h-5 w-5 mr-2" />
+                            Fix {misclassifiedCount} Meds in Passwords Section
+                        </>
+                    ) : (
+                        <>
+                            <Check className="h-5 w-5 mr-2 opacity-30" />
+                            Scan & Fix Medication Visibility
+                        </>
+                    )}
+                </button>
+            </div>
         </div>
     )
 }

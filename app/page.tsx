@@ -35,6 +35,9 @@ import Travel from "@/components/travel"
 import Goals from "@/components/goals"
 import BudgetManager from "@/components/budget-manager"
 import SubDashboard from "@/components/sub-dashboard"
+import MediaVault from "@/components/media-vault"
+import VehicleDocs from "@/components/vehicle-docs"
+import MaintenanceLogs from "@/components/maintenance-logs"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
 
@@ -306,9 +309,11 @@ function HomeContent() {
 
       // Vehicles
       case "type-vehicles":
-      case "type-vehicle-docs":
-      case "type-maintenance":
         return <Vehicles {...commonProps} />
+      case "type-vehicle-docs":
+        return <VehicleDocs {...commonProps} />
+      case "type-maintenance":
+        return <MaintenanceLogs {...commonProps} />
 
       // Business
       case "type-business":
@@ -331,6 +336,10 @@ function HomeContent() {
       // Knowledge
       case "type-knowledge":
         return <Knowledge {...commonProps} />
+
+      // Media
+      case "type-media":
+        return <MediaVault {...commonProps} />
 
       // Travel
       case "type-travel":

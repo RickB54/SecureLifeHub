@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Book, Trash2, Calendar } from "lucide-react"
+import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 interface HealthDiaryProps {
     records: any[]
@@ -14,12 +15,63 @@ interface HealthDiaryProps {
 export default function HealthDiary({ records, addItem, deleteItem, theme }: HealthDiaryProps) {
     const [entries, setEntries] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
+    const [isListening, setIsListening] = useState(false)
+    const [activeField, setActiveField] = useState<string | null>(null)
+    const [formData, setFormData] = useState({
+        title: "",
+        content: "",
+        date: new Date().toISOString().split('T')[0]
+    })
 
     // Filter for Diary
     useEffect(() => {
         const diaryEntries = records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary)
         setEntries(diaryEntries)
     }, [records])
+
+    // Speech Recognition Setup
+    const startSpeechToText = (field: 'title' | 'content') => {
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+        if (!SpeechRecognition) {
+            toast.error("Speech recognition is not supported in this browser.")
+            return
+        }
+
+        const recognition = new SpeechRecognition()
+        recognition.continuous = false
+        recognition.interimResults = false
+        recognition.lang = 'en-US'
+
+        recognition.onstart = () => {
+            setIsListening(true)
+            setActiveField(field)
+            toast.info(`Listening for ${field}...`)
+        }
+
+        recognition.onresult = (event: any) => {
+            const transcript = event.results[0][0].transcript
+            setFormData(prev => ({
+                ...prev,
+                [field]: prev[field] ? prev[field] + " " + transcript : transcript
+            }))
+            setIsListening(false)
+            setActiveField(null)
+        }
+
+        recognition.onerror = (event: any) => {
+            console.error(event.error)
+            setIsListening(false)
+            setActiveField(null)
+            toast.error("Error recognizing speech.")
+        }
+
+        recognition.onend = () => {
+            setIsListening(false)
+            setActiveField(null)
+        }
+
+        recognition.start()
+    }
 
     // UI Styles
     const glassCardStyle = theme === 'light'
@@ -42,7 +94,14 @@ export default function HealthDiary({ records, addItem, deleteItem, theme }: Hea
                         <p className="text-sm opacity-80 mt-1">Journal your daily health, symptoms, and thoughts.</p>
                     </div>
                     <button
-                        onClick={() => setShowAddModal(true)}
+                        onClick={() => {
+                            setFormData({
+                                title: "",
+                                content: "",
+                                date: new Date().toISOString().split('T')[0]
+                            })
+                            setShowAddModal(true)
+                        }}
                         className="flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl shadow-md transition-all transform hover:scale-105"
                     >
                         <Plus className="h-5 w-5 mr-2" />
@@ -96,35 +155,74 @@ export default function HealthDiary({ records, addItem, deleteItem, theme }: Hea
                         <h2 className="text-2xl font-bold mb-4">New Diary Entry</h2>
                         <form onSubmit={(e: any) => {
                             e.preventDefault()
-                            const fd = new FormData(e.target)
                             addItem({
                                 type: "note",
                                 category: "Health Diary",
-                                title: fd.get("title"),
+                                title: formData.title,
                                 item_metadata: {
                                     is_diary: true,
-                                    date: fd.get("date"),
-                                    content: fd.get("content")
+                                    date: formData.date,
+                                    content: formData.content
                                 }
                             })
                             setShowAddModal(false)
                         }} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Date</label>
-                                <input type="date" name="date" required className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 dark:text-gray-100' : 'bg-black/30 text-white'}`} style={{ colorScheme: theme }} defaultValue={new Date().toISOString().split('T')[0]} />
+                                <input
+                                    type="date"
+                                    value={formData.date}
+                                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                    required
+                                    className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 dark:text-gray-900' : 'bg-black/30 text-white'}`}
+                                    style={{ colorScheme: theme }}
+                                />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Title / Mood</label>
-                                <input name="title" required className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="e.g. Feeling energetic today" />
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium">Title / Mood</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => startSpeechToText('title')}
+                                        className={`p-1.5 rounded-full transition-all ${isListening && activeField === 'title' ? 'bg-red-500 text-white animate-pulse' : 'text-purple-500 hover:bg-purple-500/10'}`}
+                                        title="Use Voice to Text"
+                                    >
+                                        {isListening && activeField === 'title' ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                                <input
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                    required
+                                    className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-black/30 text-white'}`}
+                                    placeholder="e.g. Feeling energetic today"
+                                />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">Content</label>
-                                <textarea name="content" required rows={8} className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="How are you feeling properly? Symptoms? Changes?" />
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="block text-sm font-medium">Content</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => startSpeechToText('content')}
+                                        className={`p-1.5 rounded-full transition-all ${isListening && activeField === 'content' ? 'bg-red-500 text-white animate-pulse' : 'text-purple-500 hover:bg-purple-500/10'}`}
+                                        title="Use Voice to Text"
+                                    >
+                                        {isListening && activeField === 'content' ? <Mic className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                                    </button>
+                                </div>
+                                <textarea
+                                    value={formData.content}
+                                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                                    required
+                                    rows={8}
+                                    className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-black/30 text-white'} custom-scrollbar`}
+                                    placeholder="How are you feeling properly? Symptoms? Changes?"
+                                />
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
-                                <button type="button" onClick={() => setShowAddModal(false)} className="px-5 py-2 rounded-lg hover:bg-gray-500/20">Cancel</button>
-                                <button type="submit" className="px-5 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700">Save Entry</button>
+                                <button type="button" onClick={() => setShowAddModal(false)} className={`px-5 py-2 rounded-lg hover:bg-gray-500/20 ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>Cancel</button>
+                                <button type="submit" className="px-5 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-700 shadow-lg shadow-purple-900/20 transition-all">Save Entry</button>
                             </div>
                         </form>
                     </div>

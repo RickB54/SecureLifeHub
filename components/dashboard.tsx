@@ -48,8 +48,25 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   const weakPasswords = records.filter((r: any) => r.type === "password" && r.strength === "weak").length
   const securityScore = Math.max(0, 100 - (weakPasswords * 5))
 
+  // Recent Activity Clearing
+  const [clearedAt, setClearedAt] = useState<number>(0)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('dashboard_activity_cleared_at')
+    if (saved) setClearedAt(parseInt(saved))
+  }, [])
+
+  const handleClearActivity = () => {
+    const now = Date.now()
+    setClearedAt(now)
+    localStorage.setItem('dashboard_activity_cleared_at', now.toString())
+  }
+
   // Recent Activity
-  const recentItems = [...records].sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime()).slice(0, 5)
+  const recentItems = [...records]
+    .filter((item: any) => new Date(item.updatedAt || 0).getTime() > clearedAt)
+    .sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+    .slice(0, 5)
 
   // Styles
   const glassPanel = theme === 'light'
@@ -282,6 +299,14 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
       <div className={`p-6 rounded-2xl ${glassPanel}`}>
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold flex items-center gap-2"><Clock className="h-5 w-5 opacity-50" /> Recent Activity</h2>
+          {recentItems.length > 0 && (
+            <button
+              onClick={handleClearActivity}
+              className="text-xs font-bold uppercase tracking-widest text-[#007bff] hover:text-white transition-colors"
+            >
+              Clear
+            </button>
+          )}
         </div>
         <div className="space-y-3">
           {recentItems.map((item: any) => (

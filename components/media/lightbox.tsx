@@ -43,6 +43,20 @@ export default function Lightbox({ items, currentIndex, onClose, onNext, onPrev,
                     >
                         <Info className="h-5 w-5" />
                     </button>
+                    <button
+                        onClick={() => {
+                            const link = document.createElement('a')
+                            link.href = currentItem.item_metadata?.url || ""
+                            link.download = currentItem.title || "secure-media"
+                            document.body.appendChild(link)
+                            link.click()
+                            document.body.removeChild(link)
+                        }}
+                        className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                        title="Download"
+                    >
+                        <Download className="h-5 w-5" />
+                    </button>
                     {onDelete && (
                         <button
                             onClick={() => {

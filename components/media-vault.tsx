@@ -8,17 +8,21 @@ interface MediaVaultProps {
     records: any[]
     setRecords: (records: any[]) => void
     addItem: (item: any) => Promise<any>
-    deleteItem: (id: string) => Promise<any>
+    addFolder: (name: string) => Promise<any>
+    deleteItem: (id: string, type?: string) => Promise<any>
     theme: string
 }
 
-export default function MediaVault({ records = [], addItem, deleteItem, theme }: MediaVaultProps) {
+export default function MediaVault({ records = [], addItem, addFolder, deleteItem, theme }: MediaVaultProps) {
     // State
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [searchTerm, setSearchTerm] = useState("")
     const [selectedFolder, setSelectedFolder] = useState<string | null>(null) // null = All
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+    const [isAlbumModalOpen, setIsAlbumModalOpen] = useState(false)
+    const [newAlbumName, setNewAlbumName] = useState("")
+    const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'video'>('all')
 
     // Derived Data
     const allMedia = records.filter(r => r.category === "Secure Media" || r.type === "media")
@@ -26,13 +30,17 @@ export default function MediaVault({ records = [], addItem, deleteItem, theme }:
 
     // Filter Items based on search and folder
     const filteredItems = allMedia.filter(item => {
-        if (item.type === "folder") return false // don't show folders in the media grid/list, treat them as navigation
+        if (item.type === "folder") return false
+
+        // Type Filter
+        if (mediaTypeFilter === 'video' && item.item_metadata?.type !== 'video') return false
 
         // Search Filter
         const matchesSearch = item.title?.toLowerCase().includes(searchTerm.toLowerCase())
 
-        // Folder Filter
-        const inFolder = selectedFolder ? item.item_metadata?.folderId === selectedFolder : true
+        // Folder Filter: check both root folder_id and metadata folderId
+        const itemFolderId = item.folder_id || item.item_metadata?.folderId
+        const inFolder = selectedFolder ? itemFolderId === selectedFolder : true
 
         return matchesSearch && inFolder
     })
@@ -58,31 +66,53 @@ export default function MediaVault({ records = [], addItem, deleteItem, theme }:
 
                     <div className="space-y-1">
                         <button
-                            onClick={() => setSelectedFolder(null)}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            onClick={() => { setSelectedFolder(null); setMediaTypeFilter('all'); }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder && mediaTypeFilter === 'all' ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
                         >
                             <span className="flex items-center gap-2"><LayoutGrid className="h-4 w-4" /> All Media</span>
                             <span className="text-xs opacity-50">{allMedia.filter(i => i.type !== 'folder').length}</span>
                         </button>
-                        <button className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-black/5 dark:hover:bg-white/5 transition-colors`}>
+                        <button
+                            onClick={() => { setSelectedFolder(null); setMediaTypeFilter('video'); }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder && mediaTypeFilter === 'video' ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                        >
                             <span className="flex items-center gap-2"><Video className="h-4 w-4" /> Videos</span>
+                            <span className="text-xs opacity-50">{allMedia.filter(i => i.item_metadata?.type === 'video').length}</span>
                         </button>
                     </div>
 
                     <div className="mt-8">
                         <div className="flex items-center justify-between mb-2 px-3">
                             <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Albums</span>
-                            <button className="text-gray-400 hover:text-white"><Plus className="h-3 w-3" /></button>
+                            <button
+                                onClick={() => setIsAlbumModalOpen(true)}
+                                className="text-gray-400 hover:text-white transition-colors"
+                            >
+                                <Plus className="h-3 w-3" />
+                            </button>
                         </div>
                         <div className="space-y-1">
                             {folders.map(folder => (
-                                <button
-                                    key={folder.id}
-                                    onClick={() => setSelectedFolder(folder.id)}
-                                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${selectedFolder === folder.id ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
-                                >
-                                    <span className="flex items-center gap-2"><Folder className="h-4 w-4" /> {folder.title}</span>
-                                </button>
+                                <div key={folder.id} className="group flex items-center gap-1 pr-2">
+                                    <button
+                                        onClick={() => setSelectedFolder(folder.id)}
+                                        className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${selectedFolder === folder.id ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                    >
+                                        <span className="flex items-center gap-2"><Folder className="h-4 w-4" /> {folder.title || folder.name}</span>
+                                    </button>
+                                    <button
+                                        onClick={async (e) => {
+                                            e.stopPropagation()
+                                            if (confirm(`Delete album "${folder.title || folder.name}"? This will not delete the media inside.`)) {
+                                                await deleteItem(folder.id, "folder")
+                                                if (selectedFolder === folder.id) setSelectedFolder(null)
+                                            }
+                                        }}
+                                        className="p-1.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 transition-all"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                    </button>
+                                </div>
                             ))}
                             {folders.length === 0 && <p className="px-3 text-xs text-gray-600 italic">No albums yet</p>}
                         </div>
@@ -141,8 +171,8 @@ export default function MediaVault({ records = [], addItem, deleteItem, theme }:
                                     key={item.id}
                                     onClick={() => setLightboxIndex(idx)}
                                     className={`group relative cursor-pointer overflow-hidden ${viewMode === 'grid'
-                                            ? `aspect-square rounded-xl border ${theme === 'light' ? 'bg-gray-100 border-gray-200 hover:shadow-lg' : 'bg-gray-800 border-white/10 hover:border-pink-500/50'}`
-                                            : `flex items-center p-3 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-white/5 border-white/10'}`
+                                        ? `aspect-square rounded-xl border ${theme === 'light' ? 'bg-gray-100 border-gray-200 hover:shadow-lg' : 'bg-gray-800 border-white/10 hover:border-pink-500/50'}`
+                                        : `flex items-center p-3 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-white/5 border-white/10'}`
                                         } transition-all`}
                                 >
                                     {/* Thumbnail */}
@@ -151,8 +181,14 @@ export default function MediaVault({ records = [], addItem, deleteItem, theme }:
                                             <div className="absolute inset-0 flex items-center justify-center bg-black/10">
                                                 {item.item_metadata?.type === 'video' ? <Video className="h-8 w-8 opacity-40" /> : <Image className="h-8 w-8 opacity-40" />}
                                             </div>
-                                            {/* Simulate Image if URL exists (Mock usually implies none, but handling purely for structure) */}
-                                            {item.item_metadata?.thumbnail_url && <img src={item.item_metadata.thumbnail_url} className="absolute inset-0 w-full h-full object-cover" />}
+                                            {/* Simulate Image if URL exists */}
+                                            {(item.item_metadata?.url || item.item_metadata?.thumbnail_url) && (
+                                                <img
+                                                    src={item.item_metadata.url || item.item_metadata.thumbnail_url}
+                                                    className="absolute inset-0 w-full h-full object-cover"
+                                                    alt={item.title}
+                                                />
+                                            )}
 
                                             <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <p className="text-xs font-bold text-white truncate">{item.title}</p>
@@ -192,42 +228,127 @@ export default function MediaVault({ records = [], addItem, deleteItem, theme }:
 
             {/* Add Modal (Simplified from previous, kept inline for now) */}
             {isAddModalOpen && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className={`${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'} rounded-2xl w-full max-w-md p-6 shadow-2xl`}>
-                        <h2 className={`text-xl font-bold mb-4 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>Add Secure Media</h2>
-                        <form onSubmit={(e) => {
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className={`${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'} rounded-[2.5rem] w-full max-w-lg p-8 shadow-2xl overflow-hidden relative`}>
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-500"></div>
+
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className={`text-3xl font-black italic uppercase tracking-tighter ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>Encrypt & Save</h2>
+                            <button onClick={() => setIsAddModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                <Plus className="h-6 w-6 rotate-45 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={async (e) => {
                             e.preventDefault()
                             const fd = new FormData(e.currentTarget)
-                            addItem({
-                                title: fd.get("title"),
-                                type: "media",
-                                category: "Secure Media",
-                                item_metadata: {
-                                    type: "image", // simplistic
-                                    notes: fd.get("notes"),
-                                    folderId: selectedFolder
+                            const fileInput = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement
+                            const file = fileInput?.files?.[0]
+
+                            if (!file) return alert("Please select a file")
+
+                            // Convert to base64 for "vault storage"
+                            const reader = new FileReader()
+                            reader.onloadend = async () => {
+                                try {
+                                    await addItem({
+                                        title: fd.get("title") as string,
+                                        type: "note", // Use 'note' for database compatibility
+                                        category: "Secure Media",
+                                        folder_id: selectedFolder || null, // Proper field for useVault
+                                        item_metadata: {
+                                            type: file.type.startsWith('video') ? "video" : "image",
+                                            url: reader.result as string,
+                                            notes: fd.get("notes"),
+                                            folderId: selectedFolder, // Keep for legacy filter support
+                                            fileName: file.name,
+                                            fileSize: file.size
+                                        }
+                                    })
+                                    setIsAddModalOpen(false)
+                                } catch (err) {
+                                    console.error("Upload error:", err)
+                                    alert("Encryption failed. The file might be too large or the connection was lost.")
                                 }
-                            })
-                            setIsAddModalOpen(false)
-                        }} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Title</label>
-                                <input name="title" required className={`w-full rounded-lg px-3 py-2 ${theme === 'light' ? 'bg-gray-100 border-gray-200 text-gray-900' : 'bg-black/40 border-white/10 text-white border'}`} />
+                            }
+                            reader.readAsDataURL(file)
+                        }} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Media Title</label>
+                                <input name="title" required placeholder="e.g. Private Document Scan" className={`w-full rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:ring-2 focus:ring-pink-500/50 transition-all ${theme === 'light' ? 'bg-gray-100 text-gray-900 border-gray-200' : 'bg-black/40 border-white/10 text-white border'}`} />
                             </div>
-                            <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${theme === 'light' ? 'border-gray-300 hover:bg-gray-50' : 'border-white/10 hover:bg-white/5'}`}>
-                                <Plus className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                <p className="text-sm opacity-50">Click to upload photo or video</p>
-                                <input type="file" className="hidden" />
+
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Photo / Video File</label>
+                                <label className={`border-2 border-dashed rounded-[2rem] p-10 text-center transition-all cursor-pointer block relative group ${theme === 'light' ? 'border-gray-300 hover:border-pink-500 hover:bg-pink-50' : 'border-white/10 hover:border-pink-500/50 hover:bg-pink-500/5'}`}>
+                                    <input type="file" required accept="image/*,video/*" className="hidden" onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (file) {
+                                            const label = e.target.parentElement?.querySelector('.file-label')
+                                            if (label) label.textContent = file.name
+                                        }
+                                    }} />
+                                    <div className="relative z-10">
+                                        <Plus className="h-12 w-12 mx-auto mb-4 text-pink-500 group-hover:scale-110 transition-transform" />
+                                        <p className="font-bold text-lg mb-1 file-label uppercase italic tracking-tighter">Choose File</p>
+                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">Max 50MB • All Data Encrypted</p>
+                                    </div>
+                                </label>
                             </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-1">Private Notes</label>
-                                <textarea name="notes" className={`w-full rounded-lg px-3 py-2 h-20 ${theme === 'light' ? 'bg-gray-100 border-gray-200 text-gray-900' : 'bg-black/40 border-white/10 text-white border'}`} />
+
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Private Notes</label>
+                                <textarea name="notes" placeholder="Optional context..." className={`w-full rounded-2xl px-6 py-4 h-24 font-medium outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none ${theme === 'light' ? 'bg-gray-100 text-gray-900 border-gray-200' : 'bg-black/40 border-white/10 text-white border'}`} />
                             </div>
-                            <div className="flex gap-3 mt-6">
-                                <button type="button" onClick={() => setIsAddModalOpen(false)} className={`flex-1 py-2 rounded-lg ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-900' : 'bg-white/5 hover:bg-white/10 text-white'}`}>Cancel</button>
-                                <button type="submit" className="flex-1 py-2 bg-pink-600 hover:bg-pink-500 rounded-lg font-medium text-white">Encrypt & Save</button>
+
+                            <div className="flex gap-4 mt-8 pt-6 border-t border-white/5">
+                                <button type="button" onClick={() => setIsAddModalOpen(false)} className={`flex-1 py-4 rounded-2xl font-black uppercase italic tracking-tighter transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-900' : 'bg-white/5 hover:bg-white/10 text-white'}`}>Discard</button>
+                                <button type="submit" className="flex-1 py-4 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 rounded-2xl font-black uppercase italic tracking-tighter text-white shadow-xl shadow-pink-900/20 transition-all active:scale-95">Encrypt & Secure</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {/* Album Modal */}
+            {isAlbumModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className={`${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'} rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl relative`}>
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className={`text-2xl font-black italic uppercase tracking-tighter ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>New Album</h2>
+                            <button onClick={() => setIsAlbumModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                                <Plus className="h-6 w-6 rotate-45 text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Album Title</label>
+                                <input
+                                    value={newAlbumName}
+                                    onChange={(e) => setNewAlbumName(e.target.value)}
+                                    placeholder="e.g. Summer Vacation 2025"
+                                    className={`w-full rounded-2xl px-6 py-4 font-bold outline-none focus:ring-2 focus:ring-pink-500/50 transition-all ${theme === 'light' ? 'bg-gray-100 text-gray-900 border-gray-200' : 'bg-black/40 border-white/10 text-white border'}`}
+                                />
+                            </div>
+                            <div className="flex gap-4 pt-6">
+                                <button
+                                    onClick={() => setIsAlbumModalOpen(false)}
+                                    className={`flex-1 py-4 rounded-xl font-bold uppercase tracking-tighter transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200' : 'bg-white/5 hover:bg-white/10'}`}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!newAlbumName.trim()) return
+                                        await addFolder(newAlbumName)
+                                        setNewAlbumName("")
+                                        setIsAlbumModalOpen(false)
+                                    }}
+                                    className="flex-1 py-4 bg-pink-600 hover:bg-pink-500 rounded-xl font-bold uppercase tracking-tighter text-white transition-all shadow-lg shadow-pink-900/20"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

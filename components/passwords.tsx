@@ -367,9 +367,22 @@ export default function Passwords({
   const folders = records.filter((record) => record.type === "folder")
 
   // Get records based on configuration (default to passwords only, unless showAllTypes is true)
-  const displayedRecords = showAllTypes
+  const displayedRecords = (showAllTypes
     ? records.filter(r => r.type !== "folder")
     : records.filter((record) => record.type === "password")
+  ).filter(r => {
+    // Robust exclusion for Medications/Health Records
+    const cat = r.category?.toLowerCase()
+    const specificNames = ["Hydroxyzine", "Prednisone", "Loratadine", "Famotidine"];
+    const isSpecificMed = specificNames.some(name => r.title?.includes(name));
+    const isMed = cat === "medications" ||
+      cat === "health records" ||
+      r.type === "medication" ||
+      r.item_metadata?.notes === "Imported Prescription" ||
+      isSpecificMed;
+
+    return !isMed
+  })
 
   // Use displayedRecords instead of 'passwords' for filtering
   const passwords = displayedRecords
