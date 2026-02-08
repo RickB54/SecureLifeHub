@@ -83,7 +83,7 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
                 />
               )}
             </div>
-            <h1 className={`text-lg md:text-xl font-black tracking-tighter uppercase ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
+            <h1 className={`text-lg md:text-xl font-bold ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
           </div>
         </div>
         <div className="flex items-center space-x-2 md:space-x-4">

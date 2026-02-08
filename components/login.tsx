@@ -313,7 +313,7 @@ export default function Login() {
               />
             )}
           </div>
-          <h1 className="text-3xl font-black text-white mb-2 tracking-tighter uppercase">SecureLifeHub</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Secure Life Hub</h1>
           <p className="text-gray-400 text-sm font-medium tracking-wide">
             {isSignUp ? "Create your secure vault" : "Unlock your internal vault"}
           </p>
