@@ -1,4 +1,4 @@
-import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash } from "lucide-react"
+import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -23,12 +23,18 @@ export const sidebarSections = [
         isTopLevel: true,
     },
     {
+        id: "all-notes",
+        title: "Secure Notes",
+        color: "blue",
+        items: [{ id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-5 w-5" /> }],
+        isTopLevel: true,
+    },
+    {
         id: "vault-advanced",
         title: "Vault Advanced",
         color: "orange",
         items: [
             { id: "favorites", label: "Favorites", icon: <Star className="h-5 w-5" /> },
-            { id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-5 w-5" /> },
             { id: "trash", label: "Deleted", icon: <Trash className="h-5 w-5" /> },
             { id: "generate-password", label: "Generate Password", icon: <Wand2 className="h-5 w-5" /> },
         ],
@@ -39,7 +45,7 @@ export const sidebarSections = [
         color: "rose",
         items: [
             { id: "type-health-records", label: "Health Records", icon: <FileText className="h-4 w-4" /> },
-            { id: "type-medications", label: "Medications", icon: <FileText className="h-4 w-4" /> },
+            { id: "type-medications", label: "Medications", icon: <Pill className="h-4 w-4" /> },
             { id: "type-vitals", label: "Vitals", icon: <FileText className="h-4 w-4" /> },
             { id: "type-health-diary", label: "Health Diary", icon: <FileText className="h-4 w-4" /> },
             { id: "type-medical", label: "Health Insurance", icon: <FileText className="h-4 w-4" /> },
