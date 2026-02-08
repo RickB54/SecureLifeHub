@@ -38,9 +38,16 @@ export default function Login() {
       const challenge = new Uint8Array(32)
       window.crypto.getRandomValues(challenge)
 
+      const savedId = localStorage.getItem('biometric_id')
+      const allowCredentials = savedId ? [{
+        id: Uint8Array.from(atob(savedId), c => c.charCodeAt(0)),
+        type: 'public-key' as const
+      }] : []
+
       const assertion = await navigator.credentials.get({
         publicKey: {
           challenge,
+          allowCredentials,
           timeout: 60000,
           userVerification: "required"
         }

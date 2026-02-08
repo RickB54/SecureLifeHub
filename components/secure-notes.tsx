@@ -61,6 +61,7 @@ export default function SecureNotes({
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const recognitionRef = useRef<any>(null)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     // Detect Mobile
     useEffect(() => {
@@ -209,15 +210,34 @@ export default function SecureNotes({
         }
     }
 
-    const handleAddImage = () => {
-        const url = prompt("Enter image URL to add to note:")
-        if (url && selectedNoteId) {
-            const note = notes.find(n => n.id === selectedNoteId)
-            if (note) {
-                const updatedImages = [...(note.images || []), url]
-                handleSyncUpdate(selectedNoteId, { images: updatedImages })
-            }
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files
+        if (!files || !selectedNoteId) return
+
+        const note = notes.find(n => n.id === selectedNoteId)
+        if (!note) return
+
+        const newImages = [...(note.images || [])]
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i]
+            if (!file.type.startsWith('image/')) continue
+
+            const reader = new FileReader()
+            const promise = new Promise<string>((resolve) => {
+                reader.onload = (event) => resolve(event.target?.result as string)
+            })
+            reader.readAsDataURL(file)
+            const base64 = await promise
+            newImages.push(base64)
         }
+
+        handleSyncUpdate(selectedNoteId, { images: newImages })
+        if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+
+    const handleAddImage = () => {
+        fileInputRef.current?.click()
     }
 
     const filteredNotes = notes.filter(n => {
@@ -423,8 +443,17 @@ export default function SecureNotes({
                                 </div>
                             </div>
 
-                            {/* Main Textarea / Editor */}
                             <div className="flex-1 relative flex flex-col md:flex-row h-full overflow-hidden">
+                                {/* Hidden File Input for Images */}
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleFileUpload}
+                                    multiple
+                                    accept="image/*"
+                                    capture="environment"
+                                    className="hidden"
+                                />
                                 <div className="flex-1 h-full p-6 md:p-8 overflow-y-auto">
                                     <textarea
                                         value={draftContent}

@@ -128,6 +128,9 @@ export default function Settings({
         });
 
         if (credential) {
+          const cred = credential as PublicKeyCredential;
+          const id = btoa(String.fromCharCode(...new Uint8Array(cred.rawId)));
+          localStorage.setItem('biometric_id', id);
           localStorage.setItem('biometric_enabled', 'true')
           setBiometricEnabled(true)
           showNotification("Biometric login enabled for this device")
