@@ -267,18 +267,27 @@ function syncSessionWithWebApp() {
     });
 
     // Check periodically for session (in case of SPA navigation or same-tab login)
+    let lastKnownSession = localStorage.getItem(AUTH_KEY);
     setInterval(() => {
         const currentSession = localStorage.getItem(AUTH_KEY);
-        if (currentSession) {
-            try {
-                const session = JSON.parse(currentSession);
-                if (session && session.access_token) {
-                    chrome.runtime.sendMessage({
-                        type: 'SYNC_SESSION',
-                        session: session
-                    });
-                }
-            } catch (e) { }
+
+        if (currentSession !== lastKnownSession) {
+            if (currentSession) {
+                try {
+                    const session = JSON.parse(currentSession);
+                    if (session && session.access_token) {
+                        console.log("SecureLifeHub: Web App Session changed/detected, syncing to extension...");
+                        chrome.runtime.sendMessage({
+                            type: 'SYNC_SESSION',
+                            session: session
+                        });
+                    }
+                } catch (e) { }
+            } else {
+                console.log("SecureLifeHub: Web App Session removed, notifying extension...");
+                chrome.runtime.sendMessage({ type: 'LOGOUT_SESSION' });
+            }
+            lastKnownSession = currentSession;
         }
     }, 2000); // Check every 2 seconds
 }

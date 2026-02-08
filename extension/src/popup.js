@@ -73,38 +73,58 @@ const menuUserEmail = document.getElementById('menu-user-email')
 console.log("SecureLifeHub Popup v2 Loaded")
 
 async function init() {
-    // 1. Check extension's own Supabase session
-    let { data: { session } } = await supabase.auth.getSession()
+    // 1. Check synced session state from chrome storage
+    const { sync_session } = await chrome.storage.local.get(['sync_session'])
 
-    // 2. If no local session, check if we have a synced session from the web app
-    if (!session) {
-        const syncData = await chrome.storage.local.get(['sync_session'])
-        if (syncData.sync_session) {
-            console.log("SecureLifeHub: Found synced session, applying to extension...")
-            try {
-                const { data, error } = await supabase.auth.setSession({
-                    access_token: syncData.sync_session.access_token,
-                    refresh_token: syncData.sync_session.refresh_token
-                })
-                if (!error && data.session) {
-                    session = data.session
-                }
-            } catch (e) {
-                console.error("Failed to apply synced session:", e)
-            }
+    // 2. Check extension's own Supabase state
+    const { data: { session: localSession } } = await supabase.auth.getSession()
+
+    if (!sync_session) {
+        // Web app is logged out. Extension must follow.
+        console.log("SecureLifeHub: No synced session found. Ensuring extension is logged out.")
+        if (localSession) {
+            await supabase.auth.signOut()
         }
+        user = null
+        showLogin()
+        return
+    }
+
+    // 3. Web app is logged in. Apply sync_session if missing or mismatched.
+    if (!localSession || localSession.access_token !== sync_session.access_token) {
+        console.log("SecureLifeHub: Mismatch/Missing local session. Applying synced session...")
+        try {
+            const { data, error } = await supabase.auth.setSession({
+                access_token: sync_session.access_token,
+                refresh_token: sync_session.refresh_token
+            })
+            if (!error && data.session) {
+                user = data.session.user
+            }
+        } catch (e) {
+            console.error("Failed to apply synced session:", e)
+        }
+    } else {
+        user = localSession.user
+    }
+
+    if (user) {
+        showVault()
+    } else {
+        showLogin()
     }
 
     // Load Recents from local storage
     const storage = await chrome.storage.local.get(['recentItemsIds'])
     recentItemsIds = storage.recentItemsIds || []
 
-    if (session) {
-        user = session.user
-        showVault()
-    } else {
-        showLogin()
-    }
+    // Listen for storage changes while popup is open to handle real-time logout/login
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local' && changes.sync_session) {
+            console.log("SecureLifeHub: Real-time session change detected via sync.");
+            init(); // Re-initialize state
+        }
+    });
 }
 
 function showLogin() {
