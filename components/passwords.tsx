@@ -79,6 +79,7 @@ export default function Passwords({
   const [showTimeFilterMenu, setShowTimeFilterMenu] = useState(false)
   const [showStatusFilterMenu, setShowStatusFilterMenu] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [customDate, setCustomDate] = useState("")
 
   // State for showing/hiding filters
   const [showFilters, setShowFilters] = useState(false)

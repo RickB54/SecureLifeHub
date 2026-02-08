@@ -160,6 +160,29 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
         </div>
       </div>
 
+      {/* Biometric Enrollment Prompt (Smart Alert) */}
+      {typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') !== 'true' && (
+        <div className={`p-5 rounded-3xl border animate-in slide-in-from-top-4 duration-500 overflow-hidden relative group ${theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/10 border-blue-500/20'
+          }`}>
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="p-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-500/30">
+              <Key className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-bold text-lg leading-tight">Fast Login with Biometrics</h3>
+              <p className="text-sm opacity-70">Unlock your vault instantly using your phone's fingerprint sensor or FaceID.</p>
+            </div>
+            <button
+              onClick={() => setActivePage('settings')}
+              className="px-6 py-3 bg-white text-blue-600 font-bold rounded-xl shadow-xl hover:scale-105 transition-all text-sm whitespace-nowrap"
+            >
+              Enable Now
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Main Modules Grid */}
       <h2 className="text-xl font-bold opacity-80 pl-1">Your Hubs</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

@@ -130,230 +130,231 @@ export function useVault() {
             toast.error(error.message || "Failed to create folder")
             return null
         }
+    }
 
-        const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }, options?: { skipRefresh?: boolean }) => {
-            if (!user) return
-            try {
-                // Prepare payload (remove UI specific fields if any)
-                const payload = {
-                    user_id: user.id,
-                    type: item.type || 'password',
-                    title: item.title || item.website || 'Untitled',
-                    username: item.username || null,
-                    password: item.password || null,
-                    website: item.website || null,
-                    category: item.category || null,
-                    folder_id: item.folder_id || null, // Explicitly null if not provided
-                    is_favorite: item.is_favorite || false,
-                    is_archived: item.is_archived || false,
-                    notes: item.notes || null,
-                    item_metadata: item.item_metadata || {} // Add metadata support
-                }
-
-                console.log("=== VAULT ADD PAYLOAD ===")
-                console.log(JSON.stringify(payload, null, 2))
-                console.log("=== END PAYLOAD ===")
-
-                const { data, error } = await supabase
-                    .from("vault_items")
-                    .insert(payload)
-                    .select()
-                    .single()
-
-                if (error) {
-                    console.error("=== SUPABASE INSERT ERROR ===")
-                    console.error("Error object:", error)
-                    console.error("Error message:", error.message)
-                    console.error("Error code:", error.code)
-                    console.error("Error details:", error.details)
-                    console.error("Error hint:", error.hint)
-                    console.error("=== END SUPABASE ERROR ===")
-                    throw error
-                }
-
-                console.log("=== SUPABASE INSERT SUCCESS ===")
-                console.log("Inserted data:", data)
-                console.log("=== END SUCCESS ===")
-
-                const newItem = { ...data, updatedAt: data.updated_at }
-                setItems(prev => {
-                    const updated = [newItem as any, ...prev]
-                    console.log("🔄 Items state updated, new count:", updated.length)
-                    console.log("🔍 Sample item:", updated[0])
-                    return updated
-                })
-
-                toast.success("Item added")
-                if (!options?.skipRefresh) await fetchData() // Force sync
-                return newItem
-            } catch (error: any) {
-                console.error("=== CAUGHT ERROR IN addItem ===")
-                console.error("Raw error:", error)
-                console.error("Error type:", typeof error)
-                console.error("Error constructor:", error?.constructor?.name)
-                console.error("Error keys:", error ? Object.keys(error) : "null")
-                if (error?.message) console.error("Message:", error.message)
-                if (error?.code) console.error("Code:", error.code)
-                if (error?.details) console.error("Details:", error.details)
-                if (error?.hint) console.error("Hint:", error.hint)
-                console.error("=== END CAUGHT ERROR ===")
-
-                toast.error(error?.message || error?.hint || "Failed to add item")
+    const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }, options?: { skipRefresh?: boolean }) => {
+        if (!user) return
+        try {
+            // Prepare payload (remove UI specific fields if any)
+            const payload = {
+                user_id: user.id,
+                type: item.type || 'password',
+                title: item.title || item.website || 'Untitled',
+                username: item.username || null,
+                password: item.password || null,
+                website: item.website || null,
+                category: item.category || null,
+                folder_id: item.folder_id || null, // Explicitly null if not provided
+                is_favorite: item.is_favorite || false,
+                is_archived: item.is_archived || false,
+                notes: item.notes || null,
+                item_metadata: item.item_metadata || {} // Add metadata support
             }
-        }
 
-        const bulkAddItems = async (newItems: (Partial<VaultItem> & { item_metadata?: any })[]) => {
-            if (!user || newItems.length === 0) return
-            try {
-                const payload = newItems.map(item => ({
-                    user_id: user.id,
-                    type: item.type || 'password',
-                    title: item.title || item.website || 'Untitled',
-                    username: item.username,
-                    password: item.password,
-                    website: item.website,
-                    category: item.category,
-                    folder_id: item.folder_id,
-                    is_favorite: item.is_favorite || false,
-                    is_archived: item.is_archived || false,
-                    notes: item.notes,
-                    item_metadata: item.item_metadata || {}
-                }))
+            console.log("=== VAULT ADD PAYLOAD ===")
+            console.log(JSON.stringify(payload, null, 2))
+            console.log("=== END PAYLOAD ===")
 
-                const { data, error } = await supabase
-                    .from("vault_items")
-                    .insert(payload)
-                    .select()
+            const { data, error } = await supabase
+                .from("vault_items")
+                .insert(payload)
+                .select()
+                .single()
 
-                if (error) throw error
-
-                const mappedItems = data.map(i => ({ ...i, updatedAt: i.updated_at }))
-                setItems(prev => [...mappedItems as any, ...prev])
-                toast.success(`${mappedItems.length} items imported`)
-                await fetchData() // Force sync
-                return mappedItems
-            } catch (error: any) {
-                console.error("Error batch importing:", error)
-                toast.error(error.message)
+            if (error) {
+                console.error("=== SUPABASE INSERT ERROR ===")
+                console.error("Error object:", error)
+                console.error("Error message:", error.message)
+                console.error("Error code:", error.code)
+                console.error("Error details:", error.details)
+                console.error("Error hint:", error.hint)
+                console.error("=== END SUPABASE ERROR ===")
+                throw error
             }
-        }
 
-        const updateItem = async (id: string, updates: Partial<VaultItem>) => {
-            try {
-                // Define known schema columns to prevent errors
-                const schemaFields = [
-                    'type', 'title', 'username', 'password', 'website',
-                    'category', 'notes', 'folder_id', 'is_favorite', 'is_archived',
-                    'item_metadata' // Added to prevent nesting
-                ];
+            console.log("=== SUPABASE INSERT SUCCESS ===")
+            console.log("Inserted data:", data)
+            console.log("=== END SUCCESS ===")
 
-                // Separate schema fields from metadata
-                const dbPayload: any = { updated_at: new Date().toISOString() };
-                const metadataUpdates: any = {};
+            const newItem = { ...data, updatedAt: data.updated_at }
+            setItems(prev => {
+                const updated = [newItem as any, ...prev]
+                console.log("🔄 Items state updated, new count:", updated.length)
+                console.log("🔍 Sample item:", updated[0])
+                return updated
+            })
 
-                // Get current item to merge metadata
-                const currentItem = items.find(i => i.id === id);
-                const currentMetadata = currentItem?.item_metadata || {};
+            toast.success("Item added")
+            if (!options?.skipRefresh) await fetchData() // Force sync
+            return newItem
+        } catch (error: any) {
+            console.error("=== CAUGHT ERROR IN addItem ===")
+            console.error("Raw error:", error)
+            console.error("Error type:", typeof error)
+            console.error("Error constructor:", error?.constructor?.name)
+            console.error("Error keys:", error ? Object.keys(error) : "null")
+            if (error?.message) console.error("Message:", error.message)
+            if (error?.code) console.error("Code:", error.code)
+            if (error?.details) console.error("Details:", error.details)
+            if (error?.hint) console.error("Hint:", error.hint)
+            console.error("=== END CAUGHT ERROR ===")
 
-                Object.entries(updates).forEach(([key, value]) => {
-                    // Skip path/folder legacy fields
-                    if (key === 'path' || key === 'folder') return;
-
-                    if (schemaFields.includes(key)) {
-                        dbPayload[key] = value;
-                    } else {
-                        // Assume anything else is metadata (e.g. picture)
-                        metadataUpdates[key] = value;
-                    }
-                });
-
-                // If we have metadata updates, merge them with the base (either new metadata from payload or existing)
-                if (Object.keys(metadataUpdates).length > 0) {
-                    const baseMetadata = dbPayload.item_metadata || currentMetadata;
-                    dbPayload.item_metadata = { ...baseMetadata, ...metadataUpdates };
-                }
-
-                const { error } = await supabase
-                    .from("vault_items")
-                    .update(dbPayload)
-                    .eq('id', id)
-
-                if (error) throw error
-
-                // Update local state
-                setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates, item_metadata: dbPayload.item_metadata || item.item_metadata } : item))
-                toast.success("Item updated")
-                await fetchData() // Force sync
-            } catch (error: any) {
-                console.error("Update error:", error)
-                toast.error("Failed to update item")
-            }
-        }
-
-        const updateFolder = async (id: string, updates: Partial<Folder>) => {
-            try {
-                const { error } = await supabase
-                    .from("folders")
-                    .update({
-                        name: updates.name,
-                        parent_id: updates.parent_id
-                    })
-                    .eq('id', id)
-
-                if (error) throw error
-
-                setFolders(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f))
-                toast.success("Folder updated")
-            } catch (error: any) {
-                console.error("Folder update error:", error)
-                toast.error("Failed to update folder")
-            }
-        }
-
-        const deleteItem = async (id: string, type: string = "item", options?: { skipRefresh?: boolean }) => {
-            try {
-                const table = type === "folder" ? "folders" : "vault_items"
-                const { error } = await supabase
-                    .from(table)
-                    .delete()
-                    .eq('id', id)
-
-                if (error) throw error
-
-                if (type === "folder") {
-                    setFolders(prev => prev.filter(f => f.id !== id))
-                } else {
-                    setItems(prev => prev.filter(i => i.id !== id))
-                }
-                toast.success(`${type === 'folder' ? 'Folder' : 'Item'} deleted`)
-                if (!options?.skipRefresh) await fetchData() // Force sync
-            } catch (error: any) {
-                console.error("Delete operation failed:", JSON.stringify(error, null, 2))
-                toast.error(`Failed to delete ${type}: ${error.message || "Unknown error"}`)
-            }
-        }
-
-        // Combine for legacy 'records' prop
-        const records = [...items, ...folders]
-
-        console.log("🎯 useVault returning:", {
-            itemsCount: items.length,
-            foldersCount: folders.length,
-            recordsCount: records.length,
-            sampleRecord: records[0] ? { title: (records[0] as any).title, type: (records[0] as any).type, category: (records[0] as any).category } : null
-        })
-
-        return {
-            items,
-            folders,
-            records,
-            loading,
-            addFolder,
-            addItem,
-            bulkAddItems,
-            updateItem,
-            updateFolder,
-            deleteItem,
-            refresh: fetchData
+            toast.error(error?.message || error?.hint || "Failed to add item")
         }
     }
+
+    const bulkAddItems = async (newItems: (Partial<VaultItem> & { item_metadata?: any })[]) => {
+        if (!user || newItems.length === 0) return
+        try {
+            const payload = newItems.map(item => ({
+                user_id: user.id,
+                type: item.type || 'password',
+                title: item.title || item.website || 'Untitled',
+                username: item.username,
+                password: item.password,
+                website: item.website,
+                category: item.category,
+                folder_id: item.folder_id,
+                is_favorite: item.is_favorite || false,
+                is_archived: item.is_archived || false,
+                notes: item.notes,
+                item_metadata: item.item_metadata || {}
+            }))
+
+            const { data, error } = await supabase
+                .from("vault_items")
+                .insert(payload)
+                .select()
+
+            if (error) throw error
+
+            const mappedItems = data.map(i => ({ ...i, updatedAt: i.updated_at }))
+            setItems(prev => [...mappedItems as any, ...prev])
+            toast.success(`${mappedItems.length} items imported`)
+            await fetchData() // Force sync
+            return mappedItems
+        } catch (error: any) {
+            console.error("Error batch importing:", error)
+            toast.error(error.message)
+        }
+    }
+
+    const updateItem = async (id: string, updates: Partial<VaultItem>) => {
+        try {
+            // Define known schema columns to prevent errors
+            const schemaFields = [
+                'type', 'title', 'username', 'password', 'website',
+                'category', 'notes', 'folder_id', 'is_favorite', 'is_archived',
+                'item_metadata' // Added to prevent nesting
+            ];
+
+            // Separate schema fields from metadata
+            const dbPayload: any = { updated_at: new Date().toISOString() };
+            const metadataUpdates: any = {};
+
+            // Get current item to merge metadata
+            const currentItem = items.find(i => i.id === id);
+            const currentMetadata = currentItem?.item_metadata || {};
+
+            Object.entries(updates).forEach(([key, value]) => {
+                // Skip path/folder legacy fields
+                if (key === 'path' || key === 'folder') return;
+
+                if (schemaFields.includes(key)) {
+                    dbPayload[key] = value;
+                } else {
+                    // Assume anything else is metadata (e.g. picture)
+                    metadataUpdates[key] = value;
+                }
+            });
+
+            // If we have metadata updates, merge them with the base (either new metadata from payload or existing)
+            if (Object.keys(metadataUpdates).length > 0) {
+                const baseMetadata = dbPayload.item_metadata || currentMetadata;
+                dbPayload.item_metadata = { ...baseMetadata, ...metadataUpdates };
+            }
+
+            const { error } = await supabase
+                .from("vault_items")
+                .update(dbPayload)
+                .eq('id', id)
+
+            if (error) throw error
+
+            // Update local state
+            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates, item_metadata: dbPayload.item_metadata || item.item_metadata } : item))
+            toast.success("Item updated")
+            await fetchData() // Force sync
+        } catch (error: any) {
+            console.error("Update error:", error)
+            toast.error("Failed to update item")
+        }
+    }
+
+    const updateFolder = async (id: string, updates: Partial<Folder>) => {
+        try {
+            const { error } = await supabase
+                .from("folders")
+                .update({
+                    name: updates.name,
+                    parent_id: updates.parent_id
+                })
+                .eq('id', id)
+
+            if (error) throw error
+
+            setFolders(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f))
+            toast.success("Folder updated")
+        } catch (error: any) {
+            console.error("Folder update error:", error)
+            toast.error("Failed to update folder")
+        }
+    }
+
+    const deleteItem = async (id: string, type: string = "item", options?: { skipRefresh?: boolean }) => {
+        try {
+            const table = type === "folder" ? "folders" : "vault_items"
+            const { error } = await supabase
+                .from(table)
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+
+            if (type === "folder") {
+                setFolders(prev => prev.filter(f => f.id !== id))
+            } else {
+                setItems(prev => prev.filter(i => i.id !== id))
+            }
+            toast.success(`${type === 'folder' ? 'Folder' : 'Item'} deleted`)
+            if (!options?.skipRefresh) await fetchData() // Force sync
+        } catch (error: any) {
+            console.error("Delete operation failed:", JSON.stringify(error, null, 2))
+            toast.error(`Failed to delete ${type}: ${error.message || "Unknown error"}`)
+        }
+    }
+
+    // Combine for legacy 'records' prop
+    const records = [...items, ...folders]
+
+    console.log("🎯 useVault returning:", {
+        itemsCount: items.length,
+        foldersCount: folders.length,
+        recordsCount: records.length,
+        sampleRecord: records[0] ? { title: (records[0] as any).title, type: (records[0] as any).type, category: (records[0] as any).category } : null
+    })
+
+    return {
+        items,
+        folders,
+        records,
+        loading,
+        addFolder,
+        addItem,
+        bulkAddItems,
+        updateItem,
+        updateFolder,
+        deleteItem,
+        refresh: fetchData
+    }
+}
