@@ -12,6 +12,7 @@ export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -111,30 +112,118 @@ export default function Login() {
     setError(null)
 
     try {
+      const trimmedEmail = email.trim().toLowerCase()
+      const trimmedPassword = password.trim()
+
+      if (!trimmedEmail) {
+        setError("Email is required")
+        setLoading(false)
+        return
+      }
+
+      if (!trimmedPassword) {
+        setError("Password is required")
+        setLoading(false)
+        return
+      }
+
+      // Basic client-side email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(trimmedEmail)) {
+        setError(`Email address "${trimmedEmail}" is format-invalid.`)
+        setLoading(false)
+        return
+      }
+
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
-          email,
-          password,
+          email: trimmedEmail,
+          password: trimmedPassword,
+          options: {
+            emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
+          }
         })
         if (error) throw error
         setError("Check your email for the confirmation link!")
         // Save email on signup too
-        localStorage.setItem('lastLoginEmail', email)
+        localStorage.setItem('lastLoginEmail', trimmedEmail)
       } else {
         const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
+          email: trimmedEmail,
+          password: trimmedPassword,
         })
         if (error) throw error
         // Save email on successful login
-        localStorage.setItem('lastLoginEmail', email)
+        localStorage.setItem('lastLoginEmail', trimmedEmail)
         router.push('/?page=dashboard')
       }
     } catch (err: any) {
+      console.error("Auth Error:", err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleResendEmail = async () => {
+    const trimmedEmail = email.trim().toLowerCase()
+    if (!trimmedEmail) {
+      setError("Please enter your email address first.")
+      return
+    }
+
+    setResendLoading(true)
+    setError(null)
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: trimmedEmail,
+        options: {
+          emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
+        }
+      })
+      if (error) throw error
+      setError("Verification link resent! Please check your inbox.")
+    } catch (err: any) {
+      console.error("Resend Error:", err)
+      setError(err.message)
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
+  // Determine if we are in the middle of an SSO sync
+  const isSyncing = loading && (typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('access_token') ||
+      new URLSearchParams(window.location.hash.substring(1)).get('access_token')))
+
+  if (isSyncing) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0F172A] p-4">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-600/20 blur-[120px]" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/20 blur-[120px]" />
+
+        <div className="relative z-10 flex flex-col items-center gap-6">
+          <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-lg shadow-blue-500/30 animate-pulse">
+            <Image
+              src="/securelifehub-logo.jpg"
+              alt="SecureLifeHub Logo"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <h2 className="text-2xl font-bold text-white">Syncing Vault...</h2>
+            <div className="flex items-center gap-2 text-blue-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm font-medium">Establishing secure session</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -188,11 +277,23 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className={`p-3 rounded-lg text-sm border ${error.includes("Check")
+            <div className={`p-4 rounded-xl text-sm border flex flex-col gap-2 ${error.includes("Check") || error.includes("resent")
               ? "bg-green-500/10 border-green-500/20 text-green-400"
               : "bg-red-500/10 border-red-500/20 text-red-400"
               }`}>
-              {error}
+              <div className="flex items-start gap-2">
+                <p className="flex-1">{error}</p>
+              </div>
+              {(error.includes("Check") || error.includes("resent") || error.includes("expired")) && (
+                <button
+                  type="button"
+                  onClick={handleResendEmail}
+                  disabled={resendLoading}
+                  className="text-xs font-semibold underline underline-offset-4 hover:text-white transition-colors disabled:opacity-50 text-left w-fit"
+                >
+                  {resendLoading ? "Resending..." : "Didn't receive it? Resend link"}
+                </button>
+              )}
             </div>
           )}
 

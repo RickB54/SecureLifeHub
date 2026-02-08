@@ -73,7 +73,27 @@ const menuUserEmail = document.getElementById('menu-user-email')
 console.log("SecureLifeHub Popup v2 Loaded")
 
 async function init() {
-    const { data: { session } } = await supabase.auth.getSession()
+    // 1. Check extension's own Supabase session
+    let { data: { session } } = await supabase.auth.getSession()
+
+    // 2. If no local session, check if we have a synced session from the web app
+    if (!session) {
+        const syncData = await chrome.storage.local.get(['sync_session'])
+        if (syncData.sync_session) {
+            console.log("SecureLifeHub: Found synced session, applying to extension...")
+            try {
+                const { data, error } = await supabase.auth.setSession({
+                    access_token: syncData.sync_session.access_token,
+                    refresh_token: syncData.sync_session.refresh_token
+                })
+                if (!error && data.session) {
+                    session = data.session
+                }
+            } catch (e) {
+                console.error("Failed to apply synced session:", e)
+            }
+        }
+    }
 
     // Load Recents from local storage
     const storage = await chrome.storage.local.get(['recentItemsIds'])
@@ -96,6 +116,17 @@ function showVault() {
     authSection.classList.add('hidden')
     vaultSection.classList.remove('hidden')
     if (menuUserEmail) menuUserEmail.textContent = user.email
+
+    // Notify background script of login to sync back to any open web app tabs
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+            chrome.runtime.sendMessage({
+                type: 'SYNC_TO_WEB_APP',
+                session: session
+            });
+        }
+    });
+
     fetchItems()
 }
 

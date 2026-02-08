@@ -31,17 +31,18 @@ observer.observe(document.body, { childList: true, subtree: true });
 function scanPage() {
     if (!cachedVaultItems.length) return;
 
-    // Don't autofill on our own app (allow strict block on local dev environment)
+    // Don't AUTOMATICALLY autofill on our own app
     const currentHost = window.location.hostname;
-    // Block ANY localhost or 127.0.0.1 regardless of port, and production domain
     if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost.includes('securelifehub')) {
-        console.log("SecureLifeHub: Skipping autofill on own app");
+        // We still allow MANUAL fill if the user clicks the button in popup,
+        // so we don't return early if we want to allow decoration.
+        // But the user usually doesn't want icons on their own app.
         return;
     }
 
     const hostname = window.location.hostname.replace(/^www\./, '').toLowerCase();
 
-    const match = cachedVaultItems.find(item => {
+    const matches = cachedVaultItems.filter(item => {
         if (!item.website) return false;
 
         // Normalize stored website
@@ -54,9 +55,19 @@ function scanPage() {
         return hostname === storedDomain || hostname.endsWith('.' + storedDomain);
     });
 
-    if (match) {
-        console.log("SecureLifeHub: Credentials found for", hostname, match);
-        identifyAndDecorateFields(match);
+    if (matches.length > 0) {
+        // Prioritize exact match
+        const exactMatch = matches.find(item => {
+            let storedDomain = item.website.toLowerCase().trim();
+            storedDomain = storedDomain.replace(/^https?:\/\//, '');
+            storedDomain = storedDomain.replace(/^www\./, '');
+            storedDomain = storedDomain.split('/')[0].split('?')[0].split(':')[0];
+            return hostname === storedDomain;
+        });
+
+        const bestMatch = exactMatch || matches[0];
+        console.log("SecureLifeHub: Credentials found for", hostname, bestMatch);
+        identifyAndDecorateFields(bestMatch);
     }
 }
 
@@ -131,22 +142,28 @@ function removeIcons() {
 function fillCredentials(data) {
     console.log("SecureLifeHub: Filling credentials", {
         username: data.username,
-        passwordLength: data.password ? data.password.length : 0,
         website: data.website
     });
 
-    // Find all inputs on the page
-    const inputs = Array.from(document.querySelectorAll('input'));
+    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"])'));
 
-    // Find password field
-    const passwordInput = inputs.find(i => i.type === 'password' && i.offsetParent !== null);
+    // 1. Identify Password Field
+    let passwordInput = inputs.find(i => i.type === 'password' && i.offsetParent !== null);
 
-    // Find username field (email or text before password)
+    // 2. Identify Username Field
     let usernameInput = null;
 
-    if (passwordInput) {
+    // Strategy A: Find by common attributes
+    const usernamePatterns = ['user', 'email', 'login', 'id', 'account'];
+    usernameInput = inputs.find(i => {
+        if (i.type === 'password') return false;
+        const meta = (i.name + i.id + i.placeholder + (i.getAttribute('aria-label') || '')).toLowerCase();
+        return usernamePatterns.some(p => meta.includes(p)) && i.offsetParent !== null;
+    });
+
+    // Strategy B: If password exists, look for the text input closest preceding it
+    if (!usernameInput && passwordInput) {
         let idx = inputs.indexOf(passwordInput);
-        // Search backwards for username field
         for (let i = idx - 1; i >= 0; i--) {
             const candidate = inputs[i];
             if ((candidate.type === 'text' || candidate.type === 'email') && candidate.offsetParent !== null) {
@@ -154,34 +171,17 @@ function fillCredentials(data) {
                 break;
             }
         }
-    } else {
-        // No password field visible, might be step 1 of multi-step login
-        usernameInput = inputs.find(i =>
-            (i.type === 'email' || i.type === 'text') &&
-            i.offsetParent !== null &&
-            (i.name?.toLowerCase().includes('user') ||
-                i.name?.toLowerCase().includes('email') ||
-                i.id?.toLowerCase().includes('user') ||
-                i.id?.toLowerCase().includes('email') ||
-                i.autocomplete === 'username' ||
-                i.autocomplete === 'email')
-        );
     }
 
-    // Fill username field
-    if (usernameInput && data.username) {
-        console.log("SecureLifeHub: Filling username:", data.username);
-        performFill(usernameInput, data.username);
-    } else {
-        console.log("SecureLifeHub: Username field not found or no username data");
-    }
+    // Fill them
+    if (usernameInput && data.username) performFill(usernameInput, data.username);
+    if (passwordInput && data.password) performFill(passwordInput, data.password);
 
-    // Fill password field
-    if (passwordInput && data.password) {
-        console.log("SecureLifeHub: Filling password (length:", data.password.length, ")");
-        performFill(passwordInput, data.password);
-    } else {
-        console.log("SecureLifeHub: Password field not found or no password data");
+    // Feedback for user (visual flash)
+    if (usernameInput) {
+        const originalBg = usernameInput.style.backgroundColor;
+        usernameInput.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
+        setTimeout(() => usernameInput.style.backgroundColor = originalBg, 500);
     }
 }
 
@@ -213,5 +213,77 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         fillCredentials(request.data);
     }
 });
+
+// --- SESSION SYNC LOGIC ---
+
+/**
+ * Detects if we are on a SecureLifeHub domain and syncs the session to the extension.
+ * This allows "Login to Web App -> Auto Login Extension" flow.
+ */
+function syncSessionWithWebApp() {
+    const hostname = window.location.hostname;
+    const isAppDomain = hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname.includes('securelifehub.netlify.app');
+
+    if (!isAppDomain) return;
+
+    // Supabase stores the session in localStorage under a key like 'sb-<project-ref>-auth-token'
+    // We can iterate to find it or use the known project ref if we have it.
+    // Project Ref: uhkfmppomxibrwhtaxsg
+    const PROJECT_REF = "uhkfmppomxibrwhtaxsg";
+    const AUTH_KEY = `sb-${PROJECT_REF}-auth-token`;
+
+    const rawSession = localStorage.getItem(AUTH_KEY);
+    if (rawSession) {
+        try {
+            const session = JSON.parse(rawSession);
+            if (session && session.access_token) {
+                console.log("SecureLifeHub: Web App Session detected, syncing to extension...");
+                chrome.runtime.sendMessage({
+                    type: 'SYNC_SESSION',
+                    session: session
+                });
+            }
+        } catch (e) {
+            console.error("SecureLifeHub: Failed to parse web app session", e);
+        }
+    }
+
+    // Also listen for changes to localStorage (in case user logs in while tab is open)
+    window.addEventListener('storage', (e) => {
+        if (e.key === AUTH_KEY && e.newValue) {
+            try {
+                const session = JSON.parse(e.newValue);
+                chrome.runtime.sendMessage({
+                    type: 'SYNC_SESSION',
+                    session: session
+                });
+            } catch (err) { }
+        } else if (e.key === AUTH_KEY && !e.newValue) {
+            // Logout sync
+            chrome.runtime.sendMessage({ type: 'LOGOUT_SESSION' });
+        }
+    });
+
+    // Check periodically for session (in case of SPA navigation or same-tab login)
+    setInterval(() => {
+        const currentSession = localStorage.getItem(AUTH_KEY);
+        if (currentSession) {
+            try {
+                const session = JSON.parse(currentSession);
+                if (session && session.access_token) {
+                    chrome.runtime.sendMessage({
+                        type: 'SYNC_SESSION',
+                        session: session
+                    });
+                }
+            } catch (e) { }
+        }
+    }, 2000); // Check every 2 seconds
+}
+
+// Run sync check
+syncSessionWithWebApp();
 
 console.log("SecureLifeHub: Content script ready.");
