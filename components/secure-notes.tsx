@@ -155,32 +155,42 @@ export default function SecureNotes({
         if (typeof window !== 'undefined') {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
             if (SpeechRecognition) {
-                recognitionRef.current = new SpeechRecognition()
-                recognitionRef.current.continuous = true
-                recognitionRef.current.interimResults = true
+                const recognition = new SpeechRecognition()
+                recognition.continuous = true
+                recognition.interimResults = true
+                recognitionRef.current = recognition
 
-                recognitionRef.current.onresult = (event: any) => {
+                recognition.onresult = (event: any) => {
                     let transcript = ''
                     for (let i = event.resultIndex; i < event.results.length; i++) {
                         transcript += event.results[i][0].transcript
                     }
 
                     if (selectedNoteId) {
-                        const newContent = (draftContent || "") + " " + transcript
-                        setDraftContent(newContent)
-                        queueUpdate(selectedNoteId, { content: newContent })
+                        setDraftContent(prev => {
+                            const newContent = (prev || "") + " " + transcript
+                            queueUpdate(selectedNoteId, { content: newContent })
+                            return newContent
+                        })
                     }
                 }
 
-                recognitionRef.current.onend = () => setIsRecording(false)
-                recognitionRef.current.onerror = (event: any) => {
+                recognition.onend = () => setIsRecording(false)
+                recognition.onerror = (event: any) => {
                     console.error("Speech Recognition Error:", event.error)
                     setIsRecording(false)
-                    alert(`Speech recognition error: ${event.error}. Ensure you have granted microphone permissions and are using a supported browser like Chrome.`)
+                    // Only alert on non-abort errors to avoid spamming during stop()
+                    if (event.error !== 'aborted') {
+                        alert(`Speech recognition error: ${event.error}. Ensure you have granted microphone permissions.`)
+                    }
+                }
+
+                return () => {
+                    recognition.stop()
                 }
             }
         }
-    }, [selectedNoteId, draftContent])
+    }, [selectedNoteId])
 
     const toggleRecording = () => {
         if (!recognitionRef.current) {

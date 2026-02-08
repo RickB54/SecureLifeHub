@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Lock, Mail, Loader2, ArrowRight, Fingerprint } from "lucide-react"
+import { Lock, Mail, Loader2, ArrowRight, Fingerprint, Shield } from "lucide-react"
 import { PasswordInput } from "@/components/ui/password-input"
 import { supabase } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -14,6 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imgError, setImgError] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -255,14 +256,23 @@ export default function Login() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/20 blur-[120px]" />
 
         <div className="relative z-10 flex flex-col items-center gap-6">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-lg shadow-blue-500/30 animate-pulse">
-            <Image
-              src="/securelifehub-logo.png"
-              alt="SecureLifeHub Logo"
-              fill
-              className="object-cover"
-              priority
-            />
+          <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-lg shadow-blue-500/20 animate-pulse overflow-hidden">
+            {/* High-quality CSS Fallback Logo */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <Shield className="h-12 w-12 text-blue-500" />
+              <span className="absolute text-[14px] font-black text-white tracking-tighter mt-1">SL</span>
+            </div>
+
+            {!imgError && (
+              <Image
+                src="/securelifehub-logo.png"
+                alt=""
+                fill
+                className="object-cover z-10"
+                priority
+                onError={() => setImgError(true)}
+              />
+            )}
           </div>
           <div className="flex flex-col items-center gap-2">
             <h2 className="text-2xl font-bold text-white">Syncing Vault...</h2>
@@ -284,20 +294,30 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10 glass-panel rounded-2xl shadow-2xl border border-white/10 p-8 backdrop-blur-xl bg-white/5">
         <div className="flex flex-col items-center mb-8">
-          <div className="relative w-24 h-24 mb-4 rounded-full overflow-hidden shadow-lg shadow-blue-500/30">
-            <Image
-              src="/securelifehub-logo.png"
-              alt="SecureLifeHub Logo"
-              fill
-              className="object-cover"
-              priority
-            />
+          <div className="relative w-24 h-24 mb-4 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-lg shadow-blue-500/20 group overflow-hidden">
+            {/* High-quality CSS Fallback Logo */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <Shield className="h-12 w-12 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
+              <span className="absolute text-[14px] font-black text-white tracking-tighter mt-1">SL</span>
+            </div>
+
+            {/* The Actual Image - will layer on top if exists */}
+            {!imgError && (
+              <Image
+                src="/securelifehub-logo.png"
+                alt=""
+                fill
+                className="object-cover z-10"
+                priority
+                onError={() => setImgError(true)}
+              />
+            )}
           </div>
+          <h1 className="text-3xl font-black text-white mb-2 tracking-tighter uppercase">SecureLifeHub</h1>
+          <p className="text-gray-400 text-sm font-medium tracking-wide">
+            {isSignUp ? "Create your secure vault" : "Unlock your internal vault"}
+          </p>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">SecureLifeHub</h1>
-        <p className="text-gray-400">
-          {isSignUp ? "Create your secure vault" : "Unlock your vault"}
-        </p>
 
         <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-4">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize, HelpCircle } from "lucide-react"
+import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize, HelpCircle, Shield } from "lucide-react"
 
 import { useAuth } from "./auth-provider"
 
@@ -19,6 +19,7 @@ interface HeaderProps {
 export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage, onOpenHelp }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [imgError, setImgError] = useState(false)
   const { user } = useAuth()
 
   const toggleFullscreen = () => {
@@ -39,7 +40,7 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 ${theme === "light" ? "bg-white shadow-md" : "bg-[#2a2a2a] shadow-md"} z-10`}
+      className={`fixed top-0 left-0 right-0 ${theme === "light" ? "bg-white shadow-md" : "bg-[#2a2a2a] shadow-md"} z-20`}
     >
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center">
@@ -58,22 +59,34 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
               title="Go Back"
             >
               <ArrowLeft className="h-5 w-5 mr-1" />
-              <span className="text-sm font-medium">Back</span>
+              <span className="text-sm font-medium hidden sm:inline">Back</span>
             </button>
           )}
 
           <div className="flex items-center">
-            <div className="relative w-8 h-8 mr-2 rounded-full overflow-hidden shadow-lg shadow-blue-500/30">
-              <img
-                src="/securelifehub-logo.png"
-                alt="SLH"
-                className="w-full h-full object-cover"
-              />
+            <div
+              className="relative w-8 h-8 mr-2 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-lg shadow-blue-500/20 group overflow-hidden cursor-pointer"
+              onClick={() => onNavigate("dashboard")}
+            >
+              {/* High-quality CSS Fallback Logo */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <Shield className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
+                <span className="absolute text-[8px] font-black text-white tracking-tighter mt-0.5">SL</span>
+              </div>
+
+              {!imgError && (
+                <img
+                  src="/securelifehub-logo.png"
+                  alt=""
+                  className="w-full h-full object-cover z-10"
+                  onError={() => setImgError(true)}
+                />
+              )}
             </div>
-            <h1 className={`text-xl font-bold ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
+            <h1 className={`text-lg md:text-xl font-black tracking-tighter uppercase ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
           </div>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 md:space-x-4">
           <button
             onClick={onOpenHelp}
             className={`${theme === "light" ? "text-gray-800 hover:text-blue-500" : "text-white hover:text-blue-400"} transition-colors`}
@@ -91,16 +104,14 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
           </button>
           <button
             onClick={toggleFullscreen}
-            className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
+            className={`hidden md:block ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
             aria-label="Toggle Full Screen"
-            title={isFullscreen ? "Exit Full Screen" : "Enter Full Screen"}
           >
             {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
           </button>
           <button
             onClick={toggleTheme}
             className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
-            aria-label={`Toggle ${theme === "light" ? "dark" : "light"} mode`}
           >
             {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </button>
@@ -108,36 +119,35 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}
               className={`flex items-center space-x-1 ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
-              aria-expanded={userMenuOpen}
-              aria-haspopup="true"
             >
               <div className="bg-purple-600 rounded-full p-1">
                 <User className="h-4 w-4 text-white" />
               </div>
-              <div className="hidden md:flex flex-col items-start">
-                <span className="text-sm font-medium">{displayName}</span>
-                <span className={`text-xs ${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>
-                  {email}
-                </span>
+              <div className="hidden lg:flex flex-col items-start max-w-[100px]">
+                <span className="text-xs font-bold truncate w-full">{displayName}</span>
               </div>
-              <ChevronDown className="h-4 w-4 ml-1" />
+              <ChevronDown className="h-4 w-4" />
             </button>
             {userMenuOpen && (
               <div
-                className={`absolute right-0 mt-2 w-48 ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1 z-20`}
+                className={`absolute right-0 mt-2 w-48 ${theme === "light" ? "bg-white shadow-xl border border-gray-100" : "bg-[#1a1a1a] shadow-2xl border border-white/5"} rounded-xl py-2 z-50`}
               >
+                <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1 lg:hidden">
+                  <p className="text-xs font-bold truncate">{displayName}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{email}</p>
+                </div>
                 <button
                   onClick={() => {
                     setUserMenuOpen(false)
-                    onNavigate("user-settings")
+                    onNavigate("settings")
                   }}
-                  className={`w-full text-left px-4 py-2 ${theme === "light" ? "text-gray-800 hover:bg-gray-100" : "text-white hover:bg-gray-600"}`}
+                  className={`w-full text-left px-4 py-2 text-sm font-medium ${theme === 'light' ? 'hover:bg-gray-100 text-gray-700' : 'hover:bg-white/5 text-gray-300'}`}
                 >
-                  User Settings
+                  Settings & Account
                 </button>
                 <button
                   onClick={onLogout}
-                  className={`w-full text-left px-4 py-2 text-red-500 ${theme === "light" ? "hover:bg-red-50" : "hover:bg-red-600 hover:text-white"}`}
+                  className={`w-full text-left px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-500/10 transition-colors`}
                 >
                   Log Out
                 </button>
@@ -149,4 +159,3 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
     </header>
   )
 }
-
