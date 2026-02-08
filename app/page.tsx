@@ -40,6 +40,7 @@ import VehicleDocs from "@/components/vehicle-docs"
 import MaintenanceLogs from "@/components/maintenance-logs"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
+import SecureNotes from "@/components/secure-notes"
 
 function HomeContent() {
   // Security audit data (Mock for now, needs real calculation later)
@@ -366,7 +367,7 @@ function HomeContent() {
       case "type-software-licenses":
         return <Passwords {...commonProps} initialCategoryFilter="Software Licenses" />
       case "type-secure-notes":
-        return <Passwords {...commonProps} initialCategoryFilter="Secure Notes" />
+        return <SecureNotes {...commonProps} />
 
       // Global Filters
       case "favorites":

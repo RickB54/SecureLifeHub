@@ -766,13 +766,31 @@ export default function Passwords({
 
   // Render folder structure recursively
   const renderFolderStructure = (structure: any[], items: any[] = passwords, level = 0) => {
+    // Helper to calculate count recursively based on provided items
+    const getFolderCount = (fId: string): number => {
+      const direct = getDirectPasswordsInFolder(fId, items).length
+      // @ts-ignore
+      const subs = folders.filter((f) => f.parent_id === fId)
+      const subCounts = subs.reduce((acc, sub) => acc + getFolderCount(sub.id), 0)
+      return direct + subCounts
+    }
+
     const shouldShowFolder = (folder: any): boolean => {
+      const totalCount = getFolderCount(folder.id)
+      const isFiltering = searchQuery || categoryFilter !== "all" || favoriteFilter || archivedFilter || timeFilter !== "all"
+
+      // Hide empty folders if ANY filter is active
+      if (isFiltering && totalCount === 0) return false
+
       if (!searchQuery) return true
+
       const query = searchQuery.toLowerCase()
       const nameMatch = folder.name.toLowerCase().includes(query)
       const hasDirectMatch = getDirectPasswordsInFolder(folder.id, items).length > 0
-      const subfolders = getSubfolders(folder.id)
-      const hasSubfolderMatch = subfolders.some(sub => shouldShowFolder(sub))
+      // @ts-ignore
+      const subs = folders.filter((f) => f.parent_id === folder.id)
+      const hasSubfolderMatch = subs.some(sub => shouldShowFolder(sub))
+
       return nameMatch || hasDirectMatch || hasSubfolderMatch
     }
 
@@ -783,14 +801,6 @@ export default function Passwords({
       const isSelected = selectedFolder === folder.id
       const subfolders = getSubfolders(folder.id)
       const directPasswords = getDirectPasswordsInFolder(folder.id, items)
-
-      // Calculate count recursively based on provided items
-      const getFolderCount = (fId: string): number => {
-        const direct = getDirectPasswordsInFolder(fId, items).length
-        const subs = getSubfolders(fId)
-        const subCounts = subs.reduce((acc, sub) => acc + getFolderCount(sub.id), 0)
-        return direct + subCounts
-      }
 
       // Total count for this folder (direct + recursive subfolders)
       const totalCount = getFolderCount(folder.id)

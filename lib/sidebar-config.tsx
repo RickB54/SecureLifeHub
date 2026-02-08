@@ -28,6 +28,7 @@ export const sidebarSections = [
         color: "orange",
         items: [
             { id: "favorites", label: "Favorites", icon: <Star className="h-5 w-5" /> },
+            { id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-5 w-5" /> },
             { id: "trash", label: "Deleted", icon: <Trash className="h-5 w-5" /> },
             { id: "generate-password", label: "Generate Password", icon: <Wand2 className="h-5 w-5" /> },
         ],

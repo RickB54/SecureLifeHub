@@ -578,6 +578,7 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
     { id: "type-assets", label: "Inventory & Assets" },
     { id: "type-digital-life", label: "Digital Life" },
     { id: "type-subscriptions", label: "Subscriptions" },
+    { id: "type-secure-notes", label: "Secure Notes" },
     { id: "type-media", label: "Secure Media" },
     { id: "type-goals", label: "Goals" },
     { id: "type-knowledge", label: "Education & Knowledge" },
