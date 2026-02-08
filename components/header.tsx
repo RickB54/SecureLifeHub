@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize, HelpCircle, Shield } from "lucide-react"
 
 import { useAuth } from "./auth-provider"
+import Logo from "./logo"
 
 interface HeaderProps {
   onLogout: () => void
@@ -64,25 +65,12 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
           )}
 
           <div className="flex items-center">
-            <div
-              className="relative w-8 h-8 mr-2 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-lg shadow-blue-500/20 group overflow-hidden cursor-pointer"
+            <Logo
+              size="sm"
+              className="mr-2 cursor-pointer"
               onClick={() => onNavigate("dashboard")}
-            >
-              {/* High-quality CSS Fallback Logo */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <Shield className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
-                <span className="absolute text-[8px] font-black text-white tracking-tighter mt-0.5">SL</span>
-              </div>
-
-              {!imgError && (
-                <img
-                  src="/securelifehub-logo.png"
-                  alt=""
-                  className="w-full h-full object-cover z-10"
-                  onError={() => setImgError(true)}
-                />
-              )}
-            </div>
+              showText={false}
+            />
             <h1 className={`text-lg md:text-xl font-bold ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
           </div>
         </div>

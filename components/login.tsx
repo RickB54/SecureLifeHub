@@ -6,6 +6,7 @@ import { PasswordInput } from "@/components/ui/password-input"
 import { supabase } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
+import Logo from "./logo"
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false)
@@ -256,24 +257,7 @@ export default function Login() {
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-600/20 blur-[120px]" />
 
         <div className="relative z-10 flex flex-col items-center gap-6">
-          <div className="relative w-24 h-24 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-lg shadow-blue-500/20 animate-pulse overflow-hidden">
-            {/* High-quality CSS Fallback Logo */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Shield className="h-12 w-12 text-blue-500" />
-              <span className="absolute text-[14px] font-black text-white tracking-tighter mt-1">SL</span>
-            </div>
-
-            {!imgError && (
-              <Image
-                src="/securelifehub-logo.png"
-                alt=""
-                fill
-                className="object-cover z-10"
-                priority
-                onError={() => setImgError(true)}
-              />
-            )}
-          </div>
+          <Logo size="lg" />
           <div className="flex flex-col items-center gap-2">
             <h2 className="text-2xl font-bold text-white">Syncing Vault...</h2>
             <div className="flex items-center gap-2 text-blue-400">
@@ -294,25 +278,7 @@ export default function Login() {
 
       <div className="w-full max-w-md relative z-10 glass-panel rounded-2xl shadow-2xl border border-white/10 p-8 backdrop-blur-xl bg-white/5">
         <div className="flex flex-col items-center mb-8">
-          <div className="relative w-24 h-24 mb-4 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/10 shadow-lg shadow-blue-500/20 group overflow-hidden">
-            {/* High-quality CSS Fallback Logo */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <Shield className="h-12 w-12 text-blue-500 group-hover:scale-110 transition-transform duration-500" />
-              <span className="absolute text-[14px] font-black text-white tracking-tighter mt-1">SL</span>
-            </div>
-
-            {/* The Actual Image - will layer on top if exists */}
-            {!imgError && (
-              <Image
-                src="/securelifehub-logo.png"
-                alt=""
-                fill
-                className="object-cover z-10"
-                priority
-                onError={() => setImgError(true)}
-              />
-            )}
-          </div>
+          <Logo size="lg" />
           <h1 className="text-3xl font-bold text-white mb-2">Secure Life Hub</h1>
           <p className="text-gray-400 text-sm font-medium tracking-wide">
             {isSignUp ? "Create your secure vault" : "Unlock your internal vault"}

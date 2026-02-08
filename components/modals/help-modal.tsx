@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone } from "lucide-react"
+import Logo from "../logo"
 
 interface HelpPage {
     id: string
@@ -207,9 +208,7 @@ export default function HelpModal({ isOpen, onClose, theme }: { isOpen: boolean,
                 {/* TOC Sidebar - Collapsible on mobile */}
                 <div className={`w-full md:w-72 flex-shrink-0 border-b md:border-b-0 md:border-r ${theme === 'light' ? 'bg-gray-50 border-gray-200' : 'bg-black/40 border-white/5'} ${showMobileTOC ? 'flex h-full fixed inset-0 z-[160] md:relative md:inset-auto' : 'hidden md:flex'} flex-col`}>
                     <div className="p-8 border-b border-white/5 flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20">
-                            <BookOpen className="h-6 w-6 text-white" />
-                        </div>
+                        <Logo size="sm" />
                         <div>
                             <h2 className="text-xl font-black uppercase italic tracking-tighter text-white">Hub Manual</h2>
                             <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Table of Contents</p>
