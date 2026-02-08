@@ -361,10 +361,13 @@ export default function Login() {
               type="button"
               onClick={handleBiometricLogin}
               disabled={loading}
-              className="w-full mt-3 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 flex items-center justify-center gap-2 transition-all group"
+              className="w-full mt-3 py-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 flex flex-col items-center justify-center transition-all group"
             >
-              <Fingerprint className="h-5 w-5 text-blue-400 group-hover:scale-110 transition-transform" />
-              Sign in with Biometrics
+              <div className="flex items-center gap-2">
+                <Fingerprint className="h-5 w-5 text-blue-400 group-hover:scale-110 transition-transform" />
+                <span className="font-semibold">Sign in with Biometrics</span>
+              </div>
+              <span className="text-[10px] opacity-40 uppercase tracking-widest mt-1">Select "This Device" 📲 if asked</span>
             </button>
           )}
         </form>

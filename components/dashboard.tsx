@@ -170,8 +170,8 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
               <Key className="h-6 w-6 text-white" />
             </div>
             <div className="flex-1">
-              <h3 className="font-bold text-lg leading-tight">Fast Login with Biometrics</h3>
-              <p className="text-sm opacity-70">Unlock your vault instantly using your phone's fingerprint sensor or FaceID.</p>
+              <h3 className="font-bold text-lg leading-tight uppercase tracking-tighter">Fast Login with Biometrics</h3>
+              <p className="text-sm opacity-70">Unlock instantly with Fingerprint/FaceID. <span className="text-blue-400 font-bold">(Choose "This Device" when asked)</span></p>
             </div>
             <button
               onClick={() => setActivePage('settings')}

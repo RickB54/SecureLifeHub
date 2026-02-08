@@ -49,12 +49,28 @@ export default function SecureNotes({
     const [isRecording, setIsRecording] = useState(false)
     const [sections, setSections] = useState<string[]>(["General", "Ideas", "Personal", "Work"])
     const [activeSection, setActiveSection] = useState<string>("all")
-    const [isMobileView, setIsMobileView] = useState(false)
     const [showGallery, setShowGallery] = useState(false)
+
+    // Mobile View Management
+    const [mobileActiveView, setMobileActiveView] = useState<"list" | "editor">("list")
+    const [isMobile, setIsMobile] = useState(false)
+
+    // Local Editor State (to fix the overwriting/jumping issue)
+    const [draftTitle, setDraftTitle] = useState("")
+    const [draftContent, setDraftContent] = useState("")
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
     const recognitionRef = useRef<any>(null)
 
-    // Sync with vault items of type 'note' and category 'Secure Notes'
+    // Detect Mobile
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768)
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+        return () => window.removeEventListener('resize', checkMobile)
+    }, [])
+
+    // Sync with vault items
     useEffect(() => {
         const noteItems = records
             .filter((r: any) => r.type === 'note' || r.category === 'Secure Notes' || r.type === 'secure-note')
@@ -70,9 +86,9 @@ export default function SecureNotes({
 
         setNotes(noteItems)
 
-        // Auto-select first note if none selected
-        if (noteItems.length > 0 && !selectedNoteId) {
-            setSelectedNoteId(noteItems[0].id)
+        // Auto-select first note if on desktop and none selected
+        if (!isMobile && noteItems.length > 0 && !selectedNoteId) {
+            handleSelectNote(noteItems[0].id)
         }
 
         // Identify unique sections
@@ -81,6 +97,43 @@ export default function SecureNotes({
             setSections(prev => Array.from(new Set([...prev, ...uniqueSections])))
         }
     }, [records])
+
+    // Update Drafts when selection changes
+    const handleSelectNote = (id: string) => {
+        setSelectedNoteId(id)
+        const note = notes.find(n => n.id === id)
+        if (note) {
+            setDraftTitle(note.title)
+            setDraftContent(note.content)
+        }
+        if (isMobile) setMobileActiveView("editor")
+    }
+
+    // Auto-save logic (Debounced)
+    const queueUpdate = (id: string, updates: Partial<SecureNote>) => {
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+
+        saveTimeoutRef.current = setTimeout(() => {
+            handleSyncUpdate(id, updates)
+        }, 1000) // 1 second debounce
+    }
+
+    const handleSyncUpdate = async (id: string, updates: Partial<SecureNote>) => {
+        const dbUpdates: any = {}
+        if (updates.title !== undefined) dbUpdates.title = updates.title
+        if (updates.content !== undefined) dbUpdates.notes = updates.content
+        if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite
+
+        const metadataUpdates: any = {}
+        if (updates.images !== undefined) metadataUpdates.images = updates.images
+        if (updates.section !== undefined) metadataUpdates.section = updates.section
+
+        if (Object.keys(metadataUpdates).length > 0) {
+            dbUpdates.item_metadata = metadataUpdates
+        }
+
+        await updateItem(id, dbUpdates)
+    }
 
     // Handle Speech-to-Text
     useEffect(() => {
@@ -97,25 +150,21 @@ export default function SecureNotes({
                 }
 
                 if (selectedNoteId) {
-                    const note = notes.find(n => n.id === selectedNoteId)
-                    if (note) {
-                        handleUpdateNote(selectedNoteId, { content: note.content + " " + transcript })
-                    }
+                    const newContent = draftContent + " " + transcript
+                    setDraftContent(newContent)
+                    queueUpdate(selectedNoteId, { content: newContent })
                 }
             }
 
-            recognitionRef.current.onend = () => {
-                setIsRecording(false)
-            }
+            recognitionRef.current.onend = () => setIsRecording(false)
         }
-    }, [selectedNoteId, notes])
+    }, [selectedNoteId, draftContent])
 
     const toggleRecording = () => {
         if (!recognitionRef.current) {
             alert("Speech recognition not supported in this browser.")
             return
         }
-
         if (isRecording) {
             recognitionRef.current.stop()
         } else {
@@ -136,33 +185,27 @@ export default function SecureNotes({
             }
         }
         const created = await addItem(newNote)
-        if (created) setSelectedNoteId(created.id)
+        if (created) {
+            handleSelectNote(created.id)
+        }
     }
 
-    const handleUpdateNote = async (id: string, updates: Partial<SecureNote>) => {
-        // Map internal state to DB fields
-        const dbUpdates: any = {}
-        if (updates.title !== undefined) dbUpdates.title = updates.title
-        if (updates.content !== undefined) dbUpdates.notes = updates.content
-        if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite
-
-        // Metadata fields
-        const metadataUpdates: any = {}
-        if (updates.images !== undefined) metadataUpdates.images = updates.images
-        if (updates.section !== undefined) metadataUpdates.section = updates.section
-
-        if (Object.keys(metadataUpdates).length > 0) {
-            dbUpdates.item_metadata = metadataUpdates
+    const handleAddSection = () => {
+        const name = prompt("Enter new section name:")
+        if (name && !sections.includes(name)) {
+            setSections([...sections, name])
+            setActiveSection(name)
         }
-
-        await updateItem(id, dbUpdates)
     }
 
     const handleDeleteNote = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation()
         if (confirm("Are you sure you want to delete this note?")) {
             await deleteItem(id)
-            if (selectedNoteId === id) setSelectedNoteId(null)
+            if (selectedNoteId === id) {
+                setSelectedNoteId(null)
+                setMobileActiveView("list")
+            }
         }
     }
 
@@ -172,7 +215,7 @@ export default function SecureNotes({
             const note = notes.find(n => n.id === selectedNoteId)
             if (note) {
                 const updatedImages = [...(note.images || []), url]
-                handleUpdateNote(selectedNoteId, { images: updatedImages })
+                handleSyncUpdate(selectedNoteId, { images: updatedImages })
             }
         }
     }
@@ -188,10 +231,14 @@ export default function SecureNotes({
 
     return (
         <div className={`flex flex-col h-[calc(100vh-140px)] rounded-3xl overflow-hidden border ${theme === 'light' ? 'bg-white border-gray-200 shadow-2xl' : 'bg-[#1a1a1a] border-white/5 shadow-2xl shadow-black/50'}`}>
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 overflow-hidden relative">
 
-                {/* Sidebar: Sections & Notes List */}
-                <div className={`w-80 flex-shrink-0 border-r flex flex-col ${theme === 'light' ? 'bg-gray-50 border-gray-200' : 'bg-[#141414] border-white/5'}`}>
+                {/* Sidebar / List View */}
+                <div className={`
+          ${isMobile && mobileActiveView === "editor" ? "hidden" : "flex"} 
+          w-full md:w-80 flex-shrink-0 border-r flex flex-col 
+          ${theme === 'light' ? 'bg-gray-50 border-gray-200' : 'bg-[#141414] border-white/5'}
+        `}>
 
                     {/* Header */}
                     <div className="p-4 border-b border-white/5 space-y-4">
@@ -226,7 +273,7 @@ export default function SecureNotes({
                             onClick={() => setActiveSection("all")}
                             className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeSection === "all" ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}
                         >
-                            All Notes
+                            All
                         </button>
                         {sections.map(section => (
                             <button
@@ -237,7 +284,10 @@ export default function SecureNotes({
                                 {section}
                             </button>
                         ))}
-                        <button className="px-2 py-1 bg-white/5 rounded-lg text-gray-500 hover:text-white transition-colors">
+                        <button
+                            onClick={handleAddSection}
+                            className="px-2 py-1 bg-white/5 rounded-lg text-gray-500 hover:text-white transition-colors"
+                        >
                             <PlusCircle className="h-3 w-3" />
                         </button>
                     </div>
@@ -253,7 +303,7 @@ export default function SecureNotes({
                             filteredNotes.map(note => (
                                 <div
                                     key={note.id}
-                                    onClick={() => setSelectedNoteId(note.id)}
+                                    onClick={() => handleSelectNote(note.id)}
                                     className={`p-4 rounded-2xl cursor-pointer transition-all group relative border ${selectedNoteId === note.id ? 'bg-blue-600 border-blue-400 shadow-xl shadow-blue-900/30 translate-x-1' : theme === 'light' ? 'bg-white border-gray-100 hover:bg-gray-50' : 'bg-white/5 border-transparent hover:bg-white/10'}`}
                                 >
                                     <div className="flex justify-between items-start mb-1">
@@ -284,108 +334,133 @@ export default function SecureNotes({
                 </div>
 
                 {/* Editor Area */}
-                <div className="flex-1 flex flex-col bg-transparent relative">
+                <div className={`
+          ${isMobile && mobileActiveView === "list" ? "hidden" : "flex"}
+          flex-1 flex flex-col bg-transparent relative
+        `}>
                     {currentNote ? (
                         <>
                             {/* Editor Header */}
-                            <div className="p-6 border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex-1">
-                                    <input
-                                        type="text"
-                                        value={currentNote.title}
-                                        onChange={(e) => handleUpdateNote(currentNote.id, { title: e.target.value })}
-                                        className="w-full bg-transparent text-2xl md:text-3xl font-black outline-none placeholder:opacity-30"
-                                        placeholder="Note Title"
-                                    />
-                                    <div className="flex items-center gap-4 mt-2">
-                                        <div className="flex items-center gap-2 px-2 py-1 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-bold border border-blue-500/20">
-                                            <FolderPlus className="h-3 w-3" />
-                                            {currentNote.section || "General"}
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-500 text-xs">
-                                            <Calendar className="h-3 w-3" />
-                                            Last edited: {new Date(currentNote.updatedAt).toLocaleString()}
-                                        </div>
+                            <div className="p-4 md:p-6 border-b border-white/5 flex flex-col gap-4">
+                                <div className="flex items-center gap-3">
+                                    {isMobile && (
+                                        <button
+                                            onClick={() => setMobileActiveView("list")}
+                                            className="p-2 bg-white/5 rounded-xl text-gray-400"
+                                        >
+                                            <ArrowLeft className="h-5 w-5" />
+                                        </button>
+                                    )}
+                                    <div className="flex-1">
+                                        <input
+                                            type="text"
+                                            value={draftTitle}
+                                            onChange={(e) => {
+                                                setDraftTitle(e.target.value)
+                                                queueUpdate(currentNote.id, { title: e.target.value })
+                                            }}
+                                            className="w-full bg-transparent text-xl md:text-3xl font-black outline-none placeholder:opacity-30"
+                                            placeholder="Note Title"
+                                        />
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={toggleRecording}
-                                        className={`p-3 rounded-2xl transition-all flex items-center gap-2 ${isRecording ? 'bg-red-600 animate-pulse text-white' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
-                                        title="Voice to Text"
-                                    >
-                                        {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                                        {isRecording && <span className="text-xs font-bold">Recording...</span>}
-                                    </button>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => {
+                                                const nextSec = sections[(sections.indexOf(currentNote.section || "General") + 1) % sections.length]
+                                                handleSyncUpdate(currentNote.id, { section: nextSec })
+                                            }}
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-bold border border-blue-500/20"
+                                        >
+                                            <FolderPlus className="h-3 w-3" />
+                                            {currentNote.section || "General"}
+                                        </button>
+                                        <div className="hidden sm:flex items-center gap-2 text-gray-500 text-[10px] font-bold uppercase tracking-widest">
+                                            <Calendar className="h-3 w-3" />
+                                            {new Date(currentNote.updatedAt).toLocaleDateString()}
+                                        </div>
+                                    </div>
 
-                                    <button
-                                        onClick={handleAddImage}
-                                        className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all"
-                                        title="Add Image"
-                                    >
-                                        <ImageIcon className="h-5 w-5" />
-                                    </button>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            onClick={toggleRecording}
+                                            className={`p-2.5 rounded-xl transition-all ${isRecording ? 'bg-red-600 animate-pulse text-white' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
+                                            title="Voice to Text"
+                                        >
+                                            {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                                        </button>
 
-                                    <button
-                                        onClick={() => handleUpdateNote(currentNote.id, { isFavorite: !currentNote.isFavorite })}
-                                        className={`p-3 rounded-2xl transition-all ${currentNote.isFavorite ? 'bg-yellow-500/20 text-yellow-500' : 'bg-white/5 text-gray-400 hover:text-white'}`}
-                                    >
-                                        <Star className="h-5 w-5" fill={currentNote.isFavorite ? "currentColor" : "none"} />
-                                    </button>
+                                        <button
+                                            onClick={handleAddImage}
+                                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 transition-all"
+                                            title="Add Image"
+                                        >
+                                            <ImageIcon className="h-4 w-4" />
+                                        </button>
 
-                                    <button
-                                        onClick={() => setShowGallery(!showGallery)}
-                                        className={`p-3 rounded-2xl transition-all ${showGallery ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400'}`}
-                                        title="Gallery"
-                                    >
-                                        <ImageIcon className="h-5 w-5" />
-                                    </button>
+                                        <button
+                                            onClick={() => handleSyncUpdate(currentNote.id, { isFavorite: !currentNote.isFavorite })}
+                                            className={`p-2.5 rounded-xl transition-all ${currentNote.isFavorite ? 'bg-yellow-500/20 text-yellow-500' : 'bg-white/5 text-gray-400 hover:text-white'}`}
+                                        >
+                                            <Star className="h-4 w-4" fill={currentNote.isFavorite ? "currentColor" : "none"} />
+                                        </button>
 
-                                    <div className="h-8 w-px bg-white/10 mx-2" />
+                                        <button
+                                            onClick={() => setShowGallery(!showGallery)}
+                                            className={`p-2.5 rounded-xl transition-all ${showGallery ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400'}`}
+                                        >
+                                            <ImageIcon className="h-4 w-4" />
+                                        </button>
 
-                                    <button className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-400">
-                                        <Share2 className="h-5 w-5" />
-                                    </button>
+                                        <div className="h-6 w-px bg-white/10 mx-1" />
 
-                                    <button className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 text-gray-400">
-                                        <Maximize2 className="h-5 w-5" />
-                                    </button>
+                                        <button className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400">
+                                            <Maximize2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Main Textarea / Editor */}
                             <div className="flex-1 relative flex flex-col md:flex-row h-full overflow-hidden">
-                                <div className="flex-1 h-full p-8 overflow-y-auto">
+                                <div className="flex-1 h-full p-6 md:p-8 overflow-y-auto">
                                     <textarea
-                                        value={currentNote.content}
-                                        onChange={(e) => handleUpdateNote(currentNote.id, { content: e.target.value })}
+                                        value={draftContent}
+                                        onChange={(e) => {
+                                            setDraftContent(e.target.value)
+                                            queueUpdate(currentNote.id, { content: e.target.value })
+                                        }}
                                         className="w-full h-full bg-transparent outline-none resize-none text-lg leading-relaxed font-medium placeholder:opacity-20 custom-scrollbar"
                                         placeholder="Start typing your secure note here..."
                                     />
                                 </div>
 
-                                {/* Right Side Gallery Panel */}
+                                {/* Gallery Panel */}
                                 {showGallery && (
-                                    <div className={`w-full md:w-80 border-l border-white/5 flex flex-col p-4 animate-in slide-in-from-right transition-all ${theme === 'light' ? 'bg-gray-50' : 'bg-[#141414]'}`}>
+                                    <div className={`
+                    absolute inset-0 md:relative md:inset-auto z-20
+                    w-full md:w-80 border-l border-white/5 flex flex-col p-4 
+                    animate-in slide-in-from-right transition-all 
+                    ${theme === 'light' ? 'bg-gray-50' : 'bg-[#141414]'}
+                  `}>
                                         <div className="flex items-center justify-between mb-6">
                                             <h4 className="font-black text-xs uppercase tracking-widest text-gray-500">Image Gallery</h4>
-                                            <button onClick={() => setShowGallery(false)}><X className="h-4 w-4" /></button>
+                                            <button onClick={() => setShowGallery(false)} className="p-2 hover:bg-white/5 rounded-lg"><X className="h-4 w-4" /></button>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-2 overflow-y-auto custom-scrollbar">
                                             {currentNote.images && currentNote.images.length > 0 ? (
                                                 currentNote.images.map((img, idx) => (
-                                                    <div key={idx} className="group relative aspect-square rounded-xl overflow-hidden border border-white/5 hover:border-blue-500 transition-all bg-black/40">
+                                                    <div key={idx} className="group relative aspect-square rounded-xl overflow-hidden border border-white/5 hover:border-blue-500 transition-all bg-black/40 shadow-xl">
                                                         <img src={img} alt="" className="w-full h-full object-cover" />
                                                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                                            <button className="p-2 bg-blue-600 rounded-lg"><Maximize2 className="h-3 w-3" /></button>
-                                                            <button
+                                                            <button className="p-2 bg-red-600 rounded-lg shadow-lg hover:scale-110 transition-transform"
                                                                 onClick={() => {
                                                                     const updated = currentNote.images?.filter((_, i) => i !== idx)
-                                                                    handleUpdateNote(currentNote.id, { images: updated })
+                                                                    handleSyncUpdate(currentNote.id, { images: updated })
                                                                 }}
-                                                                className="p-2 bg-red-600 rounded-lg"
                                                             ><Trash className="h-3 w-3" /></button>
                                                         </div>
                                                     </div>
@@ -410,29 +485,29 @@ export default function SecureNotes({
                             </div>
 
                             {/* Status Bar */}
-                            <div className="px-6 py-3 border-t border-white/5 flex items-center justify-between bg-black/20 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                            <div className="px-4 md:px-6 py-2 border-t border-white/5 flex items-center justify-between bg-black/20 text-[9px] font-black uppercase tracking-widest text-gray-500 overflow-hidden">
                                 <div className="flex items-center gap-4">
-                                    <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-500" />AES-256 Encrypted</span>
-                                    <span>{currentNote.content.split(/\s+/).filter(Boolean).length} Words</span>
+                                    <span className="flex items-center gap-1.5 whitespace-nowrap"><Lock className="h-3 w-3 text-emerald-500" />Encrypted</span>
+                                    <span className="hidden sm:inline">{draftContent.split(/\s+/).filter(Boolean).length} Words</span>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                    Autosaved to Cloud
+                                <div className="flex items-center gap-1.5 text-blue-500/70">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    Live Syncing...
                                 </div>
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center opacity-30 select-none">
-                            <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mb-6">
-                                <Edit3 className="h-10 w-10" />
+                        <div className="flex-1 flex flex-col items-center justify-center opacity-30 select-none p-6 text-center">
+                            <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6">
+                                <Edit3 className="h-8 w-8" />
                             </div>
-                            <h3 className="text-2xl font-black mb-2">My Secure Vault</h3>
-                            <p className="text-sm">Select a note from the list or create a new one</p>
+                            <h3 className="text-xl md:text-2xl font-black mb-2 uppercase tracking-tighter">My Secure Notes</h3>
+                            <p className="text-xs md:text-sm max-w-xs transition-all">Select a note from the library or start a fresh one for your secure thoughts.</p>
                             <button
                                 onClick={handleAddNote}
-                                className="mt-8 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all shadow-xl shadow-blue-900/40"
+                                className="mt-8 px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl transition-all shadow-2xl shadow-blue-900/40 uppercase tracking-widest text-xs"
                             >
-                                Start Taking Notes
+                                Create First Note
                             </button>
                         </div>
                     )}

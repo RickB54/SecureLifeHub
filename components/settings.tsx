@@ -381,7 +381,7 @@ export default function Settings({
                 </div>
                 <div>
                   <div className="font-bold">Biometric Login</div>
-                  <div className="text-xs opacity-50">Fingerprint / FaceID</div>
+                  <div className="text-[10px] opacity-70 text-blue-400 font-bold uppercase tracking-wider">Choose "This Device" 📲 when asked</div>
                 </div>
               </div>
               <button
