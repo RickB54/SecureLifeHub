@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Lock, Mail, Loader2, ArrowRight } from "lucide-react"
+import { Lock, Mail, Loader2, ArrowRight, Fingerprint } from "lucide-react"
 import { PasswordInput } from "@/components/ui/password-input"
 import { supabase } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -24,6 +24,49 @@ export default function Login() {
       setEmail(savedEmail)
     }
   }, [])
+
+  const handleBiometricLogin = async () => {
+    if (!window.PublicKeyCredential) {
+      setError("Biometrics not supported on this browser")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const challenge = new Uint8Array(32)
+      window.crypto.getRandomValues(challenge)
+
+      const assertion = await navigator.credentials.get({
+        publicKey: {
+          challenge,
+          timeout: 60000,
+          userVerification: "required"
+        }
+      })
+
+      if (assertion) {
+        // Biometric verify success on device
+        // Check if we already have a session that just needs unlocking
+        const { data: { session } } = await supabase.auth.getSession()
+
+        if (session) {
+          router.push("/?page=dashboard")
+        } else {
+          setError("Session expired. Please sign in with password once to re-enable biometrics.")
+          localStorage.removeItem('biometric_enabled')
+        }
+      }
+    } catch (err: any) {
+      console.error("Biometric login failed:", err)
+      if (err.name !== 'NotAllowedError') {
+        setError("Biometric verification failed")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // SSO: Check for session token in URL and auto-login
   useEffect(() => {
@@ -207,7 +250,7 @@ export default function Login() {
         <div className="relative z-10 flex flex-col items-center gap-6">
           <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-lg shadow-blue-500/30 animate-pulse">
             <Image
-              src="/securelifehub-logo.jpg"
+              src="/securelifehub-logo.png"
               alt="SecureLifeHub Logo"
               fill
               className="object-cover"
@@ -236,7 +279,7 @@ export default function Login() {
         <div className="flex flex-col items-center mb-8">
           <div className="relative w-24 h-24 mb-4 rounded-full overflow-hidden shadow-lg shadow-blue-500/30">
             <Image
-              src="/securelifehub-logo.jpg"
+              src="/securelifehub-logo.png"
               alt="SecureLifeHub Logo"
               fill
               className="object-cover"
@@ -311,6 +354,19 @@ export default function Login() {
               </>
             )}
           </button>
+
+          {/* Biometric Sign In Option */}
+          {!isSignUp && typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') === 'true' && (
+            <button
+              type="button"
+              onClick={handleBiometricLogin}
+              disabled={loading}
+              className="w-full mt-3 py-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 flex items-center justify-center gap-2 transition-all group"
+            >
+              <Fingerprint className="h-5 w-5 text-blue-400 group-hover:scale-110 transition-transform" />
+              Sign in with Biometrics
+            </button>
+          )}
         </form>
 
         <div className="mt-6 text-center">

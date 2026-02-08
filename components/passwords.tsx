@@ -443,14 +443,45 @@ export default function Passwords({
     // Filter by time
     if (timeFilter !== "all") {
       const now = new Date()
-      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000)
+      const last7Days = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)
+      const last30Days = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000)
+      const last3Months = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000)
+      const last12Months = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000)
 
-      if (timeFilter === "last30days") {
-        filtered = filtered.filter((password) => {
-          const updatedAt = new Date(password.updatedAt)
-          return updatedAt >= thirtyDaysAgo
-        })
-      }
+      filtered = filtered.filter((password) => {
+        const itemDate = new Date(password.updatedAt || password.created_at)
+        const itemDay = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate())
+
+        switch (timeFilter) {
+          case "today":
+            return itemDay.getTime() === today.getTime()
+          case "yesterday":
+            return itemDay.getTime() === yesterday.getTime()
+          case "last7days":
+            return itemDate >= last7Days
+          case "last30days":
+            return itemDate >= last30Days
+          case "last3months":
+            return itemDate >= last3Months
+          case "last12months":
+            return itemDate >= last12Months
+          case "on":
+            if (!customDate) return true
+            const onDate = new Date(customDate)
+            const onDay = new Date(onDate.getFullYear(), onDate.getMonth(), onDate.getDate())
+            return itemDay.getTime() === onDay.getTime()
+          case "before":
+            if (!customDate) return true
+            return itemDate < new Date(customDate)
+          case "after":
+            if (!customDate) return true
+            return itemDate > new Date(customDate)
+          default:
+            return true
+        }
+      })
     }
 
     // Filter by favorites
@@ -964,7 +995,7 @@ export default function Passwords({
             </div>
           </td>
           <td className="py-3 px-4 hidden xl:table-cell truncate max-w-[120px]">{password.category || "General"}</td>
-          <td className="py-3 px-4 hidden 2xl:table-cell whitespace-nowrap">{new Date(password.updatedAt).toLocaleDateString()}</td>
+          <td className="py-3 px-4 hidden 2xl:table-cell whitespace-nowrap">{new Date(password.updatedAt || password.created_at).toLocaleDateString()}</td>
           <td className="py-3 px-4 text-right md:text-left">
             <div className="flex items-center justify-end md:justify-start space-x-1 sm:space-x-2">
               <button
@@ -1227,7 +1258,7 @@ export default function Passwords({
             className={`flex justify-between items-center mt-4 pt-3 border-t ${theme === "light" ? "border-gray-200" : "border-gray-700"}`}
           >
             <span className={`text-xs ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-              {new Date(password.updatedAt).toLocaleDateString()}
+              {new Date(password.updatedAt || password.created_at).toLocaleDateString()}
             </span>
 
             <div className="flex items-center space-x-2">
@@ -1770,6 +1801,111 @@ export default function Passwords({
                       {category}
                     </button>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* Date Filter Dropdown */}
+            <div className="relative">
+              <button
+                className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-40`}
+                onClick={() => {
+                  setShowTimeFilterMenu(!showTimeFilterMenu)
+                  setShowCategoryFilterMenu(false)
+                  setShowStatusFilterMenu(false)
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-blue-400" />
+                  <span className="truncate">
+                    {timeFilter === "all" ? "Any Time" :
+                      timeFilter === "today" ? "Today" :
+                        timeFilter === "yesterday" ? "Yesterday" :
+                          timeFilter === "last7days" ? "Last 7 days" :
+                            timeFilter === "last30days" ? "Last 30 days" :
+                              timeFilter === "last3months" ? "Last 3 months" :
+                                timeFilter === "last12months" ? "Last 12 months" :
+                                  timeFilter === "on" ? `On ${customDate || '...'}` :
+                                    timeFilter === "before" ? `Before ${customDate || '...'}` :
+                                      timeFilter === "after" ? `After ${customDate || '...'}` : "Date Filter"}
+                  </span>
+                </div>
+                {timeFilter !== "all" ? (
+                  <X
+                    className="h-4 w-4 ml-2 hover:text-red-400"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setTimeFilter("all")
+                      setCustomDate("")
+                    }}
+                  />
+                ) : (
+                  <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
+                )}
+              </button>
+
+              {showTimeFilterMenu && (
+                <div
+                  className={`absolute z-[100] mt-1 w-64 ${theme === "light" ? "bg-white" : "bg-[#252526] shadow-2xl border border-white/5"} rounded-xl p-2 animate-in fade-in zoom-in-95`}
+                >
+                  <div className="grid grid-cols-1 gap-1">
+                    {[
+                      { id: "all", label: "Any Time" },
+                      { id: "today", label: "Today" },
+                      { id: "yesterday", label: "Yesterday" },
+                      { id: "last7days", label: "Last 7 days" },
+                      { id: "last30days", label: "Last 30 days" },
+                      { id: "last3months", label: "Last 3 months" },
+                      { id: "last12months", label: "Last 12 months" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        className={`w-full text-left px-4 py-2 text-sm rounded-lg transition-colors ${timeFilter === opt.id ? "bg-blue-600 text-white" : theme === "light" ? "hover:bg-gray-100" : "hover:bg-white/5"}`}
+                        onClick={() => {
+                          setTimeFilter(opt.id)
+                          setShowTimeFilterMenu(false)
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+
+                    <div className={`h-px w-full my-1 ${theme === "light" ? "bg-gray-200" : "bg-gray-700"}`} />
+
+                    {["on", "before", "after"].map((opt) => (
+                      <div key={opt} className="px-1">
+                        <button
+                          className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex justify-between items-center ${timeFilter === opt ? "text-blue-400" : "text-gray-500"}`}
+                          onClick={() => setTimeFilter(opt)}
+                        >
+                          {opt}...
+                          {timeFilter === opt && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                        </button>
+                        {timeFilter === opt && (
+                          <input
+                            type="date"
+                            value={customDate}
+                            onChange={(e) => setCustomDate(e.target.value)}
+                            className={`w-full mt-1 px-3 py-1.5 text-sm rounded border ${theme === "light" ? "bg-white border-gray-200" : "bg-black/20 border-white/10"}`}
+                            autoFocus
+                          />
+                        )}
+                      </div>
+                    ))}
+
+                    <div className={`h-px w-full my-1 ${theme === "light" ? "bg-gray-200" : "bg-gray-700"}`} />
+
+                    <button
+                      className="w-full text-center py-2 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                      onClick={() => {
+                        setTimeFilter("all")
+                        setCustomDate("")
+                        setShowTimeFilterMenu(false)
+                      }}
+                    >
+                      Reset Date Filter
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

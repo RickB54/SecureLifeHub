@@ -63,7 +63,13 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
           )}
 
           <div className="flex items-center">
-            <Lock className={`h-6 w-6 ${theme === "light" ? "text-gray-800" : "text-white"} mr-2`} />
+            <div className="relative w-8 h-8 mr-2 rounded-full overflow-hidden shadow-lg shadow-blue-500/30">
+              <img
+                src="/securelifehub-logo.png"
+                alt="SLH"
+                className="w-full h-full object-cover"
+              />
+            </div>
             <h1 className={`text-xl font-bold ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
           </div>
         </div>

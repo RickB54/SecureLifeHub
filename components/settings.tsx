@@ -90,6 +90,59 @@ export default function Settings({
   const [importMode, setImportMode] = useState<"csv" | "json">("json")
   const [isDangerZoneUnlocked, setIsDangerZoneUnlocked] = useState(false)
   const [showPinScreen, setShowPinScreen] = useState(false)
+  const [biometricEnabled, setBiometricEnabled] = useState(false)
+
+  // Load Biometric State
+  useEffect(() => {
+    setBiometricEnabled(localStorage.getItem('biometric_enabled') === 'true')
+  }, [])
+
+  const handleToggleBiometric = async () => {
+    if (!biometricEnabled) {
+      // Enabling Biometrics
+      if (!window.PublicKeyCredential) {
+        showNotification("Biometrics not supported on this browser", "error")
+        return
+      }
+
+      try {
+        // Enrolling device (Using a basic challenge/register flow)
+        // Note: Real WebAuthn implementation requires backend challenge.
+        // For now, we'll use a local 'Mock' registration that verifies device capability.
+        const challenge = new Uint8Array(32);
+        window.crypto.getRandomValues(challenge);
+
+        const credential = await navigator.credentials.create({
+          publicKey: {
+            challenge,
+            rp: { name: "SecureLifeHub" },
+            user: {
+              id: new Uint8Array(16),
+              name: "user@securelifehub.com",
+              displayName: "SecureLifeHub User"
+            },
+            pubKeyCredParams: [{ alg: -7, type: "public-key" }],
+            authenticatorSelection: { userVerification: "required" },
+            timeout: 60000
+          }
+        });
+
+        if (credential) {
+          localStorage.setItem('biometric_enabled', 'true')
+          setBiometricEnabled(true)
+          showNotification("Biometric login enabled for this device")
+        }
+      } catch (e) {
+        console.error("Biometric enrollment failed:", e)
+        showNotification("Enrollment failed or cancelled", "error")
+      }
+    } else {
+      // Disabling
+      localStorage.removeItem('biometric_enabled')
+      setBiometricEnabled(false)
+      showNotification("Biometric login disabled")
+    }
+  }
 
   // Load User Preferences on mount
   useEffect(() => {
@@ -317,6 +370,25 @@ export default function Settings({
               </div>
               <button onClick={handleToggle2FA} className={`relative h-8 w-14 rounded-full transition-colors ${twoFactorEnabled ? 'bg-green-500' : 'bg-gray-700'}`}>
                 <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${twoFactorEnabled ? 'translate-x-6' : ''}`} />
+              </button>
+            </div>
+
+            {/* Biometric Login */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${biometricEnabled ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                  <Shield className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-bold">Biometric Login</div>
+                  <div className="text-xs opacity-50">Fingerprint / FaceID</div>
+                </div>
+              </div>
+              <button
+                onClick={handleToggleBiometric}
+                className={`relative h-8 w-14 rounded-full transition-colors ${biometricEnabled ? 'bg-blue-500' : 'bg-gray-700'}`}
+              >
+                <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${biometricEnabled ? 'translate-x-6' : ''}`} />
               </button>
             </div>
           </div>
