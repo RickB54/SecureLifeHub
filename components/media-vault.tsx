@@ -250,6 +250,32 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
                             // Convert to base64 for "vault storage"
                             const reader = new FileReader()
                             reader.onloadend = async () => {
+                                let result = reader.result as string;
+
+                                // Compress if it's an image
+                                if (file.type.startsWith('image/')) {
+                                    result = await new Promise((resolve) => {
+                                        const img = new Image();
+                                        img.src = result;
+                                        img.onload = () => {
+                                            const canvas = document.createElement('canvas');
+                                            const MAX_WIDTH = 1200;
+                                            let width = img.width;
+                                            let height = img.height;
+
+                                            if (width > MAX_WIDTH) {
+                                                height = (MAX_WIDTH / width) * height;
+                                                width = MAX_WIDTH;
+                                            }
+                                            canvas.width = width;
+                                            canvas.height = height;
+                                            const ctx = canvas.getContext('2d');
+                                            ctx?.drawImage(img, 0, 0, width, height);
+                                            resolve(canvas.toDataURL('image/jpeg', 0.7));
+                                        };
+                                    });
+                                }
+
                                 try {
                                     await addItem({
                                         title: fd.get("title") as string,
@@ -258,7 +284,7 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
                                         folder_id: selectedFolder || null, // Proper field for useVault
                                         item_metadata: {
                                             type: file.type.startsWith('video') ? "video" : "image",
-                                            url: reader.result as string,
+                                            url: result,
                                             notes: fd.get("notes"),
                                             folderId: selectedFolder, // Keep for legacy filter support
                                             fileName: file.name,

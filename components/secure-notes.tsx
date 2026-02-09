@@ -297,6 +297,31 @@ export default function SecureNotes({
         }
     }
 
+    const compressImage = (base64: string, maxWidth = 1024): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image()
+            img.src = base64
+            img.onload = () => {
+                const canvas = document.createElement('canvas')
+                let width = img.width
+                let height = img.height
+
+                if (width > maxWidth) {
+                    height = (maxWidth / width) * height
+                    width = maxWidth
+                }
+
+                canvas.width = width
+                canvas.height = height
+                const ctx = canvas.getContext('2d')
+                ctx?.drawImage(img, 0, 0, width, height)
+
+                // Use jpeg and lowered quality for significant memory savings
+                resolve(canvas.toDataURL('image/jpeg', 0.6))
+            }
+        })
+    }
+
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files
         if (!files || !selectedNoteId) return
@@ -315,8 +340,11 @@ export default function SecureNotes({
                 reader.onload = (event) => resolve(event.target?.result as string)
             })
             reader.readAsDataURL(file)
-            const base64 = await promise
-            newImages.push(base64)
+            const rawBase64 = await promise
+
+            // Compress image to avoid memory errors on mobile
+            const compressed = await compressImage(rawBase64)
+            newImages.push(compressed)
         }
 
         handleSyncUpdate(selectedNoteId, { images: newImages })
@@ -627,7 +655,6 @@ export default function SecureNotes({
                                     onChange={handleFileUpload}
                                     multiple
                                     accept="image/*"
-                                    capture="environment"
                                     className="hidden"
                                 />
                                 <div className="flex-1 h-full p-6 md:p-8 overflow-y-auto">

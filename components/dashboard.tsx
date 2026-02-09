@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
-  Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle
+  Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
+  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap
 } from "lucide-react"
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
@@ -22,6 +23,27 @@ interface DashboardProps {
 export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, addFolder, securitySettings = {}, setHelpOpen }: DashboardProps) {
   const [addPasswordModalOpen, setAddPasswordModalOpen] = useState(false)
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
+  const [showPersonalizer, setShowPersonalizer] = useState(false)
+  const [enabledPulseIds, setEnabledPulseIds] = useState<string[]>(['security', 'assets', 'goals'])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('dashboard_pulses')
+    if (saved) {
+      try {
+        setEnabledPulseIds(JSON.parse(saved))
+      } catch (e) {
+        console.error("Failed to parse pulses", e)
+      }
+    }
+  }, [])
+
+  const togglePulse = (id: string) => {
+    const newIds = enabledPulseIds.includes(id)
+      ? enabledPulseIds.filter(pid => pid !== id)
+      : [...enabledPulseIds, id]
+    setEnabledPulseIds(newIds)
+    localStorage.setItem('dashboard_pulses', JSON.stringify(newIds))
+  }
 
   // -- Stats Calculation --
   const folders = records.filter((r: any) => r.type === "folder")
@@ -47,6 +69,31 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   // Security Score (Mock calculation based on weak passwords)
   const weakPasswords = records.filter((r: any) => r.type === "password" && r.strength === "weak").length
   const securityScore = Math.max(0, 100 - (weakPasswords * 5))
+
+  // Additional Analytics Data
+  const subCount = records.filter((r: any) => r.category === "Subscriptions" || r.type === "subscription").length
+  const mediaCount = records.filter((r: any) => r.category === "Secure Media" || r.type === "media").length
+  const passCount = records.filter((r: any) => r.type === "password" || r.type === "login").length
+  const favoriteCount = records.filter((r: any) => r.is_favorite).length
+
+  // Pulse Definitions
+  const ALL_PULSES = [
+    { id: 'security', label: 'Security', icon: Shield, color: 'text-yellow-500', value: securityScore, valueText: `${securityScore}% Safe` },
+    { id: 'assets', label: 'Net Worth', icon: Activity, color: 'text-emerald-500', valueText: `$${totalAssetValue.toLocaleString()}` },
+    { id: 'goals', label: 'Active Goals', icon: Target, color: 'text-violet-500', valueText: `${goalsCount} Targets` },
+    { id: 'health', label: 'Health Vitals', icon: Heart, color: 'text-red-500', valueText: `${healthCount} Records` },
+    { id: 'subscriptions', label: 'Monthly Sub', icon: CreditCard, color: 'text-green-500', valueText: `${subCount} Services` },
+    { id: 'media', label: 'Media Vault', icon: Image, color: 'text-teal-500', valueText: `${mediaCount} Items` },
+    { id: 'vehicles', label: 'Vehicles', icon: Car, color: 'text-blue-500', valueText: `${vehicleCount} Profiles` },
+    { id: 'business', label: 'Business', icon: Briefcase, color: 'text-orange-500', valueText: `${bizCount} Projects` },
+    { id: 'knowledge', label: 'Knowledge', icon: Book, color: 'text-yellow-500', valueText: `${knowledgeCount} Guides` },
+    { id: 'travel', label: 'Travel Hub', icon: Plane, color: 'text-indigo-500', valueText: `${travelCount} Plans` },
+    { id: 'vault', label: 'Vault Items', icon: Lock, color: 'text-purple-500', valueText: `${passCount} Credentials` },
+    { id: 'favorites', label: 'Favorites', icon: Star, color: 'text-amber-500', valueText: `${favoriteCount} Starred` },
+    { id: 'diary', label: 'Daily Diary', icon: Book, color: 'text-rose-500', valueText: `${diaryCount} Entries` },
+  ]
+
+  const activePulses = ALL_PULSES.filter(p => enabledPulseIds.includes(p.id))
 
   // Recent Activity Clearing
   const [clearedAt, setClearedAt] = useState<number>(0)
@@ -117,46 +164,81 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
         </div>
 
         {/* Life Pulse Widget */}
-        <div className={`p-6 rounded-3xl ${glassPanel} flex-1 flex items-center justify-around relative overflow-hidden group`}>
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="flex-1 space-y-4">
+          <div className={`p-6 rounded-3xl ${glassPanel} flex items-center justify-around relative overflow-hidden group min-h-[160px]`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-          {/* Security Pulse */}
-          <div className="text-center z-10">
-            <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-700/20" />
-                <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent"
-                  strokeDasharray={`${2 * Math.PI * 36}`}
-                  strokeDashoffset={`${2 * Math.PI * 36 * (1 - securityScore / 100)}`}
-                  className={`${securityScore > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
-              </svg>
-              <Shield className="absolute h-8 w-8 opacity-80" />
-            </div>
-            <p className="mt-2 font-bold text-sm opacity-70">Security</p>
-            <p className="text-xs opacity-50">{securityScore}% Safe</p>
+            <button
+              onClick={() => setShowPersonalizer(!showPersonalizer)}
+              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-gray-500 hover:text-white transition-all z-20"
+              title="Personalize Dashboard"
+            >
+              <Settings2 className={`h-4 w-4 ${showPersonalizer ? 'rotate-90 text-blue-400' : ''} transition-transform`} />
+            </button>
+
+            {activePulses.length === 0 ? (
+              <div className="text-center opacity-30 italic text-sm">No analytics pinned. Click the settings icon to add.</div>
+            ) : (
+              activePulses.map((pulse, idx) => (
+                <div key={pulse.id} className="flex items-center">
+                  <div className="text-center z-10 px-4">
+                    {pulse.id === 'security' ? (
+                      <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-700/20" />
+                          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent"
+                            strokeDasharray={`${2 * Math.PI * 36}`}
+                            strokeDashoffset={`${2 * Math.PI * 36 * (1 - (pulse.value || 0) / 100)}`}
+                            className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
+                        </svg>
+                        <Shield className="absolute h-8 w-8 opacity-80" />
+                      </div>
+                    ) : (
+                      <div className="relative w-20 h-20 mx-auto flex items-center justify-center bg-gray-500/10 rounded-full mb-2">
+                        <pulse.icon className={`h-8 w-8 ${pulse.color}`} />
+                      </div>
+                    )}
+                    <p className="mt-2 font-bold text-sm opacity-70 whitespace-nowrap">{pulse.label}</p>
+                    <p className={`text-xs opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
+                  </div>
+                  {idx < activePulses.length - 1 && (
+                    <div className="h-12 w-px bg-gray-500/20 mx-2 hidden sm:block"></div>
+                  )}
+                </div>
+              ))
+            )}
           </div>
 
-          <div className="h-12 w-px bg-gray-500/20 mx-4"></div>
-
-          {/* Asset Pulse */}
-          <div className="text-center z-10">
-            <div className="relative w-20 h-20 mx-auto flex items-center justify-center bg-gray-500/10 rounded-full mb-2">
-              <Activity className="h-8 w-8 text-emerald-500" />
+          {/* Pulse Personalizer (Accordion Style) */}
+          {showPersonalizer && (
+            <div className={`p-6 rounded-3xl ${glassPanel} animate-in slide-in-from-top-4 duration-300`}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-black uppercase tracking-widest text-xs text-blue-400">Personalize Your Pulse</h3>
+                <span className="text-[10px] text-gray-500">Pick any to pin to the top bar</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-center">
+                {ALL_PULSES.map(pulse => {
+                  const isActive = enabledPulseIds.includes(pulse.id)
+                  return (
+                    <button
+                      key={pulse.id}
+                      onClick={() => togglePulse(pulse.id)}
+                      className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 group ${isActive
+                          ? 'bg-blue-600/10 border-blue-500/50 scale-105 shadow-lg shadow-blue-500/10'
+                          : 'bg-white/5 border-white/5 opacity-50 hover:opacity-100'
+                        }`}
+                    >
+                      <div className={`p-2 rounded-xl ${isActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400'}`}>
+                        <pulse.icon className="h-4 w-4" />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-tight truncate w-full">{pulse.label}</span>
+                      {isActive && <Zap className="h-2 w-2 text-yellow-400 fill-yellow-400" />}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <p className="mt-2 font-bold text-sm opacity-70">Net Worth</p>
-            <p className="text-xs opacity-50 text-emerald-400 font-mono">${totalAssetValue.toLocaleString()}</p>
-          </div>
-
-          <div className="h-12 w-px bg-gray-500/20 mx-4"></div>
-
-          {/* Goals Pulse */}
-          <div className="text-center z-10">
-            <div className="relative w-20 h-20 mx-auto flex items-center justify-center bg-gray-500/10 rounded-full mb-2">
-              <Target className="h-8 w-8 text-violet-500" />
-            </div>
-            <p className="mt-2 font-bold text-sm opacity-70">Active Goals</p>
-            <p className="text-xs opacity-50">{goalsCount} Targets</p>
-          </div>
+          )}
         </div>
       </div>
 
