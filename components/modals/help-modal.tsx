@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -216,6 +216,31 @@ const HELP_PAGES: HelpPage[] = [
                     <div className="p-4 border border-white/5 bg-amber-500/5 rounded-xl">
                         <h5 className="font-bold text-amber-400 mb-1 flex items-center gap-2"><Key className="h-3 w-3" /> Troubleshooting</h5>
                         <p className="text-[10px] text-gray-400">If you move to a new website address (like netlify.app), your old passkey will stop working for security. Simply go to settings, toggle biometrics OFF and then back ON to create a fresh key.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "recovery",
+        title: "Security Recovery",
+        icon: AlertCircle,
+        content: (
+            <div className="space-y-4 text-sm">
+                <p className="text-gray-300">Forgot your module PIN or access code? Here is how to regain access.</p>
+                <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                        <h5 className="font-bold text-blue-400 mb-1 tracking-tight">Option 1: Danger Zone Reset</h5>
+                        <p className="text-xs text-gray-400">If you can still access the <span className="text-white">Settings</span> page, you can use the Master Reset tool in the <span className="text-red-500 font-bold">Danger Zone</span>. This will clear all module locks (Health, Diary, etc.) instantly.</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-orange-500/5 border border-orange-500/10">
+                        <h5 className="font-bold text-orange-400 mb-1 tracking-tight">Option 2: Clear Site Data</h5>
+                        <p className="text-xs text-gray-400">If you are locked out of Settings, you can clear your browser's local storage for this site. This resets all local PINs without deleting your encrypted data in the database.</p>
+                        <p className="text-[10px] text-gray-500 mt-2 italic">How: Browser Settings → Privacy → Site Settings → Secure Life Hub → Clear Data.</p>
+                    </div>
+                    <div className="p-4 border border-white/5 bg-black/20 rounded-xl">
+                        <h5 className="font-bold text-white text-xs uppercase mb-1">Important Note</h5>
+                        <p className="text-xs text-gray-400">Module PINs are stored ONLY on your device for maximum privacy. We cannot reset them remotely via email.</p>
                     </div>
                 </div>
             </div>

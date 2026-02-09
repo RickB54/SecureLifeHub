@@ -560,6 +560,20 @@ export default function Settings({
                 >
                   <Lock className="h-5 w-5" /> ERASE PASSWORDS
                 </button>
+
+                <button
+                  onClick={() => {
+                    if (confirm("MASTER RESET: Clear all module PIN locks? This will unlock Health, Diary, and all other sections.")) {
+                      localStorage.removeItem("hub_security_settings");
+                      window.dispatchEvent(new CustomEvent('vault-refresh'));
+                      alert("Master Reset Successful. All modules are now unlocked.");
+                      window.location.reload(); // Reload to ensure all local states update
+                    }
+                  }}
+                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-4"
+                >
+                  <Unlock className="h-5 w-5" /> RESET MODULE PINS
+                </button>
               </div>
             </div>
           )}

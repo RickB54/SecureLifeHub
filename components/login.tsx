@@ -327,15 +327,18 @@ export default function Login() {
               <div className="flex items-start gap-2">
                 <p className="flex-1">{error}</p>
               </div>
-              {(error.includes("Check") || error.includes("resent") || error.includes("expired")) && (
-                <button
-                  type="button"
-                  onClick={handleResendEmail}
-                  disabled={resendLoading}
-                  className="text-xs font-semibold underline underline-offset-4 hover:text-white transition-colors disabled:opacity-50 text-left w-fit"
-                >
-                  {resendLoading ? "Resending..." : "Didn't receive it? Resend link"}
-                </button>
+              {(error.includes("Check") || error.includes("resent") || error.includes("confirm")) && (
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={handleResendEmail}
+                    disabled={resendLoading}
+                    className="text-xs font-semibold underline underline-offset-4 hover:text-white transition-colors disabled:opacity-50 text-left w-fit"
+                  >
+                    {resendLoading ? "Resending..." : "Didn't receive it? Resend link"}
+                  </button>
+                  <p className="text-[10px] opacity-60 italic">Note: If you already confirmed your account, please try signing in with your password below.</p>
+                </div>
               )}
             </div>
           )}
