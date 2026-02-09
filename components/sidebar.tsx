@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, HelpCircle } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 
@@ -39,6 +39,15 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
       return ["type-medications", "all-items"]
     }
   })
+
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 1024)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   // Check if any section is expanded
   const isAnyExpanded = Object.values(expandedSections).some(val => val)
@@ -148,8 +157,8 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                       onClick={() => handleNavigation(id)}
                       title={item.label}
                       className={`aspect-square flex flex-col items-center justify-center rounded-2xl transition-all group relative ${isActive
-                          ? (activeItemClasses[sectionColor] || "ring-2 ring-blue-500/50 bg-blue-500/40 text-white")
-                          : (iconColorClasses[sectionColor] || "bg-blue-500/20 text-blue-400 hover:scale-105 active:scale-95")
+                        ? (activeItemClasses[sectionColor] || "ring-2 ring-blue-500/50 bg-blue-500/40 text-white")
+                        : (iconColorClasses[sectionColor] || "bg-blue-500/20 text-blue-400 hover:scale-105 active:scale-95")
                         }`}
                     >
                       {item.icon}
@@ -199,7 +208,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                   {!isActive && (
                     <button
                       onClick={(e) => togglePin(e, item.id)}
-                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-white/10 ${pinnedItems.includes(item.id) ? 'text-yellow-500' : 'text-gray-600'}`}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 transition-all rounded-lg hover:bg-white/10 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${pinnedItems.includes(item.id) ? 'text-yellow-500' : 'text-gray-600'}`}
                     >
                       <Star className={`h-3 w-3 ${pinnedItems.includes(item.id) ? 'fill-yellow-500' : ''}`} />
                     </button>
@@ -249,7 +258,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                           {!isItemActive && (
                             <button
                               onClick={(e) => togglePin(e, item.id)}
-                              className={`absolute right-4 top-1/2 -translate-y-1/2 p-1.5 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-white/10 ${isPinned ? 'text-yellow-500' : 'text-gray-700'}`}
+                              className={`absolute right-4 top-1/2 -translate-y-1/2 p-1.5 transition-all rounded-lg hover:bg-white/10 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${isPinned ? 'text-yellow-500' : 'text-gray-700'}`}
                             >
                               <Star className={`h-3 w-3 ${isPinned ? 'fill-yellow-500' : ''}`} />
                             </button>

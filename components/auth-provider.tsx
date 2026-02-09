@@ -30,28 +30,30 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const router = useRouter()
 
     useEffect(() => {
-        const setData = async () => {
-            try {
-                const { data: { session }, error } = await supabase.auth.getSession()
-                if (error) console.error("Error checking session:", error)
+        let initialized = false
 
-                setSession(session)
-                setUser(session?.user ?? null)
-            } catch (error) {
-                console.error("Unexpected error in AuthProvider:", error)
-            } finally {
-                setLoading(false)
-            }
-        }
-
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+            console.log("Auth State Change:", event)
             setSession(session)
             setUser(session?.user ?? null)
-            setLoading(false)
+
+            if (!initialized) {
+                initialized = true
+                setLoading(false)
+            }
         })
 
-        // Initialize session
-        setData()
+        // Backup check if listener doesn't fire immediately with session
+        const initSession = async () => {
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            if (!initialized) {
+                setSession(currentSession)
+                setUser(currentSession?.user ?? null)
+                setLoading(false)
+                initialized = true
+            }
+        }
+        initSession()
 
         // Auto-logout functionality
         let inactivityTimer: NodeJS.Timeout
@@ -59,7 +61,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         // Initial limit setup
         const getTimeoutDuration = () => {
             const saved = typeof window !== 'undefined' ? localStorage.getItem("auto_lock_timeout") : null
-            // If explicitly "0" or "disabled", return null (disabled)
             if (saved === "0" || saved === "disabled") return null;
             return (saved ? parseInt(saved) : 15) * 60 * 1000
         }
@@ -77,11 +78,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             }, currentLimit)
         }
 
-        // Listen for activity
         const events = ['mousedown', 'keydown', 'scroll', 'touchstart']
         const handleActivity = () => resetTimer()
 
-        // Listen for timeout settings changes
         const handleTimeoutChange = (e: CustomEvent) => {
             if (e.detail?.timeout !== undefined) {
                 if (e.detail.timeout === 0 || e.detail.timeout === "disabled") {
@@ -97,11 +96,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         events.forEach(event => window.addEventListener(event, handleActivity))
         window.addEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
-        resetTimer() // Start timer
+        resetTimer()
 
         return () => {
             listener.subscription.unsubscribe()
-            // Clear activity listeners
             events.forEach(event => window.removeEventListener(event, handleActivity))
             window.removeEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
             if (inactivityTimer) clearTimeout(inactivityTimer)

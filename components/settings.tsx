@@ -97,6 +97,8 @@ export default function Settings({
     setBiometricEnabled(localStorage.getItem('biometric_enabled') === 'true')
   }, [])
 
+  const { user } = useAuth()
+
   const handleToggleBiometric = async () => {
     if (!biometricEnabled) {
       // Enabling Biometrics
@@ -106,23 +108,31 @@ export default function Settings({
       }
 
       try {
-        // Enrolling device (Using a basic challenge/register flow)
-        // Note: Real WebAuthn implementation requires backend challenge.
-        // For now, we'll use a local 'Mock' registration that verifies device capability.
+        await new Promise(r => setTimeout(r, 300));
+
         const challenge = new Uint8Array(32);
         window.crypto.getRandomValues(challenge);
+
+        const currentDomain = typeof window !== 'undefined' ? window.location.hostname : '';
 
         const credential = await navigator.credentials.create({
           publicKey: {
             challenge,
-            rp: { name: "SecureLifeHub" },
+            rp: {
+              name: "Secure Life Hub",
+              id: currentDomain === 'localhost' ? 'localhost' : currentDomain
+            },
             user: {
-              id: new Uint8Array(16),
-              name: "user@securelifehub.com",
-              displayName: "SecureLifeHub User"
+              id: Uint8Array.from(user?.id?.substring(0, 16) || 'fallbackuserid12', c => c.charCodeAt(0)),
+              name: user?.email || "user@securelifehub.com",
+              displayName: user?.user_metadata?.full_name || "SecureLifeHub User"
             },
             pubKeyCredParams: [{ alg: -7, type: "public-key" }],
-            authenticatorSelection: { userVerification: "required" },
+            authenticatorSelection: {
+              userVerification: "required",
+              residentKey: "preferred",
+              requireResidentKey: false
+            },
             timeout: 60000
           }
         });
@@ -137,7 +147,7 @@ export default function Settings({
         }
       } catch (e) {
         console.error("Biometric enrollment failed:", e)
-        showNotification("Enrollment failed or cancelled", "error")
+        showNotification("Enrollment failed or cancelled. Note: Some browsers require HTTPS.", "error")
       }
     } else {
       // Disabling

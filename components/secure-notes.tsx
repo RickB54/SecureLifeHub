@@ -51,8 +51,15 @@ export default function SecureNotes({
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null)
     const [searchQuery, setSearchQuery] = useState("")
     const [isRecording, setIsRecording] = useState(false)
-    const [sections, setSections] = useState<string[]>(["General", "Ideas", "Personal", "Work"])
+    const [sections, setSections] = useState<string[]>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('notes_sections')
+            return saved ? JSON.parse(saved) : ["General", "Ideas", "Personal", "Work"]
+        }
+        return ["General", "Ideas", "Personal", "Work"]
+    })
     const [activeSection, setActiveSection] = useState<string>("all")
+    const [showCategoryMenu, setShowCategoryMenu] = useState(false)
     const [showGallery, setShowGallery] = useState(false)
     const [fullscreenImage, setFullscreenImage] = useState<number | null>(null)
     const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({})
@@ -161,14 +168,17 @@ export default function SecureNotes({
                 recognitionRef.current = recognition
 
                 recognition.onresult = (event: any) => {
-                    let transcript = ''
+                    let finalTranscript = ''
                     for (let i = event.resultIndex; i < event.results.length; i++) {
-                        transcript += event.results[i][0].transcript
+                        const transcript = event.results[i][0].transcript
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript
+                        }
                     }
 
-                    if (selectedNoteId) {
+                    if (finalTranscript && selectedNoteId) {
                         setDraftContent(prev => {
-                            const newContent = (prev || "") + " " + transcript
+                            const newContent = (prev ? prev.trim() : "") + " " + finalTranscript.trim()
                             queueUpdate(selectedNoteId, { content: newContent })
                             return newContent
                         })
@@ -232,10 +242,45 @@ export default function SecureNotes({
     }
 
     const handleAddSection = () => {
-        const name = prompt("Enter new section name:")
+        const name = prompt("Enter new category name:")
         if (name && !sections.includes(name)) {
-            setSections([...sections, name])
+            const newSections = [...sections, name]
+            setSections(newSections)
+            localStorage.setItem('notes_sections', JSON.stringify(newSections))
             setActiveSection(name)
+        }
+    }
+
+    const handleEditSection = (oldName: string) => {
+        const newName = prompt("Rename category:", oldName)
+        if (newName && newName !== oldName) {
+            const newSections = sections.map(s => s === oldName ? newName : s)
+            setSections(newSections)
+            localStorage.setItem('notes_sections', JSON.stringify(newSections))
+
+            // Update all notes using this section
+            notes.forEach(note => {
+                if (note.section === oldName) {
+                    handleSyncUpdate(note.id, { section: newName })
+                }
+            })
+            if (activeSection === oldName) setActiveSection(newName)
+        }
+    }
+
+    const handleDeleteSection = (name: string) => {
+        if (confirm(`Are you sure you want to delete the category "${name}"? Notes in this category will be moved to "General".`)) {
+            const newSections = sections.filter(s => s !== name)
+            setSections(newSections)
+            localStorage.setItem('notes_sections', JSON.stringify(newSections))
+
+            // Update all notes using this section
+            notes.forEach(note => {
+                if (note.section === name) {
+                    handleSyncUpdate(note.id, { section: "General" })
+                }
+            })
+            if (activeSection === name) setActiveSection("all")
         }
     }
 
@@ -392,10 +437,10 @@ export default function SecureNotes({
                     </div>
 
                     {/* Sections Horizontal Scroll */}
-                    <div className="px-2 py-3 border-b border-white/5 flex gap-2 overflow-x-auto no-scrollbar">
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                         <button
                             onClick={() => setActiveSection("all")}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeSection === "all" ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border ${activeSection === "all" ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/40' : 'bg-white/5 border-transparent text-gray-500 hover:text-gray-300'}`}
                         >
                             All
                         </button>
@@ -403,17 +448,11 @@ export default function SecureNotes({
                             <button
                                 key={section}
                                 onClick={() => setActiveSection(section)}
-                                className={`px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeSection === section ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 text-gray-500 hover:text-gray-300'}`}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all border ${activeSection === section ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-900/40' : 'bg-white/5 border-transparent text-gray-500 hover:text-gray-300'}`}
                             >
                                 {section}
                             </button>
                         ))}
-                        <button
-                            onClick={handleAddSection}
-                            className="px-2 py-1 bg-white/5 rounded-lg text-gray-500 hover:text-white transition-colors"
-                        >
-                            <PlusCircle className="h-3 w-3" />
-                        </button>
                     </div>
 
                     {/* Notes List (Hierarchical) */}
@@ -463,16 +502,72 @@ export default function SecureNotes({
 
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => {
-                                                const nextSec = sections[(sections.indexOf(currentNote.section || "General") + 1) % sections.length]
-                                                handleSyncUpdate(currentNote.id, { section: nextSec })
-                                            }}
-                                            className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-bold border border-blue-500/20"
-                                        >
-                                            <FolderPlus className="h-3 w-3" />
-                                            {currentNote.section || "General"}
-                                        </button>
+                                        <div className="relative">
+                                            <button
+                                                onClick={() => setShowCategoryMenu(!showCategoryMenu)}
+                                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg text-xs font-bold border border-blue-500/20 hover:bg-blue-500/20 transition-all"
+                                            >
+                                                <FolderPlus className="h-3 w-3" />
+                                                {currentNote.section || "General"}
+                                                <ChevronDown className={`h-3 w-3 transition-transform ${showCategoryMenu ? 'rotate-180' : ''}`} />
+                                            </button>
+
+                                            {showCategoryMenu && (
+                                                <>
+                                                    <div
+                                                        className="fixed inset-0 z-[30]"
+                                                        onClick={() => setShowCategoryMenu(false)}
+                                                    />
+                                                    <div className={`absolute top-full left-0 mt-2 w-56 rounded-xl border border-white/10 shadow-2xl z-[40] animate-in fade-in slide-in-from-top-2 overflow-hidden ${theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}`}>
+                                                        <div className="p-2 border-b border-white/5 bg-white/5">
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 px-2 py-1">Select Category</p>
+                                                        </div>
+                                                        <div className="max-h-64 overflow-y-auto custom-scrollbar p-1">
+                                                            {sections.map(section => (
+                                                                <div key={section} className="flex items-center group">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            handleSyncUpdate(currentNote.id, { section })
+                                                                            setShowCategoryMenu(false)
+                                                                        }}
+                                                                        className={`flex-1 text-left px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${currentNote.section === section ? 'bg-blue-600 text-white' : 'hover:bg-white/5 text-gray-400 hover:text-white'}`}
+                                                                    >
+                                                                        <StickyNote className="h-3 w-3 opacity-50" />
+                                                                        {section}
+                                                                    </button>
+                                                                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleEditSection(section) }}
+                                                                            className="p-1.5 hover:bg-white/10 rounded-md text-gray-500 hover:text-blue-400"
+                                                                        >
+                                                                            <Edit3 className="h-3 w-3" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); handleDeleteSection(section) }}
+                                                                            className="p-1.5 hover:bg-white/10 rounded-md text-gray-500 hover:text-red-400"
+                                                                        >
+                                                                            <Trash className="h-3 w-3" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="p-1 border-t border-white/5 bg-white/5">
+                                                            <button
+                                                                onClick={() => {
+                                                                    handleAddSection()
+                                                                    setShowCategoryMenu(false)
+                                                                }}
+                                                                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-blue-400 hover:bg-blue-500/10 transition-all"
+                                                            >
+                                                                <PlusCircle className="h-3 w-3" />
+                                                                New Category
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
                                         {currentNote.parentId && (
                                             <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1">
                                                 <ChevronLeft className="h-3 w-3" />

@@ -69,7 +69,9 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error("Biometric login failed:", err)
-      if (err.name !== 'NotAllowedError') {
+      if (err.name === 'NotAllowedError') {
+        setError("Biometric login cancelled or no passkeys found for this domain. If you recently changed domains, please re-enable biometrics in Settings.")
+      } else {
         setError("Biometric verification failed")
       }
     } finally {
@@ -81,6 +83,7 @@ export default function Login() {
   useEffect(() => {
     const handleSSO = async () => {
       // 1. Check if we ALREADY have a session. If so, just go to dashboard.
+      // Use getSession but be mindful of AuthProvider racing
       const { data: { session: existingSession } } = await supabase.auth.getSession()
       if (existingSession) {
         console.log('SSO: Active session already found, jumping to dashboard.')
@@ -165,7 +168,7 @@ export default function Login() {
 
     try {
       const trimmedEmail = email.trim().toLowerCase()
-      const trimmedPassword = password.trim()
+      const passwordToUse = password // Do NOT trim passwords as spaces can be part of valid credentials
 
       if (!trimmedEmail) {
         setError("Email is required")
@@ -173,7 +176,7 @@ export default function Login() {
         return
       }
 
-      if (!trimmedPassword) {
+      if (!passwordToUse) {
         setError("Password is required")
         setLoading(false)
         return
@@ -190,7 +193,7 @@ export default function Login() {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
           email: trimmedEmail,
-          password: trimmedPassword,
+          password: passwordToUse,
           options: {
             emailRedirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
           }
@@ -202,7 +205,7 @@ export default function Login() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email: trimmedEmail,
-          password: trimmedPassword,
+          password: passwordToUse,
         })
         if (error) throw error
         // Save email on successful login
@@ -211,7 +214,11 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error("Auth Error:", err)
-      setError(err.message)
+      let displayError = err.message
+      if (err.message === "Invalid login credentials") {
+        displayError = "Invalid email or password. Please check your credentials or ensure your account is confirmed."
+      }
+      setError(displayError)
     } finally {
       setLoading(false)
     }
