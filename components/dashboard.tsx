@@ -161,7 +161,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
       </div>
 
       {/* Biometric Enrollment Prompt (Smart Alert) */}
-      {typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') !== 'true' && (
+      {typeof window !== 'undefined' && !localStorage.getItem('biometric_id') && (
         <div className={`p-5 rounded-3xl border animate-in slide-in-from-top-4 duration-500 overflow-hidden relative group ${theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/10 border-blue-500/20'
           }`}>
           <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -180,6 +180,46 @@ const HELP_PAGES: HelpPage[] = [
                 </div>
             </div>
         )
+    },
+    {
+        id: "biometrics",
+        title: "Biometric Login",
+        icon: Smartphone,
+        content: (
+            <div className="space-y-4 text-sm leading-relaxed">
+                <p className="text-gray-300">Unlock your vault instantly using your phone or computer's built-in security.</p>
+
+                <div className="space-y-4">
+                    <div className="p-4 border border-white/5 bg-blue-500/5 rounded-xl">
+                        <h5 className="font-bold text-blue-400 mb-1">What is a Passkey?</h5>
+                        <p className="text-xs text-gray-400">A Passkey is the digital handshake between your device and this hub. It uses your Fingerprint or FaceID to unlock a secret key stored safely on your phone. No biometric data ever leaves your device.</p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h5 className="font-bold text-white uppercase text-[10px] tracking-widest">How to Enable:</h5>
+                        <ul className="space-y-2 text-xs text-gray-400">
+                            <li className="flex gap-2">
+                                <span className="text-blue-500 font-bold">01.</span>
+                                <span>Go to <span className="text-white">Settings</span> while logged in.</span>
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-blue-500 font-bold">02.</span>
+                                <span>Find <span className="text-white font-bold">Biometric Login</span> and toggle it ON.</span>
+                            </li>
+                            <li className="flex gap-2">
+                                <span className="text-blue-500 font-bold">03.</span>
+                                <span>When prompted by your OS, choose <span className="text-white">"This Device"</span> and scan your finger/face.</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div className="p-4 border border-white/5 bg-amber-500/5 rounded-xl">
+                        <h5 className="font-bold text-amber-400 mb-1 flex items-center gap-2"><Key className="h-3 w-3" /> Troubleshooting</h5>
+                        <p className="text-[10px] text-gray-400">If you move to a new website address (like netlify.app), your old passkey will stop working for security. Simply go to settings, toggle biometrics OFF and then back ON to create a fresh key.</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 ]
 
