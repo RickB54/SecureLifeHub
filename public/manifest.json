@@ -1,0 +1,21 @@
+{
+    "name": "Secure Life Hub",
+    "short_name": "Life Hub",
+    "description": "Securely manage your entire life.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "icons": [
+        {
+            "src": "/icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/securelifehub-logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

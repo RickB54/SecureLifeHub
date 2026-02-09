@@ -87,7 +87,7 @@ export default function SecureNotes({
     // Sync with vault items
     useEffect(() => {
         const noteItems = records
-            .filter((r: any) => r.type === 'note' || r.category === 'Secure Notes' || r.type === 'secure-note')
+            .filter((r: any) => r.type === 'note' || r.type === 'secure-note')
             .map((r: any) => ({
                 id: r.id,
                 title: r.title || "Untitled Note",
@@ -168,19 +168,20 @@ export default function SecureNotes({
                 recognitionRef.current = recognition
 
                 recognition.onresult = (event: any) => {
-                    let finalTranscript = ''
+                    let newText = ''
                     for (let i = event.resultIndex; i < event.results.length; i++) {
-                        const transcript = event.results[i][0].transcript
                         if (event.results[i].isFinal) {
-                            finalTranscript += transcript
+                            newText += event.results[i][0].transcript
                         }
                     }
 
-                    if (finalTranscript && selectedNoteId) {
+                    if (newText.trim() && selectedNoteId) {
+                        const finalChunk = newText.trim()
                         setDraftContent(prev => {
-                            const newContent = (prev ? prev.trim() : "") + " " + finalTranscript.trim()
-                            queueUpdate(selectedNoteId, { content: newContent })
-                            return newContent
+                            const updated = (prev ? prev.trim() : "") + " " + finalChunk
+                            // Fire update outside of this tick to avoid side effects in render/setter
+                            setTimeout(() => queueUpdate(selectedNoteId, { content: updated }), 0)
+                            return updated
                         })
                     }
                 }

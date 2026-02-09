@@ -63,7 +63,7 @@ export default function Login() {
         if (session) {
           router.push("/?page=dashboard")
         } else {
-          setError("Session expired. Please sign in with password once to re-enable biometrics.")
+          setError("Your secure session has expired. For your safety, please sign in with your Master Password to re-enable biometrics.")
           localStorage.removeItem('biometric_enabled')
         }
       }
