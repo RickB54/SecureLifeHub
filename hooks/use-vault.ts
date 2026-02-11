@@ -99,10 +99,10 @@ export function useVault() {
     }, [fetchData])
 
     // CRUD Operations
-    const addFolder = async (name: string, parentId?: string) => {
+    const addFolder = async (name: string, category?: string, parentId?: string) => {
         if (!user) return
         const cleanParentId = parentId && parentId !== "" ? parentId : null
-        console.log(`📂 Adding folder: "${name}" (Parent: ${cleanParentId || "Root"})`)
+        console.log(`📂 Adding folder: "${name}" (Category: ${category || "None"}, Parent: ${cleanParentId || "Root"})`)
 
         try {
             const { data, error } = await supabase
@@ -110,6 +110,7 @@ export function useVault() {
                 .insert({
                     user_id: user.id,
                     name,
+                    category, // Attempt to insert category
                     parent_id: cleanParentId
                 })
                 .select()
@@ -120,16 +121,35 @@ export function useVault() {
                 throw error
             }
 
-            const newFolder = { ...data, type: "folder", path: data.name }
+            const newFolder = { ...data, type: "folder", category: data.category, path: data.name }
             setFolders(prev => [...prev, newFolder as any])
             toast.success("Folder created")
             await fetchData() // Refresh to get correct paths/order
             return newFolder
         } catch (error: any) {
             console.error("Error adding folder:", error)
+            // If category column doesn't exist, retry without it
+            if (error.code === '42703') { 
+                console.warn("Category column missing in folders table. Retrying without it.")
+                return addFolderSimple(name, parentId)
+            }
             toast.error(error.message || "Failed to create folder")
             return null
         }
+    }
+
+    const addFolderSimple = async (name: string, parentId?: string) => {
+        if (!user) return
+        const cleanParentId = parentId && parentId !== "" ? parentId : null
+        const { data, error } = await supabase
+            .from("folders")
+            .insert({ user_id: user.id, name, parent_id: cleanParentId })
+            .select().single()
+        if (error) throw error
+        const newFolder = { ...data, type: "folder", path: data.name }
+        setFolders(prev => [...prev, newFolder as any])
+        await fetchData()
+        return newFolder
     }
 
     const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }, options?: { skipRefresh?: boolean }) => {

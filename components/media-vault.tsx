@@ -8,12 +8,13 @@ interface MediaVaultProps {
     records: any[]
     setRecords: (records: any[]) => void
     addItem: (item: any) => Promise<any>
-    addFolder: (name: string) => Promise<any>
+    addFolder: (name: string, category?: string) => Promise<any>
     deleteItem: (id: string, type?: string) => Promise<any>
+    refresh: () => void
     theme: string
 }
 
-export default function MediaVault({ records = [], addItem, addFolder, deleteItem, theme }: MediaVaultProps) {
+export default function MediaVault({ records = [], addItem, addFolder, deleteItem, refresh, theme }: MediaVaultProps) {
     // State
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [searchTerm, setSearchTerm] = useState("")
@@ -26,24 +27,46 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
 
     // Derived Data
     const allMedia = records.filter(r => r.category === "Secure Media" || r.type === "media")
-    const folders = records.filter(r => r.category === "Secure Media" && r.type === "folder")
+    const mediaFolders = records.filter(r => (r.category === "Secure Media" || !r.category) && r.type === "folder")
 
     // Filter Items based on search and folder
-    const filteredItems = allMedia.filter(item => {
-        if (item.type === "folder") return false
+    const filteredContent = records.filter(item => {
+        // Only include Secure Media and Folders
+        if (item.category !== "Secure Media" && item.type !== "folder") return false
 
-        // Type Filter
-        if (mediaTypeFilter === 'video' && item.item_metadata?.type !== 'video') return false
+        // Type Filter (for media items)
+        if (item.type !== "folder") {
+            if (mediaTypeFilter === 'video' && item.item_metadata?.type !== 'video') return false
+        } else {
+            // Folders only show in 'all' view or as roots
+            if (mediaTypeFilter === 'video') return false
+        }
 
         // Search Filter
-        const matchesSearch = item.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesSearch = item.title?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                             item.name?.toLowerCase().includes(searchTerm.toLowerCase())
 
-        // Folder Filter: check both root folder_id and metadata folderId
+        // Folder Filter
         const itemFolderId = item.folder_id || item.item_metadata?.folderId
-        const inFolder = selectedFolder ? itemFolderId === selectedFolder : true
+        
+        // Logic:
+        // 1. If we are in "All Media" (selectedFolder == null):
+        //    Show everything EXCEPT folders (if they are at root?) 
+        //    Actually, user said: "i should see the pics inside this gallery and thier albums also".
+        //    So we show Root Items AND Folders.
+        // 2. If an album is selected:
+        //    Show only items IN that album.
+        
+        const inFolder = selectedFolder 
+            ? itemFolderId === selectedFolder 
+            : (item.type === "folder" || !itemFolderId)
 
         return matchesSearch && inFolder
     })
+
+    // Separate folders and media for indexing if needed, but for the grid we can mix
+    const displayItems = filteredContent.filter(i => i.type !== 'folder')
+    const displayFolders = filteredContent.filter(i => i.type === 'folder')
 
     // Actions
     const handleDelete = async (id: string) => {
@@ -55,67 +78,66 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
     const activeClass = theme === 'light' ? 'bg-pink-100 text-pink-600' : 'bg-pink-500/20 text-pink-400'
 
     return (
-        <div className={`h-full flex ${theme === 'light' ? 'bg-gray-50' : 'bg-[#121212]'} text-white overflow-hidden`}>
+        <div className={`h-full flex flex-col lg:flex-row ${theme === 'light' ? 'bg-gray-50' : 'bg-[#121212]'} text-white overflow-hidden`}>
 
-            {/* Sidebar (Folders) */}
-            <div className={`w-64 border-r flex flex-col ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
-                <div className="p-6">
-                    <h2 className={`text-lg font-bold mb-6 flex items-center gap-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+            {/* Sidebar (Folders) - Responsive: Horizontal on mobile, vertical on desktop */}
+            <div className={`w-full lg:w-64 border-b lg:border-r flex flex-col ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
+                <div className="p-4 lg:p-6 flex flex-col lg:block">
+                    <h2 className={`text-lg font-bold mb-4 lg:mb-6 flex items-center gap-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                         <Image className="h-5 w-5 text-pink-500" /> Library
                     </h2>
 
-                    <div className="space-y-1">
+                    <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 custom-scrollbar no-scrollbar">
                         <button
                             onClick={() => { setSelectedFolder(null); setMediaTypeFilter('all'); }}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder && mediaTypeFilter === 'all' ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            className={`flex-shrink-0 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder && mediaTypeFilter === 'all' ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
                         >
-                            <span className="flex items-center gap-2"><LayoutGrid className="h-4 w-4" /> All Media</span>
-                            <span className="text-xs opacity-50">{allMedia.filter(i => i.type !== 'folder').length}</span>
+                            <span className="flex items-center gap-2 whitespace-nowrap"><LayoutGrid className="h-4 w-4" /> All Media</span>
+                            <span className="text-xs opacity-50 ml-3 lg:ml-0">{allMedia.filter(i => i.type !== 'folder').length}</span>
                         </button>
                         <button
                             onClick={() => { setSelectedFolder(null); setMediaTypeFilter('video'); }}
-                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder && mediaTypeFilter === 'video' ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                            className={`flex-shrink-0 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${!selectedFolder && mediaTypeFilter === 'video' ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
                         >
-                            <span className="flex items-center gap-2"><Video className="h-4 w-4" /> Videos</span>
-                            <span className="text-xs opacity-50">{allMedia.filter(i => i.item_metadata?.type === 'video').length}</span>
+                            <span className="flex items-center gap-2 whitespace-nowrap"><Video className="h-4 w-4" /> Videos</span>
+                            <span className="text-xs opacity-50 ml-3 lg:ml-0">{allMedia.filter(i => i.item_metadata?.type === 'video').length}</span>
                         </button>
-                    </div>
 
-                    <div className="mt-8">
-                        <div className="flex items-center justify-between mb-2 px-3">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Albums</span>
-                            <button
-                                onClick={() => setIsAlbumModalOpen(true)}
-                                className="text-gray-400 hover:text-white transition-colors"
-                            >
-                                <Plus className="h-3 w-3" />
-                            </button>
-                        </div>
-                        <div className="space-y-1">
-                            {folders.map(folder => (
+                        <div className="w-px h-6 bg-white/10 mx-2 lg:hidden self-center" />
+
+                        <div className="flex lg:flex-col gap-2">
+                             {mediaFolders.map(folder => (
                                 <div key={folder.id} className="group flex items-center gap-1 pr-2">
                                     <button
                                         onClick={() => setSelectedFolder(folder.id)}
-                                        className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${selectedFolder === folder.id ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
+                                        className={`flex-shrink-0 flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${selectedFolder === folder.id ? activeClass : 'text-gray-500 hover:bg-black/5 dark:hover:bg-white/5'}`}
                                     >
-                                        <span className="flex items-center gap-2"><Folder className="h-4 w-4" /> {folder.title || folder.name}</span>
+                                        <span className="flex items-center gap-2 whitespace-nowrap"><Folder className="h-4 w-4" /> {folder.title || folder.name}</span>
                                     </button>
-                                    <button
+                                     <button
                                         onClick={async (e) => {
                                             e.stopPropagation()
                                             if (confirm(`Delete album "${folder.title || folder.name}"? This will not delete the media inside.`)) {
                                                 await deleteItem(folder.id, "folder")
+                                                refresh()
                                                 if (selectedFolder === folder.id) setSelectedFolder(null)
                                             }
                                         }}
-                                        className="p-1.5 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-500 transition-all"
+                                        className="p-1.5 opacity-0 lg:group-hover:opacity-100 text-gray-500 hover:text-red-500 transition-all hidden lg:block"
                                     >
                                         <Trash2 className="h-3 w-3" />
                                     </button>
                                 </div>
                             ))}
-                            {folders.length === 0 && <p className="px-3 text-xs text-gray-600 italic">No albums yet</p>}
                         </div>
+                        
+                        <button
+                            onClick={() => setIsAlbumModalOpen(true)}
+                            className="flex-shrink-0 p-2 text-pink-500 hover:bg-pink-500/10 rounded-lg transition-colors"
+                            title="New Album"
+                        >
+                             <Plus className="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -124,52 +146,72 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
             <div className="flex-1 flex flex-col overflow-hidden">
 
                 {/* Header / Toolbar */}
-                <div className={`p-6 border-b flex items-center justify-between ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
-                    <div>
-                        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-rose-500">
-                            {selectedFolder ? folders.find(f => f.id === selectedFolder)?.title : "All Media"}
+                <div className={`p-4 md:p-6 border-b flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
+                    <div className="w-full md:w-auto">
+                        <h1 className="text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-rose-500">
+                            {selectedFolder ? mediaFolders.find(f => f.id === selectedFolder)?.name || mediaFolders.find(f => f.id === selectedFolder)?.title : "All Media"}
                         </h1>
-                        <p className="text-xs text-gray-500 mt-1">{filteredItems.length} items • Encrypted</p>
+                        <p className="text-[10px] md:text-xs text-gray-500 mt-1">{displayItems.length} items • {displayFolders.length} albums • Encrypted</p>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
+                    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 w-full md:w-auto">
+                        <div className="relative w-full md:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <input
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Search..."
-                                className={`pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 w-64 ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-black/20 text-white'}`}
+                                className={`pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50 w-full ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-black/20 text-white'}`}
                             />
                         </div>
 
-                        <div className={`flex items-center p-1 rounded-lg border ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
-                            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? (theme === 'light' ? 'bg-gray-200 text-gray-900' : 'bg-white/10 text-white') : 'text-gray-500'}`}><Grid className="h-4 w-4" /></button>
-                            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? (theme === 'light' ? 'bg-gray-200 text-gray-900' : 'bg-white/10 text-white') : 'text-gray-500'}`}><List className="h-4 w-4" /></button>
-                        </div>
+                        <div className="flex items-center gap-2">
+                             <div className={`flex flex-1 items-center p-1 rounded-lg border ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+                                <button onClick={() => setViewMode('grid')} className={`flex-1 md:flex-none p-1.5 rounded flex justify-center ${viewMode === 'grid' ? (theme === 'light' ? 'bg-gray-200 text-gray-900' : 'bg-white/10 text-white') : 'text-gray-500'}`}><Grid className="h-4 w-4" /></button>
+                                <button onClick={() => setViewMode('list')} className={`flex-1 md:flex-none p-1.5 rounded flex justify-center ${viewMode === 'list' ? (theme === 'light' ? 'bg-gray-200 text-gray-900' : 'bg-white/10 text-white') : 'text-gray-500'}`}><List className="h-4 w-4" /></button>
+                            </div>
 
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="flex items-center px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-medium shadow-lg shadow-pink-500/20 transition-all hover:scale-105"
-                        >
-                            <Plus className="h-4 w-4 mr-2" /> Upload
-                        </button>
+                            <button
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="flex-1 md:flex-none flex items-center justify-center px-4 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-medium shadow-lg shadow-pink-500/20 transition-all hover:scale-105"
+                            >
+                                <Plus className="h-4 w-4 mr-2" /> Upload
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Content Grid/List */}
                 <div className="flex-1 overflow-y-auto p-6">
-                    {filteredItems.length === 0 ? (
+                    {filteredContent.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center opacity-40">
                             <Image className="h-16 w-16 mb-4 text-gray-500" />
                             <p className="text-lg">No media found</p>
                         </div>
                     ) : (
                         <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" : "space-y-2"}>
-                            {filteredItems.map((item, idx) => (
+                            {/* Render Folders First */}
+                            {displayFolders.map(folder => (
+                                <div
+                                    key={folder.id}
+                                    onClick={() => setSelectedFolder(folder.id)}
+                                    className={`group relative cursor-pointer overflow-hidden aspect-square rounded-2xl border flex flex-col items-center justify-center gap-3 transition-all ${theme === 'light' ? 'bg-white border-gray-200 hover:shadow-lg' : 'bg-white/5 border-white/10 hover:border-pink-500/50'}`}
+                                >
+                                    <div className="p-4 bg-pink-500/20 rounded-2xl text-pink-500 group-hover:scale-110 transition-transform">
+                                        <Folder className="h-10 w-10 fill-pink-500/20" />
+                                    </div>
+                                    <div className="text-center px-4">
+                                        <p className={`text-sm font-bold truncate ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>{folder.name || folder.title}</p>
+                                        <p className="text-[10px] text-gray-500">Album</p>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {/* Render Media Items */}
+                            {displayItems.map((item, idx) => (
                                 <div
                                     key={item.id}
-                                    onClick={() => setLightboxIndex(idx)}
+                                    onClick={() => setLightboxIndex(displayItems.indexOf(item))}
                                     className={`group relative cursor-pointer overflow-hidden ${viewMode === 'grid'
                                         ? `aspect-square rounded-xl border ${theme === 'light' ? 'bg-gray-100 border-gray-200 hover:shadow-lg' : 'bg-gray-800 border-white/10 hover:border-pink-500/50'}`
                                         : `flex items-center p-3 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-white/5 border-white/10'}`
@@ -217,11 +259,12 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
             {/* Lightbox */}
             {lightboxIndex !== null && (
                 <Lightbox
-                    items={filteredItems}
+                    items={displayItems}
                     currentIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
                     onNext={() => setLightboxIndex((prev: any) => (prev + 1) % filteredItems.length)}
                     onPrev={() => setLightboxIndex((prev: any) => (prev - 1 + filteredItems.length) % filteredItems.length)}
+                    onSelect={(index: number) => setLightboxIndex(index)}
                     onDelete={handleDelete}
                 />
             )}
@@ -243,62 +286,72 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
                             e.preventDefault()
                             const fd = new FormData(e.currentTarget)
                             const fileInput = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement
-                            const file = fileInput?.files?.[0]
+                            const files = Array.from(fileInput?.files || [])
 
-                            if (!file) return alert("Please select a file")
+                            if (files.length === 0) return alert("Please select a file")
 
-                            // Convert to base64 for "vault storage"
-                            const reader = new FileReader()
-                            reader.onloadend = async () => {
-                                let result = reader.result as string;
+                            const uploadPromises = files.map(file => {
+                                return new Promise<void>((resolve, reject) => {
+                                    const reader = new FileReader()
+                                    reader.onloadend = async () => {
+                                        let result = reader.result as string;
 
-                                // Compress if it's an image
-                                if (file.type.startsWith('image/')) {
-                                    result = await new Promise((resolve) => {
-                                        const img = new Image();
-                                        img.src = result;
-                                        img.onload = () => {
-                                            const canvas = document.createElement('canvas');
-                                            const MAX_WIDTH = 1200;
-                                            let width = img.width;
-                                            let height = img.height;
-
-                                            if (width > MAX_WIDTH) {
-                                                height = (MAX_WIDTH / width) * height;
-                                                width = MAX_WIDTH;
-                                            }
-                                            canvas.width = width;
-                                            canvas.height = height;
-                                            const ctx = canvas.getContext('2d');
-                                            ctx?.drawImage(img, 0, 0, width, height);
-                                            resolve(canvas.toDataURL('image/jpeg', 0.7));
-                                        };
-                                    });
-                                }
-
-                                try {
-                                    await addItem({
-                                        title: fd.get("title") as string,
-                                        type: "note", // Use 'note' for database compatibility
-                                        category: "Secure Media",
-                                        folder_id: selectedFolder || null, // Proper field for useVault
-                                        item_metadata: {
-                                            type: file.type.startsWith('video') ? "video" : "image",
-                                            url: result,
-                                            notes: fd.get("notes"),
-                                            folderId: selectedFolder, // Keep for legacy filter support
-                                            fileName: file.name,
-                                            fileSize: file.size
+                                        if (file.type.startsWith('image/')) {
+                                            result = await new Promise((resolve) => {
+                                                const img = new (window as any).Image();
+                                                img.src = result;
+                                                img.onload = () => {
+                                                    const canvas = document.createElement('canvas');
+                                                    const MAX_WIDTH = 1200;
+                                                    let width = img.width;
+                                                    let height = img.height;
+                                                    if (width > MAX_WIDTH) {
+                                                        height = (MAX_WIDTH / width) * height;
+                                                        width = MAX_WIDTH;
+                                                    }
+                                                    canvas.width = width;
+                                                    canvas.height = height;
+                                                    const ctx = canvas.getContext('2d');
+                                                    ctx?.drawImage(img, 0, 0, width, height);
+                                                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                                                };
+                                            });
                                         }
-                                    })
-                                    setIsAddModalOpen(false)
-                                } catch (err) {
-                                    console.error("Upload error:", err)
-                                    alert("Encryption failed. The file might be too large or the connection was lost.")
-                                }
+
+                                        try {
+                                            await addItem({
+                                                title: files.length === 1 ? (fd.get("title") as string) : file.name,
+                                                type: "note",
+                                                category: "Secure Media",
+                                                folder_id: selectedFolder || null,
+                                                item_metadata: {
+                                                    type: file.type.startsWith('video') ? "video" : "image",
+                                                    url: result,
+                                                    notes: fd.get("notes"),
+                                                    folderId: selectedFolder,
+                                                    fileName: file.name,
+                                                    fileSize: file.size
+                                                }
+                                            })
+                                            resolve()
+                                        } catch (err) {
+                                            reject(err)
+                                        }
+                                    }
+                                    reader.readAsDataURL(file)
+                                })
+                            })
+
+                            try {
+                                await Promise.all(uploadPromises)
+                                refresh()
+                                setIsAddModalOpen(false)
+                            } catch (err) {
+                                console.error("Upload error:", err)
+                                alert("Encryption failed. One or more files might be too large.")
                             }
-                            reader.readAsDataURL(file)
-                        }} className="space-y-6">
+                        }}
+ className="space-y-6">
                             <div className="space-y-2">
                                 <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Media Title</label>
                                 <input name="title" required placeholder="e.g. Private Document Scan" className={`w-full rounded-2xl px-6 py-4 font-bold text-lg outline-none focus:ring-2 focus:ring-pink-500/50 transition-all ${theme === 'light' ? 'bg-gray-100 text-gray-900 border-gray-200' : 'bg-black/40 border-white/10 text-white border'}`} />
@@ -307,11 +360,11 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
                             <div className="space-y-2">
                                 <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Photo / Video File</label>
                                 <label className={`border-2 border-dashed rounded-[2rem] p-10 text-center transition-all cursor-pointer block relative group ${theme === 'light' ? 'border-gray-300 hover:border-pink-500 hover:bg-pink-50' : 'border-white/10 hover:border-pink-500/50 hover:bg-pink-500/5'}`}>
-                                    <input type="file" required accept="image/*,video/*" className="hidden" onChange={(e) => {
-                                        const file = e.target.files?.[0]
-                                        if (file) {
+                                    <input type="file" multiple required accept="image/*,video/*" className="hidden" onChange={(e) => {
+                                        const files = e.target.files
+                                        if (files && files.length > 0) {
                                             const label = e.target.parentElement?.querySelector('.file-label')
-                                            if (label) label.textContent = file.name
+                                            if (label) label.textContent = files.length === 1 ? files[0].name : `${files.length} files selected`
                                         }
                                     }} />
                                     <div className="relative z-10">
@@ -365,7 +418,8 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
                                 <button
                                     onClick={async () => {
                                         if (!newAlbumName.trim()) return
-                                        await addFolder(newAlbumName)
+                                        await addFolder(newAlbumName, "Secure Media")
+                                        refresh() // Call refresh
                                         setNewAlbumName("")
                                         setIsAlbumModalOpen(false)
                                     }}

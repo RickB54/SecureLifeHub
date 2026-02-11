@@ -1007,15 +1007,15 @@ ${selectedMed ? `
     return (
         <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50' : 'bg-[#121212]'} text-white overflow-y-auto`}>
             {/* Header with AI Button */}
-            <div className="p-8 pb-4">
-                <div className="flex justify-between items-start mb-6">
+            <div className="p-4 md:p-8 pb-4">
+                <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold mb-2 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                            <Pill className="h-8 w-8 text-purple-400" /> Medications & Reminders
+                        <h1 className="text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+                            <Pill className="h-6 md:h-8 w-6 md:w-8 text-purple-400" /> Medications & Reminders
                         </h1>
-                        <p className="text-gray-400">Track medications, set reminders, and maintain your health</p>
+                        <p className="text-sm md:text-base text-gray-400">Track medications, set reminders, and maintain your health</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
                         <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 mr-2">
                             <button
                                 onClick={handlePrintAll}
@@ -1034,21 +1034,21 @@ ${selectedMed ? `
                         </div>
                         <button
                             onClick={() => setShowMedSummary(true)}
-                            className="bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 text-white px-4 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center gap-2"
+                            className="flex-1 md:flex-none bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 text-white px-3 md:px-4 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center justify-center gap-2 text-xs md:text-base"
                         >
-                            <FileText className="h-5 w-5" /> Med Summary
+                            <FileText className="h-4 md:h-5 w-4 md:w-5" /> Med Summary
                         </button>
                         <button
                             onClick={() => setShowQuickAI(!showQuickAI)}
-                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-4 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center gap-2"
+                            className="flex-1 md:flex-none bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-3 md:px-4 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center justify-center gap-2 text-xs md:text-base"
                         >
-                            <Sparkles className="h-5 w-5" /> AI Assistant
+                            <Sparkles className="h-4 md:h-5 w-4 md:w-5" /> AI Assistant
                         </button>
                         <button
                             onClick={() => setShowAddModal(true)}
-                            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-6 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center gap-2"
+                            className="flex-1 md:flex-none bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-3 md:px-6 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center justify-center gap-2 text-xs md:text-base"
                         >
-                            <Plus className="h-5 w-5" /> Add Med
+                            <Plus className="h-4 md:h-5 w-4 md:w-5" /> Add Med
                         </button>
                     </div>
                 </div>
@@ -1076,22 +1076,22 @@ ${selectedMed ? `
                 )}
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30">
-                        <div className="text-2xl font-bold text-purple-400">{medRecords.length}</div>
-                        <div className="text-xs text-gray-400">Total Meds</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30">
+                        <div className="text-xl md:text-2xl font-bold text-purple-400">{medRecords.length}</div>
+                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Total Meds</div>
                     </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-pink-500/20 to-pink-600/20 border border-pink-500/30">
-                        <div className="text-2xl font-bold text-pink-400">{upcomingReminders.length}</div>
-                        <div className="text-xs text-gray-400">Due Today</div>
+                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-pink-500/20 to-pink-600/20 border border-pink-500/30">
+                        <div className="text-xl md:text-2xl font-bold text-pink-400">{upcomingReminders.length}</div>
+                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Due Today</div>
                     </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30">
-                        <div className="text-2xl font-bold text-blue-400">{medRecords.filter(m => (m.item_metadata?.quantity || 0) < 10).length}</div>
-                        <div className="text-xs text-gray-400">Low Stock</div>
+                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30">
+                        <div className="text-xl md:text-2xl font-bold text-blue-400">{medRecords.filter(m => (m.item_metadata?.quantity || 0) < 10).length}</div>
+                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Low Stock</div>
                     </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30">
-                        <div className="text-2xl font-bold text-green-400">{medRecords.reduce((sum, m) => sum + (m.item_metadata?.takenLog?.length || 0), 0)}</div>
-                        <div className="text-xs text-gray-400">Doses Taken</div>
+                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30">
+                        <div className="text-xl md:text-2xl font-bold text-green-400">{medRecords.reduce((sum, m) => sum + (m.item_metadata?.takenLog?.length || 0), 0)}</div>
+                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Doses Taken</div>
                     </div>
                 </div>
 
@@ -1163,28 +1163,28 @@ ${selectedMed ? `
                 </div>
 
                 {/* Search and Views */}
-                <div className="flex gap-4 items-center mb-4">
-                    <div className="flex-1 relative">
+                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
+                    <div className="flex-1 w-full md:w-auto relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                         <input
                             type="text"
                             placeholder="Search medications..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full pl-10 pr-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
                         />
                     </div>
-                    <div className="flex gap-2">
-                        <button onClick={() => setShowPillLibrary(true)} className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-sm font-medium flex items-center gap-2">
+                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                        <button onClick={() => setShowPillLibrary(true)} className="flex-1 md:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2">
                             <Package className="h-4 w-4" /> Pill Library
                         </button>
-                        <button onClick={() => setShowMockDrugs(true)} className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl text-sm font-medium flex items-center gap-2">
+                        <button onClick={() => setShowMockDrugs(true)} className="flex-1 md:flex-none px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2">
                             <Activity className="h-4 w-4" /> Import Rx
                         </button>
                     </div>
-                    <div className="flex gap-2 bg-[#2a2a2a] rounded-xl p-1">
-                        <button onClick={() => setViewMode("list")} className={`px-4 py-2 rounded-lg transition-all ${viewMode === "list" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>List</button>
-                        <button onClick={() => setViewMode("timeline")} className={`px-4 py-2 rounded-lg transition-all ${viewMode === "timeline" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>Timeline</button>
+                    <div className="flex gap-2 bg-[#2a2a2a] rounded-xl p-1 w-full md:w-auto">
+                        <button onClick={() => setViewMode("list")} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition-all ${viewMode === "list" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>List</button>
+                        <button onClick={() => setViewMode("timeline")} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition-all ${viewMode === "timeline" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>Timeline</button>
                     </div>
                 </div>
 

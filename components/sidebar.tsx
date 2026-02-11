@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, HelpCircle } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
+import DeleteConfirmationModal from "./delete-confirmation-modal"
+import { toast } from "sonner"
 
 interface SidebarProps {
   activePage: string
@@ -41,6 +43,10 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   })
 
   const [isMobile, setIsMobile] = useState(false)
+  const [pendingUnpin, setPendingUnpin] = useState<string | null>(null)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const isLongPressActive = useRef(false)
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024)
@@ -59,13 +65,37 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
     })
   }
 
-  const togglePin = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation()
+  const togglePin = (e: React.MouseEvent | null, id: string) => {
+    if (e) e.stopPropagation()
     const newPins = pinnedItems.includes(id)
-      ? pinnedItems.filter(p => p !== id)
+      ? pinnedItems.filter((p: string) => p !== id)
       : [...pinnedItems, id]
     setPinnedItems(newPins)
     localStorage.setItem("hub_pinned_shortcuts", JSON.stringify(newPins))
+  }
+
+  const startLongPress = (id: string) => {
+    isLongPressActive.current = false
+    longPressTimer.current = setTimeout(() => {
+      isLongPressActive.current = true
+      setPendingUnpin(id)
+      setShowConfirm(true)
+      if (window.navigator.vibrate) window.navigator.vibrate(50)
+    }, 2000)
+  }
+
+  const endLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleShortcutClick = (id: string) => {
+    if (!isLongPressActive.current) {
+      handleNavigation(id)
+    }
+    isLongPressActive.current = false
   }
 
   const toggleAll = () => {
@@ -101,20 +131,20 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
         className={`fixed inset-y-0 left-0 w-64 bg-[#1a1a1a] transition-transform duration-300 ease-in-out z-30 ${isOpen ? "translate-x-0" : "-translate-x-full"
           } h-full border-r border-gray-800 pt-16 shadow-2xl overflow-hidden flex flex-col`}
       >
-        <div className="sticky top-0 bg-[#1a1a1a]/95 backdrop-blur-md z-20 px-6 py-4 border-b border-gray-800/50 flex justify-between items-center">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Navigation</span>
-          <button
-            onClick={toggleAll}
-            className={`p-1 rounded-lg transition-all ${theme === "light" ? "text-gray-800 hover:bg-black/5" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}
-          >
-            {isAnyExpanded ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
-          </button>
-        </div>
+        <div className="sticky top-0 bg-[#1a1a1a] z-20">
+          <div className="px-6 py-4 border-b border-gray-800/50 flex justify-between items-center bg-[#1a1a1a]/95 backdrop-blur-md">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Navigation</span>
+            <button
+              onClick={toggleAll}
+              className={`p-1 rounded-lg transition-all ${theme === "light" ? "text-gray-800 hover:bg-black/5" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}
+            >
+              {isAnyExpanded ? <ChevronsUp className="h-4 w-4" /> : <ChevronsDown className="h-4 w-4" />}
+            </button>
+          </div>
 
-        <nav className="p-3 overflow-y-auto flex-1 custom-scrollbar space-y-1">
-          {/* Quick Access Section */}
+          {/* Quick Access Section (Sticky) */}
           {pinnedItems.length > 0 && (
-            <div className="mb-6 px-2">
+            <div className="px-5 py-4 border-b border-gray-800/50 bg-[#1a1a1a]/95 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-3 px-1">
                 <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80">Quick Access</span>
@@ -144,7 +174,6 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                   const activeItemClasses: Record<string, string> = {
                     blue: "ring-2 ring-blue-500/50 bg-blue-500/40 text-white",
                     purple: "ring-2 ring-purple-500/50 bg-purple-500/40 text-white",
-                    // ... same for others, using default for brevity if needed
                     rose: "ring-2 ring-rose-500/50 bg-rose-500/40 text-white",
                     amber: "ring-2 ring-amber-500/50 bg-amber-500/40 text-white",
                   }
@@ -152,25 +181,29 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                   const isActive = activePage === id
 
                   return (
-                    <button
-                      key={`pin-${id}`}
-                      onClick={() => handleNavigation(id)}
-                      title={item.label}
-                      className={`aspect-square flex flex-col items-center justify-center rounded-2xl transition-all group relative ${isActive
-                        ? (activeItemClasses[sectionColor] || "ring-2 ring-blue-500/50 bg-blue-500/40 text-white")
-                        : (iconColorClasses[sectionColor] || "bg-blue-500/20 text-blue-400 hover:scale-105 active:scale-95")
-                        }`}
-                    >
-                      {item.icon}
-                      <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => togglePin(e, id)}>
-                        <div className="bg-red-500 rounded-full p-0.5"><Trash className="h-2 w-2 text-white" /></div>
-                      </div>
-                    </button>
+                    <div key={`pin-${id}`} className="relative group">
+                      <button
+                        onPointerDown={() => startLongPress(id)}
+                        onPointerUp={endLongPress}
+                        onPointerLeave={endLongPress}
+                        onClick={() => handleShortcutClick(id)}
+                        title={item.label}
+                        className={`aspect-square w-full flex flex-col items-center justify-center rounded-2xl transition-all relative ${isActive
+                          ? (activeItemClasses[sectionColor] || "ring-2 ring-blue-500/50 bg-blue-500/40 text-white")
+                          : (iconColorClasses[sectionColor] || "bg-blue-500/20 text-blue-400 hover:scale-105 active:scale-95")
+                          }`}
+                      >
+                        {item.icon}
+                      </button>
+                    </div>
                   )
                 })}
               </div>
             </div>
           )}
+        </div>
+
+        <nav className="p-3 overflow-y-auto flex-1 custom-scrollbar space-y-1">
 
           {sidebarSections.map((section) => {
             const isTopLevel = (section as any).isTopLevel === true
@@ -208,9 +241,10 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                   {!isActive && (
                     <button
                       onClick={(e) => togglePin(e, item.id)}
-                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 transition-all rounded-lg hover:bg-white/10 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${pinnedItems.includes(item.id) ? 'text-yellow-500' : 'text-gray-600'}`}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-3 transition-all rounded-xl hover:bg-white/10 z-[40] ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${pinnedItems.includes(item.id) ? 'text-yellow-500' : 'text-gray-500 hover:text-gray-300'}`}
+                      aria-label={pinnedItems.includes(item.id) ? "Unpin from shortcuts" : "Pin to shortcuts"}
                     >
-                      <Star className={`h-3 w-3 ${pinnedItems.includes(item.id) ? 'fill-yellow-500' : ''}`} />
+                      <Star className={`h-6 w-6 ${pinnedItems.includes(item.id) ? 'fill-yellow-500' : ''}`} />
                     </button>
                   )}
                 </div>
@@ -258,9 +292,10 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                           {!isItemActive && (
                             <button
                               onClick={(e) => togglePin(e, item.id)}
-                              className={`absolute right-4 top-1/2 -translate-y-1/2 p-1.5 transition-all rounded-lg hover:bg-white/10 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${isPinned ? 'text-yellow-500' : 'text-gray-700'}`}
+                              className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 transition-all rounded-xl hover:bg-white/10 z-[40] ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ${isPinned ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
+                              aria-label={isPinned ? "Unpin shortcut" : "Pin shortcut"}
                             >
-                              <Star className={`h-3 w-3 ${isPinned ? 'fill-yellow-500' : ''}`} />
+                              <Star className={`h-6 w-6 ${isPinned ? 'fill-yellow-500' : ''}`} />
                             </button>
                           )}
                         </li>
@@ -283,6 +318,23 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
           </div>
         </nav>
       </aside>
+
+      {showConfirm && pendingUnpin && (
+        <DeleteConfirmationModal
+          onClose={() => {
+            setShowConfirm(false)
+            setPendingUnpin(null)
+          }}
+          onConfirm={() => {
+            togglePin(null, pendingUnpin)
+            setShowConfirm(false)
+            setPendingUnpin(null)
+            toast.success("Shortcut removed")
+          }}
+          itemName={`the '${findItemById(pendingUnpin)?.item.label}' shortcut`}
+          theme={theme}
+        />
+      )}
     </>
   )
 }

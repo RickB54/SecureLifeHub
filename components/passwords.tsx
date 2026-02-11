@@ -26,6 +26,12 @@ import {
   ChevronsUp,
   ChevronsDown,
 } from "lucide-react"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
 import MoveToFolderModal from "./modals/move-to-folder-modal"
@@ -1749,8 +1755,20 @@ export default function Passwords({
         </div>
       )}
 
-      <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg p-4 sticky top-0 z-10 shadow-md`}>
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
+      <Accordion type="single" collapsible className="w-full">
+        <AccordionItem value="filters" className="border-none">
+          <AccordionTrigger className={`flex md:hidden items-center justify-between ${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg px-4 py-3 hover:no-underline shadow-sm mb-2`}>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-blue-400" />
+              <span className="text-sm font-semibold">Search & Filters</span>
+              {(searchQuery || categoryFilter !== "all" || timeFilter !== "all" || favoriteFilter || archivedFilter) && (
+                <span className="flex h-2 w-2 rounded-full bg-blue-500" />
+              )}
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="md:block md:p-0 data-[state=open]:overflow-visible transition-none">
+            <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg p-4 sticky top-0 md:relative z-10 shadow-md`}>
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
           <div className="relative flex-1">
             <Search
               className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}
@@ -1993,6 +2011,9 @@ export default function Passwords({
           </div>
         </div>
       </div>
+    </AccordionContent>
+  </AccordionItem>
+</Accordion>
 
       <div className="flex flex-col md:flex-row gap-4 items-start">
         {viewMode !== "folder" && (

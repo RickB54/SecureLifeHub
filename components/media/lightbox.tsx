@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, Download, Trash2, Info } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, Download, Trash2, Info, Video } from "lucide-react"
 
 interface LightboxProps {
     items: any[]
@@ -9,10 +9,11 @@ interface LightboxProps {
     onClose: () => void
     onNext: () => void
     onPrev: () => void
+    onSelect: (index: number) => void
     onDelete?: (id: string) => void
 }
 
-export default function Lightbox({ items, currentIndex, onClose, onNext, onPrev, onDelete }: LightboxProps) {
+export default function Lightbox({ items, currentIndex, onClose, onNext, onPrev, onSelect, onDelete }: LightboxProps) {
     const currentItem = items[currentIndex]
     const [showInfo, setShowInfo] = useState(false)
 
@@ -77,7 +78,7 @@ export default function Lightbox({ items, currentIndex, onClose, onNext, onPrev,
             </div>
 
             {/* Main Content */}
-            <div className="relative w-full h-full flex items-center justify-center p-4">
+            <div className="relative w-full flex-1 flex items-center justify-center p-4">
                 <button
                     onClick={onPrev}
                     className="absolute left-4 p-3 rounded-full bg-black/50 hover:bg-white/20 text-white transition-all hover:scale-110 z-10"
@@ -89,6 +90,7 @@ export default function Lightbox({ items, currentIndex, onClose, onNext, onPrev,
                     <video
                         src={currentItem.item_metadata.url}
                         controls
+                        autoPlay
                         className="max-h-full max-w-full rounded-lg shadow-2xl"
                     />
                 ) : (
@@ -107,9 +109,32 @@ export default function Lightbox({ items, currentIndex, onClose, onNext, onPrev,
                 </button>
             </div>
 
+            {/* Thumbnail Carousel */}
+            <div className="w-full bg-black/40 backdrop-blur-md p-4 flex gap-2 overflow-x-auto custom-scrollbar no-scrollbar items-center justify-center border-t border-white/5">
+                {items.map((item, idx) => (
+                    <button
+                        key={item.id}
+                        onClick={() => onSelect(idx)}
+                        className={`relative flex-shrink-0 h-16 aspect-square rounded-lg overflow-hidden border-2 transition-all ${idx === currentIndex ? 'border-pink-500 scale-110' : 'border-transparent opacity-50 hover:opacity-100'}`}
+                    >
+                         {item.item_metadata?.type === 'video' ? (
+                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                <Video className="h-4 w-4 text-white" />
+                            </div>
+                        ) : (
+                            <img
+                                src={item.item_metadata?.url || item.item_metadata?.thumbnail_url}
+                                className="w-full h-full object-cover"
+                                alt=""
+                            />
+                        )}
+                    </button>
+                ))}
+            </div>
+
             {/* Info Panel */}
             {showInfo && (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md border border-white/10 p-4 rounded-xl max-w-md w-full text-white animate-in slide-in-from-bottom-5">
+                <div className="absolute bottom-24 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-md border border-white/10 p-4 rounded-xl max-w-md w-full text-white animate-in slide-in-from-bottom-5 z-[210]">
                     <h3 className="font-bold text-lg mb-1">{currentItem.title}</h3>
                     <p className="text-sm text-gray-400 mb-2">{currentItem.category}</p>
                     {currentItem.item_metadata?.notes && (
