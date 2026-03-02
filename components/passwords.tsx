@@ -1755,9 +1755,9 @@ export default function Passwords({
         </div>
       )}
 
-      <Accordion type="single" collapsible className="w-full">
+      <Accordion type="single" collapsible defaultValue="filters" className="w-full">
         <AccordionItem value="filters" className="border-none">
-          <AccordionTrigger className={`flex md:hidden items-center justify-between ${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg px-4 py-3 hover:no-underline shadow-sm mb-2`}>
+          <AccordionTrigger className={`flex items-center justify-between ${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg px-4 py-3 hover:no-underline shadow-sm mb-2`}>
             <div className="flex items-center gap-2">
               <Filter className="h-4 w-4 text-blue-400" />
               <span className="text-sm font-semibold">Search & Filters</span>
