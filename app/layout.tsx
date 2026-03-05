@@ -19,7 +19,8 @@ export const metadata: Metadata = {
     title: 'Secure Life Hub',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: '/favicon.png',
+    apple: '/icon.png',
   },
 }
 
