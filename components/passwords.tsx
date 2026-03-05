@@ -822,6 +822,7 @@ export default function Passwords({
               className={`flex items-center flex-1 cursor-pointer py-2 px-2 rounded-lg transition-colors ${isSelected ? "bg-blue-600/20 dark:bg-blue-600/30" : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
               onClick={() => {
                 setSelectedFolder(folder.id)
+                setSelectedRecord(null) // Reset record to show folder contents on the right
                 if (!isExpanded) toggleFolder(folder.id)
               }}
             >
@@ -1341,9 +1342,99 @@ export default function Passwords({
     })
   }
 
+  // Render folder contents in the right-side details panel
+  const renderFolderDetail = (folderId: string) => {
+    const folder = folders.find((f: any) => f.id === folderId)
+    // If it's empty string, it's the "No Folder" item
+    const isNoFolder = folderId === ""
+    const folderName = isNoFolder ? "No Folder" : folder?.name || "Unknown Folder"
+
+    // Get items for structure (filtered by search/etc but NOT by folder)
+    const itemsForStructure = getFilteredPasswords(true)
+    const directItems = isNoFolder
+      ? itemsForStructure.filter((p) => !p.folder_id)
+      : itemsForStructure.filter((p) => p.folder_id === folderId)
+
+    const subFolders = isNoFolder ? [] : getSubfolders(folderId)
+
+    return (
+      <div
+        className={`h-full flex flex-col ${theme === "light" ? "bg-[#1e1e1e]" : "bg-[#2a2a2a]"} rounded-xl shadow-lg border border-gray-700 w-full max-w-full overflow-hidden`}
+      >
+        {/* Header */}
+        <div className="p-4 sm:p-6 border-b border-gray-700 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+              <div className="p-2 sm:p-3 bg-blue-500/10 rounded-lg flex-shrink-0">
+                <Folder className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+              </div>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <h2 className="text-lg sm:text-xl font-bold truncate">{folderName}</h2>
+                <div className="text-xs sm:text-sm text-gray-500">
+                  {directItems.length} Records {subFolders.length > 0 && `• ${subFolders.length} Folders`}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedFolder("")}
+              className="p-1.5 sm:p-2 hover:bg-gray-700 rounded-full transition-colors flex-shrink-0"
+              title="Close"
+            >
+              <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
+            </button>
+          </div>
+        </div>
+
+        {/* Contents list */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          {subFolders.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Sub-Folders</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {subFolders.map((sf) => (
+                  <div
+                    key={sf.id}
+                    onClick={() => {
+                      setSelectedFolder(sf.id)
+                      setSelectedRecord(null)
+                    }}
+                    className={`flex items-center p-3 rounded-lg border border-gray-700 bg-white/5 hover:bg-blue-500/10 hover:border-blue-500/30 transition-all cursor-pointer group`}
+                  >
+                    <Folder className="h-5 w-5 text-blue-400 mr-3 flex-shrink-0" />
+                    <span className="font-medium truncate text-sm text-gray-200 group-hover:text-blue-400">
+                      {sf.name}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Records</h3>
+            <div className="space-y-1">
+              {directItems.map((item) => renderFolderListItem(item))}
+              {directItems.length === 0 && (
+                <div className="text-center py-20 text-gray-500 italic flex flex-col items-center">
+                  <div className="p-4 bg-gray-800/50 rounded-full mb-4">
+                    <Lock className="h-8 w-8 opacity-20" />
+                  </div>
+                  <p>No records found in this folder</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Render right-side details pane for selected record
   const renderRecordDetails = (record: any) => {
     if (!record) {
+      if (selectedFolder) {
+        return renderFolderDetail(selectedFolder)
+      }
       return (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 opacity-50">
           <Folder className="h-16 w-16 mb-4" />
@@ -1586,6 +1677,8 @@ export default function Passwords({
   }
 
 
+
+
   // Render folder view for passwords (Split Layout)
   const renderFolderView = () => {
     // Get filtered items ignoring folder selection (so we can distribute them into structure)
@@ -1616,7 +1709,10 @@ export default function Passwords({
               <div className={`border-b ${theme === "light" ? "border-gray-100" : "border-gray-800"} mt-4`}>
                 <div
                   className={`flex items-center py-3 px-2 cursor-pointer rounded-lg transition-colors ${!selectedFolder ? 'bg-blue-600/20 dark:bg-blue-600/30' : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
-                  onClick={() => setSelectedFolder("")}
+                  onClick={() => {
+                    setSelectedFolder("")
+                    setSelectedRecord(null)
+                  }}
                 >
                   <Folder className="h-6 w-6 mr-3 text-gray-400" />
                   <div className="flex-1">
@@ -1636,8 +1732,8 @@ export default function Passwords({
         </div>
 
         {/* Right Side: Details Pane - FULL WIDTH on mobile when password selected */}
-        <div className={`h-full w-full md:w-2/3 md:pl-2 ${selectedRecord ? 'block px-2' : 'hidden md:block'}`}>
-          {renderRecordDetails(selectedRecord)}
+        <div className={`h-full w-full md:w-2/3 md:pl-2 ${selectedRecord || selectedFolder ? 'block px-2' : 'hidden md:block'}`}>
+          {selectedRecord ? renderRecordDetails(selectedRecord) : selectedFolder ? renderFolderDetail(selectedFolder) : renderRecordDetails(null)}
         </div>
       </div>
     )
@@ -2057,8 +2153,10 @@ export default function Passwords({
               </div>
 
               {/* Right: Password Details Panel */}
-              <div className={`${selectedRecord ? 'block w-full' : 'hidden'} h-full sticky top-24 self-start`}>
-                {renderRecordDetails(selectedRecord)}
+              <div
+                className={`${selectedRecord || selectedFolder ? "block w-full" : "hidden md:block"} h-full sticky top-24 self-start`}
+              >
+                {selectedRecord ? renderRecordDetails(selectedRecord) : selectedFolder ? renderFolderDetail(selectedFolder) : renderRecordDetails(null)}
               </div>
             </div>
           ) : viewMode === "grid" ? (
@@ -2069,8 +2167,10 @@ export default function Passwords({
               </div>
 
               {/* Right: Password Details Panel */}
-              <div className={`${selectedRecord ? 'block w-full' : 'hidden'} h-full overflow-y-auto sticky top-24 self-start`}>
-                {renderRecordDetails(selectedRecord)}
+              <div
+                className={`${selectedRecord || selectedFolder ? "block w-full" : "hidden md:block"} h-full overflow-y-auto sticky top-24 self-start`}
+              >
+                {selectedRecord ? renderRecordDetails(selectedRecord) : selectedFolder ? renderFolderDetail(selectedFolder) : renderRecordDetails(null)}
               </div>
             </div>
           ) : (
