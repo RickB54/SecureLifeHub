@@ -1668,34 +1668,31 @@ export default function Passwords({
       {renderAZSidebar()}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            Passwords
-            <span className={`text-lg font-normal ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-              <span className="mr-2">Passwords: {records.filter(r => r.type === 'password' || r.type === 'login').length}</span>
-              <span className="text-gray-300 dark:text-gray-600">|</span>
-              <span className="mx-2">Notes: {records.filter(r => r.type === 'note' || r.type === 'secure-note').length}</span>
-              <span className="text-gray-300 dark:text-gray-600">|</span>
-              <span className="ml-2">Folders: {records.filter(r => r.type === 'folder').length}</span>
-            </span>
-          </h1>
-          <p className={`${theme === "light" ? "text-gray-600" : "text-gray-400"}`}>Manage your saved passwords</p>
+          <h1 className="text-3xl font-bold">Passwords</h1>
+          <div className={`text-sm font-medium ${theme === "light" ? "text-gray-500" : "text-gray-400"} flex flex-wrap items-center gap-x-2`}>
+            <span>Passwords: {records.filter(r => r.type === 'password' || r.type === 'login').length}</span>
+            <span className="opacity-30">|</span>
+            <span>Notes: {records.filter(r => r.type === 'note' || r.type === 'secure-note').length}</span>
+            <span className="opacity-30">|</span>
+            <span>Folders: {folders.length}</span>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setAddPasswordModalOpen(true)}
-            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200"
+            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-3 py-2 rounded-md transition duration-200 text-sm font-semibold"
           >
-            <Plus className="h-5 w-5 mr-2" />
-            Add New Password
+            <Plus className="h-4 w-4 mr-1.5" />
+            + Password
           </button>
 
           <button
             onClick={() => setAddFolderModalOpen(true)}
-            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200"
+            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-3 py-2 rounded-md transition duration-200 text-sm font-semibold"
           >
-            <Folder className="h-5 w-5 mr-2" />
-            Add New Folder
+            <Folder className="h-4 w-4 mr-1.5" />
+            + Folder
           </button>
 
           <button
@@ -1757,46 +1754,46 @@ export default function Passwords({
         </div>
       )}
 
-      <Accordion type="single" collapsible defaultValue="filters" className="w-full">
-        <AccordionItem value="filters" className="border-none">
-          <AccordionTrigger className={`flex items-center justify-between ${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg px-4 py-3 hover:no-underline shadow-sm mb-2`}>
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-blue-400" />
-              <span className="text-sm font-semibold">Search & Filters</span>
-              {(searchQuery || categoryFilter !== "all" || timeFilter !== "all" || favoriteFilter || archivedFilter) && (
-                <span className="flex h-2 w-2 rounded-full bg-blue-500" />
-              )}
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="md:block md:p-0 data-[state=open]:overflow-visible transition-none">
-            <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-lg p-4 sticky top-0 md:relative z-10 shadow-md`}>
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="relative flex-1">
-            <Search
-              className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}
-            />
-            <input
-              type="text"
-              placeholder="Search passwords..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-10 pr-10 py-2 rounded-md ${theme === "light" ? "bg-white text-gray-900 border-gray-300" : "bg-[#2a2a2a] text-white border-gray-700"} border focus:outline-none focus:ring-2 focus:ring-blue-500`}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500 hover:text-gray-700" : "text-gray-400 hover:text-gray-200"} transition-colors`}
-                title="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+      <div className="flex flex-col gap-4">
+        {/* Always Visible Search Bar */}
+        <div className="relative w-full">
+          <Search
+            className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}
+          />
+          <input
+            type="text"
+            placeholder="Search passwords..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full pl-10 pr-10 py-2.5 rounded-xl ${theme === "light" ? "bg-white text-gray-900 border-gray-300" : "bg-[#1a1a1a] text-white border-white/10"} border focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm`}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500 hover:text-gray-700" : "text-gray-400 hover:text-gray-200"} transition-colors`}
+              title="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
 
-          {/* Always Visible Dropdowns */}
-          <div className="flex gap-2 flex-wrap">
-            {/* Categories Dropdown */}
-            <div className="relative">
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="filters" className="border-none">
+            <AccordionTrigger className={`flex items-center justify-between ${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]/50"} rounded-xl px-4 py-2.5 hover:no-underline shadow-sm border border-white/5`}>
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-blue-400" />
+                <span className="text-sm font-semibold">Other Filters</span>
+                {(categoryFilter !== "all" || timeFilter !== "all" || favoriteFilter || archivedFilter) && (
+                  <span className="flex h-2 w-2 rounded-full bg-blue-500" />
+                )}
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="p-0 pt-2 animate-none">
+              <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-xl p-4 shadow-inner border border-white/5`}>
+                <div className="flex flex-wrap gap-2">
+                  {/* Filter Dropdowns */}
+                  <div className="relative">
               <button
                 className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
                 onClick={() => {
@@ -2009,13 +2006,13 @@ export default function Passwords({
                   </button>
                 </div>
               )}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
-    </AccordionContent>
-  </AccordionItem>
-</Accordion>
 
       <div className="flex flex-col md:flex-row gap-4 items-start">
         {viewMode !== "folder" && (
