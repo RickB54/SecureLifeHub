@@ -118,10 +118,10 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar">
-        <div className="flex justify-between items-center p-4 border-b border-gray-700 sticky top-0 bg-[#2a2a2a] z-10">
-          <h2 className="text-xl font-semibold">Edit Password</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#1e1e1e] text-white border border-blue-500/30 rounded-lg shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="flex justify-between items-center p-4 border-b border-white/10 sticky top-0 bg-[#252526] z-10">
+          <h2 className="text-xl font-bold text-blue-400">Edit Password</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X className="h-5 w-5" />
           </button>
@@ -139,7 +139,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 type="text"
                 value={formData.title}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/5 border border-blue-500/20 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/10"
                 placeholder="Item Name (e.g. Google)"
               />
             </div>

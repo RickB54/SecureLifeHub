@@ -1353,7 +1353,7 @@ export default function Passwords({
     }
 
     return (
-      <div className={`h-full flex flex-col ${theme === "light" ? "bg-white" : "bg-[#2a2a2a]"} rounded-xl shadow-lg border ${theme === "light" ? "border-gray-200" : "border-gray-700"} w-full max-w-full overflow-hidden`} style={{ maxWidth: '100%', wordWrap: 'break-word' }}>
+      <div className={`h-full flex flex-col ${theme === "light" ? "bg-[#1e1e1e]" : "bg-[#2a2a2a]"} rounded-xl shadow-lg border ${theme === "light" ? "border-gray-700" : "border-gray-700"} w-full max-w-full overflow-hidden`} style={{ maxWidth: '100%', wordWrap: 'break-word' }}>
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 space-y-3">
           {/* Title Row */}
@@ -1440,7 +1440,7 @@ export default function Passwords({
             {/* Title Field */}
             <div className="group">
               <label className="text-xs text-gray-300 block mb-1">Title</label>
-              <div className="text-sm font-medium p-2 -ml-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-text">
+              <div className="text-sm font-medium p-2 -ml-2 rounded bg-blue-600/5 hover:bg-blue-600/15 transition-colors cursor-text">
                 {record.title || "Untitled"}
               </div>
             </div>
@@ -1449,7 +1449,7 @@ export default function Passwords({
             <div className="group relative">
               <label className="text-xs text-gray-300 block mb-1">Login</label>
               <div
-                className="text-sm font-medium p-2 -ml-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer flex items-center justify-between"
+                className="text-sm font-medium p-2 -ml-2 rounded bg-blue-600/10 hover:bg-blue-600/20 transition-colors cursor-pointer flex items-center justify-between"
                 onClick={(e) => {
                   navigator.clipboard.writeText(record.username || "")
                   // Could add copied feedback here
@@ -1464,9 +1464,9 @@ export default function Passwords({
             {/* Password Field */}
             <div className="group relative">
               <label className="text-xs text-gray-300 block mb-1">Password</label>
-              <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 -ml-1 sm:-ml-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 -ml-1 sm:-ml-2 rounded bg-blue-600/20 hover:bg-blue-600/30 transition-colors">
                 <div
-                  className={`flex-1 font-mono text-sm cursor-pointer ${showPasswordInDetails ? 'bg-blue-600/30 text-white font-bold px-1 rounded' : 'text-gray-500'} hover:text-blue-500`}
+                  className={`flex-1 font-mono text-sm cursor-pointer ${showPasswordInDetails ? 'text-white font-bold' : 'text-gray-400'} hover:text-blue-400`}
                   onClick={() => navigator.clipboard.writeText(record.password || "")}
                   title="Click to Copy"
                   style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
@@ -1529,7 +1529,7 @@ export default function Passwords({
                 {record.item_metadata.customFields.map((field: any) => (
                   <div key={field.id} className="group relative">
                     <label className="text-xs text-gray-300 block mb-1">{field.label}</label>
-                    <div className="flex items-center gap-2 p-2 -ml-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div className="flex items-center gap-2 p-2 -ml-2 rounded bg-blue-600/5 hover:bg-blue-600/15 transition-colors">
                       <div
                         className={`flex-1 text-sm cursor-pointer ${field.type === 'password' || field.type === 'pin' || field.type === 'hidden' ? 'font-mono' : ''} hover:text-blue-500`}
                         onClick={() => navigator.clipboard.writeText(field.value || "")}
@@ -1671,7 +1671,9 @@ export default function Passwords({
           <h1 className="text-3xl font-bold flex items-center gap-2">
             Passwords
             <span className={`text-lg font-normal ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
-              <span className="mr-2">Passwords: {records.filter(r => r.type !== 'folder').length}</span>
+              <span className="mr-2">Passwords: {records.filter(r => r.type === 'password' || r.type === 'login').length}</span>
+              <span className="text-gray-300 dark:text-gray-600">|</span>
+              <span className="mx-2">Notes: {records.filter(r => r.type === 'note' || r.type === 'secure-note').length}</span>
               <span className="text-gray-300 dark:text-gray-600">|</span>
               <span className="ml-2">Folders: {records.filter(r => r.type === 'folder').length}</span>
             </span>

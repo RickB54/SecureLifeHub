@@ -32,10 +32,18 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     useEffect(() => {
         let initialized = false
 
-        const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+        const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
             console.log("Auth State Change:", event)
-            setSession(session)
-            setUser(session?.user ?? null)
+            
+            // Handle refresh token expiration or invalidation
+            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+                console.warn("Session invalid or refreshed without session, clearing local auth state...")
+                setSession(null)
+                setUser(null)
+            } else {
+                setSession(session)
+                setUser(session?.user ?? null)
+            }
 
             if (!initialized) {
                 initialized = true
@@ -45,10 +53,24 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         // Backup check if listener doesn't fire immediately with session
         const initSession = async () => {
-            const { data: { session: currentSession } } = await supabase.auth.getSession()
-            if (!initialized) {
-                setSession(currentSession)
-                setUser(currentSession?.user ?? null)
+            try {
+                const { data: { session: currentSession }, error } = await supabase.auth.getSession()
+                
+                if (error) {
+                    console.error("Session initialization error:", error.message)
+                    if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
+                        await supabase.auth.signOut()
+                    }
+                }
+
+                if (!initialized) {
+                    setSession(currentSession)
+                    setUser(currentSession?.user ?? null)
+                    setLoading(false)
+                    initialized = true
+                }
+            } catch (err) {
+                console.error("Fatal auth init error:", err)
                 setLoading(false)
                 initialized = true
             }

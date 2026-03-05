@@ -103,9 +103,9 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className={`${theme === 'light' ? 'bg-white text-gray-900' : 'bg-black text-white border border-white/20'} rounded-lg shadow-lg w-full max-w-2xl my-8`}>
-        <div className={`flex justify-between items-center p-4 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
-          <h2 className="text-xl font-bold">Add New Password</h2>
+      <div className="bg-[#1e1e1e] text-white border border-blue-500/30 rounded-lg shadow-2xl w-full max-w-2xl my-8 overflow-hidden">
+        <div className="flex justify-between items-center p-4 border-b border-white/10 bg-[#252526]">
+          <h2 className="text-xl font-bold text-blue-400">Add New Password</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white p-2">
             <X className="h-5 w-5" />
           </button>
@@ -123,7 +123,7 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
                 type="text"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/5 border border-blue-500/20 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/10"
                 placeholder="example.com"
               />
             </div>
