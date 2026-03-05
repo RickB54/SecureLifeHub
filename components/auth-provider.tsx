@@ -9,6 +9,8 @@ interface AuthContextType {
     user: User | null
     session: Session | null
     loading: boolean
+    isLocked: boolean
+    setIsLocked: (locked: boolean) => void
     signOut: () => Promise<void>
 }
 
@@ -16,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     session: null,
     loading: true,
+    isLocked: false,
+    setIsLocked: () => { },
     signOut: async () => { },
 })
 
@@ -27,6 +31,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const [user, setUser] = useState<User | null>(null)
     const [session, setSession] = useState<Session | null>(null)
     const [loading, setLoading] = useState(true)
+    const [isLocked, setIsLocked] = useState(false)
     const router = useRouter()
 
     useEffect(() => {
@@ -40,9 +45,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 console.warn("Session invalid or refreshed without session, clearing local auth state...")
                 setSession(null)
                 setUser(null)
+                setIsLocked(false)
             } else {
                 setSession(session)
                 setUser(session?.user ?? null)
+                // If we were locked and but a new session appeared, we might want to stay locked or unlock.
+                // Usually, if they just signed in, they are unlocked.
+                if (event === 'SIGNED_IN') {
+                    setIsLocked(false)
+                }
             }
 
             if (!initialized) {
@@ -77,7 +88,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
         initSession()
 
-        // Auto-logout functionality
+        // Auto-logout/lock functionality
         let inactivityTimer: NodeJS.Timeout
 
         // Initial limit setup
@@ -94,8 +105,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             if (currentLimit === null) return; // Auto-lock disabled
 
             inactivityTimer = setTimeout(async () => {
-                console.log("User inactive, logging out...")
-                await supabase.auth.signOut()
+                console.log("User inactive, locking vault...")
+                // INSTEAD of full signOut, we just lock the view.
+                // This keeps the Supabase session alive so Fingerprint (WebAuthn) can "unlock" it.
+                setIsLocked(true)
                 router.refresh()
             }, currentLimit)
         }
@@ -129,6 +142,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     }, [])
 
     const signOut = async () => {
+        setIsLocked(false)
         await supabase.auth.signOut()
         setUser(null)
         setSession(null)
@@ -139,6 +153,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         session,
         user,
         loading,
+        isLocked,
+        setIsLocked,
         signOut,
     }
 

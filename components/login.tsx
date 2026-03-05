@@ -7,8 +7,13 @@ import { supabase } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Logo from "./logo"
+import { useAuth } from "@/components/auth-provider"
 
-export default function Login() {
+interface LoginProps {
+  isUnlockMode?: boolean
+}
+
+export default function Login({ isUnlockMode = false }: LoginProps) {
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -18,6 +23,7 @@ export default function Login() {
   const [imgError, setImgError] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { setIsLocked, signOut } = useAuth()
 
   // Load last used email from localStorage
   useEffect(() => {
@@ -57,13 +63,20 @@ export default function Login() {
 
       if (assertion) {
         // Biometric verify success on device
-        // Check if we already have a session that just needs unlocking
+        console.log("Biometric verification successful")
+        
+        // IMPORTANT: Biometrics in this PWA is used for UNLOCKING an existing session.
+        // We check if we still have a valid Supabase session.
         const { data: { session } } = await supabase.auth.getSession()
 
         if (session) {
+          console.log("Active session found, unlocking...")
+          setIsLocked(false)
+          // If we are on the dashboard, we stay there, otherwise we might need to redirect
           router.push("/?page=dashboard")
         } else {
-          setError("Your secure session has expired. For your safety, please sign in with your Master Password to re-enable biometrics.")
+          console.warn("No active session found during biometric unlock.")
+          setError("Your secure session has fully expired. For your safety, please sign in with your Master Password once to re-enable biometrics for this visit.")
           localStorage.removeItem('biometric_enabled')
         }
       }
@@ -288,25 +301,29 @@ export default function Login() {
           <Logo size="lg" />
           <h1 className="text-3xl font-bold text-white mb-2">Secure Life Hub</h1>
           <p className="text-gray-400 text-sm font-medium tracking-wide">
-            {isSignUp ? "Create your secure vault" : "Unlock your internal vault"}
+            {isUnlockMode 
+              ? "Vault is locked. Unlock below." 
+              : isSignUp ? "Create your secure vault" : "Unlock your internal vault"}
           </p>
         </div>
 
         <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-4">
-            <div className="relative group">
-              <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
-              <input
-                type="email"
-                name="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
-                placeholder="Email address"
-              />
-            </div>
+            {!isUnlockMode && (
+              <div className="relative group">
+                <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
+                <input
+                  type="email"
+                  name="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 transition-all placeholder:text-gray-600"
+                  placeholder="Email address"
+                />
+              </div>
+            )}
             <div className="relative group">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
               <PasswordInput
@@ -375,18 +392,31 @@ export default function Login() {
           )}
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp)
-              setError(null)
-            }}
-            className="text-gray-400 hover:text-white text-sm transition-colors"
-          >
-            {isSignUp
-              ? "Already have a vault? Sign In"
-              : "New here? Create a Vault"}
-          </button>
+        <div className="mt-6 text-center flex flex-col gap-2">
+          {!isUnlockMode ? (
+            <button
+              onClick={() => {
+                setIsSignUp(!isSignUp)
+                setError(null)
+              }}
+              className="text-gray-400 hover:text-white text-sm transition-colors"
+            >
+              {isSignUp
+                ? "Already have a vault? Sign In"
+                : "New here? Create a Vault"}
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                signOut()
+                // Router push will happen in signOut logic or here
+                router.push('/')
+              }}
+              className="text-gray-500 hover:text-red-400 text-xs transition-colors uppercase tracking-widest font-bold"
+            >
+              Sign out / Change Account
+            </button>
+          )}
         </div>
       </div>
 
