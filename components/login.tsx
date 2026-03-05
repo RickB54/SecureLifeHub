@@ -66,16 +66,29 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         console.log("Biometric verification successful")
         
         // IMPORTANT: Biometrics in this PWA is used for UNLOCKING an existing session.
-        // We check if we still have a valid Supabase session.
-        const { data: { session } } = await supabase.auth.getSession()
+        // We first try to refresh the session to ensure tokens are up to date.
+        let session = null;
+        try {
+          const { data: { session: refreshedSession } } = await supabase.auth.refreshSession();
+          session = refreshedSession;
+        } catch (refreshErr) {
+          console.warn("Refresh session failed during biometric unlock:", refreshErr);
+        }
+
+        // If refresh didn't return a session, check if we have one locally anyway
+        if (!session) {
+          const { data: { session: currentSession } } = await supabase.auth.getSession()
+          session = currentSession;
+        }
 
         if (session) {
-          console.log("Active session found, unlocking...")
+          console.log("Active session found, unlocking UI...")
           setIsLocked(false)
-          // If we are on the dashboard, we stay there, otherwise we might need to redirect
-          router.push("/?page=dashboard")
+          // Ensure we are on the dashboard
+          const targetPage = searchParams.get("page") || "dashboard"
+          router.push(`/?page=${targetPage}`)
         } else {
-          console.warn("No active session found during biometric unlock.")
+          console.warn("No active Supabase session found after biometric success.")
           setError("Your secure session has fully expired. For your safety, please sign in with your Master Password once to re-enable biometrics for this visit.")
           localStorage.removeItem('biometric_enabled')
         }

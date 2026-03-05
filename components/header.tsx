@@ -8,6 +8,7 @@ import Logo from "./logo"
 
 interface HeaderProps {
   onLogout: () => void
+  onLock: () => void
   toggleSidebar: () => void
   onNavigate: (page: string) => void
   onBack: () => void
@@ -17,7 +18,7 @@ interface HeaderProps {
   onOpenHelp: () => void
 }
 
-export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage, onOpenHelp }: HeaderProps) {
+export default function Header({ onLogout, onLock, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage, onOpenHelp }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [imgError, setImgError] = useState(false)
@@ -132,6 +133,15 @@ export default function Header({ onLogout, toggleSidebar, onNavigate, onBack, th
                   className={`w-full text-left px-4 py-2 text-sm font-medium ${theme === 'light' ? 'hover:bg-gray-100 text-gray-700' : 'hover:bg-white/5 text-gray-300'}`}
                 >
                   Settings & Account
+                </button>
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false)
+                    onLock()
+                  }}
+                  className={`w-full text-left px-4 py-2 text-sm font-bold text-blue-500 hover:bg-blue-500/10 transition-colors flex items-center gap-2`}
+                >
+                  <Lock className="h-4 w-4" /> Lock Vault
                 </button>
                 <button
                   onClick={onLogout}

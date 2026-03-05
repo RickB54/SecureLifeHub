@@ -34,6 +34,30 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const [isLocked, setIsLocked] = useState(false)
     const router = useRouter()
 
+    // Handle initial lock state and persistence
+    useEffect(() => {
+        const isCurrentlyLocked = localStorage.getItem('vault_locked') === 'true'
+        const bioEnabled = localStorage.getItem('biometric_enabled') === 'true'
+        
+        // If biometrics are enabled, we default to LOCKED on new page loads for security
+        if (bioEnabled && !isCurrentlyLocked) {
+           // We don't automatically lock if they just signed in, 
+           // but we do if they refresh or come back later.
+           // For now, let's just trust the persistent state.
+        }
+        
+        setIsLocked(isCurrentlyLocked)
+    }, [])
+
+    const setLockedWithPersistence = (locked: boolean) => {
+        setIsLocked(locked)
+        if (locked) {
+            localStorage.setItem('vault_locked', 'true')
+        } else {
+            localStorage.removeItem('vault_locked')
+        }
+    }
+
     useEffect(() => {
         let initialized = false
 
@@ -46,13 +70,14 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 setSession(null)
                 setUser(null)
                 setIsLocked(false)
+                localStorage.removeItem('vault_locked')
             } else {
                 setSession(session)
                 setUser(session?.user ?? null)
                 // If we were locked and but a new session appeared, we might want to stay locked or unlock.
                 // Usually, if they just signed in, they are unlocked.
                 if (event === 'SIGNED_IN') {
-                    setIsLocked(false)
+                    setLockedWithPersistence(false)
                 }
             }
 
@@ -108,7 +133,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 console.log("User inactive, locking vault...")
                 // INSTEAD of full signOut, we just lock the view.
                 // This keeps the Supabase session alive so Fingerprint (WebAuthn) can "unlock" it.
-                setIsLocked(true)
+                setLockedWithPersistence(true)
                 router.refresh()
             }, currentLimit)
         }
@@ -154,7 +179,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         user,
         loading,
         isLocked,
-        setIsLocked,
+        setIsLocked: setLockedWithPersistence,
         signOut,
     }
 

@@ -124,7 +124,7 @@ function HomeContent() {
   }, [activePage])
 
   // Auth from Context
-  const { user, loading: authLoading, signOut, isLocked } = useAuth()
+  const { user, loading: authLoading, signOut, isLocked, setIsLocked } = useAuth()
 
   // Data from Supabase Hook
   const {
@@ -407,6 +407,7 @@ function HomeContent() {
       >
         <Header
           onLogout={handleLogout}
+          onLock={() => setIsLocked(true)}
           toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onNavigate={handleNavigate}
           onBack={handleBack}
