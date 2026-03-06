@@ -2040,7 +2040,7 @@ export default function Passwords({
   };
 
   return (
-    <div className={`space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-visible ${isFullscreen ? 'fixed inset-0 z-[10000] bg-background p-4 md:p-8' : ''}`}>
+    <div className={`space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-visible`}>
       {renderAZSidebar()}
 
       {/* COMPACT HEADER: Always visible, integrated search and counts */}
