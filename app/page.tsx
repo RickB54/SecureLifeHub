@@ -206,8 +206,16 @@ function HomeContent() {
   // Handle logout
   const handleLogout = async () => {
     setNavHistory([])
-    await signOut()
-    router.push("/")
+    // If biometrics are enabled, "Log Out" from the UI actually performs a soft-logout (Lock).
+    // This preserves the Supabase session so they can unlock with their fingerprint later.
+    // If they truly want to switch accounts, they can use "Sign out / Change Account" from the lock screen.
+    if (typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') === 'true') {
+      setIsLocked(true)
+      router.push("/")
+    } else {
+      await signOut()
+      router.push("/")
+    }
   }
 
   if (authLoading) {
