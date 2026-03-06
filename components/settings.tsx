@@ -23,7 +23,9 @@ import {
   ChevronDown,
   ChevronUp,
   Trash,
-  ChevronRight
+  ChevronRight,
+  Maximize,
+  Minimize
 } from "lucide-react"
 import CsvImporter from "./csv-importer"
 import JsonImporter from "./json-importer"
@@ -45,7 +47,9 @@ export default function Settings({
   autoLockTimeout,
   setAutoLockTimeout,
   twoFactorEnabled,
-  setTwoFactorEnabled
+  setTwoFactorEnabled,
+  isFullscreen,
+  setIsFullscreen
 }: {
   records: any[]
   items: any[]
@@ -60,6 +64,8 @@ export default function Settings({
   setAutoLockTimeout: (value: number) => void
   twoFactorEnabled: boolean
   setTwoFactorEnabled: (enabled: boolean) => void
+  isFullscreen?: boolean
+  setIsFullscreen?: (val: boolean) => void
 }) {
   // Security audit data (Mock for now, needs real calculation later)
   const [securityAuditData, setSecurityAuditData] = useState({
@@ -441,6 +447,21 @@ export default function Settings({
               </div>
               <button onClick={handleToggleAutoFill} className={`relative h-8 w-14 rounded-full transition-colors ${autoFillEnabled ? 'bg-blue-500' : 'bg-gray-700'}`}>
                 <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${autoFillEnabled ? 'translate-x-6' : ''}`} />
+              </button>
+            </div>
+            {/* Full Screen Mode */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+              <div>
+                <div className="font-bold">Full Screen Mode</div>
+                <div className={`text-xs ${isFullscreen ? 'text-blue-400' : 'text-gray-500'}`}>
+                  {isFullscreen ? "Immersive View Active" : "Standard Layout"}
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsFullscreen?.(!isFullscreen)} 
+                className={`flex items-center justify-center p-2 rounded-xl transition-all ${isFullscreen ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+              >
+                {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
               </button>
             </div>
           </div>

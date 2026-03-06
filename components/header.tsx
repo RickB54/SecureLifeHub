@@ -16,22 +16,36 @@ interface HeaderProps {
   toggleTheme: () => void
   activePage: string
   onOpenHelp: () => void
+  isFullscreen: boolean
+  setIsFullscreen: (val: boolean) => void
 }
 
-export default function Header({ onLogout, onLock, toggleSidebar, onNavigate, onBack, theme, toggleTheme, activePage, onOpenHelp }: HeaderProps) {
+export default function Header({ 
+  onLogout, 
+  onLock, 
+  toggleSidebar, 
+  onNavigate, 
+  onBack, 
+  theme, 
+  toggleTheme, 
+  activePage, 
+  onOpenHelp,
+  isFullscreen,
+  setIsFullscreen
+}: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [imgError, setImgError] = useState(false)
   const { user } = useAuth()
 
   const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen)
+    
+    // Also try browser-level fullscreen for better immersion if possible
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-      setIsFullscreen(true)
+      document.documentElement.requestFullscreen().catch(() => {})
     } else {
       if (document.exitFullscreen) {
-        document.exitFullscreen()
-        setIsFullscreen(false)
+        document.exitFullscreen().catch(() => {})
       }
     }
   }

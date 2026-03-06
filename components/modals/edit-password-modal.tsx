@@ -139,7 +139,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 type="text"
                 value={formData.title}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-blue-600/5 border border-blue-500/20 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/10"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
                 placeholder="Item Name (e.g. Google)"
               />
             </div>
@@ -154,7 +154,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 type="text"
                 value={formData.website}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
                 placeholder="example.com"
               />
             </div>
@@ -169,7 +169,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 type="text"
                 value={formData.username}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
                 placeholder="username@example.com"
               />
             </div>
@@ -183,7 +183,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
                 placeholder="Enter password"
               />
             </div>
@@ -197,10 +197,10 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
               >
                 {categories.map((category) => (
-                  <option key={category} value={category}>
+                  <option key={category} value={category} className="bg-[#1e1e1e]">
                     {category}
                   </option>
                 ))}
@@ -216,11 +216,11 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 name="folder_id"
                 value={formData.folder_id}
                 onChange={handleChange}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
               >
-                <option value="">No folder (Root)</option>
+                <option value="" className="bg-[#1e1e1e]">No folder (Root)</option>
                 {folders.map((folder) => (
-                  <option key={folder.id} value={folder.id}>
+                  <option key={folder.id} value={folder.id} className="bg-[#1e1e1e]">
                     {folder.name || folder.path}
                   </option>
                 ))}
@@ -235,7 +235,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center px-3 py-2 bg-[#333] border border-gray-700 rounded-md hover:bg-gray-600"
+                  className="flex items-center px-3 py-2 bg-blue-600/5 border border-blue-500/20 rounded-md hover:bg-blue-600/10 transition-all font-medium"
                 >
                   <Image className="h-4 w-4 mr-2" />
                   {previewImage ? "Change Image" : "Upload Image"}
@@ -269,7 +269,7 @@ export default function EditPasswordModal({ onClose, onSave, passwordData, folde
                 value={formData.notes}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-3 py-2 bg-[#333] border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff]"
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20 autofill:shadow-[0_0_0_30px_#001a33_inset] autofill:[-webkit-text-fill-color:white]"
                 placeholder="Add notes (optional)"
               />
             </div>

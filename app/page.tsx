@@ -64,6 +64,7 @@ function HomeContent() {
   const [activePage, setActivePage] = useState(initialPage) // Initialize directly from URL
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Force dashboard on mount if no explicit page in URL
   useEffect(() => {
@@ -223,7 +224,9 @@ function HomeContent() {
     theme,
     setActivePage: handleNavigate, // Use history-aware navigation
     setRecords: () => console.warn("Direct setRecords not supported in Supabase mode"), // Placeholder
-    setHelpOpen: () => setHelpOpen(true)
+    setHelpOpen: () => setHelpOpen(true),
+    isFullscreen,
+    setIsFullscreen
   }
 
 
@@ -403,29 +406,35 @@ function HomeContent() {
   return (
     <ErrorBoundary>
       <div
-        className={`flex flex-col h-screen overflow-hidden ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-[#1a1a1a] text-white"}`}
+        className={`flex flex-col h-screen overflow-hidden ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-[#1a1a1a] text-white"} ${isFullscreen ? 'overscroll-none' : ''}`}
       >
-        <Header
-          onLogout={handleLogout}
-          onLock={() => setIsLocked(true)}
-          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onNavigate={handleNavigate}
-          onBack={handleBack}
-          theme={theme}
-          toggleTheme={toggleTheme}
-          activePage={activePage}
-          onOpenHelp={() => setHelpOpen(true)}
-        />
-        <div className="flex flex-1 overflow-hidden pt-16">
-          <Sidebar
-            activePage={activePage}
-            setActivePage={handleNavigate}
-            isOpen={sidebarOpen}
-            setIsOpen={setSidebarOpen}
+        {!isFullscreen && (
+          <Header
+            onLogout={handleLogout}
+            onLock={() => setIsLocked(true)}
+            toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
             theme={theme}
+            toggleTheme={toggleTheme}
+            activePage={activePage}
             onOpenHelp={() => setHelpOpen(true)}
+            isFullscreen={isFullscreen}
+            setIsFullscreen={setIsFullscreen}
           />
-          <main className="flex-1 p-4 md:p-6 overflow-y-auto custom-scrollbar h-full">{renderActivePage()}</main>
+        )}
+        <div className={`flex flex-1 overflow-hidden ${!isFullscreen ? 'pt-16' : ''}`}>
+          {!isFullscreen && (
+            <Sidebar
+              activePage={activePage}
+              setActivePage={handleNavigate}
+              isOpen={sidebarOpen}
+              setIsOpen={setSidebarOpen}
+              theme={theme}
+              onOpenHelp={() => setHelpOpen(true)}
+            />
+          )}
+          <main className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>{renderActivePage()}</main>
         </div>
         <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} />
       </div>

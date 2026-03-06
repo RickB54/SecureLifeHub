@@ -63,6 +63,8 @@ interface PasswordsProps {
   initialFavoriteFilter?: boolean
   initialArchivedFilter?: boolean
   setRecords?: any
+  isFullscreen?: boolean
+  setIsFullscreen?: (val: boolean) => void
 }
 
 export default function Passwords({
@@ -77,7 +79,9 @@ export default function Passwords({
   showAllTypes = false,
   initialFavoriteFilter = false,
   initialArchivedFilter = false,
-  setRecords
+  setRecords,
+  isFullscreen,
+  setIsFullscreen
 }: PasswordsProps) {
   // State for view mode (folder only now)
   const [viewMode, setViewMode] = useState("folder")
@@ -121,7 +125,7 @@ export default function Passwords({
 
   // State for active dropdown menu
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false)
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -240,10 +244,26 @@ export default function Passwords({
     await addItem({
       ...newPassword,
       type: "password",
-      folder_id: folderId // Explicitly save folder_id
+      folder_id: (newPassword.folder_id === "" || !newPassword.folder_id) ? null : newPassword.folder_id // Explicitly handle root as null
     })
     setAddPasswordModalOpen(false)
   }
+
+  // Expand or collapse all folders
+  const handleToggleAllFolders = () => {
+    const isAnyCollapsed = folders.some(f => !expandedFolders[f.id]);
+    if (isAnyCollapsed) {
+      // Expand all
+      const all: Record<string, boolean> = {};
+      folders.forEach(f => { all[f.id] = true; });
+      setExpandedFolders(all);
+      toast.success("All folders expanded");
+    } else {
+      // Collapse all
+      setExpandedFolders({});
+      toast.success("All folders collapsed");
+    }
+  };
 
   // Handle adding a new folder
   const handleAddFolder = async (folderData: any) => {
@@ -476,7 +496,11 @@ export default function Passwords({
 
     // Filter by folder - ONLY if not ignored
     if (!ignoreFolder && selectedFolder) {
-      filtered = filtered.filter((password) => password.folder_id === selectedFolder)
+      if (selectedFolder === "no-folder") {
+        filtered = filtered.filter((password) => !password.folder_id || password.folder_id === "")
+      } else {
+        filtered = filtered.filter((password) => password.folder_id === selectedFolder)
+      }
     }
 
     // Filter by type
@@ -1958,42 +1982,37 @@ export default function Passwords({
       {/* COMPACT HEADER: Always visible, integrated search and counts */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          {selectedRecord ? (
-            <div className="flex items-center gap-2">
+          {/* Mobile Back Button - ONLY on mobile when record selected */}
+          {selectedRecord && (
+            <div className="md:hidden flex items-center gap-2">
               <button
                 onClick={() => setSelectedRecord(null)}
-                className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-white/5 hover:bg-white/10 text-gray-300'} flex items-center gap-2 pr-4`}
+                className={`p-1.5 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-white/5 hover:bg-white/10 text-gray-300'} flex items-center gap-2 pr-3`}
               >
                 <ArrowLeft className="h-5 w-5" />
-                <span className="font-bold text-sm">Back to Vault</span>
+                <span className="font-bold text-xs uppercase tracking-tight">Back</span>
               </button>
-              <button 
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
-                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
-              >
-                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-              </button>
-            </div>
-          ) : (
-            <div className="flex-shrink-0">
-              <h1 className="text-2xl font-extrabold tracking-tight">Vault</h1>
-              <div className={`text-[10px] font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"} flex items-center gap-2 flex-wrap`}>
-                <span>{passwords.length} Records</span>
-                <span className="opacity-30">•</span>
-                <span>{records.filter(r => r.type === 'note' || r.type === 'secure-note' || r.category === 'Secure Notes').length} Notes</span>
-                <span className="opacity-30">•</span>
-                <span>{folders.length} Folders</span>
-                <button 
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  className={`ml-2 p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
-                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
-                >
-                  {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                </button>
-              </div>
             </div>
           )}
+
+          {/* Vault Title - Visible always on desktop, and on mobile when no record selected */}
+          <div className={`flex-shrink-0 ${selectedRecord ? 'hidden md:block' : 'block'}`}>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Vault</h1>
+            <div className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"} flex items-center gap-1.5 sm:gap-2 flex-wrap`}>
+              <span>{passwords.length} Records</span>
+              <span className="opacity-30">•</span>
+              <span>{records.filter(r => r.type === 'note' || r.type === 'secure-note' || r.category === 'Secure Notes').length} Notes</span>
+              <span className="opacity-30">•</span>
+              <span>{folders.length} Folders</span>
+              <button 
+                onClick={() => setIsFullscreen?.(!isFullscreen)}
+                className={`ml-1.5 p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
+              >
+                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              </button>
+            </div>
+          </div>
 
           {/* Search bar integrated on the same line */}
           <div className="flex-1 max-w-xl hidden sm:block">
@@ -2020,47 +2039,79 @@ export default function Passwords({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {!selectedRecord && (
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setAddPasswordModalOpen(true)}
-                className="flex items-center bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-all text-[10px] font-bold uppercase tracking-tight shadow-md whitespace-nowrap"
+                className="flex items-center bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1.5 rounded-lg transition-all text-[10px] sm:text-[11px] font-bold uppercase tracking-tight shadow-md whitespace-nowrap"
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
                 Password
               </button>
               <button
                 onClick={() => setAddFolderModalOpen(true)}
-                className={`flex items-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-3 py-1.5 rounded-lg transition-all text-[10px] font-bold uppercase tracking-tight shadow-sm whitespace-nowrap`}
+                className={`flex items-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2.5 py-1.5 rounded-lg transition-all text-[10px] sm:text-[11px] font-bold uppercase tracking-tight shadow-sm whitespace-nowrap`}
               >
-                <Folder className="h-3.5 w-3.5 mr-1" />
+                <Plus className="h-3.5 w-3.5 mr-1 text-blue-400" />
                 Folder
               </button>
+
+              {/* Expand/Collapse All Button */}
+              <button
+                onClick={handleToggleAllFolders}
+                className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
+                title="Expand/Collapse All Folders"
+              >
+                <ChevronsDown className="h-4 w-4 text-blue-400" />
+              </button>
+
+              {/* Categories Dropdown Container */}
+              <div className="relative" ref={activeMenu === 'categories-header' ? menuRef : null}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenu(activeMenu === 'categories-header' ? null : 'categories-header');
+                  }}
+                  className={`flex items-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2.5 py-1.5 rounded-lg transition-all text-[10px] sm:text-[11px] font-bold uppercase tracking-tight shadow-sm whitespace-nowrap`}
+                >
+                  <Filter className="h-3.5 w-3.5 mr-1" />
+                  Categories
+                  <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${activeMenu === 'categories-header' ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Categories Floating Dropdown Menu */}
+                {activeMenu === 'categories-header' && (
+                  <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl border overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#2a2a2a] border-white/10'}`}>
+                    <div className="p-1.5 space-y-0.5">
+                      {[
+                        { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
+                        { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setCategoryFilter('all'); } },
+                        { name: 'Recent', icon: RotateCcw, count: passwords.filter(p => new Date(p.updatedAt || p.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, color: 'text-purple-500', action: () => { setCategoryFilter('all'); } },
+                        { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setCategoryFilter('all'); } },
+                        { name: 'Security Audit', icon: Shield, count: passwords.filter(p => !p.password || p.password.length < 8).length, color: 'text-red-500', action: () => { setCategoryFilter('all'); } },
+                      ].map((cat) => (
+                        <button
+                          key={cat.name}
+                          onClick={() => {
+                            cat.action();
+                            setActiveMenu(null);
+                          }}
+                          className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center justify-between group ${theme === 'light' ? 'hover:bg-gray-100 text-gray-700' : 'hover:bg-white/5 text-gray-200'}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <cat.icon className={`h-4 w-4 ${cat.color}`} fill={(cat.name === 'Favorites' && favoriteFilter) || (cat.name === 'Archived' && archivedFilter) ? 'currentColor' : 'none'} />
+                            <span className="font-semibold">{cat.name}</span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${theme === 'light' ? 'bg-gray-100 text-gray-500' : 'bg-white/10 text-gray-400'}`}>{cat.count}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
-
-          <button
-            onClick={() => {
-              const allExpanded = folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id])
-              if (allExpanded) setExpandedFolders({})
-              else {
-                const allFolderIds = folders.reduce((acc: Record<string, boolean>, folder: any) => {
-                  acc[folder.id] = true
-                  return acc
-                }, {})
-                setExpandedFolders(allFolderIds)
-              }
-            }}
-            className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-600' : 'bg-white/5 hover:bg-white/10 text-gray-400'} ${selectedRecord ? 'hidden' : 'block'}`}
-            title="Toggle All Folders"
-          >
-            {folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id]) ? (
-              <ChevronsUp className="h-5 w-5" />
-            ) : (
-              <ChevronsDown className="h-5 w-5" />
-            )}
-          </button>
         </div>
       </div>
 
@@ -2081,50 +2132,94 @@ export default function Passwords({
       {/* FILTERS & CONTENT GRID */}
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 mt-2">
         {/* Left Side: Navigation / List (Hidden when record selected) */}
-        {!selectedRecord && (
-          <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
-            {/* Folder Navigation */}
-            <div className={`rounded-2xl p-4 ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"} border shadow-sm`}>
-               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Categories</h3>
-               <div className="grid grid-cols-1 gap-1">
-                 {['All Items', 'Favorites', 'Recent', 'Security Audit'].map((cat) => (
-                   <button 
-                    key={cat}
-                    onClick={() => {
-                      if (cat === 'Favorites') setFavoriteFilter(true);
-                      else setFavoriteFilter(false);
-                      // Add other category logic if needed
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between group ${theme === 'light' ? 'hover:bg-gray-50 text-gray-700' : 'hover:bg-white/5 text-gray-300'}`}
-                   >
-                     <div className="flex items-center gap-3">
-                       {cat === 'All Items' && <Folder className="h-4 w-4 text-blue-500" />}
-                       {cat === 'Favorites' && <Star className="h-4 w-4 text-yellow-500" fill={favoriteFilter ? 'currentColor' : 'none'} />}
-                       {cat === 'Recent' && <RotateCcw className="h-4 w-4 text-purple-500" />}
-                       {cat === 'Security Audit' && <Shield className="h-4 w-4 text-red-500" />}
-                       <span className="font-medium">{cat}</span>
-                     </div>
-                     <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
-                   </button>
-                 ))}
-               </div>
-            </div>
+            <div className={`w-full md:w-1/3 lg:w-1/4 flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar ${selectedRecord ? 'hidden md:flex' : 'flex'}`}>
+              {/* Folder Navigation / Categories Accordion */}
+              <div className={`rounded-2xl overflow-hidden border shadow-sm ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"}`}>
+                <Accordion 
+                  type="single" 
+                  collapsible 
+                  className="w-full" 
+                  value={isCategoriesExpanded ? "categories" : ""}
+                  onValueChange={(val) => setIsCategoriesExpanded(val === "categories")}
+                >
+                  <AccordionItem value="categories" className="border-none">
+                    <AccordionTrigger 
+                      className="px-4 py-3 hover:bg-white/5 hover:no-underline transition-all"
+                    >
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest text-left">Categories</h3>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-2 pb-2">
+                      <div className="grid grid-cols-1 gap-1">
+                        {[
+                          { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
+                          { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setCategoryFilter('all'); } },
+                          { name: 'Recent', icon: RotateCcw, count: passwords.filter(p => new Date(p.updatedAt || p.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, color: 'text-purple-500', action: () => { setCategoryFilter('all'); } },
+                          { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setCategoryFilter('all'); } },
+                          { name: 'Security Audit', icon: Shield, count: passwords.filter(p => !p.password || p.password.length < 8).length, color: 'text-red-500', action: () => { setCategoryFilter('all'); } },
+                        ].map((cat) => (
+                          <button 
+                           key={cat.name}
+                           onClick={cat.action}
+                           className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between group ${theme === 'light' ? 'hover:bg-gray-50 text-gray-700' : 'hover:bg-white/5 text-gray-300'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <cat.icon className={`h-4 w-4 ${cat.color}`} fill={(cat.name === 'Favorites' && (favoriteFilter)) || (cat.name === 'Archived' && (archivedFilter)) ? 'currentColor' : 'none'} />
+                              <span className="font-medium">{cat.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${theme === 'light' ? 'bg-gray-100 text-gray-500' : 'bg-white/5 text-gray-400'}`}>{cat.count}</span>
+                              <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              </div>
 
-            {/* Folder Structure */}
-            <div className="flex-1">
-              {viewMode === 'folder' ? (
-                 <div className="space-y-4">
-                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest px-4">My Folders</h3>
-                   {renderFolderStructure(folders.filter((f: any) => !f.parent_id), getFilteredPasswords(true))}
-                 </div>
-              ) : (
-                <div className="space-y-2">
-                   {renderPasswordRows()}
-                </div>
-              )}
+              {/* Folder Structure */}
+              <div className="flex-1">
+                {viewMode === 'folder' ? (
+                   <div className="space-y-4">
+                     <div className="flex items-center justify-between px-4">
+                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Folders</h3>
+                     </div>
+                     
+                     {/* Root Folder Entry - Enhanced Visibility */}
+                     <div className="px-2 mb-2">
+                        <div
+                         className={`flex items-center cursor-pointer py-3 px-3 rounded-xl transition-all border ${selectedFolder === "no-folder" || selectedFolder === "" ? "bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10" : theme === "light" ? "hover:bg-gray-50 border-gray-100" : "hover:bg-white/5 border-white/5"}`}
+                         onClick={() => {
+                           setSelectedFolder("no-folder")
+                           setSelectedRecord(null)
+                           setCategoryFilter('all')
+                           setFavoriteFilter(false)
+                           setArchivedFilter(false)
+                         }}
+                        >
+                          <div className={`p-2 rounded-lg ${selectedFolder === "no-folder" || selectedFolder === "" ? 'bg-blue-500/20' : 'bg-gray-500/10'} mr-3`}>
+                             <Folder className={`h-5 w-5 ${selectedFolder === "no-folder" || selectedFolder === "" ? 'text-blue-400' : 'text-gray-400'}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className={`font-bold text-sm ${selectedFolder === "no-folder" || selectedFolder === "" ? 'text-blue-100' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No folder (Root)</div>
+                            <div className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                              {passwords.filter((p: any) => !p.folder_id).length} Records
+                            </div>
+                          </div>
+                          {(selectedFolder === "no-folder" || selectedFolder === "") && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+                        </div>
+                     </div>
+
+                     {renderFolderStructure(folders.filter((f: any) => !f.parent_id), getFilteredPasswords(true))}
+                   </div>
+                ) : (
+                  <div className="space-y-2">
+                     {renderPasswordRows()}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
 
         {/* Right Side: Details / Main View (Full-page when record selected) */}
         <div className={`flex-1 h-full overflow-hidden ${selectedRecord ? 'relative' : ''}`}>
