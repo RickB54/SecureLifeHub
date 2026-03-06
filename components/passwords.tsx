@@ -2181,7 +2181,6 @@ export default function Passwords({
                           { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setCategoryFilter('all'); } },
                           { name: 'Recent', icon: RotateCcw, count: passwords.filter(p => new Date(p.updatedAt || p.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, color: 'text-purple-500', action: () => { setCategoryFilter('all'); } },
                           { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setCategoryFilter('all'); } },
-                          { name: 'Security Audit', icon: Shield, count: passwords.filter(p => !p.password || p.password.length < 8).length, color: 'text-red-500', action: () => { setCategoryFilter('all'); } },
                         ].map((cat) => (
                           <button 
                            key={cat.name}
