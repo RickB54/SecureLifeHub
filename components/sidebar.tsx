@@ -124,12 +124,18 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-20" onClick={() => setIsOpen(false)}></div>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-[45]"
+          style={{ top: 0 }}
+          onClick={() => setIsOpen(false)}
+        ></div>
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 w-64 bg-[#1a1a1a] transition-transform duration-300 ease-in-out z-30 ${isOpen ? "translate-x-0" : "-translate-x-full"
-          } h-full border-r border-gray-800 pt-16 shadow-2xl overflow-hidden flex flex-col`}
+        className={`fixed left-0 w-64 bg-[#1a1a1a] transition-transform duration-300 ease-in-out z-[50] ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        } border-r border-gray-800 pt-16 shadow-2xl overflow-hidden flex flex-col`}
+        style={{ top: 0, height: '100dvh' }}
       >
         <div className="sticky top-0 bg-[#1a1a1a] z-20">
           <div className="px-6 py-4 border-b border-gray-800/50 flex justify-between items-center bg-[#1a1a1a]/95 backdrop-blur-md">
