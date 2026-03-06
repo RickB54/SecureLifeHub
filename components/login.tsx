@@ -233,27 +233,6 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <>{isSignUp ? "Create Vault" : "Unlock Vault"} <ArrowRight className="h-5 w-5" /></>}
           </button>
 
-          {!isUnlockMode && (
-            <>
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1e1e1e] px-2 text-gray-500">Or continue with</span></div>
-              </div>
-
-              <button
-                type="button" onClick={handleGoogleLogin} disabled={loading}
-                className="w-full bg-white text-black font-semibold py-3 rounded-xl flex items-center justify-center gap-3 transition-all hover:bg-gray-100 shadow-lg text-sm"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.273 0 3.191 2.69 1.055 6.645l4.211 3.12z" />
-                  <path fill="#34A853" d="M16.04 18.013c-1.09.618-2.346.955-3.682.955-3.173 0-5.873-1.928-6.936-4.664l-4.254 3.264C3.3 21.064 7.39 24 12 24c3.055 0 5.764-1.009 7.745-2.727l-3.705-3.26z" />
-                  <path fill="#4285F4" d="M19.745 21.273c2.618-2.273 4.145-5.636 4.145-9.5 0-.845-.082-1.636-.211-2.432H12v4.613h6.732c-.314 1.573-1.127 2.873-2.382 3.732l3.395 3.587z" />
-                  <path fill="#FBBC05" d="M5.291 14.305c-.155-.464-.245-.964-.245-1.482 0-.518.09-1.018.245-1.482L1.082 8.218C.391 9.5 0 10.955 0 12.5s.391 3 1.082 4.282l4.209-3.477z" />
-                </svg>
-                Sign in with Google
-              </button>
-            </>
-          )}
 
           {typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') === 'true' && (
             <button
