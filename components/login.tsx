@@ -84,10 +84,14 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         if (session) {
           console.log("Active session found, unlocking UI...")
           setIsLocked(false)
-          // Ensure we respect any existing page param, otherwise just go to root
+          // Ensure we respect any existing page param, otherwise respect startup preference
           const targetPage = searchParams.get("page")
+          const savedStartup = localStorage.getItem("hub_startup_page")
+          
           if (targetPage) {
             router.push(`/?page=${targetPage}`)
+          } else if (savedStartup && savedStartup !== "dashboard") {
+            router.push(`/?page=${savedStartup}`)
           } else {
             router.push('/')
           }
@@ -118,8 +122,12 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       if (existingSession) {
         console.log('SSO: Active session already found, jumping to destination.')
         const page = searchParams.get('page')
+        const savedStartup = localStorage.getItem("hub_startup_page")
+        
         if (page) {
           router.push(`/?page=${page}`)
+        } else if (savedStartup && savedStartup !== "dashboard") {
+          router.push(`/?page=${savedStartup}`)
         } else {
           router.push('/')
         }
@@ -180,8 +188,12 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
           // 4. Clear tokens from URL and redirect
           window.history.replaceState({}, '', window.location.pathname)
+          const savedStartup = localStorage.getItem("hub_startup_page")
+          
           if (targetPage) {
             router.push(`/?page=${targetPage}`)
+          } else if (savedStartup && savedStartup !== "dashboard") {
+            router.push(`/?page=${savedStartup}`)
           } else {
             router.push('/')
           }
@@ -250,8 +262,12 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         localStorage.setItem('lastLoginEmail', trimmedEmail)
         
         const pageParam = searchParams.get('page')
+        const savedStartup = localStorage.getItem("hub_startup_page")
+        
         if (pageParam) {
           router.push(`/?page=${pageParam}`)
+        } else if (savedStartup && savedStartup !== "dashboard") {
+          router.push(`/?page=${savedStartup}`)
         } else {
           router.push('/')
         }

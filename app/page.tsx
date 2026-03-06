@@ -64,10 +64,23 @@ function HomeContent() {
 
   const searchParams = useSearchParams()
   const router = useRouter()
+  // Initialize from URL or default to dashboard
   const [activePage, setActivePage] = useState(searchParams.get("page") || "dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // Critical: Load startup preference as early as possible on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("hub_startup_page")
+    if (saved) {
+      setStartupPage(saved)
+      // If we are at the root (dashboard) and no explicit page is in URL, apply it immediately
+      if (!searchParams.get("page") && saved !== "dashboard") {
+        setActivePage(saved)
+      }
+    }
+  }, [])
 
   // Auth from Context - MUST be early for effects
   const { user, loading: authLoading, signOut, isLocked, setIsLocked } = useAuth()
@@ -109,23 +122,19 @@ function HomeContent() {
     const pageParam = searchParams.get("page")
     const savedStartup = localStorage.getItem("hub_startup_page") || "dashboard"
     
-    // 1. Sync startup page state
-    if (savedStartup !== startupPage) {
-      setStartupPage(savedStartup)
-    }
-
-    // 2. Initial landing: if authenticated and at root-dashboard, apply startup preference
+    // 1. Initial landing: if authenticated and at root-dashboard, apply startup preference
+    // This handles cases like a fresh login or session restoration
     if (user && !isLocked && !pageParam && activePage === "dashboard" && savedStartup !== "dashboard" && navHistory.length === 0) {
       setActivePage(savedStartup)
       router.push(`/?page=${savedStartup}`)
     }
 
-    // 3. Sync state with URL if they differ (handles browser back/forward)
+    // 2. Sync state with URL if they differ (handles browser back/forward)
     if (pageParam && pageParam !== activePage) {
       setActivePage(pageParam)
     }
 
-    // 4. Clear sensitive tokens but KEEP the page param
+    // 3. Clear sensitive tokens but KEEP the page param
     if (typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
       const cleanParams = new URLSearchParams(window.location.search)
       cleanParams.delete('access_token')
