@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Login from "@/components/login"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
 import { useAuth } from "@/components/auth-provider"
@@ -63,6 +63,7 @@ function HomeContent() {
   const [startupPage, setStartupPage] = useState("dashboard")
 
   const searchParams = useSearchParams()
+  const router = useRouter()
   const [activePage, setActivePage] = useState(searchParams.get("page") || "dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -85,17 +86,22 @@ function HomeContent() {
     if (page === activePage) return
     setNavHistory(prev => [...prev, activePage])
     setActivePage(page)
+    router.push(`/?page=${page}`)
   }
 
   const handleBack = () => {
     if (navHistory.length === 0) {
       setActivePage("dashboard")
+      router.push("/?page=dashboard")
       return
     }
     const newHistory = [...navHistory]
     const prevPage = newHistory.pop()
     setNavHistory(newHistory)
-    if (prevPage) setActivePage(prevPage)
+    if (prevPage) {
+      setActivePage(prevPage)
+      router.push(`/?page=${prevPage}`)
+    }
   }
 
   // Consolidated Startup & Navigation logic
@@ -103,27 +109,31 @@ function HomeContent() {
     const pageParam = searchParams.get("page")
     const savedStartup = localStorage.getItem("hub_startup_page") || "dashboard"
     
-    // 1. Update startup page state if missing
+    // 1. Sync startup page state
     if (savedStartup !== startupPage) {
       setStartupPage(savedStartup)
     }
 
-    // 2. Handle redirection if authenticated
-    if (user && !isLocked) {
-      if (pageParam && pageParam !== activePage) {
-        // Respect explicit URL parameter
-        setActivePage(pageParam)
-      } else if (!pageParam && activePage === "dashboard" && savedStartup !== "dashboard" && navHistory.length === 0) {
-        // Apply startup preference only on initial landing (navHistory is empty)
-        setActivePage(savedStartup)
-      }
-      
-      // 3. Clear any URL params (like tokens) after processing
-      if (typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
-        window.history.replaceState({}, '', window.location.pathname)
-      }
+    // 2. Initial landing: if authenticated and at root-dashboard, apply startup preference
+    if (user && !isLocked && !pageParam && activePage === "dashboard" && savedStartup !== "dashboard" && navHistory.length === 0) {
+      setActivePage(savedStartup)
+      router.push(`/?page=${savedStartup}`)
     }
-  }, [searchParams, user, isLocked, activePage, startupPage, navHistory.length])
+
+    // 3. Sync state with URL if they differ (handles browser back/forward)
+    if (pageParam && pageParam !== activePage) {
+      setActivePage(pageParam)
+    }
+
+    // 4. Clear sensitive tokens but KEEP the page param
+    if (typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
+      const cleanParams = new URLSearchParams(window.location.search)
+      cleanParams.delete('access_token')
+      cleanParams.delete('refresh_token')
+      const newQuery = cleanParams.toString()
+      window.history.replaceState({}, '', `/${newQuery ? '?' + newQuery : ''}`)
+    }
+  }, [searchParams, user, isLocked, activePage, startupPage, navHistory.length, router])
 
   // Security & Locking Logic
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
