@@ -35,15 +35,15 @@ export default function Logo({ className = "", showText = true, size = "md", onC
     }
 
     const slSizeClasses = {
-        sm: "text-[6px]",
-        md: "text-[10px]",
-        lg: "text-[16px]",
-        xl: "text-[20px]"
+        sm: "text-[10px]",
+        md: "text-[14px]",
+        lg: "text-[24px]",
+        xl: "text-[34px]"
     }
 
     return (
         <div
-            className={`relative ${sizeClasses[size]} rounded-full flex items-center justify-center bg-gradient-to-b from-[#4f83cc] to-[#1e3a8a] border border-white/20 shadow-xl overflow-hidden group ${className}`}
+            className={`relative ${sizeClasses[size]} rounded-full flex items-center justify-center bg-gradient-to-b from-[#4f83cc] to-[#1e3a8a] border-[0.5px] border-white/40 shadow-xl overflow-hidden group ${className}`}
             onClick={onClick}
         >
             {/* High-quality CSS Fallback Logo that matches screenshot */}
