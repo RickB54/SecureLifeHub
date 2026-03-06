@@ -107,7 +107,7 @@ export default function Header({
           </button>
           <button
             onClick={toggleFullscreen}
-            className={`hidden md:block ${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
+            className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
             aria-label="Toggle Full Screen"
           >
             {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}

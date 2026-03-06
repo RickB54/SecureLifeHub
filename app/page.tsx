@@ -66,6 +66,23 @@ function HomeContent() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Listen for browser-level fullscreen changes to keep state in sync
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
+    document.addEventListener("mozfullscreenchange", handleFullscreenChange)
+    document.addEventListener("MSFullscreenChange", handleFullscreenChange)
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
+      document.removeEventListener("mozfullscreenchange", handleFullscreenChange)
+      document.removeEventListener("MSFullscreenChange", handleFullscreenChange)
+    }
+  }, [])
+
   // Force dashboard on mount if no explicit page in URL
   useEffect(() => {
     const page = searchParams.get("page")

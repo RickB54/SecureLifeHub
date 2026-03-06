@@ -32,8 +32,8 @@ import {
   Paperclip,
   Upload,
   FileText,
-  Maximize2,
-  Minimize2,
+  Maximize,
+  Minimize,
 } from "lucide-react"
 import {
   Accordion,
@@ -1982,15 +1982,20 @@ export default function Passwords({
       {/* COMPACT HEADER: Always visible, integrated search and counts */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          {/* Mobile Back Button - ONLY on mobile when record selected */}
-          {selectedRecord && (
+          {/* Mobile Back Button - ONLY on mobile when record selected OR folder selected */}
+          {(selectedRecord || selectedFolder) && (
             <div className="md:hidden flex items-center gap-2">
               <button
-                onClick={() => setSelectedRecord(null)}
+                onClick={() => {
+                  if (selectedRecord) setSelectedRecord(null);
+                  else setSelectedFolder("");
+                }}
                 className={`p-1.5 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-white/5 hover:bg-white/10 text-gray-300'} flex items-center gap-2 pr-3`}
               >
                 <ArrowLeft className="h-5 w-5" />
-                <span className="font-bold text-xs uppercase tracking-tight">Back</span>
+                <span className="font-bold text-xs uppercase tracking-tight">
+                  {selectedRecord ? "Back" : "Folders"}
+                </span>
               </button>
             </div>
           )}
@@ -2005,11 +2010,33 @@ export default function Passwords({
               <span className="opacity-30">•</span>
               <span>{folders.length} Folders</span>
               <button 
-                onClick={() => setIsFullscreen?.(!isFullscreen)}
+                onClick={() => {
+                  const newState = !isFullscreen;
+                  setIsFullscreen?.(newState);
+                  
+                  // Hardware-level fullscreen
+                  if (newState) {
+                    if (document.documentElement.requestFullscreen) {
+                      document.documentElement.requestFullscreen().catch(() => {});
+                    } else if ((document.documentElement as any).webkitRequestFullscreen) {
+                      (document.documentElement as any).webkitRequestFullscreen();
+                    } else if ((document.documentElement as any).msRequestFullscreen) {
+                      (document.documentElement as any).msRequestFullscreen();
+                    }
+                  } else {
+                    if (document.fullscreenElement && document.exitFullscreen) {
+                      document.exitFullscreen().catch(() => {});
+                    } else if ((document as any).webkitExitFullscreen) {
+                      (document as any).webkitExitFullscreen();
+                    } else if ((document as any).msExitFullscreen) {
+                      (document as any).msExitFullscreen();
+                    }
+                  }
+                }}
                 className={`ml-1.5 p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
                 title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
               >
-                {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
               </button>
             </div>
           </div>
@@ -2057,15 +2084,6 @@ export default function Passwords({
                 Folder
               </button>
 
-              {/* Expand/Collapse All Button */}
-              <button
-                onClick={handleToggleAllFolders}
-                className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
-                title="Expand/Collapse All Folders"
-              >
-                <ChevronsDown className="h-4 w-4 text-blue-400" />
-              </button>
-
               {/* Categories Dropdown Container */}
               <div className="relative" ref={activeMenu === 'categories-header' ? menuRef : null}>
                 <button
@@ -2089,7 +2107,6 @@ export default function Passwords({
                         { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setCategoryFilter('all'); } },
                         { name: 'Recent', icon: RotateCcw, count: passwords.filter(p => new Date(p.updatedAt || p.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, color: 'text-purple-500', action: () => { setCategoryFilter('all'); } },
                         { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setCategoryFilter('all'); } },
-                        { name: 'Security Audit', icon: Shield, count: passwords.filter(p => !p.password || p.password.length < 8).length, color: 'text-red-500', action: () => { setCategoryFilter('all'); } },
                       ].map((cat) => (
                         <button
                           key={cat.name}
@@ -2110,6 +2127,15 @@ export default function Passwords({
                   </div>
                 )}
               </div>
+
+              {/* Expand/Collapse All Button - MOVED TO LAST POSITION */}
+              <button
+                onClick={handleToggleAllFolders}
+                className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
+                title="Expand/Collapse All Folders"
+              >
+                <ChevronsDown className="h-4 w-4 text-blue-400" />
+              </button>
             </div>
           )}
         </div>
@@ -2131,8 +2157,8 @@ export default function Passwords({
 
       {/* FILTERS & CONTENT GRID */}
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 mt-2">
-        {/* Left Side: Navigation / List (Hidden when record selected) */}
-            <div className={`w-full md:w-1/3 lg:w-1/4 flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar ${selectedRecord ? 'hidden md:flex' : 'flex'}`}>
+        {/* Left Side: Navigation / List (Hidden when record selected OR folder selected on mobile) */}
+            <div className={`w-full md:w-1/3 lg:w-1/4 flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar ${(selectedRecord || selectedFolder) ? 'hidden md:flex' : 'flex'}`}>
               {/* Folder Navigation / Categories Accordion */}
               <div className={`rounded-2xl overflow-hidden border shadow-sm ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"}`}>
                 <Accordion 
