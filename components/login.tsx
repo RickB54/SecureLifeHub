@@ -25,12 +25,23 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
   const searchParams = useSearchParams()
   const { setIsLocked, signOut } = useAuth()
 
-  // Load last used email from localStorage
+  // Load last used email and optional saved password from localStorage
   useEffect(() => {
     const savedEmail = localStorage.getItem('lastLoginEmail')
     if (savedEmail) {
       setEmail(savedEmail)
       setIsSignUp(false) // Force to login mode if they have been here before
+    }
+
+    // Auto-fill password if "Remember Master Password" is enabled (Desktop Only feature)
+    const rememberPass = localStorage.getItem('remember_master_pass') === 'true'
+    const savedPass = localStorage.getItem('saved_master_pass')
+    if (rememberPass && savedPass) {
+      try {
+        setPassword(atob(savedPass))
+      } catch (e) {
+        console.warn("Failed to decode saved password")
+      }
     }
   }, [])
 
@@ -364,6 +375,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
               <div className="relative group">
                 <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
                 <input
+                  id="login-email"
                   type="email"
                   name="email"
                   autoComplete="email"
@@ -378,6 +390,9 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             <div className="relative group">
               <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
               <PasswordInput
+                id="master-password"
+                name="master-password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
