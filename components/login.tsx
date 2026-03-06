@@ -30,6 +30,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     const savedEmail = localStorage.getItem('lastLoginEmail')
     if (savedEmail) {
       setEmail(savedEmail)
+      setIsSignUp(false) // Force to login mode if they have been here before
     }
   }, [])
 
