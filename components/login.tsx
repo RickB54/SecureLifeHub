@@ -116,6 +116,9 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
   // SSO: Check for session token in URL and auto-login
   useEffect(() => {
+    // If we are just unlocking the vault, we already have a session, do not run SSO redirection!
+    if (isUnlockMode) return;
+
     const handleSSO = async () => {
       // 1. Check if we ALREADY have a session. If so, just go to dashboard.
       // Use getSession but be mindful of AuthProvider racing
