@@ -3,12 +3,17 @@
 import { X, Copy, Check } from "lucide-react"
 import { useState } from "react"
 
-export default function ViewFinancialCardModal({ onClose, cardData }) {
-    const [copiedField, setCopiedField] = useState(null)
+interface ViewFinancialCardModalProps {
+  onClose: () => void
+  cardData: any
+}
+
+export default function ViewFinancialCardModal({ onClose, cardData }: ViewFinancialCardModalProps) {
+    const [copiedField, setCopiedField] = useState<string | null>(null)
 
     if (!cardData) return null
 
-    const handleCopy = (text, field) => {
+    const handleCopy = (text: string, field: string) => {
         if (!text) return
         navigator.clipboard.writeText(text)
         setCopiedField(field)
@@ -34,9 +39,22 @@ export default function ViewFinancialCardModal({ onClose, cardData }) {
                             <div className="text-lg font-medium text-white">{title}</div>
                         </div>
 
-                        <div>
-                            <label className="text-xs text-gray-400 uppercase font-bold tracking-wider">Type</label>
-                            <div className="text-base text-gray-300 capitalize">{cardType}</div>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <label className="text-xs text-gray-400 uppercase font-bold tracking-wider">Type</label>
+                                <div className="text-base text-gray-300 capitalize">{cardType}</div>
+                            </div>
+                            {cardData.cardColor && (
+                                <div className="text-right">
+                                    <label className="text-xs text-gray-400 uppercase font-bold tracking-wider">Card Color</label>
+                                    <div className="flex justify-end mt-1">
+                                        <div 
+                                            className="w-8 h-8 rounded-full border border-gray-600 shadow-sm"
+                                            style={{ backgroundColor: cardData.cardColor }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="relative group">
@@ -80,7 +98,7 @@ export default function ViewFinancialCardModal({ onClose, cardData }) {
                             <div className="pt-4 border-t border-gray-700">
                                 <h3 className="text-sm font-semibold mb-3 text-gray-300">Custom Fields</h3>
                                 <div className="space-y-3">
-                                    {custom_fields.map((field, idx) => (
+                                    {custom_fields.map((field: any, idx: number) => (
                                         <div key={idx} className="flex justify-between items-center bg-[#333] p-2 rounded border border-gray-700">
                                             <span className="text-sm text-gray-400">{field.label}</span>
                                             <div className="flex items-center gap-2">

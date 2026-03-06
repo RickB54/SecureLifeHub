@@ -34,6 +34,7 @@ interface FinancialCard {
     cardNumber?: string
     expiry?: string
     cvv?: string
+    cardColor?: string
     custom_fields?: any[]
   }
   is_archived?: boolean
@@ -45,6 +46,7 @@ interface FinancialCard {
   cardNumber?: string
   expiry?: string
   cvv?: string
+  cardColor?: string
   custom_fields?: any[]
 }
 
@@ -108,6 +110,7 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
       cardNumber: record.item_metadata?.cardNumber || "",
       expiry: record.item_metadata?.expiry || "",
       cvv: record.item_metadata?.cvv || "",
+      cardColor: record.item_metadata?.cardColor || "",
       custom_fields: record.item_metadata?.custom_fields || [],
     }))
 
@@ -191,8 +194,8 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
   // Handle adding new card
   const handleAddCard = async (newCard: any) => {
     // Extract metadata fields
-    const { cardNumber, cvv, expiry, cardType, name, title, ...rest } = newCard
-    const metadata = { cardNumber, cvv, expiry, cardType, name }
+    const { cardNumber, cvv, expiry, cardType, name, title, cardColor, ...rest } = newCard
+    const metadata = { cardNumber, cvv, expiry, cardType, name, cardColor }
 
     await addItem({
       title: title || "New Card",
@@ -236,6 +239,7 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
         cardNumber: card.cardNumber,
         expiry: card.expiry,
         cvv: card.cvv,
+        cardColor: card.cardColor,
         custom_fields: card.custom_fields || []
       }
 
@@ -269,13 +273,14 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
     if (!selectedCard) return
 
     // Extract metadata fields
-    const { cardNumber, cvv, expiry, cardType, name, title, ...rest } = updatedData
+    const { cardNumber, cvv, expiry, cardType, name, title, cardColor, ...rest } = updatedData
     const metadata = {
       cardNumber: cardNumber || selectedCard.cardNumber,
       cvv: cvv || selectedCard.cvv,
       expiry: expiry || selectedCard.expiry,
       cardType: cardType || selectedCard.cardType,
-      name: name || selectedCard.name
+      name: name || selectedCard.name,
+      cardColor: cardColor || selectedCard.cardColor
     }
 
     await updateItem(selectedCard.id, {
@@ -342,20 +347,29 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
     console.log("Card details downloaded:", card.title)
   }
 
-  // Get card background color based on type
-  const getCardBackground = (cardType: string) => {
-    switch (cardType.toLowerCase()) {
+  // Get card background color based on type or custom color
+  const getCardBackground = (card: any) => {
+    if (card.cardColor) {
+      return { backgroundColor: card.cardColor }
+    }
+
+    const cardBrand = card.title?.toLowerCase().includes("visa")
+      ? "visa"
+      : card.title?.toLowerCase().includes("mastercard")
+        ? "mastercard"
+        : card.title?.toLowerCase().includes("amex") || card.title?.toLowerCase().includes("american express")
+          ? "amex"
+          : "default"
+
+    switch (cardBrand) {
       case "visa":
-        return "bg-gradient-to-br from-blue-900 to-blue-950"
+        return { background: "linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 100%)" }
       case "mastercard":
-        return "bg-gradient-to-br from-red-900 to-red-950"
+        return { background: "linear-gradient(135deg, #991b1b 0%, #450a0a 100%)" }
       case "amex":
-      case "american express":
-        return "bg-gradient-to-br from-yellow-800 to-yellow-950"
-      case "discover":
-        return "bg-gradient-to-br from-orange-800 to-orange-950"
+        return { background: "linear-gradient(135deg, #854d0e 0%, #422006 100%)" }
       default:
-        return "bg-gradient-to-br from-gray-800 to-gray-900"
+        return { background: "linear-gradient(135deg, #374151 0%, #111827 100%)" }
     }
   }
 
@@ -475,7 +489,7 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
             : "credit"
 
       return (
-        <div key={card.id} className={`${getCardBackground(cardBrand)} rounded-lg overflow-hidden shadow-lg`}>
+        <div key={card.id} style={getCardBackground(card)} className="rounded-lg overflow-hidden shadow-lg min-h-[220px] flex flex-col">
           <div className="p-4">
             <div className="flex justify-between items-start mb-6">
               <h3 className="font-semibold text-lg">{card.title || "Unnamed Card"}</h3>
