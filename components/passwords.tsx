@@ -2217,15 +2217,101 @@ export default function Passwords({
             placeholder="Search vault..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm ${theme === "light" ? "bg-white text-gray-900 border-gray-200" : "bg-white/5 text-white border-white/5"} border focus:outline-none shadow-sm`}
+            className={`w-full pl-10 pr-10 py-2.5 rounded-xl text-sm ${theme === "light" ? "bg-white text-gray-900 border-gray-200" : "bg-white/5 text-white border-white/5"} border focus:outline-none shadow-sm`}
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className={`absolute right-5 top-1/2 -translate-y-1/2 p-1 rounded-full ${theme === "light" ? "text-gray-400 hover:text-gray-600" : "text-gray-500 hover:text-white"} transition-colors`}
+              title="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       )}
 
       {/* FILTERS & CONTENT GRID */}
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 mt-2">
-        {/* Left Side: Navigation / List (Hidden when record selected OR folder selected on mobile) */}
-            <div className={`w-full md:w-1/3 lg:w-1/4 flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar ${(selectedRecord || selectedFolder) ? 'hidden md:flex' : 'flex'}`}>
+
+        {/* === RECORD DETAIL VIEW in List Mode === */}
+        {selectedRecord && forceListView && (
+          <div className="flex-1 h-full w-full animate-in fade-in slide-in-from-right-4 duration-300">
+            {renderRecordDetails(selectedRecord)}
+          </div>
+        )}
+
+        {/* === FLAT LIST VIEW: Full-width, no folders === */}
+        {!selectedRecord && forceListView && (
+          <div className="flex-1 h-full flex flex-col gap-2">
+            <div className={`flex items-center gap-2 px-1 py-1 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+              <ListIcon className="h-3.5 w-3.5" />
+              <span>{getFilteredPasswords().length} record{getFilteredPasswords().length !== 1 ? 's' : ''}</span>
+              {favoriteFilter && <span className="text-yellow-400">· Favorites</span>}
+              {archivedFilter && <span className="text-green-400">· Archived</span>}
+              {timeFilter === 'recent' && <span className="text-purple-400">· Recent</span>}
+              {searchQuery && <span className="text-blue-400">· "{searchQuery}"</span>}
+            </div>
+            <div className={`flex-1 rounded-2xl border overflow-y-auto custom-scrollbar ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
+              {getFilteredPasswords().length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40">
+                  <Search className="h-10 w-10 mb-3" />
+                  <p className="font-bold text-sm">No results found</p>
+                  <p className="text-xs mt-1">Try adjusting your filter or search</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-white/5">
+                  {getFilteredPasswords().map((pw) => (
+                    <div
+                      key={pw.id}
+                      className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
+                      onClick={() => handleEditPassword(pw.id)}
+                    >
+                      <div className="flex-shrink-0">
+                        {pw.website ? (
+                          <div className="p-2 bg-blue-500/10 rounded-lg">
+                            <ExternalLink className="h-4 w-4 text-blue-400" />
+                          </div>
+                        ) : (
+                          <div className="p-2 bg-purple-500/10 rounded-lg">
+                            <Lock className="h-4 w-4 text-purple-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
+                          <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
+                        </div>
+                        {pw.website && (
+                          <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
+                        )}
+                        {pw.username && (
+                          <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          className={`p-1.5 rounded-md transition-colors ${
+                            pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
+                          }`}
+                          onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
+                          title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                        >
+                          <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* === FOLDER / TWO-PANEL VIEW: Only shown when NOT in list view mode === */}
+        {/* Left Side: Folder Navigation */}
+            <div className={`w-full md:w-1/3 lg:w-1/4 flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar ${forceListView ? 'hidden' : (selectedRecord || selectedFolder) ? 'hidden md:flex' : 'flex'}`}>
               {/* Folder Navigation / Categories Accordion */}
               <div className={`rounded-2xl overflow-hidden border shadow-sm ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"}`}>
                 <Accordion 
@@ -2278,30 +2364,32 @@ export default function Passwords({
                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Folders</h3>
                      </div>
                      
-                     {/* Root Folder Entry - Enhanced Visibility */}
-                     <div className="px-2 mb-2">
-                        <div
-                         className={`flex items-center cursor-pointer py-3 px-3 rounded-xl transition-all border ${selectedFolder === "no-folder" || selectedFolder === "" ? "bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10" : theme === "light" ? "hover:bg-gray-50 border-gray-100" : "hover:bg-white/5 border-white/5"}`}
-                         onClick={() => {
-                           setSelectedFolder("no-folder")
-                           setSelectedRecord(null)
-                           setCategoryFilter('all')
-                           setFavoriteFilter(false)
-                           setArchivedFilter(false)
-                         }}
-                        >
-                          <div className={`p-2 rounded-lg ${selectedFolder === "no-folder" || selectedFolder === "" ? 'bg-blue-500/20' : 'bg-gray-500/10'} mr-3`}>
-                             <Folder className={`h-5 w-5 ${selectedFolder === "no-folder" || selectedFolder === "" ? 'text-blue-400' : 'text-gray-400'}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className={`font-bold text-sm ${selectedFolder === "no-folder" || selectedFolder === "" ? 'text-blue-100' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No folder (Root)</div>
-                            <div className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
-                              {passwords.filter((p: any) => !p.folder_id).length} Records
-                            </div>
-                          </div>
-                          {(selectedFolder === "no-folder" || selectedFolder === "") && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
-                        </div>
-                     </div>
+                     {/* Root Folder Entry - only shown when unorganised passwords exist */}
+                     {passwords.filter((p: any) => !p.folder_id).length > 0 && (
+                       <div className="px-2 mb-2">
+                         <div
+                          className={`flex items-center cursor-pointer py-3 px-3 rounded-xl transition-all border ${selectedFolder === "no-folder" ? "bg-blue-600/20 border-blue-500/40 shadow-lg shadow-blue-500/10" : theme === "light" ? "hover:bg-gray-50 border-gray-100" : "hover:bg-white/5 border-white/5"}`}
+                          onClick={() => {
+                            setSelectedFolder("no-folder")
+                            setSelectedRecord(null)
+                            setCategoryFilter('all')
+                            setFavoriteFilter(false)
+                            setArchivedFilter(false)
+                          }}
+                         >
+                           <div className={`p-2 rounded-lg ${selectedFolder === "no-folder" ? 'bg-blue-500/20' : 'bg-gray-500/10'} mr-3`}>
+                              <Folder className={`h-5 w-5 ${selectedFolder === "no-folder" ? 'text-blue-400' : 'text-gray-400'}`} />
+                           </div>
+                           <div className="flex-1 min-w-0">
+                             <div className={`font-bold text-sm ${selectedFolder === "no-folder" ? 'text-blue-100' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No folder (Root)</div>
+                             <div className="text-[10px] uppercase font-bold text-gray-500 tracking-wider">
+                               {passwords.filter((p: any) => !p.folder_id).length} Records
+                             </div>
+                           </div>
+                           {selectedFolder === "no-folder" && <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />}
+                         </div>
+                       </div>
+                     )}
 
                      {renderFolderStructure(folders.filter((f: any) => !f.parent_id), getFilteredPasswords(true))}
                    </div>
