@@ -2401,120 +2401,56 @@ export default function Passwords({
               </div>
             </div>
 
-        {/* Right Side: Details / Main View (Full-page when record selected) */}
-        <div className={`flex-1 h-full overflow-hidden ${selectedRecord ? 'relative' : ''}`}>
-           {selectedRecord ? (
-              <div className="h-full w-full animate-in fade-in slide-in-from-right-4 duration-300">
-                {renderRecordDetails(selectedRecord)}
-              </div>
-           ) : viewMode === "list" ? (
-             <div className="h-full flex flex-col gap-4">
-                <div className={`flex-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'} overflow-hidden shadow-sm`}>
-                    <div className="overflow-x-auto h-full scrollbar-hide">
-                      <table className="w-full text-left text-sm table-fixed">
-                        <thead className={`${theme === "light" ? "bg-gray-50 text-gray-600" : "bg-white/5 text-gray-400"} sticky top-0 z-10 font-bold uppercase text-[10px] tracking-wider`}>
-                          <tr>
-                            <th className="py-4 px-6 w-full md:w-auto">Record Title</th>
-                            <th className="py-4 px-6 hidden md:table-cell w-48">Username</th>
-                            <th className="py-4 px-6 hidden lg:table-cell w-32 text-right">Updated</th>
-                          </tr>
-                        </thead>
-                        <tbody className={`divide-y ${theme === "light" ? "divide-gray-100" : "divide-white/5"}`}>
-                          {renderPasswordRows()}
-                        </tbody>
-                      </table>
-                      {getFilteredPasswords().length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-50">
-                          <Search className="h-12 w-12 mb-4" />
-                          <p className="font-bold">No records matched your search</p>
-                          <p className="text-xs">Try searching for a different keyword</p>
-                        </div>
-                      )}
-                    </div>
+        {/* Right Side: Details / Main View — hidden when forceListView is active */}
+        {!forceListView && (
+          <div className={`flex-1 h-full overflow-hidden ${selectedRecord ? 'relative' : ''}`}>
+             {selectedRecord ? (
+                <div className="h-full w-full animate-in fade-in slide-in-from-right-4 duration-300">
+                  {renderRecordDetails(selectedRecord)}
                 </div>
-             </div>
-           ) : viewMode === "grid" ? (
-             <div className="h-full overflow-y-auto scrollbar-hide">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-1">
-                  {renderPasswordGrid()}
-                </div>
-             </div>
-           ) : forceListView ? (
-             /* Flat list view — either filter-activated or user-toggled */
-             <div className="h-full flex flex-col gap-2">
-               <div className={`flex items-center gap-2 px-1 py-1 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
-                 <ListIcon className="h-3.5 w-3.5" />
-                 <span>{getFilteredPasswords().length} record{getFilteredPasswords().length !== 1 ? 's' : ''}</span>
-                 {favoriteFilter && <span className="text-yellow-400">· Favorites</span>}
-                 {archivedFilter && <span className="text-green-400">· Archived</span>}
-                 {timeFilter === 'recent' && <span className="text-purple-400">· Recent</span>}
-                 {searchQuery && <span className="text-blue-400">· "{searchQuery}"</span>}
+             ) : viewMode === "list" ? (
+               <div className="h-full flex flex-col gap-4">
+                  <div className={`flex-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'} overflow-hidden shadow-sm`}>
+                      <div className="overflow-x-auto h-full scrollbar-hide">
+                        <table className="w-full text-left text-sm table-fixed">
+                          <thead className={`${theme === "light" ? "bg-gray-50 text-gray-600" : "bg-white/5 text-gray-400"} sticky top-0 z-10 font-bold uppercase text-[10px] tracking-wider`}>
+                            <tr>
+                              <th className="py-4 px-6 w-full md:w-auto">Record Title</th>
+                              <th className="py-4 px-6 hidden md:table-cell w-48">Username</th>
+                              <th className="py-4 px-6 hidden lg:table-cell w-32 text-right">Updated</th>
+                            </tr>
+                          </thead>
+                          <tbody className={`divide-y ${theme === "light" ? "divide-gray-100" : "divide-white/5"}`}>
+                            {renderPasswordRows()}
+                          </tbody>
+                        </table>
+                        {getFilteredPasswords().length === 0 && (
+                          <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-50">
+                            <Search className="h-12 w-12 mb-4" />
+                            <p className="font-bold">No records matched your search</p>
+                            <p className="text-xs">Try searching for a different keyword</p>
+                          </div>
+                        )}
+                      </div>
+                  </div>
                </div>
-               <div className={`flex-1 rounded-2xl border overflow-y-auto custom-scrollbar ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
-                 {getFilteredPasswords().length === 0 ? (
-                   <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40">
-                     <Search className="h-10 w-10 mb-3" />
-                     <p className="font-bold text-sm">No results found</p>
-                     <p className="text-xs mt-1">Try adjusting your filter or search</p>
-                   </div>
-                 ) : (
-                   <div className="divide-y divide-white/5">
-                     {getFilteredPasswords().map((pw) => (
-                       <div
-                         key={pw.id}
-                         className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
-                         onClick={() => handleEditPassword(pw.id)}
-                       >
-                         <div className="flex-shrink-0">
-                           {pw.website ? (
-                             <div className="p-2 bg-blue-500/10 rounded-lg">
-                               <ExternalLink className="h-4 w-4 text-blue-400" />
-                             </div>
-                           ) : (
-                             <div className="p-2 bg-purple-500/10 rounded-lg">
-                               <Lock className="h-4 w-4 text-purple-400" />
-                             </div>
-                           )}
-                         </div>
-                         <div className="flex-1 min-w-0">
-                           <div className="flex items-center gap-2">
-                             {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-                             <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
-                           </div>
-                           {pw.website && (
-                             <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
-                           )}
-                           {pw.username && (
-                             <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
-                           )}
-                         </div>
-                         <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <button
-                             className={`p-1.5 rounded-md transition-colors ${
-                               pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
-                             }`}
-                             onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
-                             title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                           >
-                             <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
-                           </button>
-                         </div>
-                       </div>
-                     ))}
+             ) : viewMode === "grid" ? (
+               <div className="h-full overflow-y-auto scrollbar-hide">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-1">
+                    {renderPasswordGrid()}
+                  </div>
+               </div>
+             ) : (
+               <div className="h-full">
+                 {selectedFolder ? renderFolderDetail(selectedFolder) : (
+                   <div className="h-full flex items-center justify-center opacity-20">
+                      <Folder className="h-24 w-24" />
                    </div>
                  )}
                </div>
-             </div>
-           ) : (
-             <div className="h-full">
-               {selectedFolder ? renderFolderDetail(selectedFolder) : (
-                 <div className="h-full flex items-center justify-center opacity-20">
-                    <Folder className="h-24 w-24" />
-                 </div>
-               )}
-             </div>
-           )}
-        </div>
+             )}
+          </div>
+        )}
       </div>
 
       {/* MODALS */}
