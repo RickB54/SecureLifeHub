@@ -8,13 +8,14 @@ import CustomFieldsSection, { CustomField } from "./custom-fields-section"
 // Update the component to accept folders prop and initialFolderId
 export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialFolderId = "" }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialFolderId?: string }) {
   const [formData, setFormData] = useState({
+    title: "",
     website: "",
     username: "",
     password: "",
     notes: "",
     category: "General",
-    folder_id: initialFolderId, // Use initialFolderId
-    picture: "", // Add picture field
+    folder_id: initialFolderId,
+    picture: "",
     customFields: [] as CustomField[]
   })
 
@@ -113,6 +114,21 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
 
         <form onSubmit={handleSubmit} className="p-4">
           <div className="space-y-4">
+          <div>
+              <label htmlFor="title" className="block text-sm font-bold text-gray-200 mb-1">
+                Title <span className="text-gray-500 font-normal">(optional, defaults to website)</span>
+              </label>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                value={formData.title}
+                onChange={handleChange}
+                className="w-full px-3 py-2 bg-blue-600/10 border border-blue-500/30 rounded-md focus:outline-none focus:ring-2 focus:ring-[#007bff] text-white transition-all hover:bg-blue-600/20"
+                placeholder="e.g. My Bank Login"
+              />
+            </div>
+
             <div>
               <label htmlFor="website" className="block text-sm font-bold text-gray-200 mb-1">
                 Website

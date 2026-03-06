@@ -226,19 +226,18 @@ export default function Passwords({
 
   // Handle adding a new password
   const handleAddPassword = async (newPassword: any) => {
-    // If a new folder was created implicitly by path (legacy) or directly by selection
-    let folderId = undefined;
-    if (newPassword.folder_id) {
+    let folderId: string | null = null;
+
+    if (newPassword.folder_id && newPassword.folder_id !== "") {
+      // Use the explicitly selected folder_id
       folderId = newPassword.folder_id;
     } else if (newPassword.path) {
+      // Legacy: resolve folder by path
       const existingFolder = folders.find(f => f.path === newPassword.path);
       if (!existingFolder) {
-        // Create new folder if it doesn't exist
         const folderName = newPassword.path.split("/").pop()
         const newFolder = await addFolder(folderName)
-        if (newFolder) {
-          folderId = newFolder.id
-        }
+        if (newFolder) folderId = newFolder.id
       } else {
         folderId = existingFolder.id;
       }
@@ -247,7 +246,8 @@ export default function Passwords({
     await addItem({
       ...newPassword,
       type: "password",
-      folder_id: (newPassword.folder_id === "" || !newPassword.folder_id) ? null : newPassword.folder_id // Explicitly handle root as null
+      title: newPassword.title || newPassword.website || 'Untitled',
+      folder_id: folderId, // Use the correctly computed folderId
     })
     setAddPasswordModalOpen(false)
   }
@@ -2163,8 +2163,34 @@ export default function Passwords({
                 )}
               </div>
 
-              {/* Expand/Collapse All Button */}
-              {!isFilterActive && (
+              {/* View toggle: Folder / List icons — always visible */}
+              <div className={`flex items-center rounded-lg overflow-hidden border ${theme === 'light' ? 'border-gray-200' : 'border-white/10'}`}>
+                <button
+                  onClick={() => setForceListView(false)}
+                  className={`p-1.5 transition-all ${
+                    !forceListView
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'light' ? 'text-gray-500 hover:bg-gray-100' : 'text-gray-400 hover:bg-white/10'
+                  }`}
+                  title="Folder View"
+                >
+                  <FolderTree className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setForceListView(true)}
+                  className={`p-1.5 transition-all ${
+                    forceListView
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'light' ? 'text-gray-500 hover:bg-gray-100' : 'text-gray-400 hover:bg-white/10'
+                  }`}
+                  title="List View"
+                >
+                  <ListIcon className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Expand/Collapse All — only in folder mode */}
+              {!forceListView && (
                 <button
                   onClick={handleToggleAllFolders}
                   className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
@@ -2175,22 +2201,6 @@ export default function Passwords({
                   ) : (
                     <ChevronsUp className="h-4 w-4 text-blue-400" />
                   )}
-                </button>
-              )}
-
-              {/* List / Folder toggle — shown when filter or search is active */}
-              {isFilterActive && (
-                <button
-                  onClick={() => setForceListView(!forceListView)}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all text-[10px] sm:text-[11px] font-bold uppercase tracking-tight shadow-sm ${
-                    forceListView
-                      ? 'bg-blue-600 text-white'
-                      : theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'
-                  }`}
-                  title={forceListView ? 'Switch to Folder View' : 'Switch to List View'}
-                >
-                  {forceListView ? <FolderTree className="h-3.5 w-3.5" /> : <ListIcon className="h-3.5 w-3.5" />}
-                  {forceListView ? 'Folders' : 'List'}
                 </button>
               )}
             </div>
@@ -2341,16 +2351,16 @@ export default function Passwords({
                   {renderPasswordGrid()}
                 </div>
              </div>
-           ) : isFilterActive && forceListView ? (
-             /* Flat list view for filtered/search results — no folders shown */
+           ) : forceListView ? (
+             /* Flat list view — either filter-activated or user-toggled */
              <div className="h-full flex flex-col gap-2">
-               <div className={`flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+               <div className={`flex items-center gap-2 px-1 py-1 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                  <ListIcon className="h-3.5 w-3.5" />
-                 {getFilteredPasswords().length} result{getFilteredPasswords().length !== 1 ? 's' : ''}
-                 {favoriteFilter && ' · Favorites'}
-                 {archivedFilter && ' · Archived'}
-                 {timeFilter === 'recent' && ' · Recent'}
-                 {searchQuery && ` · "${searchQuery}"`}
+                 <span>{getFilteredPasswords().length} record{getFilteredPasswords().length !== 1 ? 's' : ''}</span>
+                 {favoriteFilter && <span className="text-yellow-400">· Favorites</span>}
+                 {archivedFilter && <span className="text-green-400">· Archived</span>}
+                 {timeFilter === 'recent' && <span className="text-purple-400">· Recent</span>}
+                 {searchQuery && <span className="text-blue-400">· "{searchQuery}"</span>}
                </div>
                <div className={`flex-1 rounded-2xl border overflow-y-auto custom-scrollbar ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
                  {getFilteredPasswords().length === 0 ? (
@@ -2367,10 +2377,21 @@ export default function Passwords({
                          className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
                          onClick={() => handleEditPassword(pw.id)}
                        >
+                         <div className="flex-shrink-0">
+                           {pw.website ? (
+                             <div className="p-2 bg-blue-500/10 rounded-lg">
+                               <ExternalLink className="h-4 w-4 text-blue-400" />
+                             </div>
+                           ) : (
+                             <div className="p-2 bg-purple-500/10 rounded-lg">
+                               <Lock className="h-4 w-4 text-purple-400" />
+                             </div>
+                           )}
+                         </div>
                          <div className="flex-1 min-w-0">
                            <div className="flex items-center gap-2">
                              {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-                             <span className="font-medium text-sm truncate">{pw.title || 'Untitled'}</span>
+                             <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
                            </div>
                            {pw.website && (
                              <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
@@ -2379,15 +2400,17 @@ export default function Passwords({
                              <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
                            )}
                          </div>
-                         <button
-                           className={`p-1.5 flex-shrink-0 transition-colors rounded-md opacity-0 group-hover:opacity-100 ${
-                             pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'
-                           }`}
-                           onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
-                           title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                         >
-                           <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
-                         </button>
+                         <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button
+                             className={`p-1.5 rounded-md transition-colors ${
+                               pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
+                             }`}
+                             onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
+                             title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                           >
+                             <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
+                           </button>
+                         </div>
                        </div>
                      ))}
                    </div>
