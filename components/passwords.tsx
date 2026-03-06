@@ -32,6 +32,8 @@ import {
   Paperclip,
   Upload,
   FileText,
+  Maximize2,
+  Minimize2,
 } from "lucide-react"
 import {
   Accordion,
@@ -119,6 +121,7 @@ export default function Passwords({
 
   // State for active dropdown menu
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -1949,20 +1952,29 @@ export default function Passwords({
   };
 
   return (
-    <div className="space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-hidden">
+    <div className={`space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[10000] bg-background p-4 md:p-8' : ''}`}>
       {renderAZSidebar()}
 
       {/* COMPACT HEADER: Always visible, integrated search and counts */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="flex items-center gap-4 min-w-0 flex-1">
           {selectedRecord ? (
-            <button
-              onClick={() => setSelectedRecord(null)}
-              className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-white/5 hover:bg-white/10 text-gray-300'} flex items-center gap-2 pr-4`}
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span className="font-bold text-sm">Back to Vault</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedRecord(null)}
+                className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-white/5 hover:bg-white/10 text-gray-300'} flex items-center gap-2 pr-4`}
+              >
+                <ArrowLeft className="h-5 w-5" />
+                <span className="font-bold text-sm">Back to Vault</span>
+              </button>
+              <button 
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
+                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
+              >
+                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              </button>
+            </div>
           ) : (
             <div className="flex-shrink-0">
               <h1 className="text-2xl font-extrabold tracking-tight">Vault</h1>
@@ -1972,6 +1984,13 @@ export default function Passwords({
                 <span>{records.filter(r => r.type === 'note' || r.type === 'secure-note' || r.category === 'Secure Notes').length} Notes</span>
                 <span className="opacity-30">•</span>
                 <span>{folders.length} Folders</span>
+                <button 
+                  onClick={() => setIsFullscreen(!isFullscreen)}
+                  className={`ml-2 p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
+                  title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
+                >
+                  {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                </button>
               </div>
             </div>
           )}
