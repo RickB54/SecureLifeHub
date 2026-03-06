@@ -30,6 +30,7 @@ import {
   Sun,
   RotateCcw
 } from "lucide-react"
+import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
 import CsvImporter from "./csv-importer"
 import JsonImporter from "./json-importer"
@@ -53,6 +54,8 @@ export default function Settings({
   setAutoLockTimeout,
   twoFactorEnabled,
   setTwoFactorEnabled,
+  startupPage,
+  setStartupPage,
   isFullscreen,
   setIsFullscreen
 }: {
@@ -70,6 +73,8 @@ export default function Settings({
   setAutoLockTimeout: (value: number) => void
   twoFactorEnabled: boolean
   setTwoFactorEnabled: (enabled: boolean) => void
+  startupPage?: string
+  setStartupPage?: (page: string) => void
   isFullscreen?: boolean
   setIsFullscreen?: (val: boolean) => void
 }) {
@@ -443,6 +448,34 @@ export default function Settings({
                   Save
                 </button>
               </div>
+            </div>
+
+            {/* Startup Page Selection */}
+            <div className="p-4 rounded-xl bg-black/20 border border-white/5">
+              <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-70">Startup View</h4>
+              <div className="flex gap-2">
+                <select
+                  value={startupPage || "dashboard"}
+                  onChange={(e) => {
+                    const newPage = e.target.value;
+                    setStartupPage?.(newPage);
+                    localStorage.setItem("hub_startup_page", newPage);
+                    toast.success(`Startup view set to ${newPage.replace('type-', '').replace(/-/g, ' ')}`);
+                  }}
+                  className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2 outline-none cursor-pointer hover:border-blue-500/30 transition-colors"
+                >
+                  <option value="dashboard">Dashboard (Default)</option>
+                  <option value="all-items">Vault (All Items)</option>
+                  <option value="passwords">Passwords List</option>
+                  <option value="favorites">Favorites</option>
+                  {sidebarSections.flatMap(section => section.items).map(item => (
+                    <option key={item.id} value={item.id}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[10px] text-gray-500 mt-2 px-1">Choose which area of the hub opens automatically when you log in.</p>
             </div>
 
             {/* Auto-Fill */}

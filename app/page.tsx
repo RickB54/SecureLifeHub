@@ -59,58 +59,24 @@ function HomeContent() {
   // Theme state
   const [theme, setTheme] = useState("dark")
 
-  // Changed initial page to "dashboard" as requested
+  // Startup page preference
+  const [startupPage, setStartupPage] = useState("dashboard")
+
   const searchParams = useSearchParams()
-  const initialPage = searchParams.get("page") || "dashboard"
-  const [activePage, setActivePage] = useState(initialPage) // Initialize directly from URL
+  const [activePage, setActivePage] = useState(searchParams.get("page") || "dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
-  // Listen for browser-level fullscreen changes to keep state in sync
+  // Auth from Context - MUST be early for effects
+  const { user, loading: authLoading, signOut, isLocked, setIsLocked } = useAuth()
+
+  // Fullscreen listener
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement)
     document.addEventListener("fullscreenchange", handleFullscreenChange)
-    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
-    document.addEventListener("mozfullscreenchange", handleFullscreenChange)
-    document.addEventListener("MSFullscreenChange", handleFullscreenChange)
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange)
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
-      document.removeEventListener("mozfullscreenchange", handleFullscreenChange)
-      document.removeEventListener("MSFullscreenChange", handleFullscreenChange)
-    }
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
   }, [])
-
-  // Force dashboard on mount if no explicit page in URL
-  useEffect(() => {
-    const page = searchParams.get("page")
-    if (!page) {
-      if (activePage !== "dashboard") setActivePage("dashboard")
-      // Clear any URL params, EXCEPT for SSO tokens which the Login component needs
-      if (typeof window !== 'undefined' && !searchParams.get('access_token')) {
-        window.history.replaceState({}, '', window.location.pathname)
-      }
-    }
-  }, [])
-
-  // Sync activePage with URL if it changes, but ALWAYS default to dashboard if no page param
-  useEffect(() => {
-    const page = searchParams.get("page")
-    // Only update if there's an explicit page param AND it's different
-    if (page && page !== activePage) {
-      setActivePage(page)
-    } else if (!page && activePage !== "dashboard") {
-      // If no page param, always go to dashboard
-      setActivePage("dashboard")
-    }
-  }, [searchParams])
-
-  // Security & Locking Logic
-  const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
-  const [unlockedModules, setUnlockedModules] = useState<string[]>([])
 
   // -- Navigation History to fix Back Button --
   const [navHistory, setNavHistory] = useState<string[]>([])
@@ -132,6 +98,38 @@ function HomeContent() {
     if (prevPage) setActivePage(prevPage)
   }
 
+  // Consolidated Startup & Navigation logic
+  useEffect(() => {
+    const pageParam = searchParams.get("page")
+    const savedStartup = localStorage.getItem("hub_startup_page") || "dashboard"
+    
+    // 1. Update startup page state if missing
+    if (savedStartup !== startupPage) {
+      setStartupPage(savedStartup)
+    }
+
+    // 2. Handle redirection if authenticated
+    if (user && !isLocked) {
+      if (pageParam && pageParam !== activePage) {
+        // Respect explicit URL parameter
+        setActivePage(pageParam)
+      } else if (!pageParam && activePage === "dashboard" && savedStartup !== "dashboard" && navHistory.length === 0) {
+        // Apply startup preference only on initial landing (navHistory is empty)
+        setActivePage(savedStartup)
+      }
+      
+      // 3. Clear any URL params (like tokens) after processing
+      if (typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    }
+  }, [searchParams, user, isLocked, activePage, startupPage, navHistory.length])
+
+  // Security & Locking Logic
+  const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
+  const [unlockedModules, setUnlockedModules] = useState<string[]>([])
+
+
   // Load security settings on mount and when activePage changes (to ensure we have latest)
   useEffect(() => {
     try {
@@ -142,8 +140,6 @@ function HomeContent() {
     }
   }, [activePage])
 
-  // Auth from Context
-  const { user, loading: authLoading, signOut, isLocked, setIsLocked } = useAuth()
 
   // Data from Supabase Hook
   const {
@@ -238,6 +234,8 @@ function HomeContent() {
     setAutoLockTimeout,
     twoFactorEnabled,
     setTwoFactorEnabled,
+    startupPage,
+    setStartupPage,
     refresh,
     theme,
     toggleTheme,

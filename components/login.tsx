@@ -84,9 +84,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         if (session) {
           console.log("Active session found, unlocking UI...")
           setIsLocked(false)
-          // Ensure we are on the dashboard
-          const targetPage = searchParams.get("page") || "dashboard"
-          router.push(`/?page=${targetPage}`)
+          // Ensure we respect any existing page param, otherwise just go to root
+          const targetPage = searchParams.get("page")
+          if (targetPage) {
+            router.push(`/?page=${targetPage}`)
+          } else {
+            router.push('/')
+          }
         } else {
           console.warn("No active Supabase session found after biometric success.")
           setError("Your secure session has fully expired. For your safety, please sign in with your Master Password once to re-enable biometrics for this visit.")
@@ -112,9 +116,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       // Use getSession but be mindful of AuthProvider racing
       const { data: { session: existingSession } } = await supabase.auth.getSession()
       if (existingSession) {
-        console.log('SSO: Active session already found, jumping to dashboard.')
-        const page = searchParams.get('page') || 'dashboard'
-        router.push(`/?page=${page}`)
+        console.log('SSO: Active session already found, jumping to destination.')
+        const page = searchParams.get('page')
+        if (page) {
+          router.push(`/?page=${page}`)
+        } else {
+          router.push('/')
+        }
         return
       }
 
@@ -124,7 +132,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
       const accessToken = params.get('access_token') || hashParams.get('access_token')
       const refreshToken = params.get('refresh_token') || hashParams.get('refresh_token')
-      const targetPage = params.get('page') || hashParams.get('page') || 'dashboard'
+      const targetPage = params.get('page') || hashParams.get('page')
 
       if (accessToken && refreshToken) {
         setLoading(true)
@@ -172,7 +180,11 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
           // 4. Clear tokens from URL and redirect
           window.history.replaceState({}, '', window.location.pathname)
-          router.push(`/?page=${targetPage}`)
+          if (targetPage) {
+            router.push(`/?page=${targetPage}`)
+          } else {
+            router.push('/')
+          }
 
         } catch (err: any) {
           console.error('SSO: Critical catch error:', err)
@@ -236,7 +248,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         if (error) throw error
         // Save email on successful login
         localStorage.setItem('lastLoginEmail', trimmedEmail)
-        router.push('/?page=dashboard')
+        
+        const pageParam = searchParams.get('page')
+        if (pageParam) {
+          router.push(`/?page=${pageParam}`)
+        } else {
+          router.push('/')
+        }
       }
     } catch (err: any) {
       console.error("Auth Error:", err)
