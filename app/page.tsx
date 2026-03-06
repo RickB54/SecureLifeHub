@@ -455,16 +455,15 @@ function HomeContent() {
           setIsFullscreen={setIsFullscreen}
         />
         <div className={`flex flex-1 overflow-hidden pt-16`}>
-          {!isFullscreen && (
-            <Sidebar
-              activePage={activePage}
-              setActivePage={handleNavigate}
-              isOpen={sidebarOpen}
-              setIsOpen={setSidebarOpen}
-              theme={theme}
-              onOpenHelp={() => setHelpOpen(true)}
-            />
-          )}
+          {/* Sidebar always rendered so hamburger menu works in fullscreen mode too */}
+          <Sidebar
+            activePage={activePage}
+            setActivePage={handleNavigate}
+            isOpen={sidebarOpen}
+            setIsOpen={setSidebarOpen}
+            theme={theme}
+            onOpenHelp={() => setHelpOpen(true)}
+          />
           <main className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>{renderActivePage()}</main>
         </div>
         <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} />
