@@ -25,6 +25,13 @@ import {
   Image,
   ChevronsUp,
   ChevronsDown,
+  ArrowLeft,
+  RotateCcw,
+  Shield,
+  Download,
+  Paperclip,
+  Upload,
+  FileText,
 } from "lucide-react"
 import {
   Accordion,
@@ -105,6 +112,7 @@ export default function Passwords({
   const [initialParentFolderId, setInitialParentFolderId] = useState<string | undefined>(undefined)
   const [autoFillModalOpen, setAutoFillModalOpen] = useState(false)
   const [viewPictureModalOpen, setViewPictureModalOpen] = useState(false)
+  const [viewHistoryModalOpen, setViewHistoryModalOpen] = useState(false)
 
   // Ref for dropdown menus
   const menuRef = useRef<HTMLDivElement>(null)
@@ -391,6 +399,40 @@ export default function Passwords({
 
     return !isMed
   })
+
+  // Handle adding an attachment
+  const handleAddAttachment = async (recordId: string, file: File) => {
+    const record = records.find(r => r.id === recordId)
+    if (!record) return
+
+    const newAttachment = {
+      id: Math.random().toString(36).substring(7),
+      name: file.name,
+      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+      type: file.type.split('/')[1]?.toUpperCase() || 'FILE',
+      uploaded_at: new Date().toISOString()
+    }
+
+    const updatedAttachments = [...(record.attachments || []), newAttachment]
+    const updatedRecord = { ...record, attachments: updatedAttachments }
+    
+    await updateItem(recordId, updatedRecord)
+    setSelectedRecord(updatedRecord)
+    toast.success("Attachment added successfully")
+  }
+
+  // Handle deleting an attachment
+  const handleDeleteAttachment = async (recordId: string, attachmentId: string) => {
+    const record = records.find(r => r.id === recordId)
+    if (!record) return
+
+    const updatedAttachments = (record.attachments || []).filter((a: any) => a.id !== attachmentId)
+    const updatedRecord = { ...record, attachments: updatedAttachments }
+    
+    await updateItem(recordId, updatedRecord)
+    setSelectedRecord(updatedRecord)
+    toast.success("Attachment removed")
+  }
 
   // Use displayedRecords instead of 'passwords' for filtering
   const passwords = displayedRecords
@@ -1342,14 +1384,13 @@ export default function Passwords({
     })
   }
 
-  // Render folder contents in the right-side details panel
-  const renderFolderDetail = (folderId: string) => {
-    const folder = folders.find((f: any) => f.id === folderId)
-    // If it's empty string, it's the "No Folder" item
-    const isNoFolder = folderId === ""
-    const folderName = isNoFolder ? "No Folder" : folder?.name || "Unknown Folder"
+  // Render folder details
+  const renderFolderDetail = (fId: string) => {
+    const isNoFolder = fId === "no-folder" || fId === ""
+    const folder = folders.find((f: any) => f.id === fId)
+    const folderName = isNoFolder ? "No Folder" : (folder?.name || "Unknown Folder")
+    const folderId = fId
 
-    // Get items for structure (filtered by search/etc but NOT by folder)
     const itemsForStructure = getFilteredPasswords(true)
     const directItems = isNoFolder
       ? itemsForStructure.filter((p) => !p.folder_id)
@@ -1444,154 +1485,238 @@ export default function Passwords({
     }
 
     return (
-      <div className={`h-full flex flex-col ${theme === "light" ? "bg-[#1e1e1e]" : "bg-[#2a2a2a]"} rounded-xl shadow-lg border ${theme === "light" ? "border-gray-700" : "border-gray-700"} w-full max-w-full overflow-hidden`} style={{ maxWidth: '100%', wordWrap: 'break-word' }}>
-        {/* Header */}
-        <div className="p-4 sm:p-6 border-b border-gray-100 dark:border-gray-700 space-y-3">
-          {/* Title Row */}
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-              <div className="p-2 sm:p-3 bg-gray-100 dark:bg-gray-700 rounded-lg flex-shrink-0">
-                {record.website ? <ExternalLink className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" /> : <Lock className="h-6 w-6 sm:h-8 sm:w-8 text-gray-500" />}
+      <div className={`h-full flex flex-col ${theme === "light" ? "bg-white" : "bg-[#1e1e1e]"} rounded-xl shadow-2xl border ${theme === "light" ? "border-gray-200" : "border-white/10"} w-full max-w-full overflow-hidden`} style={{ maxWidth: '100%', wordWrap: 'break-word' }}>
+        {/* Header - Keeper Style */}
+        <div className={`p-4 sm:p-6 border-b ${theme === "light" ? "border-gray-100" : "border-white/5"} space-y-4`}>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0 flex-1">
+              <div className={`p-3 ${theme === "light" ? "bg-blue-50" : "bg-blue-500/10"} rounded-xl flex-shrink-0 border ${theme === "light" ? "border-blue-100" : "border-blue-500/20"}`}>
+                {record.website ? <ExternalLink className="h-8 w-8 text-blue-500" /> : <Lock className="h-8 w-8 text-blue-400" />}
               </div>
-              <div className="min-w-0 flex-1 overflow-hidden">
-                <h2 className="text-lg sm:text-xl font-bold break-words" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>{record.title || "Untitled"}</h2>
-                <p className="text-xs sm:text-sm text-gray-500">Record Info</p>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight break-words" style={{ wordBreak: 'break-word' }}>{record.title || "Untitled"}</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>General</span>
+                  {record.folder_id && (
+                    <>
+                      <span className="text-gray-600">•</span>
+                      <span className="text-xs text-blue-400 font-medium">
+                        {folders.find(f => f.id === record.folder_id)?.name || "Folder"}
+                      </span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setSelectedRecord(null)}
-              className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors flex-shrink-0"
-              title="Close"
-            >
-              <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-            </button>
-          </div>
 
-          {/* Action Icons Row */}
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap overflow-x-auto">
-            <button
+            <div className="flex items-center gap-1 sm:gap-2">
+              <div className="hidden sm:flex items-center gap-2 mr-2">
+                <button
+                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${theme === 'light' ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'}`}
+                  onClick={() => {/* Share logic */}}
+                >
+                  Share
+                </button>
+              </div>
+              <button
+                onClick={() => setEditPasswordModalOpen(true)}
+                className={`p-2 rounded-lg transition-colors ${theme === 'light' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                title="Edit"
+              >
+                <Edit className="h-5 w-5" />
+              </button>
+              <div className="relative">
+                <button
+                  className={`p-2 rounded-lg transition-colors ${theme === 'light' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} ${activeMenu === `more-${record.id}` ? (theme === 'light' ? 'bg-gray-200' : 'bg-white/10 text-white') : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setActiveMenu(activeMenu === `more-${record.id}` ? null : `more-${record.id}`)
+                  }}
+                  title="More Actions"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+
+                {activeMenu === `more-${record.id}` && (
+                  <div
+                    className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl border overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#2a2a2a] border-white/10'}`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="p-1">
+                      <button
+                        className={`flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${theme === "light" ? "hover:bg-gray-100 text-gray-700" : "hover:bg-white/5 text-gray-200"}`}
+                        onClick={() => {
+                          setSelectedRecord(record)
+                          setMoveToFolderModalOpen(true)
+                          setActiveMenu(null)
+                        }}
+                      >
+                        <FolderTree className="h-4 w-4 mr-3 text-blue-400" />
+                        Move to Folder
+                      </button>
+                      <button
+                        className={`flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${theme === "light" ? "hover:bg-gray-100 text-gray-700" : "hover:bg-white/5 text-gray-200"}`}
+                        onClick={() => {
+                          handleDuplicatePassword(record)
+                          setActiveMenu(null)
+                          toast.success("Record duplicated")
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-3 text-purple-400" />
+                        Duplicate Record
+                      </button>
+                      <button
+                        className={`flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${theme === "light" ? "hover:bg-gray-100 text-gray-700" : "hover:bg-white/5 text-gray-300"}`}
+                        onClick={() => {
+                          setViewHistoryModalOpen(true)
+                          setActiveMenu(null)
+                        }}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-3 text-green-400" />
+                        View History
+                      </button>
+                    </div>
+                    <div className={`h-px w-full ${theme === "light" ? "bg-gray-100" : "bg-white/5"}`} />
+                    <div className="p-1">
+                      <button
+                        className={`flex items-center w-full px-3 py-2.5 text-sm font-medium rounded-lg text-red-500 transition-colors ${theme === "light" ? "hover:bg-red-50" : "hover:bg-red-500/10"}`}
+                        onClick={() => {
+                          setDeleteConfirmModalOpen(true)
+                          setActiveMenu(null)
+                        }}
+                      >
+                        <Trash className="h-4 w-4 mr-3" />
+                        Delete Record
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedRecord(null)
+                  setShowPasswordInDetails(false)
+                }}
+                className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'hover:bg-red-50 text-red-500' : 'hover:bg-red-500/10 text-red-400'}`}
+                title="Close"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Bar Sub-Header - Favorite/Archive/Delete */}
+        <div className={`px-6 py-2 border-b ${theme === "light" ? "bg-gray-50 border-gray-100" : "bg-black/20 border-white/5"} flex items-center gap-4`}>
+           <button
               onClick={async () => {
                 const newFavoriteStatus = !(record.isFavorite || record.is_favorite)
                 const updatedRecord = { ...record, isFavorite: newFavoriteStatus, is_favorite: newFavoriteStatus }
-                setSelectedRecord(updatedRecord) // Update local state immediately
+                setSelectedRecord(updatedRecord)
                 await updateItem(record.id, updatedRecord)
               }}
-              className={`p-2 hover:bg-yellow-100 dark:hover:bg-yellow-900/20 rounded-full transition-colors ${(record.isFavorite || record.is_favorite) ? 'text-yellow-500' : 'text-gray-400'}`}
-              title={(record.isFavorite || record.is_favorite) ? "Remove Favorite" : "Add Favorite"}
+              className={`flex items-center gap-1.5 text-xs font-bold uppercase transition-colors ${(record.isFavorite || record.is_favorite) ? 'text-yellow-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              <Star className="h-5 w-5" fill={(record.isFavorite || record.is_favorite) ? "currentColor" : "none"} />
-            </button>
-            <button
-              onClick={() => {
-                setSelectedRecord(record)
-                setMoveToFolderModalOpen(true)
-              }}
-              className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/20 rounded-full transition-colors text-purple-500"
-              title="Move to Folder"
-            >
-              <Folder className="h-5 w-5" />
+              <Star className="h-4 w-4" fill={(record.isFavorite || record.is_favorite) ? "currentColor" : "none"} />
+              {(record.isFavorite || record.is_favorite) ? "Favorite" : "Add Favorite"}
             </button>
             <button
               onClick={async () => {
                 const newArchivedStatus = !(record.is_archived || record.isArchived)
                 const updatedRecord = { ...record, is_archived: newArchivedStatus, isArchived: newArchivedStatus }
-                setSelectedRecord(updatedRecord) // Update local state immediately
+                setSelectedRecord(updatedRecord)
                 await updateItem(record.id, updatedRecord)
               }}
-              className={`p-2 hover:bg-green-100 dark:hover:bg-green-900/20 rounded-full transition-colors ${(record.is_archived || record.isArchived) ? 'text-green-500' : 'text-gray-400'}`}
-              title={(record.is_archived || record.isArchived) ? "Unarchive" : "Archive"}
+              className={`flex items-center gap-1.5 text-xs font-bold uppercase transition-colors ${(record.is_archived || record.isArchived) ? 'text-green-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
-              <Archive className="h-5 w-5" fill={(record.is_archived || record.isArchived) ? "currentColor" : "none"} />
+              <Archive className="h-4 w-4" fill={(record.is_archived || record.isArchived) ? "currentColor" : "none"} />
+              {(record.is_archived || record.isArchived) ? "Archived" : "Archive"}
             </button>
+            <div className="flex-1" />
             <button
-              onClick={() => setEditPasswordModalOpen(true)}
-              className="p-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-full transition-colors text-blue-500"
-              title="Edit"
+              onClick={() => setDeleteConfirmModalOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-bold uppercase text-red-500/70 hover:text-red-500 transition-colors"
             >
-              <Edit className="h-5 w-5" />
+              <Trash className="h-4 w-4" />
+              Delete
             </button>
-            <button
-              onClick={() => {
-                setDeleteConfirmModalOpen(true)
-              }}
-              className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-full transition-colors text-red-500"
-              title="Delete"
-            >
-              <Trash className="h-5 w-5" />
-            </button>
-          </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-          {/* Section: General */}
-          <div className="space-y-3 sm:space-y-4">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">General</h3>
-
+        <div className={`flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 ${theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}`}>
+          {/* Section: Credentials */}
+          <div className="max-w-4xl space-y-6">
             {/* Title Field */}
-            <div className="group">
-              <label className="text-xs text-gray-300 block mb-1">Title</label>
-              <div className="text-sm font-medium p-2 -ml-2 rounded bg-blue-600/5 hover:bg-blue-600/15 transition-colors cursor-text">
+            <div className="group border-b border-white/5 pb-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Title</label>
+              <div className="text-lg font-bold text-gray-100">
                 {record.title || "Untitled"}
               </div>
             </div>
 
             {/* Login Field */}
-            <div className="group relative">
-              <label className="text-xs text-gray-300 block mb-1">Login</label>
+            <div className="group border-b border-white/5 pb-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Login</label>
               <div
-                className="text-sm font-medium p-2 -ml-2 rounded bg-blue-600/10 hover:bg-blue-600/20 transition-colors cursor-pointer flex items-center justify-between"
-                onClick={(e) => {
+                className="text-lg font-medium text-blue-400 hover:text-blue-300 transition-colors cursor-pointer flex items-center justify-between"
+                onClick={() => {
                   navigator.clipboard.writeText(record.username || "")
-                  // Could add copied feedback here
+                  toast.success("Login copied")
                 }}
                 title="Click to Copy"
               >
                 <span>{record.username || "—"}</span>
-                <Copy className="h-3 w-3 opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity" />
+                <Copy className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
 
             {/* Password Field */}
-            <div className="group relative">
-              <label className="text-xs text-gray-300 block mb-1">Password</label>
-              <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-2 -ml-1 sm:-ml-2 rounded bg-blue-600/20 hover:bg-blue-600/30 transition-colors">
+            <div className="group border-b border-white/5 pb-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Password</label>
+              <div className="flex items-center gap-4 py-2 hover:bg-white/5 rounded-lg pr-4 -ml-4 pl-4 transition-colors">
                 <div
-                  className={`flex-1 font-mono text-sm cursor-pointer ${showPasswordInDetails ? 'text-white font-bold' : 'text-gray-400'} hover:text-blue-400`}
-                  onClick={() => navigator.clipboard.writeText(record.password || "")}
+                  className={`flex-1 font-mono text-xl tracking-tight cursor-pointer ${showPasswordInDetails ? 'text-white font-bold' : 'text-gray-500 font-bold overflow-hidden'} hover:text-blue-400`}
+                  onClick={() => {
+                      navigator.clipboard.writeText(record.password || "");
+                      toast.success("Password copied");
+                  }}
                   title="Click to Copy"
                   style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
                 >
-                  {showPasswordInDetails ? record.password : "••••••••••"}
+                  {showPasswordInDetails ? record.password : "••••••••••••"}
                 </div>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowPasswordInDetails(!showPasswordInDetails)
                   }}
-                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
+                  className={`p-2 rounded-lg transition-colors ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}`}
                 >
-                  {showPasswordInDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPasswordInDetails ? <EyeOff className="h-5 w-5 text-gray-400" /> : <Eye className="h-5 w-5 text-gray-400" />}
                 </button>
               </div>
-              <div className={`h-1 w-full bg-gray-700 mt-2 rounded-full overflow-hidden ${record.password ? "opacity-100" : "opacity-0"}`}>
-                <div className="h-full bg-orange-500 w-2/3"></div> {/* Mock strength meter */}
+
+              {/* Strength Meter - Keeper Style */}
+              <div className="mt-4 space-y-1.5">
+                <div className={`h-1.5 w-full bg-gray-800 rounded-full overflow-hidden flex gap-0.5`}>
+                  <div className={`h-full bg-green-500 w-[95%] rounded-full`} />
+                </div>
+                <p className="text-[10px] font-bold text-green-500 uppercase tracking-widest">Strong</p>
               </div>
-              <p className="text-xs text-gray-300 mt-1">Fair</p>
             </div>
 
             {/* Website Field */}
             {record.website && (
-              <div className="group">
-                <label className="text-xs text-gray-300 block mb-1">Website Address</label>
+              <div className="group border-b border-white/5 pb-4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-2">Website Address</label>
                 <a
                   href={record.website.startsWith("http") ? record.website : `https://${record.website}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-blue-500 hover:underline flex items-center gap-1 p-2 -ml-2"
+                  className="text-lg text-blue-500 hover:text-blue-400 flex items-center gap-2 group/link"
                 >
-                  {record.website}
-                  <ExternalLink className="h-3 w-3" />
+                  <span className="truncate">{record.website}</span>
+                  <ExternalLink className="h-4 w-4 opacity-50 group-hover/link:opacity-100 transition-opacity" />
                 </a>
               </div>
             )}
@@ -1599,37 +1724,101 @@ export default function Passwords({
             {/* Picture Field - Show uploaded image */}
             {(record.image || record.picture) && (
               <div className="group">
-                <label className="text-xs text-gray-300 block mb-2">Picture</label>
-                <div className="w-32 h-32 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-4">Picture</label>
+                <div className="relative w-48 h-48 rounded-2xl overflow-hidden bg-gray-900 border border-white/10 group-hover:border-blue-500/50 transition-all cursor-pointer shadow-2xl" onClick={() => handleViewPicture(record)}>
                   <img
                     src={record.image || record.picture}
                     alt={record.title || "Password"}
-                    className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() => handleViewPicture(record)}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye className="h-8 w-8 text-white" />
+                  </div>
                 </div>
               </div>
             )}
           </div>
 
+          {/* Section: Attachments - Keeper Style */}
+          <div className="max-w-4xl pt-8 border-t border-white/5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Attachments</h3>
+                <button
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.onchange = (e: any) => {
+                      const file = e.target.files[0];
+                      if (file) handleAddAttachment(record.id, file);
+                    };
+                    input.click();
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${theme === 'light' ? 'bg-blue-50 text-blue-600 hover:bg-blue-100' : 'bg-blue-500/10 text-blue-400 hover:bg-blue-500/20'}`}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Attachment
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                {(record.attachments || []).map((att: any) => (
+                  <div key={att.id} className="p-4 rounded-xl border border-white/5 bg-white/5 flex items-center justify-between hover:bg-white/10 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-500/10 rounded-lg text-blue-400 font-bold text-[10px]">{att.type || 'DOC'}</div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-200">{att.name}</p>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold">{att.size}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       <button 
+                         onClick={() => toast.success(`Downloading ${att.name}...`)}
+                         className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-blue-400 transition-all"
+                         title="Download"
+                       >
+                         <Download className="h-5 w-5" />
+                       </button>
+                       <button 
+                         onClick={() => handleDeleteAttachment(record.id, att.id)}
+                         className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-red-400 transition-all"
+                         title="Remove"
+                       >
+                         <Trash className="h-4 w-4" />
+                       </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {(!record.attachments || record.attachments.length === 0) && (
+                  <div className="py-8 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                     <Paperclip className="h-8 w-8 text-gray-600 mx-auto mb-2 opacity-20" />
+                     <p className="text-xs text-gray-500 font-medium">No attachments yet</p>
+                  </div>
+                )}
+              </div>
+          </div>
+
           {/* Custom Fields Section */}
           {record.item_metadata?.customFields && record.item_metadata.customFields.length > 0 && (
-            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">Custom Fields</h3>
-              <div className="space-y-3">
+            <div className="max-w-4xl pt-8 border-t border-white/5">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Custom Fields</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                 {record.item_metadata.customFields.map((field: any) => (
-                  <div key={field.id} className="group relative">
-                    <label className="text-xs text-gray-300 block mb-1">{field.label}</label>
-                    <div className="flex items-center gap-2 p-2 -ml-2 rounded bg-blue-600/5 hover:bg-blue-600/15 transition-colors">
+                  <div key={field.id} className="group border-b border-white/5 pb-4">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">{field.label}</label>
+                    <div className="flex items-center gap-2 group/field">
                       <div
-                        className={`flex-1 text-sm cursor-pointer ${field.type === 'password' || field.type === 'pin' || field.type === 'hidden' ? 'font-mono' : ''} hover:text-blue-500`}
-                        onClick={() => navigator.clipboard.writeText(field.value || "")}
+                        className={`flex-1 text-sm font-medium ${field.type === 'password' || field.type === 'pin' || field.type === 'hidden' ? 'font-mono' : ''} text-gray-200 transition-colors cursor-pointer group-hover/field:text-blue-400`}
+                        onClick={() => {
+                            navigator.clipboard.writeText(field.value || "");
+                            toast.success(`${field.label} copied`);
+                        }}
                         title="Click to Copy"
                         style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
                       >
                         {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden')
                           ? (activePasswordPopup === `custom-${field.id}` ? (
-                            <span className="bg-blue-600/30 text-white font-medium px-1 rounded">{field.value}</span>
+                            <span className="text-white">{field.value}</span>
                           ) : "••••••••")
                           : field.value || "—"}
                       </div>
@@ -1640,18 +1829,21 @@ export default function Passwords({
                             e.stopPropagation()
                             setActivePasswordPopup(activePasswordPopup === `custom-${field.id}` ? null : `custom-${field.id}`)
                           }}
-                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded flex-shrink-0"
+                          className={`p-1.5 rounded-lg transition-colors ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}`}
                         >
-                          {activePasswordPopup === `custom-${field.id}` ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          {activePasswordPopup === `custom-${field.id}` ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
                         </button>
                       )}
 
                       <button
-                        onClick={() => navigator.clipboard.writeText(field.value || "")}
-                        className="p-1 opacity-0 group-hover:opacity-100 transition-opacity text-blue-500"
+                        onClick={() => {
+                            navigator.clipboard.writeText(field.value || "");
+                            toast.success(`${field.label} copied`);
+                        }}
+                        className="p-1.5 opacity-0 group-hover/field:opacity-100 transition-opacity text-blue-500 hover:bg-blue-500/10 rounded-lg"
                         title="Copy"
                       >
-                        <Copy className="h-3.5 w-3.5" />
+                        <Copy className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -1662,12 +1854,10 @@ export default function Passwords({
 
           {/* Section: Notes */}
           {record.notes && (
-            <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <div className="group">
-                <label className="text-xs text-gray-300 block mb-1">Notes</label>
-                <div className="text-sm whitespace-pre-wrap text-gray-200 leading-relaxed">
-                  {record.notes}
-                </div>
+            <div className="max-w-4xl pt-8 border-t border-white/5 mb-20">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-4">Note</label>
+              <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-gray-50' : 'bg-white/5'} text-sm whitespace-pre-wrap text-gray-200 leading-relaxed font-medium border border-white/5`}>
+                {record.notes}
               </div>
             </div>
           )}
@@ -1687,12 +1877,11 @@ export default function Passwords({
 
     return (
       <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-300px)] w-full max-w-full overflow-hidden">
-        {/* Left Side: Folder/List - HIDE on mobile when password selected */}
-        <div className={`md:w-1/3 border-r border-gray-100 dark:border-gray-800 pr-2 overflow-y-auto ${selectedRecord ? 'hidden md:block' : 'block'} w-full md:max-w-[33%]`}>
+        {/* Left Side: Folder/List - HIDE COMPLETELY when password selected for "Full Page" mode */}
+        <div className={`md:w-1/3 border-r border-gray-100 dark:border-gray-800 pr-2 overflow-y-auto ${selectedRecord ? 'hidden' : 'block'} w-full md:max-w-[33%]`}>
           <div className="space-y-2">
-            {/* Only show folder structure when NO filters are active */}
+            {/* Folder structure */}
             {!favoriteFilter && !archivedFilter && renderFolderStructure(topLevelFolders, itemsForStructure)}
-
             {/* Passwords without folders - Show when no filters OR show filtered items in flat list */}
             {favoriteFilter || archivedFilter ? (
               /* When filtering, show flat list of matching passwords */
@@ -1731,8 +1920,8 @@ export default function Passwords({
           </div>
         </div>
 
-        {/* Right Side: Details Pane - FULL WIDTH on mobile when password selected */}
-        <div className={`h-full w-full md:w-2/3 md:pl-2 ${selectedRecord || selectedFolder ? 'block px-2' : 'hidden md:block'}`}>
+        {/* Right Side: Details Pane - FULL WIDTH when record selected */}
+        <div className={`h-full w-full ${selectedRecord ? 'md:w-full' : 'md:w-2/3'} md:pl-2 ${selectedRecord || selectedFolder ? 'block px-2' : 'hidden md:block'}`}>
           {selectedRecord ? renderRecordDetails(selectedRecord) : selectedFolder ? renderFolderDetail(selectedFolder) : renderRecordDetails(null)}
         </div>
       </div>
@@ -1760,47 +1949,83 @@ export default function Passwords({
   };
 
   return (
-    <div className="space-y-6 px-2 md:px-4 pb-10 relative">
+    <div className="space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-hidden">
       {renderAZSidebar()}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Passwords</h1>
-          <div className={`text-sm font-medium ${theme === "light" ? "text-gray-500" : "text-gray-400"} flex flex-wrap items-center gap-x-2`}>
-            <span>Passwords: {records.filter(r => r.type === 'password' || r.type === 'login').length}</span>
-            <span className="opacity-30">|</span>
-            <span>Notes: {records.filter(r => r.type === 'note' || r.type === 'secure-note').length}</span>
-            <span className="opacity-30">|</span>
-            <span>Folders: {folders.length}</span>
+
+      {/* COMPACT HEADER: Always visible, integrated search and counts */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          {selectedRecord ? (
+            <button
+              onClick={() => setSelectedRecord(null)}
+              className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700' : 'bg-white/5 hover:bg-white/10 text-gray-300'} flex items-center gap-2 pr-4`}
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="font-bold text-sm">Back to Vault</span>
+            </button>
+          ) : (
+            <div className="flex-shrink-0">
+              <h1 className="text-2xl font-extrabold tracking-tight">Vault</h1>
+              <div className={`text-[10px] font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"} flex items-center gap-2 flex-wrap`}>
+                <span>{passwords.length} Records</span>
+                <span className="opacity-30">•</span>
+                <span>{records.filter(r => r.type === 'note' || r.type === 'secure-note' || r.category === 'Secure Notes').length} Notes</span>
+                <span className="opacity-30">•</span>
+                <span>{folders.length} Folders</span>
+              </div>
+            </div>
+          )}
+
+          {/* Search bar integrated on the same line */}
+          <div className="flex-1 max-w-xl hidden sm:block">
+             <div className="relative w-full">
+              <Search
+                className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}
+              />
+              <input
+                type="text"
+                placeholder="Search everything..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={`w-full pl-10 pr-10 py-2 rounded-xl text-sm ${theme === "light" ? "bg-white text-gray-900 border-gray-200" : "bg-white/5 text-white border-white/5"} border focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm transition-all`}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500 hover:text-gray-700" : "text-gray-400 hover:text-gray-200"}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setAddPasswordModalOpen(true)}
-            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-3 py-2 rounded-md transition duration-200 text-sm font-semibold"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            + Password
-          </button>
-
-          <button
-            onClick={() => setAddFolderModalOpen(true)}
-            className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-3 py-2 rounded-md transition duration-200 text-sm font-semibold"
-          >
-            <Folder className="h-4 w-4 mr-1.5" />
-            + Folder
-          </button>
+        <div className="flex items-center gap-2">
+          {!selectedRecord && (
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setAddPasswordModalOpen(true)}
+                className="flex items-center bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-all text-[10px] font-bold uppercase tracking-tight shadow-md whitespace-nowrap"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Password
+              </button>
+              <button
+                onClick={() => setAddFolderModalOpen(true)}
+                className={`flex items-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-3 py-1.5 rounded-lg transition-all text-[10px] font-bold uppercase tracking-tight shadow-sm whitespace-nowrap`}
+              >
+                <Folder className="h-3.5 w-3.5 mr-1" />
+                Folder
+              </button>
+            </div>
+          )}
 
           <button
             onClick={() => {
-              // Check if all folders are expanded
               const allExpanded = folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id])
-
-              if (allExpanded) {
-                // Collapse all
-                setExpandedFolders({})
-              } else {
-                // Expand all
+              if (allExpanded) setExpandedFolders({})
+              else {
                 const allFolderIds = folders.reduce((acc: Record<string, boolean>, folder: any) => {
                   acc[folder.id] = true
                   return acc
@@ -1808,8 +2033,8 @@ export default function Passwords({
                 setExpandedFolders(allFolderIds)
               }
             }}
-            className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-md transition duration-200"
-            title={folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id]) ? "Collapse All Folders" : "Expand All Folders"}
+            className={`p-2 rounded-xl transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-600' : 'bg-white/5 hover:bg-white/10 text-gray-400'} ${selectedRecord ? 'hidden' : 'block'}`}
+            title="Toggle All Folders"
           >
             {folders.length > 0 && folders.every((folder: any) => expandedFolders[folder.id]) ? (
               <ChevronsUp className="h-5 w-5" />
@@ -1820,449 +2045,232 @@ export default function Passwords({
         </div>
       </div>
 
-      {/* Filter Status Indicator */}
-      {(favoriteFilter || archivedFilter) && (
-        <div className={`${favoriteFilter ? 'bg-yellow-500/20 border-yellow-500' : 'bg-green-500/20 border-green-500'} border-l-4 rounded-md p-4 mb-4`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {favoriteFilter ? (
-                <>
-                  <Star className="h-5 w-5 text-yellow-500" fill="currentColor" />
-                  <span className="font-semibold text-yellow-700 dark:text-yellow-300">Showing Favorites Only</span>
-                </>
-              ) : (
-                <>
-                  <Archive className="h-5 w-5 text-green-500" fill="currentColor" />
-                  <span className="font-semibold text-green-700 dark:text-green-300">Showing Archived Items Only</span>
-                </>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                setFavoriteFilter(false)
-                setArchivedFilter(false)
-              }}
-              className="text-sm px-3 py-1 bg-white dark:bg-gray-800 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
-              Clear Filter
-            </button>
-          </div>
+      {/* MOBILE SEARCH - Only visible on small screens when no record selected */}
+      {!selectedRecord && (
+        <div className="sm:hidden relative w-full px-2">
+          <Search className={`absolute left-5 top-1/2 transform -translate-y-1/2 h-4 w-4 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`} />
+          <input
+            type="text"
+            placeholder="Search vault..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full pl-10 pr-4 py-2.5 rounded-xl text-sm ${theme === "light" ? "bg-white text-gray-900 border-gray-200" : "bg-white/5 text-white border-white/5"} border focus:outline-none shadow-sm`}
+          />
         </div>
       )}
 
-      <div className="flex flex-col gap-4">
-        {/* Always Visible Search Bar */}
-        <div className="relative w-full">
-          <Search
-            className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}
-          />
-          <input
-            type="text"
-            placeholder="Search passwords..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full pl-10 pr-10 py-2.5 rounded-xl ${theme === "light" ? "bg-white text-gray-900 border-gray-300" : "bg-[#1a1a1a] text-white border-white/10"} border focus:outline-none focus:ring-2 focus:ring-blue-500/50 shadow-sm`}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${theme === "light" ? "text-gray-500 hover:text-gray-700" : "text-gray-400 hover:text-gray-200"} transition-colors`}
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="filters" className="border-none">
-            <AccordionTrigger className={`flex items-center justify-between ${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]/50"} rounded-xl px-4 py-2.5 hover:no-underline shadow-sm border border-white/5`}>
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-blue-400" />
-                <span className="text-sm font-semibold">Other Filters</span>
-                {(categoryFilter !== "all" || timeFilter !== "all" || favoriteFilter || archivedFilter) && (
-                  <span className="flex h-2 w-2 rounded-full bg-blue-500" />
-                )}
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="p-0 pt-2 animate-none">
-              <div className={`${theme === "light" ? "bg-gray-100" : "bg-[#1a1a1a]"} rounded-xl p-4 shadow-inner border border-white/5`}>
-                <div className="flex flex-wrap gap-2">
-                  {/* Filter Dropdowns */}
-                  <div className="relative">
-              <button
-                className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
-                onClick={() => {
-                  setShowCategoryFilterMenu(!showCategoryFilterMenu)
-                  setShowStatusFilterMenu(false)
-                }}
-              >
-                <span>{categoryFilter === "all" ? "Categories" : categoryFilter}</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </button>
-
-              {showCategoryFilterMenu && (
-                <div
-                  className={`absolute z-10 mt-1 w-full ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1 max-h-60 overflow-y-auto`}
-                >
-                  <button
-                    className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${categoryFilter === "all" ? "bg-blue-600 text-white" : ""}`}
+      {/* FILTERS & CONTENT GRID */}
+      <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 mt-2">
+        {/* Left Side: Navigation / List (Hidden when record selected) */}
+        {!selectedRecord && (
+          <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+            {/* Folder Navigation */}
+            <div className={`rounded-2xl p-4 ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"} border shadow-sm`}>
+               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Categories</h3>
+               <div className="grid grid-cols-1 gap-1">
+                 {['All Items', 'Favorites', 'Recent', 'Security Audit'].map((cat) => (
+                   <button 
+                    key={cat}
                     onClick={() => {
-                      setCategoryFilter("all")
-                      setShowCategoryFilterMenu(false)
+                      if (cat === 'Favorites') setFavoriteFilter(true);
+                      else setFavoriteFilter(false);
+                      // Add other category logic if needed
                     }}
-                  >
-                    All Categories
-                  </button>
-                  {categories.map((category) => (
-                    <button
-                      key={category}
-                      className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${categoryFilter === category ? "bg-blue-600 text-white" : ""}`}
-                      onClick={() => {
-                        setCategoryFilter(category)
-                        setShowCategoryFilterMenu(false)
-                      }}
-                    >
-                      {category}
-                    </button>
-                  ))}
-                </div>
-              )}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between group ${theme === 'light' ? 'hover:bg-gray-50 text-gray-700' : 'hover:bg-white/5 text-gray-300'}`}
+                   >
+                     <div className="flex items-center gap-3">
+                       {cat === 'All Items' && <Folder className="h-4 w-4 text-blue-500" />}
+                       {cat === 'Favorites' && <Star className="h-4 w-4 text-yellow-500" fill={favoriteFilter ? 'currentColor' : 'none'} />}
+                       {cat === 'Recent' && <RotateCcw className="h-4 w-4 text-purple-500" />}
+                       {cat === 'Security Audit' && <Shield className="h-4 w-4 text-red-500" />}
+                       <span className="font-medium">{cat}</span>
+                     </div>
+                     <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+                   </button>
+                 ))}
+               </div>
             </div>
 
-            {/* Date Filter Dropdown */}
-            <div className="relative">
-              <button
-                className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-40`}
-                onClick={() => {
-                  setShowTimeFilterMenu(!showTimeFilterMenu)
-                  setShowCategoryFilterMenu(false)
-                  setShowStatusFilterMenu(false)
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-blue-400" />
-                  <span className="truncate">
-                    {timeFilter === "all" ? "Any Time" :
-                      timeFilter === "today" ? "Today" :
-                        timeFilter === "yesterday" ? "Yesterday" :
-                          timeFilter === "last7days" ? "Last 7 days" :
-                            timeFilter === "last30days" ? "Last 30 days" :
-                              timeFilter === "last3months" ? "Last 3 months" :
-                                timeFilter === "last12months" ? "Last 12 months" :
-                                  timeFilter === "on" ? `On ${customDate || '...'}` :
-                                    timeFilter === "before" ? `Before ${customDate || '...'}` :
-                                      timeFilter === "after" ? `After ${customDate || '...'}` : "Date Filter"}
-                  </span>
-                </div>
-                {timeFilter !== "all" ? (
-                  <X
-                    className="h-4 w-4 ml-2 hover:text-red-400"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setTimeFilter("all")
-                      setCustomDate("")
-                    }}
-                  />
-                ) : (
-                  <ChevronDown className="h-4 w-4 ml-2 opacity-50" />
-                )}
-              </button>
-
-              {showTimeFilterMenu && (
-                <div
-                  className={`absolute z-[100] mt-1 w-64 ${theme === "light" ? "bg-white" : "bg-[#252526] shadow-2xl border border-white/5"} rounded-xl p-2 animate-in fade-in zoom-in-95`}
-                >
-                  <div className="grid grid-cols-1 gap-1">
-                    {[
-                      { id: "all", label: "Any Time" },
-                      { id: "today", label: "Today" },
-                      { id: "yesterday", label: "Yesterday" },
-                      { id: "last7days", label: "Last 7 days" },
-                      { id: "last30days", label: "Last 30 days" },
-                      { id: "last3months", label: "Last 3 months" },
-                      { id: "last12months", label: "Last 12 months" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        className={`w-full text-left px-4 py-2 text-sm rounded-lg transition-colors ${timeFilter === opt.id ? "bg-blue-600 text-white" : theme === "light" ? "hover:bg-gray-100" : "hover:bg-white/5"}`}
-                        onClick={() => {
-                          setTimeFilter(opt.id)
-                          setShowTimeFilterMenu(false)
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-
-                    <div className={`h-px w-full my-1 ${theme === "light" ? "bg-gray-200" : "bg-gray-700"}`} />
-
-                    {["on", "before", "after"].map((opt) => (
-                      <div key={opt} className="px-1">
-                        <button
-                          className={`w-full text-left px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg flex justify-between items-center ${timeFilter === opt ? "text-blue-400" : "text-gray-500"}`}
-                          onClick={() => setTimeFilter(opt)}
-                        >
-                          {opt}...
-                          {timeFilter === opt && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                        </button>
-                        {timeFilter === opt && (
-                          <input
-                            type="date"
-                            value={customDate}
-                            onChange={(e) => setCustomDate(e.target.value)}
-                            className={`w-full mt-1 px-3 py-1.5 text-sm rounded border ${theme === "light" ? "bg-white border-gray-200" : "bg-black/20 border-white/10"}`}
-                            autoFocus
-                          />
-                        )}
-                      </div>
-                    ))}
-
-                    <div className={`h-px w-full my-1 ${theme === "light" ? "bg-gray-200" : "bg-gray-700"}`} />
-
-                    <button
-                      className="w-full text-center py-2 text-xs font-bold text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
-                      onClick={() => {
-                        setTimeFilter("all")
-                        setCustomDate("")
-                        setShowTimeFilterMenu(false)
-                      }}
-                    >
-                      Reset Date Filter
-                    </button>
-                  </div>
+            {/* Folder Structure */}
+            <div className="flex-1">
+              {viewMode === 'folder' ? (
+                 <div className="space-y-4">
+                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest px-4">My Folders</h3>
+                   {renderFolderStructure(folders.filter((f: any) => !f.parent_id), getFilteredPasswords(true))}
+                 </div>
+              ) : (
+                <div className="space-y-2">
+                   {renderPasswordRows()}
                 </div>
               )}
-            </div>
-
-            {/* Functions Dropdown */}
-            <div className="relative flex items-center gap-2">
-              <button
-                className={`flex items-center justify-between ${theme === "light" ? "bg-gray-200 hover:bg-gray-300 text-gray-800" : "bg-[#333] hover:bg-gray-600 text-white"} px-4 py-2 rounded-md transition duration-200 min-w-32`}
-                onClick={() => {
-                  setShowStatusFilterMenu(!showStatusFilterMenu)
-                  setShowCategoryFilterMenu(false)
-                }}
-              >
-                <span>Functions</span>
-                <ChevronDown className="h-4 w-4 ml-2" />
-              </button>
-
-              {/* Quick Clear Filter Button */}
-              {(categoryFilter !== "all" || favoriteFilter || archivedFilter) && (
-                <button
-                  onClick={() => {
-                    setCategoryFilter("all")
-                    setFavoriteFilter(false)
-                    setArchivedFilter(false)
-                    toast.success("Filters cleared")
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md font-bold text-xs uppercase tracking-tight transition-all ${theme === 'light' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-red-500/10 text-red-400 hover:bg-red-500/20'}`}
-                  title="Clear all active filters"
-                >
-                  <X className="h-3 w-3" /> Clear
-                </button>
-              )}
-
-              {showStatusFilterMenu && (
-                <div
-                  className={`absolute z-10 mt-1 w-48 ${theme === "light" ? "bg-white" : "bg-[#333]"} rounded-md shadow-lg py-1`}
-                >
-                  <button
-                    className={`w-full text-left px-4 py-2 flex items-center gap-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${favoriteFilter ? "bg-blue-600 text-white" : ""}`}
-                    onClick={() => {
-                      setFavoriteFilter(!favoriteFilter)
-                      setShowStatusFilterMenu(false)
-                    }}
-                  >
-                    <Star className="h-4 w-4" fill={favoriteFilter ? "currentColor" : "none"} />
-                    {favoriteFilter ? "Show All" : "Favorites Only"}
-                  </button>
-                  <button
-                    className={`w-full text-left px-4 py-2 flex items-center gap-2 ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-600"} ${archivedFilter ? "bg-blue-600 text-white" : ""}`}
-                    onClick={() => {
-                      setArchivedFilter(!archivedFilter)
-                      setShowStatusFilterMenu(false)
-                    }}
-                  >
-                    <Archive className="h-4 w-4" />
-                    {archivedFilter ? "Show Active" : "Show Archived"}
-                  </button>
-                  <div className={`h-px ${theme === "light" ? "bg-gray-200" : "bg-gray-700"} my-1`} />
-                  <button
-                    className={`w-full text-left px-4 py-2 ${theme === "light" ? "hover:bg-gray-100 text-red-600" : "hover:bg-gray-600 text-red-400"}`}
-                    onClick={() => {
-                      setCategoryFilter("all")
-                      setFavoriteFilter(false)
-                      setArchivedFilter(false)
-                      setShowStatusFilterMenu(false)
-                    }}
-                  >
-                    Clear All Filters
-                  </button>
-                </div>
-              )}
-                </div>
-              </div>
-            </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-
-      <div className="flex flex-col md:flex-row gap-4 items-start">
-        {viewMode !== "folder" && (
-          <div className={`w-full md:w-64 rounded-xl p-4 h-fit sticky top-24 ${theme === "light" ? "bg-white border border-gray-200" : "bg-[#1a1a1a] border border-gray-800"}`}>
-            <h2 className="text-lg font-semibold mb-4">Folders</h2>
-            <div className="space-y-1">
-              <div
-                className={`flex items-center py-2 cursor-pointer ${theme === "light" ? "hover:bg-gray-100" : "hover:bg-gray-700"} rounded px-2 ${selectedFolder === "" ? "bg-blue-600 text-white" : ""
-                  }`}
-                onClick={() => setSelectedFolder("")}
-              >
-                <Folder className={`h-5 w-5 mr-2 ${selectedFolder === "" ? "text-white" : "text-blue-400"}`} />
-                <span>All Items</span>
-              </div>
-              {renderFolderStructure(topLevelFolders, getFilteredPasswords(true))}
             </div>
           </div>
         )}
 
-        <div className="flex-1">
-          {viewMode === "list" ? (
-            <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-300px)]">
-              {/* Left: Password List */}
-              <div className={`${selectedRecord ? 'hidden' : 'w-full'} rounded-xl overflow-hidden relative z-40 ${theme === "light" ? "bg-white border border-gray-200" : "bg-[#1a1a1a] border border-gray-800"}`}>
-                <div className="overflow-x-auto h-full">
-                  <table className="w-full text-left text-sm table-fixed">
-                    <thead className={`${theme === "light" ? "bg-gray-50 text-gray-600" : "bg-[#1a1a1a] text-gray-300"} sticky top-0`}>
-                      <tr>
-                        <th className="py-3 px-4 font-medium w-full md:w-auto">Title / Website</th>
-                        <th className="py-3 px-4 font-medium hidden md:table-cell w-48">Username</th>
-                        <th className="py-3 px-4 font-medium hidden lg:table-cell w-48">Password</th>
-                        <th className="py-3 px-4 font-medium hidden xl:table-cell w-32">Category</th>
-                        <th className="py-3 px-4 font-medium hidden 2xl:table-cell w-32">Updated</th>
-                        <th className="py-3 px-4 font-medium w-32 md:w-auto text-right md:text-left">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`divide-y ${theme === "light" ? "divide-gray-100" : "divide-gray-800"}`}>
-                      {renderPasswordRows()}
-                    </tbody>
-                  </table>
+        {/* Right Side: Details / Main View (Full-page when record selected) */}
+        <div className={`flex-1 h-full overflow-hidden ${selectedRecord ? 'relative' : ''}`}>
+           {selectedRecord ? (
+              <div className="h-full w-full animate-in fade-in slide-in-from-right-4 duration-300">
+                {renderRecordDetails(selectedRecord)}
+              </div>
+           ) : viewMode === "list" ? (
+             <div className="h-full flex flex-col gap-4">
+                <div className={`flex-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'} overflow-hidden shadow-sm`}>
+                    <div className="overflow-x-auto h-full scrollbar-hide">
+                      <table className="w-full text-left text-sm table-fixed">
+                        <thead className={`${theme === "light" ? "bg-gray-50 text-gray-600" : "bg-white/5 text-gray-400"} sticky top-0 z-10 font-bold uppercase text-[10px] tracking-wider`}>
+                          <tr>
+                            <th className="py-4 px-6 w-full md:w-auto">Record Title</th>
+                            <th className="py-4 px-6 hidden md:table-cell w-48">Username</th>
+                            <th className="py-4 px-6 hidden lg:table-cell w-32 text-right">Updated</th>
+                          </tr>
+                        </thead>
+                        <tbody className={`divide-y ${theme === "light" ? "divide-gray-100" : "divide-white/5"}`}>
+                          {renderPasswordRows()}
+                        </tbody>
+                      </table>
+                      {getFilteredPasswords().length === 0 && (
+                        <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-50">
+                          <Search className="h-12 w-12 mb-4" />
+                          <p className="font-bold">No records matched your search</p>
+                          <p className="text-xs">Try searching for a different keyword</p>
+                        </div>
+                      )}
+                    </div>
                 </div>
-              </div>
-
-              {/* Right: Password Details Panel */}
-              <div
-                className={`${selectedRecord || selectedFolder ? "block w-full" : "hidden md:block"} h-full sticky top-24 self-start`}
-              >
-                {selectedRecord ? renderRecordDetails(selectedRecord) : selectedFolder ? renderFolderDetail(selectedFolder) : renderRecordDetails(null)}
-              </div>
-            </div>
-          ) : viewMode === "grid" ? (
-            <div className="flex flex-col md:flex-row gap-4 h-[calc(100vh-300px)]">
-              {/* Left: Password Grid */}
-              <div className={`${selectedRecord ? 'hidden' : 'w-full'} overflow-y-auto`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">{renderPasswordGrid()}</div>
-              </div>
-
-              {/* Right: Password Details Panel */}
-              <div
-                className={`${selectedRecord || selectedFolder ? "block w-full" : "hidden md:block"} h-full overflow-y-auto sticky top-24 self-start`}
-              >
-                {selectedRecord ? renderRecordDetails(selectedRecord) : selectedFolder ? renderFolderDetail(selectedFolder) : renderRecordDetails(null)}
-              </div>
-            </div>
-          ) : (
-            <div>{renderFolderView()}</div>
-          )}
+             </div>
+           ) : viewMode === "grid" ? (
+             <div className="h-full overflow-y-auto scrollbar-hide">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-1">
+                  {renderPasswordGrid()}
+                </div>
+             </div>
+           ) : (
+             <div className="h-full">
+               {selectedFolder ? renderFolderDetail(selectedFolder) : (
+                 <div className="h-full flex items-center justify-center opacity-20">
+                    <Folder className="h-24 w-24" />
+                 </div>
+               )}
+             </div>
+           )}
         </div>
-      </div >
+      </div>
 
-      {/* Modals */}
-      {
-        addPasswordModalOpen && (
-          <AddPasswordModal
-            onClose={() => setAddPasswordModalOpen(false)}
-            onAdd={async (item: any) => {
-              await handleAddPassword(item)
-              setInitialFolderId("")
-            }}
-            folders={folders}
-            theme={theme}
-            initialFolderId={initialFolderId}
-          />
-        )
-      }
+      {/* MODALS */}
+      {addPasswordModalOpen && (
+        <AddPasswordModal
+          onClose={() => setAddPasswordModalOpen(false)}
+          onAdd={async (item: any) => {
+            await handleAddPassword(item);
+            setInitialFolderId("");
+          }}
+          folders={folders}
+          theme={theme}
+          initialFolderId={initialFolderId}
+        />
+      )}
+      {addFolderModalOpen && (
+        <AddFolderModal
+          onClose={() => setAddFolderModalOpen(false)}
+          onAdd={handleAddFolder}
+          folders={folders}
+          theme={theme}
+          initialParentId={initialParentFolderId}
+        />
+      )}
+      {moveToFolderModalOpen && (
+        <MoveToFolderModal
+          onClose={() => setMoveToFolderModalOpen(false)}
+          onMove={handleMoveToFolder}
+          folders={folders}
+          record={selectedRecord}
+          theme={theme}
+        />
+      )}
+      {editPasswordModalOpen && (
+        <EditPasswordModal
+          onClose={() => setEditPasswordModalOpen(false)}
+          onSave={handleSaveEditedPassword}
+          passwordData={selectedRecord}
+          folders={folders}
+          theme={theme}
+        />
+      )}
+      {deleteConfirmModalOpen && (
+        <DeleteConfirmationModal
+          onClose={() => setDeleteConfirmModalOpen(false)}
+          onConfirm={handleDeleteConfirm}
+          itemName={selectedRecord?.website || selectedRecord?.username || "this password"}
+          theme={theme}
+        />
+      )}
+      {autoFillModalOpen && selectedRecord && (
+        <AutoFill passwordData={selectedRecord} onClose={() => setAutoFillModalOpen(false)} theme={theme} />
+      )}
+      {viewPictureModalOpen && selectedRecord && selectedRecord.picture && (
+        <ViewPictureModal
+          onClose={() => setViewPictureModalOpen(false)}
+          picture={selectedRecord.picture}
+          passwordName={selectedRecord.website || selectedRecord.username}
+          theme={theme}
+        />
+      )}
+      {viewHistoryModalOpen && selectedRecord && (
+        <ViewHistoryModal
+          record={selectedRecord}
+          onClose={() => setViewHistoryModalOpen(false)}
+          theme={theme}
+        />
+      )}
+    </div>
+  )
+}
 
-      {
-        addFolderModalOpen && (
-          <AddFolderModal
-            onClose={() => setAddFolderModalOpen(false)}
-            onAdd={handleAddFolder}
-            folders={folders}
-            theme={theme}
-            initialParentId={initialParentFolderId}
-          />
-        )
-      }
+const ViewHistoryModal = ({ record, onClose, theme }: { record: any, onClose: () => void, theme: string }) => {
+  const history = [
+    { date: record.created_at, action: "Record Created", details: "Initial entry established" },
+    ...(record.updated_at ? [{ date: record.updated_at, action: "Record Updated", details: "Last modification recorded" }] : [])
+  ];
 
-      {
-        moveToFolderModalOpen && (
-          <MoveToFolderModal
-            onClose={() => setMoveToFolderModalOpen(false)}
-            onMove={handleMoveToFolder}
-            folders={folders}
-            record={selectedRecord}
-            theme={theme}
-          />
-        )
-      }
-
-      {/* Edit Password Modal */}
-      {
-        editPasswordModalOpen && (
-          <EditPasswordModal
-            onClose={() => setEditPasswordModalOpen(false)}
-            onSave={handleSaveEditedPassword}
-            passwordData={selectedRecord}
-            folders={folders}
-            theme={theme}
-          />
-        )
-      }
-
-      {/* Delete Confirmation Modal */}
-      {
-        deleteConfirmModalOpen && (
-          <DeleteConfirmationModal
-            onClose={() => setDeleteConfirmModalOpen(false)}
-            onConfirm={handleDeleteConfirm}
-            itemName={selectedRecord?.website || selectedRecord?.username || "this password"}
-            theme={theme}
-          />
-        )
-      }
-
-      {/* Auto Fill Modal */}
-      {
-        autoFillModalOpen && selectedRecord && (
-          <AutoFill passwordData={selectedRecord} onClose={() => setAutoFillModalOpen(false)} theme={theme} />
-        )
-      }
-
-      {/* View Picture Modal */}
-      {
-        viewPictureModalOpen && selectedRecord && selectedRecord.picture && (
-          <ViewPictureModal
-            onClose={() => setViewPictureModalOpen(false)}
-            picture={selectedRecord.picture}
-            passwordName={selectedRecord.website || selectedRecord.username}
-            theme={theme}
-          />
-        )
-      }
-    </div >
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className={`w-full max-w-md rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/10'} shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300`}>
+        <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+             <RotateCcw className="h-5 w-5 text-green-400" />
+             <h2 className="text-lg font-bold">Record History</h2>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+           {history.map((item, i) => (
+             <div key={i} className="flex gap-4 relative">
+                {i < history.length - 1 && <div className="absolute left-2.5 top-6 bottom-[-24px] w-px bg-white/10" />}
+                <div className="h-5 w-5 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center z-10 mt-1">
+                   <div className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                </div>
+                <div className="flex-1">
+                   <p className="text-sm font-bold text-gray-100">{item.action}</p>
+                   <p className="text-[10px] uppercase font-bold text-gray-500 mt-0.5 tracking-wider">
+                     {new Date(item.date).toLocaleString([], { dateStyle: 'long', timeStyle: 'short' })}
+                   </p>
+                   <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{item.details}</p>
+                </div>
+             </div>
+           ))}
+           {history.length === 0 && (
+             <div className="py-10 text-center opacity-30">
+                <RotateCcw className="h-10 w-10 mx-auto mb-2" />
+                <p>No history records found</p>
+             </div>
+           )}
+        </div>
+        <div className="px-6 py-4 bg-black/20 border-t border-white/5 text-center">
+            <button onClick={onClose} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold transition-all w-full shadow-lg shadow-blue-600/20">Done</button>
+        </div>
+      </div>
+    </div>
   )
 }
 
