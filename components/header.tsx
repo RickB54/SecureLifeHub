@@ -67,7 +67,7 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 ${theme === "light" ? "bg-white shadow-md" : "bg-[#2a2a2a] shadow-md"} z-20`}
+      className={`fixed top-0 left-0 right-0 ${theme === "light" ? "bg-white shadow-md" : "bg-[#2a2a2a] shadow-md"} z-40`}
     >
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center">
