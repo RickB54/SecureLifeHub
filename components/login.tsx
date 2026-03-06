@@ -93,7 +93,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           } else if (savedStartup && savedStartup !== "dashboard") {
             router.push(`/?page=${savedStartup}`)
           } else {
-            router.push('/')
+            router.push('/?page=dashboard')
           }
         } else {
           console.warn("No active Supabase session found after biometric success.")
@@ -129,7 +129,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         } else if (savedStartup && savedStartup !== "dashboard") {
           router.push(`/?page=${savedStartup}`)
         } else {
-          router.push('/')
+          router.push('/?page=dashboard')
         }
         return
       }
@@ -195,7 +195,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           } else if (savedStartup && savedStartup !== "dashboard") {
             router.push(`/?page=${savedStartup}`)
           } else {
-            router.push('/')
+            router.push('/?page=dashboard')
           }
 
         } catch (err: any) {
@@ -269,7 +269,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         } else if (savedStartup && savedStartup !== "dashboard") {
           router.push(`/?page=${savedStartup}`)
         } else {
-          router.push('/')
+          router.push('/?page=dashboard')
         }
       }
     } catch (err: any) {

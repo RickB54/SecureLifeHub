@@ -59,30 +59,17 @@ function HomeContent() {
   // Theme state
   const [theme, setTheme] = useState("dark")
 
-  // Startup page preference
-  const [startupPage, setStartupPage] = useState("dashboard")
-
+  // 1. Initial State
   const searchParams = useSearchParams()
   const router = useRouter()
-  // Initialize from URL or default to dashboard
+  // Try to be smart about initial render
   const [activePage, setActivePage] = useState(searchParams.get("page") || "dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [startupPage, setStartupPage] = useState("dashboard")
 
-  // Critical: Load startup preference as early as possible on mount
-  useEffect(() => {
-    const saved = localStorage.getItem("hub_startup_page")
-    if (saved) {
-      setStartupPage(saved)
-      // If we are at the root (dashboard) and no explicit page is in URL, apply it immediately
-      if (!searchParams.get("page") && saved !== "dashboard") {
-        setActivePage(saved)
-      }
-    }
-  }, [])
-
-  // Auth from Context - MUST be early for effects
+  // Auth from Context
   const { user, loading: authLoading, signOut, isLocked, setIsLocked } = useAuth()
 
   // Fullscreen listener
@@ -92,7 +79,7 @@ function HomeContent() {
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
   }, [])
 
-  // -- Navigation History to fix Back Button --
+  // -- Navigation History --
   const [navHistory, setNavHistory] = useState<string[]>([])
 
   const handleNavigate = (page: string) => {
@@ -117,24 +104,31 @@ function HomeContent() {
     }
   }
 
-  // Consolidated Startup & Navigation logic
+  // 2. CONSOLIDATED STARTUP & NAVIGATION EFFECT
   useEffect(() => {
+    if (authLoading) return
+
     const pageParam = searchParams.get("page")
     const savedStartup = localStorage.getItem("hub_startup_page") || "dashboard"
     
-    // 1. Initial landing: if authenticated and at root-dashboard, apply startup preference
-    // This handles cases like a fresh login or session restoration
-    if (user && !isLocked && !pageParam && activePage === "dashboard" && savedStartup !== "dashboard" && navHistory.length === 0) {
+    // Sync local state for Settings UI
+    if (savedStartup !== startupPage) setStartupPage(savedStartup)
+
+    // A. Handle Startup Redirection
+    // If authenticated, unlocked, at the root URL, and haven't navigated yet
+    if (user && !isLocked && !pageParam && navHistory.length === 0 && savedStartup !== "dashboard") {
+      console.log(`🚀 Applying Startup Preference: ${savedStartup}`)
       setActivePage(savedStartup)
       router.push(`/?page=${savedStartup}`)
+      return
     }
 
-    // 2. Sync state with URL if they differ (handles browser back/forward)
+    // B. Handle URL -> State Synchronization (Browser Back/Forward)
     if (pageParam && pageParam !== activePage) {
       setActivePage(pageParam)
     }
 
-    // 3. Clear sensitive tokens but KEEP the page param
+    // C. Clean URL tokens while preserving page
     if (typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
       const cleanParams = new URLSearchParams(window.location.search)
       cleanParams.delete('access_token')
@@ -142,7 +136,7 @@ function HomeContent() {
       const newQuery = cleanParams.toString()
       window.history.replaceState({}, '', `/${newQuery ? '?' + newQuery : ''}`)
     }
-  }, [searchParams, user, isLocked, activePage, startupPage, navHistory.length, router])
+  }, [user, isLocked, authLoading, searchParams, activePage, startupPage, navHistory.length])
 
   // Security & Locking Logic
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
@@ -211,7 +205,9 @@ function HomeContent() {
 
   // Handle logout
   const handleLogout = async () => {
+    setNavHistory([])
     await signOut()
+    router.push("/")
   }
 
   if (authLoading) {
