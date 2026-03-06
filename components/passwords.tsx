@@ -100,6 +100,9 @@ export default function Passwords({
   const [searchQuery, setSearchQuery] = useState("")
   const [customDate, setCustomDate] = useState("")
 
+  // Force flat list view when filter/search is active
+  const [forceListView, setForceListView] = useState(false)
+
   // State for showing/hiding filters
   const [showFilters, setShowFilters] = useState(false)
 
@@ -412,6 +415,16 @@ export default function Passwords({
     setArchivedFilter(initialArchivedFilter)
   }, [initialArchivedFilter])
 
+  // Auto-switch to list view when a special filter is active
+  useEffect(() => {
+    const filterOn = favoriteFilter || archivedFilter || timeFilter === 'recent' || searchQuery.trim() !== ""
+    if (filterOn) {
+      setForceListView(true)
+    } else {
+      setForceListView(false)
+    }
+  }, [favoriteFilter, archivedFilter, timeFilter, searchQuery])
+
   // Handle view picture
   const handleViewPicture = (password: any) => {
     setSelectedRecord(password)
@@ -497,6 +510,9 @@ export default function Passwords({
 
   // Build folder structure
   const topLevelFolders = folders.filter((folder) => !folder.parent_id)
+
+  // Determine if any non-default filter is active (Favorites, Archived, Recent, search)
+  const isFilterActive = favoriteFilter || archivedFilter || timeFilter === 'recent' || searchQuery.trim() !== ""
 
   // Function to get direct subfolders of a folder
   const getSubfolders = (parentId: string) => {
@@ -2147,18 +2163,36 @@ export default function Passwords({
                 )}
               </div>
 
-              {/* Expand/Collapse All Button - MOVED TO LAST POSITION */}
-              <button
-                onClick={handleToggleAllFolders}
-                className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
-                title="Expand/Collapse All Folders"
-              >
-                {folders.some(f => !expandedFolders[f.id]) ? (
-                  <ChevronsDown className="h-4 w-4 text-blue-400" />
-                ) : (
-                  <ChevronsUp className="h-4 w-4 text-blue-400" />
-                )}
-              </button>
+              {/* Expand/Collapse All Button */}
+              {!isFilterActive && (
+                <button
+                  onClick={handleToggleAllFolders}
+                  className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
+                  title="Expand/Collapse All Folders"
+                >
+                  {folders.some(f => !expandedFolders[f.id]) ? (
+                    <ChevronsDown className="h-4 w-4 text-blue-400" />
+                  ) : (
+                    <ChevronsUp className="h-4 w-4 text-blue-400" />
+                  )}
+                </button>
+              )}
+
+              {/* List / Folder toggle — shown when filter or search is active */}
+              {isFilterActive && (
+                <button
+                  onClick={() => setForceListView(!forceListView)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all text-[10px] sm:text-[11px] font-bold uppercase tracking-tight shadow-sm ${
+                    forceListView
+                      ? 'bg-blue-600 text-white'
+                      : theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                  }`}
+                  title={forceListView ? 'Switch to Folder View' : 'Switch to List View'}
+                >
+                  {forceListView ? <FolderTree className="h-3.5 w-3.5" /> : <ListIcon className="h-3.5 w-3.5" />}
+                  {forceListView ? 'Folders' : 'List'}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -2306,6 +2340,59 @@ export default function Passwords({
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 p-1">
                   {renderPasswordGrid()}
                 </div>
+             </div>
+           ) : isFilterActive && forceListView ? (
+             /* Flat list view for filtered/search results — no folders shown */
+             <div className="h-full flex flex-col gap-2">
+               <div className={`flex items-center gap-2 px-1 py-2 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
+                 <ListIcon className="h-3.5 w-3.5" />
+                 {getFilteredPasswords().length} result{getFilteredPasswords().length !== 1 ? 's' : ''}
+                 {favoriteFilter && ' · Favorites'}
+                 {archivedFilter && ' · Archived'}
+                 {timeFilter === 'recent' && ' · Recent'}
+                 {searchQuery && ` · "${searchQuery}"`}
+               </div>
+               <div className={`flex-1 rounded-2xl border overflow-y-auto custom-scrollbar ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
+                 {getFilteredPasswords().length === 0 ? (
+                   <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40">
+                     <Search className="h-10 w-10 mb-3" />
+                     <p className="font-bold text-sm">No results found</p>
+                     <p className="text-xs mt-1">Try adjusting your filter or search</p>
+                   </div>
+                 ) : (
+                   <div className="divide-y divide-white/5">
+                     {getFilteredPasswords().map((pw) => (
+                       <div
+                         key={pw.id}
+                         className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
+                         onClick={() => handleEditPassword(pw.id)}
+                       >
+                         <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-2">
+                             {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
+                             <span className="font-medium text-sm truncate">{pw.title || 'Untitled'}</span>
+                           </div>
+                           {pw.website && (
+                             <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
+                           )}
+                           {pw.username && (
+                             <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
+                           )}
+                         </div>
+                         <button
+                           className={`p-1.5 flex-shrink-0 transition-colors rounded-md opacity-0 group-hover:opacity-100 ${
+                             pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400'
+                           }`}
+                           onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
+                           title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                         >
+                           <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
              </div>
            ) : (
              <div className="h-full">

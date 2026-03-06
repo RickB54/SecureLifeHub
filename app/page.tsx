@@ -440,38 +440,21 @@ function HomeContent() {
       <div
         className={`flex flex-col h-screen overflow-hidden ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-[#1a1a1a] text-white"} ${isFullscreen ? 'overscroll-none select-none touch-pan-y' : ''}`}
       >
-        {isFullscreen && (
-          <button
-            onClick={() => {
-              setIsFullscreen(false)
-              if (document.exitFullscreen) {
-                document.exitFullscreen().catch(() => {})
-              } else if ((document as any).webkitExitFullscreen) {
-                (document as any).webkitExitFullscreen();
-              }
-            }}
-            className="fixed top-2 right-2 z-[10001] p-2 rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10 opacity-30 hover:opacity-100 transition-opacity focus:opacity-100 active:scale-95"
-            title="Exit Fullscreen"
-          >
-            <Minimize className="h-5 w-5" />
-          </button>
-        )}
-        {!isFullscreen && (
-          <Header
-            onLogout={handleLogout}
-            onLock={() => setIsLocked(true)}
-            toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-            onNavigate={handleNavigate}
-            onBack={handleBack}
-            theme={theme}
-            toggleTheme={toggleTheme}
-            activePage={activePage}
-            onOpenHelp={() => setHelpOpen(true)}
-            isFullscreen={isFullscreen}
-            setIsFullscreen={setIsFullscreen}
-          />
-        )}
-        <div className={`flex flex-1 overflow-hidden ${!isFullscreen ? 'pt-16' : ''}`}>
+        {/* Header is ALWAYS visible — even in fullscreen mode */}
+        <Header
+          onLogout={handleLogout}
+          onLock={() => setIsLocked(true)}
+          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onNavigate={handleNavigate}
+          onBack={handleBack}
+          theme={theme}
+          toggleTheme={toggleTheme}
+          activePage={activePage}
+          onOpenHelp={() => setHelpOpen(true)}
+          isFullscreen={isFullscreen}
+          setIsFullscreen={setIsFullscreen}
+        />
+        <div className={`flex flex-1 overflow-hidden pt-16`}>
           {!isFullscreen && (
             <Sidebar
               activePage={activePage}
