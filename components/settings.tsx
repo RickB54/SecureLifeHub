@@ -25,8 +25,12 @@ import {
   Trash,
   ChevronRight,
   Maximize,
-  Minimize
+  Minimize,
+  Moon,
+  Sun,
+  RotateCcw
 } from "lucide-react"
+import { toast } from "sonner"
 import CsvImporter from "./csv-importer"
 import JsonImporter from "./json-importer"
 import MockDataGenerator from "./mock-data-generator"
@@ -44,6 +48,7 @@ export default function Settings({
   updateItem,
   deleteItem,
   theme,
+  toggleTheme,
   autoLockTimeout,
   setAutoLockTimeout,
   twoFactorEnabled,
@@ -60,6 +65,7 @@ export default function Settings({
   updateItem?: any
   deleteItem?: any
   theme?: string
+  toggleTheme?: () => void
   autoLockTimeout: number
   setAutoLockTimeout: (value: number) => void
   twoFactorEnabled: boolean
@@ -67,6 +73,8 @@ export default function Settings({
   isFullscreen?: boolean
   setIsFullscreen?: (val: boolean) => void
 }) {
+  const currentTheme = theme || "dark";
+  const globalToggleTheme = toggleTheme || (() => {});
   // Security audit data (Mock for now, needs real calculation later)
   const [securityAuditData, setSecurityAuditData] = useState({
     score: 36,
@@ -458,10 +466,74 @@ export default function Settings({
                 </div>
               </div>
               <button 
-                onClick={() => setIsFullscreen?.(!isFullscreen)} 
-                className={`flex items-center justify-center p-2 rounded-xl transition-all ${isFullscreen ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+                onClick={() => {
+                  const newState = !isFullscreen;
+                  setIsFullscreen?.(newState);
+                  
+                  // Hardware-level fullscreen
+                  if (newState) {
+                    if (document.documentElement.requestFullscreen) {
+                      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+                    } else if ((document.documentElement as any).webkitRequestFullscreen) {
+                      (document.documentElement as any).webkitRequestFullscreen({ navigationUI: 'hide' });
+                    } else if ((document.documentElement as any).msRequestFullscreen) {
+                      (document.documentElement as any).msRequestFullscreen({ navigationUI: 'hide' });
+                    }
+                  } else {
+                    if (document.fullscreenElement && document.exitFullscreen) {
+                      document.exitFullscreen().catch(() => {});
+                    } else if ((document as any).webkitExitFullscreen) {
+                      (document as any).webkitExitFullscreen();
+                    } else if ((document as any).msExitFullscreen) {
+                      (document as any).msExitFullscreen();
+                    }
+                  }
+                }} 
+                className={`flex items-center justify-center p-2 rounded-xl transition-all ${isFullscreen ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' : 'bg-gray-700 text-gray-300'}`}
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
               >
                 {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+        </SettingsCard>
+
+        {/* Appearance Section */}
+        <SettingsCard title="Appearance" icon={Sun} color="amber">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+              <div>
+                <div className="font-bold">Dark Mode</div>
+                <div className="text-xs opacity-50">Switch between light and dark themes</div>
+              </div>
+              <button 
+                onClick={globalToggleTheme} 
+                className={`relative h-8 w-14 rounded-full transition-colors ${currentTheme === 'dark' ? 'bg-blue-600' : 'bg-gray-400'}`}
+              >
+                <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${currentTheme === 'dark' ? 'translate-x-6' : ''} flex items-center justify-center`}>
+                   {currentTheme === 'light' ? <Sun className="h-3 w-3 text-amber-500" /> : <Moon className="h-3 w-3 text-blue-600" />}
+                </div>
+              </button>
+            </div>
+            
+            <div className={`h-px w-full ${currentTheme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`} />
+
+            {/* Recents Reset */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+              <div>
+                <div className="font-bold">Reset Recent Items</div>
+                <div className="text-xs text-blue-400 font-medium">Reset 'Recents' folder history to start fresh from now</div>
+              </div>
+              <button 
+                onClick={() => {
+                  if (confirm("Reset recent items history? New items from this point forward will show in Recents.")) {
+                    localStorage.setItem('hub_recents_reset_date', new Date().toISOString());
+                    toast.success("Recents history reset");
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${currentTheme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+              >
+                <RotateCcw className="h-4 w-4" /> Reset
               </button>
             </div>
           </div>

@@ -307,8 +307,17 @@ export default function Passwords({
   const handleToggleFavorite = async (id: string) => {
     const record = records.find(r => r.id === id)
     if (record) {
-      const newState = !record.is_favorite;
-      await updateItem(id, { is_favorite: newState })
+      const newState = !(record.is_favorite || record.isFavorite);
+      const updatedRecord = { ...record, is_favorite: newState, isFavorite: newState };
+      
+      // Update persistent storage
+      await updateItem(id, { is_favorite: newState, isFavorite: newState })
+      
+      // Update local state if currently viewing this record
+      if (selectedRecord && selectedRecord.id === id) {
+        setSelectedRecord(updatedRecord);
+      }
+      
       toast.success(newState ? "Added to favorites" : "Removed from favorites")
     }
   }
@@ -317,8 +326,17 @@ export default function Passwords({
   const handleToggleArchive = async (id: string) => {
     const record = records.find(r => r.id === id)
     if (record) {
-      const newState = !record.is_archived;
-      await updateItem(id, { is_archived: newState })
+      const newState = !(record.is_archived || record.isArchived);
+      const updatedRecord = { ...record, is_archived: newState, isArchived: newState };
+      
+      // Update persistent storage
+      await updateItem(id, { is_archived: newState, isArchived: newState })
+      
+      // Update local state if currently viewing this record
+      if (selectedRecord && selectedRecord.id === id) {
+        setSelectedRecord(updatedRecord);
+      }
+      
       toast.success(newState ? "Item archived" : "Item unarchived")
     }
   }
@@ -563,12 +581,12 @@ export default function Passwords({
 
     // Filter by favorites
     if (favoriteFilter) {
-      filtered = filtered.filter((password) => password.is_favorite)
+      filtered = filtered.filter((password) => password.is_favorite || password.isFavorite)
     }
 
     // Filter by archived
     if (archivedFilter) {
-      filtered = filtered.filter((password) => password.is_archived)
+      filtered = filtered.filter((password) => password.is_archived || password.isArchived)
     }
 
     // Filter by search query
@@ -584,12 +602,22 @@ export default function Passwords({
       )
     }
 
-    // Sort by title
+    // Sort by title (default)
     filtered.sort((a, b) => {
       const titleA = a.title || a.website || "Untitled";
       const titleB = b.title || b.website || "Untitled";
       return titleA.localeCompare(titleB);
     });
+
+    // Special case for 'recent' - override sorting and limit to 10
+    if (timeFilter === 'recent') {
+      filtered.sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.created_at).getTime();
+        const dateB = new Date(b.updatedAt || b.created_at).getTime();
+        return dateB - dateA;
+      });
+      return filtered.slice(0, 10);
+    }
 
     return filtered
   }
@@ -832,7 +860,12 @@ export default function Passwords({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-sm truncate">{password.title || password.website || "Untitled"}</div>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-sm truncate">{password.title || password.website || "Untitled"}</div>
+            {(password.is_favorite || password.isFavorite) && (
+              <Star className="h-3 w-3 text-yellow-400 flex-shrink-0" fill="currentColor" />
+            )}
+          </div>
           <div className={`text-xs truncate ${theme === "light" ? "text-gray-500" : "text-gray-300"}`}>
             {password.username || password.email || "No username"}
           </div>
@@ -1636,24 +1669,14 @@ export default function Passwords({
         {/* Action Bar Sub-Header - Favorite/Archive/Delete */}
         <div className={`px-6 py-2 border-b ${theme === "light" ? "bg-gray-50 border-gray-100" : "bg-black/20 border-white/5"} flex items-center gap-4`}>
            <button
-              onClick={async () => {
-                const newFavoriteStatus = !(record.isFavorite || record.is_favorite)
-                const updatedRecord = { ...record, isFavorite: newFavoriteStatus, is_favorite: newFavoriteStatus }
-                setSelectedRecord(updatedRecord)
-                await updateItem(record.id, updatedRecord)
-              }}
+              onClick={() => handleToggleFavorite(record.id)}
               className={`flex items-center gap-1.5 text-xs font-bold uppercase transition-colors ${(record.isFavorite || record.is_favorite) ? 'text-yellow-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
               <Star className="h-4 w-4" fill={(record.isFavorite || record.is_favorite) ? "currentColor" : "none"} />
               {(record.isFavorite || record.is_favorite) ? "Favorite" : "Add Favorite"}
             </button>
             <button
-              onClick={async () => {
-                const newArchivedStatus = !(record.is_archived || record.isArchived)
-                const updatedRecord = { ...record, is_archived: newArchivedStatus, isArchived: newArchivedStatus }
-                setSelectedRecord(updatedRecord)
-                await updateItem(record.id, updatedRecord)
-              }}
+              onClick={() => handleToggleArchive(record.id)}
               className={`flex items-center gap-1.5 text-xs font-bold uppercase transition-colors ${(record.is_archived || record.isArchived) ? 'text-green-500' : 'text-gray-500 hover:text-gray-300'}`}
             >
               <Archive className="h-4 w-4" fill={(record.is_archived || record.isArchived) ? "currentColor" : "none"} />
@@ -1923,16 +1946,41 @@ export default function Passwords({
             ) : (
               /* Normal view - show passwords without folders */
               <div className={`border-b ${theme === "light" ? "border-gray-100" : "border-gray-800"} mt-4`}>
+
+                {/* Favorites Virtual Folder */}
                 <div
-                  className={`flex items-center py-3 px-2 cursor-pointer rounded-lg transition-colors ${!selectedFolder ? 'bg-blue-600/20 dark:bg-blue-600/30' : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
+                  className={`flex items-center py-3 px-2 cursor-pointer rounded-lg transition-colors ${favoriteFilter ? 'bg-blue-600/20 dark:bg-blue-600/30' : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
+                  onClick={() => {
+                    setFavoriteFilter(true)
+                    setArchivedFilter(false)
+                    setTimeFilter('all')
+                    setCategoryFilter('all')
+                    setSelectedFolder("")
+                    setSelectedRecord(null)
+                  }}
+                >
+                  <Star className="h-6 w-6 mr-3 text-yellow-400" fill={favoriteFilter ? "currentColor" : "none"} />
+                  <div className="flex-1">
+                    <div className={`font-semibold ${favoriteFilter ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>Favorites</div>
+                    <span className="text-xs text-gray-300">
+                      {passwords.filter(p => p.is_favorite || p.isFavorite).length} Records
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={`flex items-center py-3 px-2 cursor-pointer rounded-lg transition-colors ${!selectedFolder && !favoriteFilter && !archivedFilter && timeFilter === 'all' ? 'bg-blue-600/20 dark:bg-blue-600/30' : theme === "light" ? "hover:bg-gray-50" : "hover:bg-white/5"}`}
                   onClick={() => {
                     setSelectedFolder("")
+                    setFavoriteFilter(false)
+                    setArchivedFilter(false)
+                    setTimeFilter('all')
                     setSelectedRecord(null)
                   }}
                 >
                   <Folder className="h-6 w-6 mr-3 text-gray-400" />
                   <div className="flex-1">
-                    <div className={`font-semibold ${!selectedFolder ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No Folder</div>
+                    <div className={`font-semibold ${!selectedFolder && !favoriteFilter && !archivedFilter && timeFilter === 'all' ? 'text-blue-400' : theme === "light" ? "text-gray-900" : "text-gray-100"}`}>No Folder</div>
                     <span className="text-xs text-gray-300">
                       {itemsForStructure.filter((p) => !p.folder_id).length} Records
                     </span>
@@ -1976,11 +2024,11 @@ export default function Passwords({
   };
 
   return (
-    <div className={`space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[10000] bg-background p-4 md:p-8' : ''}`}>
+    <div className={`space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-visible ${isFullscreen ? 'fixed inset-0 z-[10000] bg-background p-4 md:p-8' : ''}`}>
       {renderAZSidebar()}
 
       {/* COMPACT HEADER: Always visible, integrated search and counts */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-50">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-4 min-w-0 flex-1">
           {/* Mobile Back Button - ONLY on mobile when record selected OR folder selected */}
           {(selectedRecord || selectedFolder) && (
@@ -2009,35 +2057,6 @@ export default function Passwords({
               <span>{records.filter(r => r.type === 'note' || r.type === 'secure-note' || r.category === 'Secure Notes').length} Notes</span>
               <span className="opacity-30">•</span>
               <span>{folders.length} Folders</span>
-              <button 
-                onClick={() => {
-                  const newState = !isFullscreen;
-                  setIsFullscreen?.(newState);
-                  
-                  // Hardware-level fullscreen
-                  if (newState) {
-                    if (document.documentElement.requestFullscreen) {
-                      document.documentElement.requestFullscreen().catch(() => {});
-                    } else if ((document.documentElement as any).webkitRequestFullscreen) {
-                      (document.documentElement as any).webkitRequestFullscreen();
-                    } else if ((document.documentElement as any).msRequestFullscreen) {
-                      (document.documentElement as any).msRequestFullscreen();
-                    }
-                  } else {
-                    if (document.fullscreenElement && document.exitFullscreen) {
-                      document.exitFullscreen().catch(() => {});
-                    } else if ((document as any).webkitExitFullscreen) {
-                      (document as any).webkitExitFullscreen();
-                    } else if ((document as any).msExitFullscreen) {
-                      (document as any).msExitFullscreen();
-                    }
-                  }
-                }}
-                className={`ml-1.5 p-1.5 rounded-lg transition-all ${theme === 'light' ? 'bg-gray-100 hover:bg-gray-200 text-gray-500' : 'bg-white/5 hover:bg-white/10 text-gray-400'}`}
-                title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Mode"}
-              >
-                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-              </button>
             </div>
           </div>
 
@@ -2094,7 +2113,7 @@ export default function Passwords({
                   className={`flex items-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2.5 py-1.5 rounded-lg transition-all text-[10px] sm:text-[11px] font-bold uppercase tracking-tight shadow-sm whitespace-nowrap`}
                 >
                   <Filter className="h-3.5 w-3.5 mr-1" />
-                  Categories
+                  {favoriteFilter ? 'Favorites' : archivedFilter ? 'Archived' : timeFilter === 'recent' ? 'Recent' : categoryFilter !== 'all' ? categoryFilter : 'Categories'}
                   <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${activeMenu === 'categories-header' ? 'rotate-180' : ''}`} />
                 </button>
 
@@ -2103,10 +2122,10 @@ export default function Passwords({
                   <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl border overflow-hidden z-[100] animate-in fade-in zoom-in-95 duration-200 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#2a2a2a] border-white/10'}`}>
                     <div className="p-1.5 space-y-0.5">
                       {[
-                        { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
-                        { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setCategoryFilter('all'); } },
-                        { name: 'Recent', icon: RotateCcw, count: passwords.filter(p => new Date(p.updatedAt || p.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, color: 'text-purple-500', action: () => { setCategoryFilter('all'); } },
-                        { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setCategoryFilter('all'); } },
+                        { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
+                        { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
+                        { name: 'Recent', icon: RotateCcw, count: Math.min(10, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
+                        { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                       ].map((cat) => (
                         <button
                           key={cat.name}
@@ -2134,7 +2153,11 @@ export default function Passwords({
                 className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
                 title="Expand/Collapse All Folders"
               >
-                <ChevronsDown className="h-4 w-4 text-blue-400" />
+                {folders.some(f => !expandedFolders[f.id]) ? (
+                  <ChevronsDown className="h-4 w-4 text-blue-400" />
+                ) : (
+                  <ChevronsUp className="h-4 w-4 text-blue-400" />
+                )}
               </button>
             </div>
           )}
@@ -2177,10 +2200,10 @@ export default function Passwords({
                     <AccordionContent className="px-2 pb-2">
                       <div className="grid grid-cols-1 gap-1">
                         {[
-                          { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
-                          { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setCategoryFilter('all'); } },
-                          { name: 'Recent', icon: RotateCcw, count: passwords.filter(p => new Date(p.updatedAt || p.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length, color: 'text-purple-500', action: () => { setCategoryFilter('all'); } },
-                          { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setCategoryFilter('all'); } },
+                          { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
+                          { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
+                          { name: 'Recent', icon: RotateCcw, count: Math.min(10, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
+                          { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                         ].map((cat) => (
                           <button 
                            key={cat.name}

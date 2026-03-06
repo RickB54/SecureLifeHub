@@ -38,14 +38,25 @@ export default function Header({
   const { user } = useAuth()
 
   const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
+    const newState = !isFullscreen;
+    setIsFullscreen(newState)
     
-    // Also try browser-level fullscreen for better immersion if possible
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {})
+    // Hardware-level fullscreen for better immersion
+    if (newState) {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+      } else if ((document.documentElement as any).webkitRequestFullscreen) {
+        (document.documentElement as any).webkitRequestFullscreen({ navigationUI: 'hide' });
+      } else if ((document.documentElement as any).msRequestFullscreen) {
+        (document.documentElement as any).msRequestFullscreen({ navigationUI: 'hide' });
+      }
     } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {})
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if ((document as any).webkitExitFullscreen) {
+        (document as any).webkitExitFullscreen();
+      } else if ((document as any).msExitFullscreen) {
+        (document as any).msExitFullscreen();
       }
     }
   }
@@ -112,12 +123,7 @@ export default function Header({
           >
             {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
           </button>
-          <button
-            onClick={toggleTheme}
-            className={`${theme === "light" ? "text-gray-800 hover:text-[#007bff]" : "text-white hover:text-[#007bff]"}`}
-          >
-            {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </button>
+
           <div className="relative">
             <button
               onClick={() => setUserMenuOpen(!userMenuOpen)}

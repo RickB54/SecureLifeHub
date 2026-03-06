@@ -41,6 +41,7 @@ import MaintenanceLogs from "@/components/maintenance-logs"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
 import SecureNotes from "@/components/secure-notes"
+import { Minimize } from "lucide-react"
 
 function HomeContent() {
   // Security audit data (Mock for now, needs real calculation later)
@@ -239,6 +240,7 @@ function HomeContent() {
     setTwoFactorEnabled,
     refresh,
     theme,
+    toggleTheme,
     setActivePage: handleNavigate, // Use history-aware navigation
     setRecords: () => console.warn("Direct setRecords not supported in Supabase mode"), // Placeholder
     setHelpOpen: () => setHelpOpen(true),
@@ -423,8 +425,24 @@ function HomeContent() {
   return (
     <ErrorBoundary>
       <div
-        className={`flex flex-col h-screen overflow-hidden ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-[#1a1a1a] text-white"} ${isFullscreen ? 'overscroll-none' : ''}`}
+        className={`flex flex-col h-screen overflow-hidden ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-[#1a1a1a] text-white"} ${isFullscreen ? 'overscroll-none select-none touch-pan-y' : ''}`}
       >
+        {isFullscreen && (
+          <button
+            onClick={() => {
+              setIsFullscreen(false)
+              if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {})
+              } else if ((document as any).webkitExitFullscreen) {
+                (document as any).webkitExitFullscreen();
+              }
+            }}
+            className="fixed top-2 right-2 z-[10001] p-2 rounded-full bg-black/40 text-white backdrop-blur-md border border-white/10 opacity-30 hover:opacity-100 transition-opacity focus:opacity-100 active:scale-95"
+            title="Exit Fullscreen"
+          >
+            <Minimize className="h-5 w-5" />
+          </button>
+        )}
         {!isFullscreen && (
           <Header
             onLogout={handleLogout}

@@ -112,7 +112,6 @@ export const sidebarSections = [
         color: "gray",
         items: [
             { id: "settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
-            { id: "security-audit", label: "Security Audit", icon: <Shield className="h-5 w-5" /> }
         ],
     },
 ]
