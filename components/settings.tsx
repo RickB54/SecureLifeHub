@@ -28,7 +28,10 @@ import {
   Minimize,
   Moon,
   Sun,
-  RotateCcw
+  RotateCcw,
+  User,
+  Mail,
+  Globe
 } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
@@ -197,7 +200,7 @@ export default function Settings({
   // Handle toggling 2FA
   const handleToggle2FA = () => {
     setTwoFactorEnabled(!twoFactorEnabled)
-    showNotification(`Two - factor authentication ${!twoFactorEnabled ? "enabled" : "disabled"} `)
+    showNotification(`Two-factor authentication ${!twoFactorEnabled ? "enabled" : "disabled"}`)
   }
 
   // Handle saving master password
@@ -366,6 +369,34 @@ export default function Settings({
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Account Section */}
+        <SettingsCard title="Account" icon={User} color="blue">
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-black/20 border border-white/5">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                  <User className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="text-sm text-gray-400">Signed in as</div>
+                  <div className="font-bold text-lg">{user?.email}</div>
+                  <div className="flex items-center gap-2 mt-1">
+                    {user?.app_metadata?.provider === 'google' ? (
+                      <span className="text-[10px] bg-white/10 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Globe className="h-2.5 w-2.5" /> Google Account
+                      </span>
+                    ) : (
+                      <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <Mail className="h-2.5 w-2.5" /> Email Account
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </SettingsCard>
 
         {/* Security Section */}
         <SettingsCard title="Security" icon={Shield} color="purple">
