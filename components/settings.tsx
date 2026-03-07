@@ -473,41 +473,43 @@ export default function Settings({
               </button>
             </div>
 
-            {/* Remember Password (Desktop Only) */}
-            {typeof window !== 'undefined' && !/Mobile|Android|iP(hone|od|ad)/i.test(navigator.userAgent) && (
-              <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${localStorage.getItem('remember_master_pass') === 'true' ? 'bg-amber-500/20 text-amber-400' : 'bg-gray-500/10 text-gray-500'}`}>
-                    <Save className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="font-bold">Remember Master Password</div>
-                    <div className="text-[10px] opacity-70 text-amber-400 font-bold uppercase tracking-wider">For Desktop PC Testing Only 🖥️</div>
-                  </div>
+            <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${typeof window !== 'undefined' && localStorage.getItem('remember_master_pass') === 'true' ? 'bg-amber-500/20 text-amber-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                  <Save className="h-5 w-5" />
                 </div>
-                <button
-                  onClick={() => {
-                    const isEnabled = localStorage.getItem('remember_master_pass') === 'true';
-                    if (!isEnabled) {
-                      const pass = prompt("Enter Master Password to save (Desktop Only):");
-                      if (pass) {
-                        localStorage.setItem('saved_master_pass', btoa(pass));
-                        localStorage.setItem('remember_master_pass', 'true');
-                        toast.success("Master password saved on this PC");
-                      }
-                    } else {
-                      localStorage.removeItem('saved_master_pass');
-                      localStorage.setItem('remember_master_pass', 'false');
-                      toast.info("Master password removed from local memory");
-                    }
-                    window.dispatchEvent(new Event('storage')); // Trigger update
-                  }}
-                  className={`relative h-8 w-14 rounded-full transition-colors ${localStorage.getItem('remember_master_pass') === 'true' ? 'bg-amber-500' : 'bg-gray-700'}`}
-                >
-                  <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${localStorage.getItem('remember_master_pass') === 'true' ? 'translate-x-6' : ''}`} />
-                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold">Remember Master Password</div>
+                    <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-amber-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-[10px] opacity-70 text-amber-400 font-bold uppercase tracking-wider">For External Testing Only 🖥️📱</div>
+                </div>
               </div>
-            )}
+              <button
+                onClick={() => {
+                  const isEnabled = localStorage.getItem('remember_master_pass') === 'true';
+                  if (!isEnabled) {
+                    const pass = prompt("Enter Master Password to save:");
+                    if (pass) {
+                      localStorage.setItem('saved_master_pass', btoa(pass));
+                      localStorage.setItem('remember_master_pass', 'true');
+                      toast.success("Master password saved on this device (for testing)");
+                    }
+                  } else {
+                    localStorage.removeItem('saved_master_pass');
+                    localStorage.setItem('remember_master_pass', 'false');
+                    toast.info("Master password removed from local storage");
+                  }
+                  window.dispatchEvent(new Event('storage'));
+                }}
+                className={`relative h-8 w-14 rounded-full transition-colors ${typeof window !== 'undefined' && localStorage.getItem('remember_master_pass') === 'true' ? 'bg-amber-500' : 'bg-gray-700'}`}
+              >
+                <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${typeof window !== 'undefined' && localStorage.getItem('remember_master_pass') === 'true' ? 'translate-x-6' : ''}`} />
+              </button>
+            </div>
           </div>
         </SettingsCard>
 

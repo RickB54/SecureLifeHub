@@ -497,20 +497,20 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                   <div className="text-left">
                     <h2 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
                       Recent Activity
-                      <button onClick={(e) => { e.stopPropagation(); onOpenHelp?.("dashboard"); }} className="p-1 hover:bg-white/5 rounded-full text-gray-400 hover:text-blue-400">
+                      <span onClick={(e) => { e.stopPropagation(); onOpenHelp?.("dashboard"); }} className="p-1 hover:bg-white/5 rounded-full text-gray-400 hover:text-blue-400 cursor-pointer">
                         <HelpCircle className="h-3 w-3" />
-                      </button>
+                      </span>
                     </h2>
                     <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-tight">{recentItems.length} Changes Captured</p>
                   </div>
                 </div>
                 {recentItems.length > 0 && (
-                  <button
+                  <span
                     onClick={(e) => { e.stopPropagation(); handleClearActivity(); }}
-                    className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-white transition-colors bg-blue-500/5 px-3 py-1.5 rounded-full border border-blue-500/10"
+                    className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-white transition-colors bg-blue-500/5 px-3 py-1.5 rounded-full border border-blue-500/10 cursor-pointer"
                   >
                     Clear History
-                  </button>
+                  </span>
                 )}
               </div>
             </AccordionTrigger>
