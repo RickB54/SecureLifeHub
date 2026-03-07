@@ -338,6 +338,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Manage your passwords, logins, and secure notes."
           icon={<Key className="h-6 w-6 text-purple-500" />}
           colorClass="border-purple-500"
+          shadowColor="rgba(168, 85, 247, 0.35)"
           buttonColorClass="text-purple-400 hover:bg-purple-500"
           onClick={() => setActivePage('passwords')}
           onHelp={() => onOpenHelp?.("passwords")}
@@ -349,6 +350,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Track health records, medications, and vitals."
           icon={<Heart className="h-6 w-6 text-red-500" />}
           colorClass="border-red-500"
+          shadowColor="rgba(239, 68, 68, 0.35)"
           buttonColorClass="text-red-400 hover:bg-red-500"
           onClick={() => setActivePage('type-health-records')}
           onHelp={() => onOpenHelp?.("health")}
@@ -360,6 +362,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Manage your credit and debit cards securely."
           icon={<CreditCard className="h-6 w-6 text-yellow-500" />}
           colorClass="border-yellow-500"
+          shadowColor="rgba(234, 179, 8, 0.35)"
           buttonColorClass="text-yellow-400 hover:bg-yellow-500"
           onClick={() => setActivePage('financial-cards')}
           onHelp={() => onOpenHelp?.("finance")}
@@ -371,6 +374,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Manage vehicle profiles, maintenance, and docs."
           icon={<Car className="h-6 w-6 text-blue-500" />}
           colorClass="border-blue-500"
+          shadowColor="rgba(59, 130, 246, 0.35)"
           buttonColorClass="text-blue-400 hover:bg-blue-500"
           onClick={() => setActivePage('type-vehicles')}
           onHelp={() => onOpenHelp?.("mobility")}
@@ -382,6 +386,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Organize side projects, clients, and contracts."
           icon={<Briefcase className="h-6 w-6 text-orange-500" />}
           colorClass="border-orange-500"
+          shadowColor="rgba(249, 115, 22, 0.35)"
           buttonColorClass="text-orange-400 hover:bg-orange-500"
           onClick={() => setActivePage('type-business')}
           onHelp={() => onOpenHelp?.("finance")}
@@ -393,6 +398,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Track physical inventory and asset values."
           icon={<Box className="h-6 w-6 text-emerald-500" />}
           colorClass="border-emerald-500"
+          shadowColor="rgba(16, 185, 129, 0.35)"
           buttonColorClass="text-emerald-400 hover:bg-emerald-500"
           onClick={() => setActivePage('type-assets')}
           onHelp={() => onOpenHelp?.("finance")}
@@ -404,6 +410,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Manage social media and online assets."
           icon={<Globe className="h-6 w-6 text-pink-500" />}
           colorClass="border-pink-500"
+          shadowColor="rgba(236, 72, 153, 0.35)"
           buttonColorClass="text-pink-400 hover:bg-pink-500"
           onClick={() => setActivePage('type-digital-life')}
           onHelp={() => onOpenHelp?.("social")}
@@ -415,6 +422,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Personal journal and daily thoughts."
           icon={<Book className="h-6 w-6 text-rose-500" />}
           colorClass="border-rose-500"
+          shadowColor="rgba(244, 63, 94, 0.35)"
           buttonColorClass="text-rose-400 hover:bg-rose-500"
           onClick={() => setActivePage('type-diary')}
           onHelp={() => onOpenHelp?.("social")}
@@ -426,6 +434,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Track recurring expenses and renewals."
           icon={<CreditCard className="h-6 w-6 text-green-500" />}
           colorClass="border-green-500"
+          shadowColor="rgba(34, 197, 94, 0.35)"
           buttonColorClass="text-green-400 hover:bg-green-500"
           onClick={() => setActivePage('type-subscriptions')}
           onHelp={() => onOpenHelp?.("social")}
@@ -437,6 +446,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Encrypted gallery for photos and videos."
           icon={<Image className="h-6 w-6 text-teal-500" />}
           colorClass="border-teal-500"
+          shadowColor="rgba(20, 184, 166, 0.35)"
           buttonColorClass="text-teal-400 hover:bg-teal-500"
           onClick={() => setActivePage('type-media')}
           onHelp={() => onOpenHelp?.("media")}
@@ -448,6 +458,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Travel plans, passports, and itineraries."
           icon={<Plane className="h-6 w-6 text-indigo-500" />}
           colorClass="border-indigo-500"
+          shadowColor="rgba(99, 102, 241, 0.35)"
           buttonColorClass="text-indigo-400 hover:bg-indigo-500"
           onClick={() => setActivePage('type-travel')}
           onHelp={() => onOpenHelp?.("mobility")}
@@ -459,6 +470,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           description="Life goals and interactive progress tracking."
           icon={<Target className="h-6 w-6 text-pink-500" />}
           colorClass="border-pink-500"
+          shadowColor="rgba(236, 72, 153, 0.35)"
           buttonColorClass="text-pink-400 hover:bg-pink-500"
           onClick={() => setActivePage('type-goals')}
           onHelp={() => onOpenHelp?.("goals")}
@@ -571,22 +583,31 @@ interface ModuleCardProps {
   title: string
   description: string
   icon: any
-  colorClass: string // expecting something like "border-purple-500"
-  buttonColorClass: string // "text-purple-400 group-hover:bg-purple-500/10"
+  colorClass: string
+  buttonColorClass: string
+  shadowColor?: string
   onClick: () => void
   count: number
   isLocked?: boolean
   onHelp?: () => void
 }
 
-function ModuleCard({ title, description, icon, colorClass, buttonColorClass, onClick, count, isLocked, onHelp }: ModuleCardProps) {
+function ModuleCard({ title, description, icon, colorClass, buttonColorClass, shadowColor, onClick, count, isLocked, onHelp }: ModuleCardProps) {
   return (
-    <div className={`bg-[#1e1e1e] border border-white/10 rounded-3xl flex flex-col justify-between overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group ${colorClass} border-t-4 relative`}>
+    <button
+      onClick={onClick}
+      className={`bg-[#1e1e1e] border-2 rounded-3xl flex flex-col overflow-hidden transition-all duration-300 group ${colorClass} relative w-full text-left active:scale-95`}
+      style={{
+        boxShadow: shadowColor
+          ? `0 0 30px ${shadowColor}, 0 0 60px ${shadowColor.replace('0.35', '0.15')}, 0 8px 32px rgba(0,0,0,0.7)`
+          : '0 8px 32px rgba(0,0,0,0.7)'
+      }}
+    >
       {isLocked && <Lock className="absolute top-4 right-4 h-4 w-4 text-yellow-500 z-10" />}
-      <div className="p-4 md:p-6">
+      <div className="p-4 md:p-6 flex-1">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-white/5 group-hover:scale-110 transition-transform">
+            <div className="p-3 rounded-2xl bg-white/5 group-hover:scale-110 group-active:scale-95 transition-transform">
               {icon}
             </div>
             <div>
@@ -594,23 +615,19 @@ function ModuleCard({ title, description, icon, colorClass, buttonColorClass, on
               {count > 0 && <span className="text-[10px] font-mono bg-white/5 px-2 py-0.5 rounded text-gray-500">{count} Items</span>}
             </div>
           </div>
-          <button 
+          <span
+            role="button"
+            tabIndex={0}
             onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-600 hover:text-blue-400 transition-all opacity-100"
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onHelp?.(); }}}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-600 hover:text-blue-400 transition-all cursor-pointer"
           >
             <HelpCircle className="h-4 w-4" />
-          </button>
+          </span>
         </div>
         <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed line-clamp-2 md:line-clamp-none">{description}</p>
       </div>
-
-      <button
-        onClick={onClick}
-        className={`w-full py-4 text-sm font-bold uppercase tracking-wider border-t border-white/5 transition-colors flex items-center justify-center gap-2 ${buttonColorClass} group-hover:text-white group-hover:bg-opacity-20`}
-      >
-        Open {title.split(" ")[0]} <ChevronRight className="h-4 w-4" />
-      </button>
-    </div>
+    </button>
   )
 }
 
