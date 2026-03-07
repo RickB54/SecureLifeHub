@@ -31,7 +31,9 @@ import {
   RotateCcw,
   User,
   Mail,
-  Globe
+  Globe,
+  FolderTree,
+  Grid
 } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
@@ -517,41 +519,108 @@ export default function Settings({
               </div>
             </div>
 
-            {/* Startup Page Selection */}
-            <div className="p-4 rounded-xl bg-black/20 border border-white/5">
-              <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-70">Startup View</h4>
-              <div className="flex gap-2">
-                <select
-                  value={startupPage || "dashboard"}
-                  onChange={(e) => {
-                    const newPage = e.target.value;
-                    setStartupPage?.(newPage);
-                    localStorage.setItem("hub_startup_page", newPage);
-                    toast.success(`Startup view set to ${newPage.replace('type-', '').replace(/-/g, ' ')}`);
-                  }}
-                  className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2 outline-none cursor-pointer hover:border-blue-500/30 transition-colors"
-                >
-                  <option value="dashboard">Dashboard (Default)</option>
-                  <option value="all-items">Vault (All Items)</option>
-                  <option value="passwords">Passwords List</option>
-                  <option value="favorites">Favorites</option>
-                  {(() => {
-                    const seen = new Set(['dashboard', 'all-items', 'passwords', 'favorites']);
-                    return sidebarSections.flatMap(section => section.items)
-                      .filter(item => {
-                        if (seen.has(item.id)) return false;
-                        seen.add(item.id);
-                        return true;
-                      })
-                      .map(item => (
-                        <option key={item.id} value={item.id}>
-                          {item.label}
-                        </option>
-                      ));
-                  })()}
-                </select>
+            {/* Startup Page Selection - Accordion Grid View */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                  <Grid className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="font-black text-sm uppercase tracking-widest">Startup View Configuration</h4>
+                  <p className="text-[10px] text-gray-500">Choose your landing page after login.</p>
+                </div>
               </div>
-              <p className="text-[10px] text-gray-500 mt-2 px-1">Choose which area of the hub opens automatically when you log in.</p>
+
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {sidebarSections.map(section => {
+                  const isSectionActive = section.items.some(i => i.id === (startupPage || "dashboard"));
+                  const activeItemName = section.items.find(i => i.id === (startupPage || "dashboard"))?.label;
+                  
+                  // Simple local expansion state management could be added as a parent-level toggler
+                  // but for immediate UX without complex state lifting, we'll use a local state
+                  // Since we are inside a map, we need to handle this carefully.
+                  // I'll add an "expandedSections" state to the main Settings component.
+                  return (
+                    <div 
+                      key={section.id} 
+                      className={`overflow-hidden rounded-2xl border transition-all duration-300 ${
+                        isSectionActive 
+                          ? `border-${section.color}-500/30 bg-${section.color}-500/5 ring-1 ring-${section.color}-500/20 shadow-lg shadow-${section.color}-900/10` 
+                          : 'border-white/5 bg-black/20 hover:border-white/10'
+                      }`}
+                    >
+                      <button
+                        onClick={() => {
+                          const element = document.getElementById(`content-${section.id}`);
+                          const chevron = document.getElementById(`chevron-${section.id}`);
+                          if (element) {
+                            const isHidden = element.classList.contains('hidden');
+                            // Close all others first? (Accordion behavior) - optional
+                            // Toggle this one
+                            if (isHidden) {
+                              element.classList.remove('hidden');
+                              element.classList.add('block', 'animate-in', 'fade-in', 'slide-in-from-top-1');
+                              chevron?.classList.add('rotate-180');
+                            } else {
+                              element.classList.add('hidden');
+                              element.classList.remove('block');
+                              chevron?.classList.remove('rotate-180');
+                            }
+                          }
+                        }}
+                        className="w-full flex flex-col p-3 text-left transition-colors hover:bg-white/5 group"
+                      >
+                        <div className="flex items-center justify-between pointer-events-none">
+                          <div className="flex items-center gap-2">
+                            <div className={`p-1.5 rounded-lg bg-${section.color}-500/20 text-${section.color}-400 group-hover:scale-110 transition-transform`}>
+                              {section.items[0]?.icon}
+                            </div>
+                            <span className={`text-[9px] font-black uppercase tracking-widest text-${section.color}-400`}>
+                              {section.title}
+                            </span>
+                          </div>
+                          <ChevronDown id={`chevron-${section.id}`} className="h-3 w-3 text-gray-600 transition-transform duration-300" />
+                        </div>
+                        
+                        {isSectionActive && (
+                          <div className="mt-2.5 flex items-center gap-1.5 animate-in fade-in">
+                            <div className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" />
+                            <span className="text-[10px] font-bold text-gray-200 truncate max-w-[80px]">{activeItemName}</span>
+                          </div>
+                        )}
+                      </button>
+
+                      <div id={`content-${section.id}`} className="hidden p-2 pt-0 space-y-1 bg-black/20 border-t border-white/5">
+                        {section.items.map(item => {
+                          const isActive = (startupPage || "dashboard") === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={() => {
+                                setStartupPage?.(item.id);
+                                localStorage.setItem("hub_startup_page", item.id);
+                                toast.success(`Startup view set to ${item.label}`, {
+                                  icon: <Check className={`h-4 w-4 text-${section.color}-400`} />
+                                });
+                              }}
+                              className={`w-full flex items-center gap-2 p-2 rounded-xl transition-all ${
+                                isActive 
+                                  ? `bg-${section.color}-600 text-white shadow-md` 
+                                  : 'hover:bg-white/10 text-gray-500 hover:text-gray-300'
+                              }`}
+                            >
+                              <div className={isActive ? 'text-white' : `text-${section.color}-500/50`}>
+                                {item.icon}
+                              </div>
+                              <span className="text-[10px] font-bold truncate">{item.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Auto-Fill */}
@@ -674,108 +743,207 @@ export default function Settings({
           <MockDataGenerator bulkAddItems={bulkAddItems} records={records} deleteItem={deleteItem} updateItem={updateItem} />
         </SettingsCard>
 
-        <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20">
+        <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20 lg:col-span-2">
           {!isDangerZoneUnlocked ? (
-            <div className="text-center py-8">
-              <Lock className="h-12 w-12 mx-auto mb-4 text-red-500 opacity-50" />
-              <h3 className="text-xl font-bold mb-2">Restricted Area</h3>
+            <div className="text-center py-12">
+              <div className="h-20 w-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+                <Lock className="h-10 w-10 text-red-500 animate-pulse" />
+              </div>
+              <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Restricted Security Area</h3>
+              <p className="text-gray-500 mb-8 max-w-md mx-auto">This area contains destructive actions that cannot be undone. Please proceed with extreme caution.</p>
               <button
                 onClick={() => setShowPinScreen(true)}
-                className="bg-red-500/10 hover:bg-red-500/20 text-red-500 px-8 py-3 rounded-xl font-bold transition-all border border-red-500/50"
+                className="bg-red-500 hover:bg-red-400 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-red-900/40 uppercase tracking-widest text-sm"
               >
                 Unlock Danger Zone
               </button>
             </div>
           ) : (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {[
-                  { label: "Wipe Vault (Safe)", types: ["card", "note", "contact"], desc: "Keeps passwords" },
-                  { label: "Wipe Health", types: ["health-record", "fitness"], desc: "Delete medical data" },
-                  { label: "Wipe Business", types: ["business", "project"], desc: "Delete business data" },
-                ].map(action => (
-                  <button key={action.label}
-                    onClick={() => alert("This feature is simplified for this view. Use the full wipe below.")} // Simplified for grid view logic to save space/complexity in this one-shot
-                    className="p-4 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-xl text-left transition-colors"
-                  >
-                    <div className="font-bold text-red-400">{action.label}</div>
-                    <div className="text-xs opacity-50">{action.desc}</div>
-                  </button>
-                ))}
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
+              {/* Individual Page Wipe Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-red-500/20 pb-4">
+                  <Trash className="h-6 w-6 text-red-500" />
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-tighter">Individual Page Wipe</h4>
+                    <p className="text-xs text-gray-500">Delete all records for a specific section without affecting other data.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sidebarSections.filter(s => !['dashboard', 'vault-advanced', 'configuration'].includes(s.id)).map(section => (
+                    <div key={section.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3">
+                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
+                        <div className={`p-1.5 rounded-lg bg-${section.color}-500/20 text-${section.color}-400`}>
+                          {section.items[0]?.icon && section.items[0].icon}
+                        </div>
+                        <h5 className="font-bold text-sm uppercase tracking-wider">{section.title}</h5>
+                      </div>
+                      <div className="space-y-2">
+                        {section.items.map(item => {
+                          const id = item.id;
+                          // Define what items are data-holding.
+                          const isDataHolding = id.startsWith('type-') || id === 'all-items';
+                          if (!isDataHolding) return null;
+
+                          // Define filter logic based on item ID
+                          const getFilter = () => {
+                            if (id === 'all-items') return (r: any) => r.type !== 'folder';
+                            if (id === 'type-secure-notes') return (r: any) => r.type === 'note' || r.type === 'secure-note';
+                            if (id === 'type-payment-cards') return (r: any) => r.type === 'card' || r.type === 'financial-card';
+                            if (id === 'type-health-records') return (r: any) => r.category === 'Health Records' || r.type === 'health-record';
+                            if (id === 'type-medications') return (r: any) => r.type === 'medication' || r.category === 'medications';
+                            if (id === 'type-vitals') return (r: any) => r.category === 'vitals';
+                            if (id === 'type-health-diary') return (r: any) => r.category === 'Health Diary';
+                            if (id === 'type-medical') return (r: any) => r.category === 'Health Insurance';
+                            if (id === 'type-vehicles') return (r: any) => r.type === 'vehicle' || r.category === 'Vehicle Profiles';
+                            if (id === 'type-vehicle-docs') return (r: any) => r.category === 'Registration & Docs';
+                            if (id === 'type-maintenance') return (r: any) => r.type === 'maintenance' || r.category === 'Maintenance Logs';
+                            if (id === 'type-business') return (r: any) => r.type === 'business' || r.category === 'Business Hub';
+                            if (id === 'type-clients') return (r: any) => r.type === 'client' || r.category === 'Client Records';
+                            if (id === 'type-assets') return (r: any) => r.type === 'asset' || r.category === 'Asset Ledger';
+                            if (id === 'type-budget') return (r: any) => r.type === 'budget' || r.category === 'Budget Manager';
+                            if (id === 'type-media') return (r: any) => r.type === 'media' || r.category === 'Secure Media' || r.category === 'Memories & Media';
+                            if (id === 'type-goals') return (r: any) => r.type === 'goal' || r.category === 'Goals & Timeline';
+                            if (id === 'type-digital-life') return (r: any) => r.category === 'Online Presence' || r.type === 'online-presence';
+                            if (id === 'type-diary') return (r: any) => r.type === 'diary' || r.category === 'My Diary';
+                            if (id === 'type-subscriptions') return (r: any) => r.category === 'Subscriptions';
+                            if (id === 'type-social') return (r: any) => r.category === 'Social Media';
+                            
+                            // Fallback for Passwords Categories handled in page.tsx
+                            const categoryLabel = item.label;
+                            return (r: any) => r.category === categoryLabel || (r.type === 'password' && r.category === categoryLabel);
+                          };
+
+                          const filter = getFilter();
+                          const count = records.filter(filter).length;
+
+                          return (
+                            <button
+                              key={item.id}
+                              onClick={async () => {
+                                if (count === 0) {
+                                  toast.error(`No data found for ${item.label}`);
+                                  return;
+                                }
+
+                                if (confirm(`⚠️ CRITICAL: Are you sure you want to delete ALL ${count} items in "${item.label}"? This action is permanent and cannot be undone.`)) {
+                                  if (!deleteItem) return;
+                                  showNotification(`Wiping ${count} items...`, "error");
+                                  
+                                  try {
+                                    const targets = records.filter(filter);
+                                    for (const r of targets) {
+                                      await deleteItem(r.id, r.type || "item", { skipRefresh: true });
+                                    }
+                                    window.dispatchEvent(new CustomEvent('vault-refresh'));
+                                    toast.success(`Successfully deleted all ${item.label} data.`);
+                                  } catch (e) {
+                                    console.error(e);
+                                    toast.error("Failed to complete wipe.");
+                                  }
+                                }
+                              }}
+                              className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/5 hover:bg-red-500/15 border border-red-500/10 transition-all group"
+                            >
+                              <div className="text-left">
+                                <div className="text-xs font-bold text-red-400 group-hover:text-red-300">Wipe {item.label}</div>
+                                <div className="text-[10px] opacity-40">{count} items recorded</div>
+                              </div>
+                              <Trash className="h-4 w-4 text-red-500 opacity-30 group-hover:opacity-100" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div className="h-px bg-red-500/20 my-4" />
+              <div className="h-px bg-red-500/20 my-8" />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  onClick={async () => {
-                    if (confirm("WARNING: This will delete ALL data (EXCEPT PASSWORDS).")) {
-                      if (!deleteItem) return;
-                      const vaultItems = records.filter(r => r.type !== "folder" && r.type !== "password" && r.type !== "login")
-                      // ... simplified logic call or full logic ...
-                      // For safety/brevity in this huge replace block, I'll alert for now or invoke a helper if I extracted one.
-                      // I'll reimplement the loop briefly.
-                      if (vaultItems.length > 0) {
-                        for (const r of vaultItems) await deleteItem(r.id, r.type || "item", { skipRefresh: true })
-                        window.dispatchEvent(new CustomEvent('vault-refresh'))
-                        alert("Wipe complete.")
+              {/* Master Actions Section */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3 border-b border-red-500/20 pb-4">
+                  <Lock className="h-6 w-6 text-red-500" />
+                  <div>
+                    <h4 className="text-xl font-black uppercase tracking-tighter">Master Actions</h4>
+                    <p className="text-xs text-gray-500">Global operations across the entire vault.</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button
+                    onClick={async () => {
+                      if (confirm("MASTER ERASE: Delete ALL PASSWORDS and logins?")) {
+                        if (!deleteItem) return;
+                        const pws = records.filter(r => r.type === "password" || r.type === "login")
+                        if (pws.length === 0) return toast.info("No passwords found.");
+                        if (confirm(`You are about to erase ${pws.length} passwords. This cannot be undone!`)) {
+                          for (const r of pws) await deleteItem(r.id, "item", { skipRefresh: true })
+                          window.dispatchEvent(new CustomEvent('vault-refresh'))
+                          toast.success("All passwords erased.");
+                        }
                       }
-                    }
-                  }}
-                  className="w-full py-4 bg-red-900/20 border border-red-500/50 hover:bg-red-900/40 text-red-400 rounded-xl font-bold flex items-center justify-center gap-2"
-                >
-                  <Trash className="h-5 w-5" /> Delete All Data (Keep Passwords)
-                </button>
+                    }}
+                    className="w-full py-5 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-red-900/40 transition-all uppercase tracking-widest text-xs"
+                  >
+                    <Lock className="h-5 w-5" /> Erase All Passwords
+                  </button>
 
-                <button
-                  onClick={async () => {
-                    if (confirm("CRITICAL: Delete ALL Medications only? This cannot be undone.")) {
-                      if (!deleteItem) return;
-                      const meds = records.filter(r => {
-                        const cat = r.category?.toLowerCase() || ""
-                        return cat === "medications" || cat === "health records" || r.type === "medication"
-                      })
-                      if (meds.length === 0) return alert("No medications found to delete.")
-                      if (confirm(`You are about to delete ${meds.length} medications. Confirm?`)) {
-                        for (const m of meds) await deleteItem(m.id, "item", { skipRefresh: true })
+                  <button
+                    onClick={async () => {
+                      if (confirm("CRITICAL: Delete ALL folders? This will move all items to the root.")) {
+                        if (!deleteItem) return;
+                        const vaultFolders = records.filter(r => r.type === "folder")
+                        if (vaultFolders.length === 0) return toast.info("No folders found.");
+                        for (const r of vaultFolders) await deleteItem(r.id, "folder", { skipRefresh: true })
                         window.dispatchEvent(new CustomEvent('vault-refresh'))
-                        alert("All medications removed.")
+                        toast.success("All folders removed.");
                       }
-                    }
-                  }}
-                  className="w-full py-4 bg-orange-900/20 border border-orange-500/50 hover:bg-orange-900/40 text-orange-400 rounded-xl font-bold flex items-center justify-center gap-2"
-                >
-                  <Activity className="h-5 w-5" /> Remove All Meds
-                </button>
+                    }}
+                    className="w-full py-5 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl shadow-orange-900/40 transition-all uppercase tracking-widest text-xs"
+                  >
+                    <FolderTree className="h-5 w-5" /> Remove All Folders
+                  </button>
 
-                <button
-                  onClick={async () => {
-                    if (confirm("CRITICAL: Delete ALL PASSWORDS?")) {
-                      if (!deleteItem) return;
-                      const pws = records.filter(r => r.type === "password" || r.type === "login")
-                      for (const r of pws) await deleteItem(r.id, "item", { skipRefresh: true })
-                      window.dispatchEvent(new CustomEvent('vault-refresh'))
-                      alert("Passwords erased.")
-                    }
-                  }}
-                  className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-red-900/20"
-                >
-                  <Lock className="h-5 w-5" /> ERASE PASSWORDS
-                </button>
+                  <button
+                    onClick={() => {
+                      if (confirm("MASTER RESET: Clear all module PIN locks? This will unlock Health, Diary, and all other sections.")) {
+                        localStorage.removeItem("hub_security_settings");
+                        window.dispatchEvent(new CustomEvent('vault-refresh'));
+                        toast.success("Security settings reset.");
+                        setTimeout(() => window.location.reload(), 1000);
+                      }
+                    }}
+                    className="w-full py-5 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs"
+                  >
+                    <Unlock className="h-5 w-5" /> Reset Module Pins
+                  </button>
 
-                <button
-                  onClick={() => {
-                    if (confirm("MASTER RESET: Clear all module PIN locks? This will unlock Health, Diary, and all other sections.")) {
-                      localStorage.removeItem("hub_security_settings");
-                      window.dispatchEvent(new CustomEvent('vault-refresh'));
-                      alert("Master Reset Successful. All modules are now unlocked.");
-                      window.location.reload(); // Reload to ensure all local states update
-                    }
-                  }}
-                  className="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all mt-4"
-                >
-                  <Unlock className="h-5 w-5" /> RESET MODULE PINS
-                </button>
+                  <button
+                    onClick={async () => {
+                      if (confirm("⚠️ NUCLEAR OPTION: Delete EVERY SINGLE PIECE of data in this vault (including folders and passwords)?")) {
+                        if (confirm("FINAL WARNING: This is absolutely irreversible. Type 'DELETE' to continue.")) {
+                          const input = prompt("Type 'DELETE' to confirm nuclear wipe:");
+                          if (input === 'DELETE') {
+                            if (!deleteItem) return;
+                            const all = [...records];
+                            for (const r of all) {
+                              await deleteItem(r.id, r.type || "item", { skipRefresh: true });
+                            }
+                            window.dispatchEvent(new CustomEvent('vault-refresh'));
+                            toast.success("Vault completely wiped.");
+                            setTimeout(() => window.location.reload(), 1000);
+                          }
+                        }
+                      }
+                    }}
+                    className="w-full py-5 bg-black border border-red-500 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs shadow-2xl"
+                  >
+                    <AlertCircle className="h-5 w-5" /> Nuclear Wipe (All Data)
+                  </button>
+                </div>
               </div>
             </div>
           )}
