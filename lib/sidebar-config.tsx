@@ -48,6 +48,8 @@ export const sidebarSections = [
             { id: "type-medications", label: "Medications", icon: <Pill className="h-4 w-4" /> },
             { id: "type-vitals", label: "Vitals", icon: <FileText className="h-4 w-4" /> },
             { id: "type-health-diary", label: "Health Diary", icon: <FileText className="h-4 w-4" /> },
+            { id: "type-health-portals", label: "Health Portals", icon: <Globe className="h-4 w-4" /> },
+            { id: "type-doctors", label: "My Doctors", icon: <Users className="h-4 w-4" /> },
             { id: "type-medical", label: "Health Insurance", icon: <FileText className="h-4 w-4" /> },
         ]
     },

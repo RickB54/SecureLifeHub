@@ -8,6 +8,12 @@ import {
 } from "lucide-react"
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 interface DashboardProps {
   records: any[]
@@ -165,80 +171,139 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
 
         {/* Life Pulse Widget */}
         <div className="flex-1 space-y-4">
-          <div className={`p-6 rounded-3xl ${glassPanel} flex items-center justify-around relative overflow-hidden group min-h-[160px]`}>
+          <div className={`rounded-3xl ${glassPanel} relative overflow-hidden group min-h-[160px] flex flex-col justify-center`}>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <button
-              onClick={() => setShowPersonalizer(!showPersonalizer)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/5 text-gray-500 hover:text-white transition-all z-20"
-              title="Personalize Dashboard"
-            >
-              <Settings2 className={`h-4 w-4 ${showPersonalizer ? 'rotate-90 text-blue-400' : ''} transition-transform`} />
-            </button>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            {activePulses.length === 0 ? (
-              <div className="text-center opacity-30 italic text-sm">No analytics pinned. Click the settings icon to add.</div>
-            ) : (
-              activePulses.map((pulse, idx) => (
-                <div key={pulse.id} className="flex items-center">
-                  <div className="text-center z-10 px-4">
-                    {pulse.id === 'security' ? (
-                      <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90">
-                          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-700/20" />
-                          <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent"
-                            strokeDasharray={`${2 * Math.PI * 36}`}
-                            strokeDashoffset={`${2 * Math.PI * 36 * (1 - (pulse.value || 0) / 100)}`}
-                            className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
-                        </svg>
-                        <Shield className="absolute h-8 w-8 opacity-80" />
-                      </div>
-                    ) : (
-                      <div className="relative w-20 h-20 mx-auto flex items-center justify-center bg-gray-500/10 rounded-full mb-2">
-                        <pulse.icon className={`h-8 w-8 ${pulse.color}`} />
-                      </div>
+            <div className="flex items-center justify-start lg:justify-around overflow-x-auto overflow-y-hidden custom-scrollbar-hide gap-3 sm:gap-6 px-8 md:px-10 py-6 w-full snap-x snap-mandatory relative scroll-smooth" style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
+              {activePulses.length === 0 ? (
+                <div className="w-full text-center opacity-30 italic text-sm py-4">No analytics pinned. Click the settings icon to add.</div>
+              ) : (
+                activePulses.map((pulse, idx) => (
+                  <div key={pulse.id} className="flex items-center flex-shrink-0 snap-center transition-all duration-300">
+                    <div className="text-center z-10 px-4 group/item">
+                      {pulse.id === 'security' ? (
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto flex items-center justify-center transition-transform group-hover/item:scale-105">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-700/20" />
+                            <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent"
+                              strokeDasharray={`${2 * Math.PI * 36}`}
+                              strokeDashoffset={`${2 * Math.PI * 36 * (1 - (pulse.value || 0) / 100)}`}
+                              className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
+                          </svg>
+                          <Shield className="absolute h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
+                        </div>
+                      ) : (
+                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto flex items-center justify-center bg-gray-500/10 rounded-full mb-2 transition-transform group-hover/item:scale-105">
+                          <pulse.icon className={`h-6 w-6 sm:h-8 sm:w-8 ${pulse.color}`} />
+                        </div>
+                      )}
+                      <p className="mt-1 sm:mt-2 font-bold text-[10px] sm:text-xs uppercase tracking-wider opacity-70 whitespace-nowrap">{pulse.label}</p>
+                      <p className={`text-[9px] sm:text-xs opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
+                    </div>
+                    {idx < activePulses.length - 1 && (
+                      <div className="h-10 w-px bg-white/5 mx-2 hidden lg:block"></div>
                     )}
-                    <p className="mt-2 font-bold text-sm opacity-70 whitespace-nowrap">{pulse.label}</p>
-                    <p className={`text-xs opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
                   </div>
-                  {idx < activePulses.length - 1 && (
-                    <div className="h-12 w-px bg-gray-500/20 mx-2 hidden sm:block"></div>
-                  )}
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
 
           {/* Pulse Personalizer (Accordion Style) */}
-          {showPersonalizer && (
-            <div className={`p-6 rounded-3xl ${glassPanel} animate-in slide-in-from-top-4 duration-300`}>
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-black uppercase tracking-widest text-xs text-blue-400">Personalize Your Pulse</h3>
-                <span className="text-[10px] text-gray-500">Pick any to pin to the top bar</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 text-center">
-                {ALL_PULSES.map(pulse => {
-                  const isActive = enabledPulseIds.includes(pulse.id)
-                  return (
-                    <button
-                      key={pulse.id}
-                      onClick={() => togglePulse(pulse.id)}
-                      className={`p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 group ${isActive
-                          ? 'bg-blue-600/10 border-blue-500/50 scale-105 shadow-lg shadow-blue-500/10'
-                          : 'bg-white/5 border-white/5 opacity-50 hover:opacity-100'
-                        }`}
-                    >
-                      <div className={`p-2 rounded-xl ${isActive ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400'}`}>
-                        <pulse.icon className="h-4 w-4" />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-tight truncate w-full">{pulse.label}</span>
-                      {isActive && <Zap className="h-2 w-2 text-yellow-400 fill-yellow-400" />}
-                    </button>
-                  )
-                })}
-              </div>
+          {/* Pulse Personalizer (Permanent Accordion) */}
+          <div className={`rounded-3xl ${glassPanel} overflow-hidden shadow-2xl border border-white/10`}>
+            <Accordion type="single" collapsible className="w-full border-none">
+              <AccordionItem value="personalizer" className="border-none">
+                <AccordionTrigger className="px-6 py-5 hover:no-underline [&[data-state=open]>svg]:rotate-180 group/trigger">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full pr-6 gap-3">
+                    <div className="text-left">
+                      <h3 className="font-black uppercase tracking-widest text-xs text-blue-400 group-hover/trigger:text-blue-300 transition-colors">Personalize Your Pulse</h3>
+                      <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 font-black uppercase tracking-widest whitespace-nowrap shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+                        {enabledPulseIds.length} Active
+                      </span>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2 duration-300">
+                    <div className="mt-2">
+                      <Accordion type="multiple" className="w-full space-y-3 border-none">
+                        {[
+                          { 
+                            id: 'core', 
+                            title: 'Security & Core', 
+                            items: ['security', 'vault', 'favorites'],
+                            icon: Shield
+                          },
+                          { 
+                            id: 'finance', 
+                            title: 'Finances & Assets', 
+                            items: ['assets', 'subscriptions'],
+                            icon: CreditCard
+                          },
+                          { 
+                            id: 'health', 
+                            title: 'Health & Life', 
+                            items: ['health', 'diary', 'goals'],
+                            icon: Activity
+                          },
+                          { 
+                            id: 'lifestyle', 
+                            title: 'Essentials & Hubs', 
+                            items: ['vehicles', 'business', 'knowledge', 'travel', 'media'],
+                            icon: Globe
+                          }
+                        ].map((group) => (
+                          <AccordionItem key={group.id} value={group.id} className="border border-white/5 rounded-2xl overflow-hidden px-4 bg-white/5">
+                            <AccordionTrigger className="hover:no-underline py-4">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-xl bg-white/5 text-blue-400">
+                                  <group.icon className="h-4 w-4" />
+                                </div>
+                                <span className="text-xs font-black uppercase tracking-widest">{group.title}</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="pt-0 pb-5">
+                              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mt-2">
+                                {ALL_PULSES.filter(p => group.items.includes(p.id)).map(pulse => {
+                                  const isActive = enabledPulseIds.includes(pulse.id)
+                                  return (
+                                    <button
+                                      key={pulse.id}
+                                      onClick={() => togglePulse(pulse.id)}
+                                      className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 group relative h-full justify-center ${isActive
+                                          ? 'bg-blue-600/20 border-blue-500/50 shadow-lg shadow-blue-500/10'
+                                          : 'bg-white/5 border-white/5 opacity-50 hover:opacity-100'
+                                        }`}
+                                    >
+                                      <div className={`p-2.5 rounded-xl transition-all ${isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-gray-400'}`}>
+                                        <pulse.icon className="h-4 w-4" />
+                                      </div>
+                                      <span className="text-[10px] font-black uppercase tracking-tight text-center leading-tight">
+                                        {pulse.label}
+                                      </span>
+                                      {isActive && (
+                                        <div className="absolute top-2 right-2">
+                                          <Zap className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+                                        </div>
+                                      )}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </div>
-          )}
         </div>
       </div>
 

@@ -28,6 +28,8 @@ import HealthDiary from "@/components/health-diary"
 import Vehicles from "@/components/vehicles"
 import Business from "@/components/business"
 import Assets from "@/components/assets"
+import HealthPortals from "@/components/health-portals"
+import Doctors from "@/components/doctors"
 import DigitalLife from "@/components/digital-life"
 import Diary from "@/components/diary"
 import Knowledge from "@/components/knowledge"
@@ -321,6 +323,10 @@ function HomeContent() {
         return <Medications {...commonProps} />
       case "type-health-diary":
         return <HealthDiary {...commonProps} />
+      case "type-health-portals":
+        return <HealthPortals {...commonProps} />
+      case "type-doctors":
+        return <Doctors {...commonProps} />
       case "type-medical":
         return (
           <HealthInsurance
