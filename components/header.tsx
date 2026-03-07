@@ -132,8 +132,8 @@ export default function Header({
               <div className="bg-purple-600 rounded-full p-1">
                 <User className="h-4 w-4 text-white" />
               </div>
-              <div className="hidden lg:flex flex-col items-start max-w-[100px]">
-                <span className="text-xs font-bold truncate w-full">{displayName}</span>
+              <div className="hidden lg:flex flex-col items-start min-w-0">
+                <span className="text-xs font-bold break-words">{displayName}</span>
               </div>
               <ChevronDown className="h-4 w-4" />
             </button>
@@ -142,8 +142,8 @@ export default function Header({
                 className={`absolute right-0 mt-2 w-48 ${theme === "light" ? "bg-white shadow-xl border border-gray-100" : "bg-[#1a1a1a] shadow-2xl border border-white/5"} rounded-xl py-2 z-50`}
               >
                 <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1 lg:hidden">
-                  <p className="text-xs font-bold truncate">{displayName}</p>
-                  <p className="text-[10px] text-gray-500 truncate">{email}</p>
+                  <p className="text-xs font-bold break-words">{displayName}</p>
+                  <p className="text-[10px] text-gray-500 break-all">{email}</p>
                 </div>
                 <button
                   onClick={() => {

@@ -459,41 +459,41 @@ export default function PersonalInfo({ records, addItem, updateItem, deleteItem,
         <div className="space-y-2 flex-1">
           <div className="flex items-center">
             <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Type:</span>
-            <span className="flex-1 truncate capitalize">{record.type}</span>
+            <span className="flex-1 break-words capitalize">{record.type}</span>
           </div>
 
           {record.type === "contact" || record.type === "Contact" ? (
             <>
               <div className="flex items-center">
                 <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Name:</span>
-                <span className="flex-1 truncate">{record.name || record.title}</span>
+                <span className="flex-1 break-words">{record.name || record.title}</span>
               </div>
 
               {record.item_metadata?.businessName && (
                 <div className="flex items-center">
                   <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Business:</span>
-                  <span className="flex-1 truncate">{record.item_metadata.businessName}</span>
+                  <span className="flex-1 break-words">{record.item_metadata.businessName}</span>
                 </div>
               )}
 
               {record.item_metadata?.telephone && (
                 <div className="flex items-center">
                   <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Phone:</span>
-                  <span className="flex-1 truncate">{record.item_metadata.telephone}</span>
+                  <span className="flex-1 break-words">{record.item_metadata.telephone}</span>
                 </div>
               )}
 
               {record.item_metadata?.email && (
                 <div className="flex items-center">
                   <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Email:</span>
-                  <span className="flex-1 truncate">{record.item_metadata.email}</span>
+                  <span className="flex-1 break-words">{record.item_metadata.email}</span>
                 </div>
               )}
 
               {record.item_metadata?.address && (
                 <div className="flex items-center">
                   <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Address:</span>
-                  <span className="flex-1 truncate">{record.item_metadata.address}</span>
+                  <span className="flex-1 break-words">{record.item_metadata.address}</span>
                 </div>
               )}
             </>
@@ -507,7 +507,7 @@ export default function PersonalInfo({ records, addItem, updateItem, deleteItem,
               {record.item_metadata?.details && (
                 <div className="flex items-center">
                   <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Details:</span>
-                  <span className="flex-1 truncate">{record.item_metadata.details}</span>
+                  <span className="flex-1 break-words">{record.item_metadata.details}</span>
                 </div>
               )}
             </>

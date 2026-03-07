@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Trash2, Edit } from "lucide-react"
+import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Trash2, Edit, HelpCircle } from "lucide-react"
 
 interface Props {
     records: any[]
@@ -9,9 +9,10 @@ interface Props {
     updateItem: (id: string, updates: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function HealthInsurance({ records, addItem, updateItem, deleteItem, theme }: Props) {
+export default function HealthInsurance({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: Props) {
     const [policies, setPolicies] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -32,6 +33,7 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
                     <div>
                         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center gap-3">
                             <Shield className="h-8 w-8 text-blue-500" /> Health Insurance
+                            <button onClick={() => onOpenHelp?.('type-medical')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
                         </h1>
                         <p className="text-gray-400 mt-1">Manage cards, copays, and provider contacts.</p>
                     </div>

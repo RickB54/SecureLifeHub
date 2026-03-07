@@ -1,12 +1,12 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Image, X } from "lucide-react"
+import { Image, X, HelpCircle } from "lucide-react"
 import { PasswordInput } from "@/components/ui/password-input"
 import CustomFieldsSection, { CustomField } from "./custom-fields-section"
 
 // Update the component to accept folders prop and initialFolderId
-export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialFolderId = "" }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialFolderId?: string }) {
+export default function AddPasswordModal({ onClose, onAdd, folders, theme, initialFolderId = "", onOpenHelp }: { onClose: () => void, onAdd: (data: any) => void, folders: any[], theme: string, initialFolderId?: string, onOpenHelp?: (id?: string) => void }) {
   const [formData, setFormData] = useState({
     title: "",
     website: "",
@@ -103,11 +103,23 @@ export default function AddPasswordModal({ onClose, onAdd, folders, theme, initi
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1e1e1e] text-white border border-blue-500/30 rounded-lg shadow-2xl w-full max-w-2xl my-8 overflow-hidden">
-        <div className="flex justify-between items-center p-4 border-b border-white/10 bg-[#252526]">
-          <h2 className="text-xl font-bold text-blue-400">Add New Password</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white p-2">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-[100] p-4 overflow-y-auto pt-10 pb-10 custom-scrollbar">
+      <div className="bg-[#1e1e1e] text-white border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-md my-8 overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="flex justify-between items-center p-6 border-b border-white/10 sticky top-0 bg-[#1e1e1e] z-10 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-blue-400">Add New Records</h2>
+            <button 
+                type="button"
+                onClick={() => {
+                    const helpId = formData.category === "Health Insurance" || formData.category === "Health Records" ? "health" : "passwords";
+                    onOpenHelp?.(helpId);
+                }} 
+                className="p-1 hover:text-blue-400 opacity-50 transition-opacity hover:opacity-100"
+            >
+                <HelpCircle className="h-4 w-4" />
+            </button>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white p-2 hover:bg-white/5 rounded-full transition-colors">
             <X className="h-5 w-5" />
           </button>
         </div>

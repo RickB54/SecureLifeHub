@@ -65,6 +65,7 @@ interface PasswordsProps {
   setRecords?: any
   isFullscreen?: boolean
   setIsFullscreen?: (val: boolean) => void
+  onOpenHelp?: (targetId?: string) => void
 }
 
 export default function Passwords({
@@ -81,7 +82,8 @@ export default function Passwords({
   initialArchivedFilter = false,
   setRecords,
   isFullscreen,
-  setIsFullscreen
+  setIsFullscreen,
+  onOpenHelp
 }: PasswordsProps) {
   // State for view mode (folder only now)
   const [viewMode, setViewMode] = useState("folder")
@@ -1091,27 +1093,29 @@ export default function Passwords({
           className={`border-b ${theme === "light" ? "border-gray-200" : "border-gray-700"} hover:bg-white/5 transition-colors cursor-pointer ${isFolder ? 'hidden md:table-row' : ''}`}
           onClick={() => handleEditPassword(password.id)}
         >
-          <td className="py-3 px-4 overflow-hidden max-w-[150px] md:max-w-none">
+          <td className="py-3 px-4 overflow-hidden md:max-w-none">
             {password.website ? (
-              <div className="flex flex-col">
-                <div className="font-medium truncate">{password.title || "Untitled"}</div>
+              <div className="flex flex-col min-w-0">
+                <div className="font-medium break-words leading-snug">{password.title || "Untitled"}</div>
                 <a
                   href={password.website.startsWith("http") ? password.website : `https://${password.website}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center mt-0.5 truncate"
+                  className="text-xs text-blue-400 hover:text-blue-300 hover:underline flex items-center mt-0.5 break-all"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {password.website.replace(/^https?:\/\//, '').replace(/^www\./, '').substring(0, 30)}{password.website.length > 30 ? '...' : ''}
+                  <span className="truncate max-w-[200px] md:max-w-none">
+                    {password.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                  </span>
                   <ExternalLink className="h-3 w-3 ml-1 flex-shrink-0" />
                 </a>
               </div>
             ) : (
-              <span className="font-medium truncate block">{password.title || "Untitled"}</span>
+              <span className="font-medium break-words block leading-snug">{password.title || "Untitled"}</span>
             )}
           </td>
           <td
-            className="py-3 px-4 hidden md:table-cell hover:text-blue-400 transition-colors truncate max-w-[150px]"
+            className="py-3 px-4 hidden md:table-cell hover:text-blue-400 transition-colors break-words max-w-[150px]"
             onClick={(e) => {
               e.stopPropagation()
               handleEditPassword(password.id)
@@ -1143,7 +1147,7 @@ export default function Passwords({
               </button>
             </div>
           </td>
-          <td className="py-3 px-4 hidden xl:table-cell truncate max-w-[120px]">{password.category || "General"}</td>
+          <td className="py-3 px-4 hidden xl:table-cell break-words max-w-[120px]">{password.category || "General"}</td>
           <td className="py-3 px-4 hidden 2xl:table-cell whitespace-nowrap">{new Date(password.updatedAt || password.created_at).toLocaleDateString()}</td>
           <td className="py-3 px-4 text-right md:text-left">
             <div className="flex items-center justify-end md:justify-start space-x-1 sm:space-x-2">
@@ -2485,8 +2489,8 @@ export default function Passwords({
                   {renderRecordDetails(selectedRecord)}
                 </div>
              ) : viewMode === "list" ? (
-               <div className="h-full flex flex-col gap-4">
-                  <div className={`flex-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'} overflow-hidden shadow-sm`}>
+               <div className="h-full flex flex-col gap-4 relative">
+                  <div className={`flex-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'} overflow-hidden shadow-sm relative`}>
                       <div className="overflow-x-auto h-full scrollbar-hide">
                         <table className="w-full text-left text-sm table-fixed">
                           <thead className={`${theme === "light" ? "bg-gray-50 text-gray-600" : "bg-white/5 text-gray-400"} sticky top-0 z-10 font-bold uppercase text-[10px] tracking-wider`}>
@@ -2508,6 +2512,26 @@ export default function Passwords({
                           </div>
                         )}
                       </div>
+                  </div>
+
+                  {/* A-Z Fast Selector */}
+                  <div className="absolute right-1 top-4 bottom-4 flex flex-col items-center justify-between py-2 z-20 pointer-events-none">
+                    <div className="flex flex-col items-center gap-0.5 pointer-events-auto bg-black/20 backdrop-blur-sm p-1 rounded-full border border-white/5">
+                      {"ABCDEFGHIJKLMNOPQRSTUVWXYZ#".split("").map(letter => (
+                        <button
+                          key={letter}
+                          onClick={() => {
+                            const element = document.getElementById(`letter-group-${letter}`);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                          }}
+                          className="text-[9px] font-black w-4 h-4 flex items-center justify-center rounded-full text-gray-400 hover:bg-blue-600 hover:text-white transition-all scale-100 hover:scale-125"
+                        >
+                          {letter}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                </div>
              ) : viewMode === "grid" ? (
@@ -2540,6 +2564,7 @@ export default function Passwords({
           folders={folders}
           theme={theme}
           initialFolderId={initialFolderId}
+          onOpenHelp={onOpenHelp}
         />
       )}
       {addFolderModalOpen && (
@@ -2567,6 +2592,7 @@ export default function Passwords({
           passwordData={selectedRecord}
           folders={folders}
           theme={theme}
+          onOpenHelp={onOpenHelp}
         />
       )}
       {deleteConfirmModalOpen && (

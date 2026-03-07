@@ -17,19 +17,20 @@ import {
   ExternalLink,
   ChevronRight,
   MoreVertical,
-  Heart
+  Heart,
+  HelpCircle
 } from "lucide-react"
 import { toast } from "sonner"
-
 interface DoctorsProps {
   records: any[]
   addItem: (item: any) => Promise<any>
   updateItem: (id: string, updates: any) => Promise<any>
   deleteItem: (id: string) => Promise<any>
   theme: string
+  onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Doctors({ records, addItem, updateItem, deleteItem, theme }: DoctorsProps) {
+export default function Doctors({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: DoctorsProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [editingDoctor, setEditingDoctor] = useState<any>(null)
@@ -109,12 +110,12 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
     <div className={`p-4 md:p-8 space-y-6 animate-in fade-in duration-500 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-rose-400 to-indigo-500 uppercase tracking-tighter">
+          <h1 className="text-2xl md:text-3xl font-black flex items-center gap-3">
+            <Users className="h-8 w-8 text-blue-500" />
             My Medical Team
+            <button onClick={() => onOpenHelp?.('type-doctors')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
           </h1>
-          <p className="text-gray-500 text-sm font-medium mt-1 uppercase tracking-widest opacity-70">
-            Keep track of all your specialists and providers
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Directory of specialists, facilities, and care providers.</p>
         </div>
         <button
           onClick={() => { resetForm(); setShowAddModal(true); }}

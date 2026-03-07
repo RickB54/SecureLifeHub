@@ -23,10 +23,10 @@ interface DashboardProps {
   addItem: (item: any) => Promise<any>
   addFolder: (name: string, parentId?: string) => Promise<any>
   securitySettings?: Record<string, { isLocked: boolean }>
-  setHelpOpen?: () => void
+  onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, addFolder, securitySettings = {}, setHelpOpen }: DashboardProps) {
+export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, addFolder, securitySettings = {}, onOpenHelp }: DashboardProps) {
   const [addPasswordModalOpen, setAddPasswordModalOpen] = useState(false)
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
   const [showPersonalizer, setShowPersonalizer] = useState(false)
@@ -138,7 +138,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
               Secure Life Hub
             </h1>
             <button
-              onClick={setHelpOpen}
+              onClick={() => onOpenHelp?.("dashboard")}
               className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all shadow-xl"
               title="Open Manual"
             >
@@ -172,8 +172,14 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
         {/* Life Pulse Widget */}
         <div className="flex-1 space-y-4">
           <div className={`rounded-3xl ${glassPanel} relative overflow-hidden group min-h-[160px] flex flex-col justify-center`}>
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
+            <div className="absolute top-4 right-4 z-20">
+              <button 
+                onClick={() => onOpenHelp?.("dashboard")}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <HelpCircle className="h-4 w-4" />
+              </button>
+            </div>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
             <div className="flex items-center justify-start lg:justify-around overflow-x-auto overflow-y-hidden custom-scrollbar-hide gap-3 sm:gap-6 px-8 md:px-10 py-6 w-full snap-x snap-mandatory relative scroll-smooth" style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
@@ -218,9 +224,17 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
               <AccordionItem value="personalizer" className="border-none">
                 <AccordionTrigger className="px-6 py-5 hover:no-underline [&[data-state=open]>svg]:rotate-180 group/trigger">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full pr-6 gap-3">
-                    <div className="text-left">
-                      <h3 className="font-black uppercase tracking-widest text-xs text-blue-400 group-hover/trigger:text-blue-300 transition-colors">Personalize Your Pulse</h3>
-                      <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
+                    <div className="text-left flex items-center gap-2">
+                      <div className="flex flex-col">
+                        <h3 className="font-black uppercase tracking-widest text-xs text-blue-400 group-hover/trigger:text-blue-300 transition-colors flex items-center gap-2">
+                          Personalize Your Pulse
+                          <HelpCircle 
+                            className="h-3 w-3 text-blue-500/40 hover:text-blue-400 cursor-help" 
+                            onClick={(e) => { e.stopPropagation(); onOpenHelp?.("dashboard"); }}
+                          />
+                        </h3>
+                        <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 font-black uppercase tracking-widest whitespace-nowrap shadow-[0_0_15px_rgba(59,130,246,0.1)]">
@@ -330,9 +344,13 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
         </div>
       )}
 
-      {/* Main Modules Grid */}
-      <h2 className="text-xl font-bold opacity-80 pl-1">Your Hubs</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <div className="flex items-center gap-3 pl-1">
+        <h2 className="text-xl font-bold opacity-80">Your Hubs</h2>
+        <button onClick={() => onOpenHelp?.("intro")} className="p-1 hover:bg-white/5 rounded-full text-gray-500 hover:text-blue-400 transition-colors">
+          <HelpCircle className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         <ModuleCard
           title="Vault"
           count={vaultCount}
@@ -341,6 +359,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-purple-500"
           buttonColorClass="text-purple-400 hover:bg-purple-500"
           onClick={() => setActivePage('passwords')}
+          onHelp={() => onOpenHelp?.("passwords")}
           isLocked={securitySettings['passwords']?.isLocked}
         />
         <ModuleCard
@@ -351,6 +370,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-red-500"
           buttonColorClass="text-red-400 hover:bg-red-500"
           onClick={() => setActivePage('type-health-records')}
+          onHelp={() => onOpenHelp?.("health")}
           isLocked={securitySettings['type-health-records']?.isLocked}
         />
         <ModuleCard
@@ -361,6 +381,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-yellow-500"
           buttonColorClass="text-yellow-400 hover:bg-yellow-500"
           onClick={() => setActivePage('financial-cards')}
+          onHelp={() => onOpenHelp?.("finance")}
           isLocked={securitySettings['financial-cards']?.isLocked}
         />
         <ModuleCard
@@ -371,6 +392,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-blue-500"
           buttonColorClass="text-blue-400 hover:bg-blue-500"
           onClick={() => setActivePage('type-vehicles')}
+          onHelp={() => onOpenHelp?.("mobility")}
           isLocked={securitySettings['type-vehicles']?.isLocked}
         />
         <ModuleCard
@@ -381,6 +403,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-orange-500"
           buttonColorClass="text-orange-400 hover:bg-orange-500"
           onClick={() => setActivePage('type-business')}
+          onHelp={() => onOpenHelp?.("finance")}
           isLocked={securitySettings['type-business']?.isLocked}
         />
         <ModuleCard
@@ -391,6 +414,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-emerald-500"
           buttonColorClass="text-emerald-400 hover:bg-emerald-500"
           onClick={() => setActivePage('type-assets')}
+          onHelp={() => onOpenHelp?.("finance")}
           isLocked={securitySettings['type-assets']?.isLocked}
         />
         <ModuleCard
@@ -401,6 +425,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-pink-500"
           buttonColorClass="text-pink-400 hover:bg-pink-500"
           onClick={() => setActivePage('type-digital-life')}
+          onHelp={() => onOpenHelp?.("social")}
           isLocked={securitySettings['type-digital-life']?.isLocked}
         />
         <ModuleCard
@@ -411,6 +436,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-rose-500"
           buttonColorClass="text-rose-400 hover:bg-rose-500"
           onClick={() => setActivePage('type-diary')}
+          onHelp={() => onOpenHelp?.("social")}
           isLocked={securitySettings['diary']?.isLocked}
         />
         <ModuleCard
@@ -421,6 +447,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-green-500"
           buttonColorClass="text-green-400 hover:bg-green-500"
           onClick={() => setActivePage('type-subscriptions')}
+          onHelp={() => onOpenHelp?.("social")}
           isLocked={securitySettings['type-subscriptions']?.isLocked}
         />
         <ModuleCard
@@ -431,17 +458,8 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-teal-500"
           buttonColorClass="text-teal-400 hover:bg-teal-500"
           onClick={() => setActivePage('type-media')}
-          isLocked={securitySettings['type-media']?.isLocked}
-        />
-        <ModuleCard
-          title="Knowledge"
-          count={knowledgeCount}
-          description="Personal wiki, SOPs, and reference vault."
-          icon={<Book className="h-6 w-6 text-yellow-500" />}
-          colorClass="border-yellow-500"
-          buttonColorClass="text-yellow-400 hover:bg-yellow-500"
-          onClick={() => setActivePage('type-knowledge')}
-          isLocked={securitySettings['type-knowledge']?.isLocked}
+          onHelp={() => onOpenHelp?.("media")}
+          isLocked={securitySettings['media']?.isLocked}
         />
         <ModuleCard
           title="Travel"
@@ -451,54 +469,81 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           colorClass="border-indigo-500"
           buttonColorClass="text-indigo-400 hover:bg-indigo-500"
           onClick={() => setActivePage('type-travel')}
+          onHelp={() => onOpenHelp?.("mobility")}
           isLocked={securitySettings['type-travel']?.isLocked}
         />
         <ModuleCard
           title="Goals"
           count={goalsCount}
-          description="Set goals, track steps, and visualize progress."
+          description="Life goals and interactive progress tracking."
           icon={<Target className="h-6 w-6 text-pink-500" />}
           colorClass="border-pink-500"
           buttonColorClass="text-pink-400 hover:bg-pink-500"
           onClick={() => setActivePage('type-goals')}
-          isLocked={securitySettings['type-goals']?.isLocked}
+          onHelp={() => onOpenHelp?.("goals")}
+          isLocked={securitySettings['goals']?.isLocked}
         />
       </div>
 
-      {/* Recent Activity */}
-      <div className={`p-6 rounded-2xl ${glassPanel}`}>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold flex items-center gap-2"><Clock className="h-5 w-5 opacity-50" /> Recent Activity</h2>
-          {recentItems.length > 0 && (
-            <button
-              onClick={handleClearActivity}
-              className="text-xs font-bold uppercase tracking-widest text-[#007bff] hover:text-white transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-        <div className="space-y-3">
-          {recentItems.map((item: any) => (
-            <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-colors group cursor-default">
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-white/5 border border-white/10`}>
-                  {getIconForCategory(item.category)}
+      <div className={`p-0 rounded-3xl ${glassPanel} overflow-hidden shadow-2xl border border-white/10`}>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value="activity" className="border-none">
+            <AccordionTrigger className="px-6 py-5 hover:no-underline [&[data-state=open]>svg]:rotate-180 group/trigger">
+              <div className="flex items-center justify-between w-full pr-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div className="text-left">
+                    <h2 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+                      Recent Activity
+                      <button onClick={(e) => { e.stopPropagation(); onOpenHelp?.("dashboard"); }} className="p-1 hover:bg-white/5 rounded-full text-gray-400 hover:text-blue-400">
+                        <HelpCircle className="h-3 w-3" />
+                      </button>
+                    </h2>
+                    <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-tight">{recentItems.length} Changes Captured</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-sm tracking-wide">{item.title || item.name || "Untitled"}</p>
-                  <p className="text-xs opacity-50 flex items-center gap-1">
-                    {item.category || "General"} â€¢ <span className="opacity-70">{new Date(item.updatedAt).toLocaleDateString()}</span>
-                  </p>
-                </div>
+                {recentItems.length > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleClearActivity(); }}
+                    className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-white transition-colors bg-blue-500/5 px-3 py-1.5 rounded-full border border-blue-500/10"
+                  >
+                    Clear History
+                  </button>
+                )}
               </div>
-              <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-50 transition-opacity" />
-            </div>
-          ))}
-          {records.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No activity yet</div>
-          )}
-        </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2 duration-300">
+              <div className="space-y-2">
+                {recentItems.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group cursor-default">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-black/20 border border-white/5`}>
+                        {getIconForCategory(item.category)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm tracking-wide text-gray-200">{item.title || item.name || "Untitled"}</p>
+                        <p className="text-[10px] text-gray-500 flex items-center gap-2 uppercase font-black tracking-tight">
+                          {item.category || "General"} <span className="text-gray-700">•</span> <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                  </div>
+                ))}
+                {recentItems.length === 0 && (
+                  <div className="text-center py-10">
+                    <div className="inline-flex p-4 rounded-full bg-white/5 mb-3 text-gray-600">
+                      <Clock className="h-8 w-8" />
+                    </div>
+                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">No activity found</p>
+                  </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
 
       {/* Modals */}
@@ -543,21 +588,32 @@ interface ModuleCardProps {
   onClick: () => void
   count: number
   isLocked?: boolean
+  onHelp?: () => void
 }
 
-function ModuleCard({ title, description, icon, colorClass, buttonColorClass, onClick, count, isLocked }: ModuleCardProps) {
+function ModuleCard({ title, description, icon, colorClass, buttonColorClass, onClick, count, isLocked, onHelp }: ModuleCardProps) {
   return (
-    <div className={`bg-[#1e1e1e] border border-white/10 rounded-lg flex flex-col justify-between overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group ${colorClass} border-t-4 relative`}>
-      {isLocked && <Lock className="absolute top-3 right-3 h-5 w-5 text-yellow-500 z-10" />}
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
+    <div className={`bg-[#1e1e1e] border border-white/10 rounded-3xl flex flex-col justify-between overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 group ${colorClass} border-t-4 relative`}>
+      {isLocked && <Lock className="absolute top-4 right-4 h-4 w-4 text-yellow-500 z-10" />}
+      <div className="p-4 md:p-6">
+        <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-3">
-            {icon}
-            <h3 className="font-bold text-lg text-white">{title}</h3>
+            <div className="p-3 rounded-2xl bg-white/5 group-hover:scale-110 transition-transform">
+              {icon}
+            </div>
+            <div>
+              <h3 className="font-bold text-sm md:text-lg text-white leading-tight">{title}</h3>
+              {count > 0 && <span className="text-[10px] font-mono bg-white/5 px-2 py-0.5 rounded text-gray-500">{count} Items</span>}
+            </div>
           </div>
-          {count > 0 && <span className="text-xs font-mono bg-white/5 px-2 py-1 rounded text-gray-400">{count}</span>}
+          <button 
+            onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
+            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-600 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
-        <p className="text-gray-400 text-sm leading-relaxed">{description}</p>
+        <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed line-clamp-2 md:line-clamp-none">{description}</p>
       </div>
 
       <button

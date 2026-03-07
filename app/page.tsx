@@ -68,6 +68,7 @@ function HomeContent() {
   const [activePage, setActivePage] = useState(searchParams.get("page") || "dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [helpInitialPage, setHelpInitialPage] = useState<string | undefined>(undefined)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [startupPage, setStartupPage] = useState("dashboard")
 
@@ -266,7 +267,11 @@ function HomeContent() {
     toggleTheme,
     setActivePage: handleNavigate, // Use history-aware navigation
     setRecords: () => console.warn("Direct setRecords not supported in Supabase mode"), // Placeholder
-    setHelpOpen: () => setHelpOpen(true),
+    onOpenHelp: (targetId?: string) => {
+      if (targetId) setHelpInitialPage(targetId)
+      else setHelpInitialPage(undefined)
+      setHelpOpen(true)
+    },
     isFullscreen,
     setIsFullscreen
   }
@@ -440,6 +445,7 @@ function HomeContent() {
                 records={records}
                 setActivePage={handleNavigate}
                 theme={theme}
+                onOpenHelp={commonProps.onOpenHelp}
               />
             )
           }
@@ -464,7 +470,7 @@ function HomeContent() {
           theme={theme}
           toggleTheme={toggleTheme}
           activePage={activePage}
-          onOpenHelp={() => setHelpOpen(true)}
+          onOpenHelp={() => commonProps.onOpenHelp(activePage)}
           isFullscreen={isFullscreen}
           setIsFullscreen={setIsFullscreen}
         />
@@ -476,11 +482,11 @@ function HomeContent() {
             isOpen={sidebarOpen}
             setIsOpen={setSidebarOpen}
             theme={theme}
-            onOpenHelp={() => setHelpOpen(true)}
+            onOpenHelp={() => commonProps.onOpenHelp()}
           />
           <main className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>{renderActivePage()}</main>
         </div>
-        <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} />
+        <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} initialPageId={helpInitialPage || activePage} />
       </div>
     </ErrorBoundary>
   )

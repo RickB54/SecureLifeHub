@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
-import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown } from "lucide-react"
+import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize } from "lucide-react"
 import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, startOfDay, endOfDay, eachHourOfInterval, addWeeks, subWeeks, addMonths, subMonths, parse, addHours } from "date-fns"
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -42,9 +42,10 @@ interface MedicationsProps {
     updateItem: (id: string, updates: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Medications({ records, addItem, updateItem, deleteItem, theme }: MedicationsProps) {
+export default function Medications({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: MedicationsProps) {
     const { user } = useAuth()
     const [searchQuery, setSearchQuery] = useState("")
     const [showAddModal, setShowAddModal] = useState(false)
@@ -603,7 +604,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             headStyles: { fillColor: [147, 51, 234], fontSize: 10, fontStyle: 'bold' },
             bodyStyles: { fontSize: 9, cellPadding: 6 },
             columnStyles: {
-                0: { fontStyle: 'bold', width: 40 },
+                0: { fontStyle: 'bold', cellWidth: 40 },
                 4: { fontStyle: 'italic', fontSize: 8 }
             },
             alternateRowStyles: { fillColor: [249, 250, 251] }
@@ -1010,9 +1011,14 @@ ${selectedMed ? `
             <div className="p-4 md:p-8 pb-4">
                 <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-6">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
-                            <Pill className="h-6 md:h-8 w-6 md:w-8 text-purple-400" /> Medications & Reminders
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
+                                Medications
+                            </h1>
+                            <button type="button" onClick={() => onOpenHelp?.("medications")} className="p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-white transition-all focus:outline-none" title="Explain Medications">
+                                <HelpCircle className="h-6 w-6" />
+                            </button>
+                        </div>
                         <p className="text-sm md:text-base text-gray-400">Track medications, set reminders, and maintain your health</p>
                     </div>
                     <div className="flex flex-wrap gap-2 w-full md:w-auto">
@@ -1216,8 +1222,8 @@ ${selectedMed ? `
                                                 {getPillIcon(med)}
                                             </div>
                                             <div className="flex-1">
-                                                <div className="flex flex-col">
-                                                    <h3 className="text-lg font-bold truncate max-w-[200px]">{med.title}</h3>
+                                                <div className="flex flex-col min-w-0">
+                                                    <h3 className="text-lg font-bold break-words leading-tight">{med.title}</h3>
                                                     <span className="text-xs text-gray-400">{med.item_metadata?.dosage}</span>
                                                 </div>
                                                 <div className="text-sm text-gray-400 mt-1 flex flex-col gap-1">
@@ -1704,7 +1710,8 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
         doseSchedule: medication?.item_metadata?.doseSchedule || [], // Array of { dayIndex: number, quantity: number }
         startDate: medication?.item_metadata?.startDate || medication?.item_metadata?.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
         endDate: medication?.item_metadata?.endDate || "",
-        scheduleStartDate: medication?.item_metadata?.scheduleStartDate || format(new Date(), 'yyyy-MM-dd')
+        scheduleStartDate: medication?.item_metadata?.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
+        dosesPerDay: medication?.item_metadata?.dosesPerDay || "1"
     })
 
     const [isStyleExpanded, setIsStyleExpanded] = useState(false)
@@ -1881,6 +1888,7 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                     'Taken'
                 ]),
                 headStyles: { fillColor: [147, 51, 234], fontStyle: 'bold' },
+                bodyStyles: { fontSize: 8, cellPadding: 2 },
                 alternateRowStyles: { fillColor: [249, 250, 251] },
                 margin: { left: 15, right: 15 }
             })

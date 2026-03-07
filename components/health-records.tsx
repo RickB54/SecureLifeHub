@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -17,9 +17,10 @@ interface HealthDashboardProps {
     deleteItem: (id: string) => Promise<any>
     theme: string
     setRecords?: any
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme }: HealthDashboardProps) {
+export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: HealthDashboardProps) {
     const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai">("dashboard")
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
@@ -317,6 +318,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
                         <span className="flex items-center gap-2">
                             <CalendarIcon className="h-5 w-5 text-blue-500" /> Upcoming
+                            <button onClick={() => onOpenHelp?.('type-health-records')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-3 w-3" /></button>
                         </span>
                         <span className="text-xs font-normal text-gray-500">{upcomingAppts.length} found</span>
                     </h3>
@@ -390,7 +392,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const renderRecords = () => (
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                <h2 className="text-xl md:text-2xl font-bold uppercase tracking-widest text-[10px] md:text-sm opacity-50">Medical History Accordion</h2>
+                <h2 className="text-xl md:text-2xl font-bold uppercase tracking-widest text-[10px] md:text-sm opacity-50 flex items-center gap-2">
+                    Medical History Accordion
+                    <button onClick={() => onOpenHelp?.('type-health-records')} className="p-1 hover:text-blue-400"><HelpCircle className="h-4 w-4" /></button>
+                </h2>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
                     <button
                         onClick={() => loadMockData('records')}
@@ -428,7 +433,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     {item.item_metadata?.url ? <Image className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-bold truncate group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.title}</h3>
+                                    <h3 className="text-lg font-bold break-words group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.title}</h3>
                                     <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase tracking-wider">
                                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(new Date(item.item_metadata?.date || item.created_at), 'PPP p')}</span>
                                         {item.item_metadata?.doctor && <span className="flex items-center gap-1 border-l border-white/10 pl-3"><User className="h-3 w-3" /> {item.item_metadata.doctor}</span>}
@@ -1135,6 +1140,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             onClose={() => setLightboxOpen(false)}
                             onNext={() => setLightboxIndex((prev) => (prev + 1) % lightboxItems.length)}
                             onPrev={() => setLightboxIndex((prev) => (prev - 1 + lightboxItems.length) % lightboxItems.length)}
+                            onSelect={() => {}}
                         />
                     )}
             </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Save, RotateCcw, Cloud, Download, Clock, CheckCircle, AlertTriangle, FileJson, Shield, Loader2, HardDrive, RefreshCw, Trash2, Calendar, Database } from "lucide-react"
+import { Save, RotateCcw, Cloud, Download, Clock, CheckCircle, AlertTriangle, FileJson, Shield, Loader2, HardDrive, RefreshCw, Trash2, Calendar, Database, HelpCircle } from "lucide-react"
 import { format } from "date-fns"
 
 interface BackupRecoveryProps {
@@ -10,9 +10,10 @@ interface BackupRecoveryProps {
     deleteItem?: (id: string) => Promise<any>
     bulkAddItems?: (items: any[]) => Promise<any>
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function BackupRecovery({ records, addItem, deleteItem, bulkAddItems, theme }: BackupRecoveryProps) {
+export default function BackupRecovery({ records, addItem, deleteItem, bulkAddItems, theme, onOpenHelp }: BackupRecoveryProps) {
     const [backups, setBackups] = useState<any[]>([])
     const [loading, setLoading] = useState(false)
     const [status, setStatus] = useState<"idle" | "backing_up" | "restoring" | "success" | "error">("idle")
@@ -225,7 +226,12 @@ export default function BackupRecovery({ records, addItem, deleteItem, bulkAddIt
             <div className="flex items-center gap-3 mb-6">
                 <HardDrive className="h-6 w-6 text-blue-500" />
                 <div>
-                    <h2 className="text-xl font-bold">Data Management</h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold">Data Management</h2>
+                        <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-500 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                            <HelpCircle className="h-4 w-4" />
+                        </button>
+                    </div>
                     <p className={`text-sm ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Backup, restore, and manage your application data</p>
                 </div>
             </div>

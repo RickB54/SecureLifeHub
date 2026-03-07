@@ -16,7 +16,8 @@ import {
   Check,
   Hospital,
   Stethoscope,
-  Activity
+  Activity,
+  HelpCircle
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -26,9 +27,10 @@ interface HealthPortalsProps {
   updateItem: (id: string, updates: any) => Promise<any>
   deleteItem: (id: string) => Promise<any>
   theme: string
+  onOpenHelp?: (targetId?: string) => void
 }
 
-export default function HealthPortals({ records, addItem, updateItem, deleteItem, theme }: HealthPortalsProps) {
+export default function HealthPortals({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: HealthPortalsProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [editingPortal, setEditingPortal] = useState<any>(null)
@@ -107,14 +109,14 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
 
   return (
     <div className={`p-4 md:p-8 space-y-6 animate-in fade-in duration-500 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <h1 className="text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 uppercase tracking-tighter">
-            Health Portals
+          <h1 className="text-3xl font-black flex items-center gap-3">
+            <Globe className="h-8 w-8 text-blue-500" />
+            Health Portals & Logins
+            <button onClick={() => onOpenHelp?.('type-health-portals')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
           </h1>
-          <p className="text-gray-500 text-sm font-medium mt-1 uppercase tracking-widest opacity-70">
-            Secure access to your medical providers
-          </p>
+          <p className="text-gray-500 text-sm mt-1">Manage links and access details for your medical provider portals.</p>
         </div>
         <button
           onClick={() => { resetForm(); setShowAddModal(true); }}
@@ -171,7 +173,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
                   {portal.item_metadata?.facility?.toLowerCase().includes('hospital') ? <Hospital className="h-8 w-8" /> : <Stethoscope className="h-8 w-8" />}
                 </div>
                 <div className="min-w-0 pr-12">
-                  <h3 className="text-xl font-black uppercase tracking-tighter truncate leading-tight group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-xl font-black uppercase tracking-tighter break-words leading-tight group-hover:text-blue-400 transition-colors">
                     {portal.title}
                   </h3>
                   <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">
@@ -186,7 +188,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
                     <User className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-[10px] uppercase font-black text-gray-600 mb-0.5">Username</p>
-                      <p className="text-sm font-mono truncate max-w-[120px]">{portal.item_metadata?.username || "---"}</p>
+                      <p className="text-sm font-mono break-words">{portal.item_metadata?.username || "---"}</p>
                     </div>
                   </div>
                   <button 
@@ -202,7 +204,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
                     <Key className="h-4 w-4 text-gray-500" />
                     <div>
                       <p className="text-[10px] uppercase font-black text-gray-600 mb-0.5">Password</p>
-                      <p className="text-sm font-mono truncate max-w-[120px]">••••••••••••</p>
+                      <p className="text-sm font-mono break-words">••••••••••••</p>
                     </div>
                   </div>
                   <button 

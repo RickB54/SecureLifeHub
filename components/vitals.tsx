@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Plus, Activity, Heart, Droplets, Utensils, Trash2, Calendar, FileText, ChevronLeft, ChevronRight, Clock, Weight, Thermometer, Edit } from "lucide-react"
+import { Plus, Activity, Heart, Droplets, Utensils, Trash2, Calendar, FileText, ChevronLeft, ChevronRight, Clock, Weight, Thermometer, Edit, HelpCircle } from "lucide-react"
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, subWeeks, startOfDay, endOfDay } from "date-fns"
 
 interface VitalsProps {
@@ -10,9 +10,10 @@ interface VitalsProps {
     updateItem: (id: string, updates: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Vitals({ records, addItem, deleteItem, theme }: VitalsProps) {
+export default function Vitals({ records, addItem, deleteItem, theme, onOpenHelp }: VitalsProps) {
     const [showAddModal, setShowAddModal] = useState(false)
     const [viewMode, setViewMode] = useState<"list" | "timeline">("list")
     const [currentDate, setCurrentDate] = useState(new Date())
@@ -66,8 +67,9 @@ export default function Vitals({ records, addItem, deleteItem, theme }: VitalsPr
             <div className={`p-6 rounded-2xl ${headerStyle} ${glassCardStyle}`}>
                 <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-pink-500">
+                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-500 to-pink-500 flex items-center gap-3">
                             Vitals & Stats
+                            <button onClick={() => onOpenHelp?.('type-vitals')} className="p-1 hover:text-red-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
                         </h1>
                         <p className="text-sm opacity-80 mt-1">Track your Blood Pressure, Oxygen levels, Heart Rate, Weight, etc.</p>
                     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, HelpCircle } from "lucide-react"
 
 interface SubDashboardProps {
     section: {
@@ -13,9 +13,10 @@ interface SubDashboardProps {
     records: any[]
     setActivePage: (page: string) => void
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function SubDashboard({ section, records, setActivePage, theme }: SubDashboardProps) {
+export default function SubDashboard({ section, records, setActivePage, theme, onOpenHelp }: SubDashboardProps) {
     const sectionColor = section.color || "blue"
 
     // Map color names to Tailwind color classes
@@ -80,8 +81,16 @@ export default function SubDashboard({ section, records, setActivePage, theme }:
                             <div className={`p-4 rounded-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 ${theme === 'dark' ? `${themeColors.bg} ${themeColors.text}` : `${themeColors.lightBg} ${themeColors.lightText}`}`}>
                                 {item.icon}
                             </div>
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${theme === 'dark' ? 'bg-white/5 group-hover:bg-white/10' : 'bg-gray-50 group-hover:bg-white'}`}>
-                                <ArrowRight className={`w-5 h-5 transition-transform duration-500 group-hover:translate-x-1 ${theme === 'dark' ? 'text-gray-500 group-hover:text-white' : 'text-gray-400 group-hover:text-black'}`} />
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onOpenHelp?.(item.id); }}
+                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
+                                >
+                                    <HelpCircle className="h-4 w-4" />
+                                </button>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${theme === 'dark' ? 'bg-white/5 group-hover:bg-white/10' : 'bg-gray-50 group-hover:bg-white'}`}>
+                                    <ArrowRight className={`w-5 h-5 transition-transform duration-500 group-hover:translate-x-1 ${theme === 'dark' ? 'text-gray-500 group-hover:text-white' : 'text-gray-400 group-hover:text-black'}`} />
+                                </div>
                             </div>
                         </div>
 

@@ -135,7 +135,7 @@ export default function VehicleDocs({ records, addItem, deleteItem, theme }: Veh
                                         </button>
                                     </div>
 
-                                    <h3 className={`text-lg font-black uppercase italic tracking-tighter truncate ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                                    <h3 className={`text-lg font-black uppercase italic tracking-tighter break-words ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                                         {doc.title}
                                     </h3>
                                     <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest mt-1">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2 } from "lucide-react"
+import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2, HelpCircle } from "lucide-react"
 import { toast } from "sonner"
 
 interface HealthDiaryProps {
@@ -10,9 +10,10 @@ interface HealthDiaryProps {
     updateItem: (id: string, updates: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
 
-export default function HealthDiary({ records, addItem, deleteItem, theme }: HealthDiaryProps) {
+export default function HealthDiary({ records, addItem, deleteItem, theme, onOpenHelp }: HealthDiaryProps) {
     const [entries, setEntries] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
     const [isListening, setIsListening] = useState(false)
@@ -86,12 +87,13 @@ export default function HealthDiary({ records, addItem, deleteItem, theme }: Hea
         <div className="space-y-8 p-4">
             {/* Header */}
             <div className={`p-6 rounded-2xl ${headerStyle} ${glassCardStyle}`}>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-start mb-6">
                     <div>
-                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-500">
+                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500 flex items-center gap-3">
                             Health Diary
+                            <button onClick={() => onOpenHelp?.('type-health-diary')} className="p-1 hover:text-emerald-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
                         </h1>
-                        <p className="text-sm opacity-80 mt-1">Journal your daily health, symptoms, and thoughts.</p>
+                        <p className="text-gray-400 mt-1 uppercase tracking-widest text-[10px] font-black opacity-70">Symptom tracking & wellness journal</p>
                     </div>
                     <button
                         onClick={() => {

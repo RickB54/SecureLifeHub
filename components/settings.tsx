@@ -33,7 +33,8 @@ import {
   Mail,
   Globe,
   FolderTree,
-  Grid
+  Grid,
+  HelpCircle
 } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
@@ -62,7 +63,8 @@ export default function Settings({
   startupPage,
   setStartupPage,
   isFullscreen,
-  setIsFullscreen
+  setIsFullscreen,
+  onOpenHelp
 }: {
   records: any[]
   items: any[]
@@ -82,6 +84,7 @@ export default function Settings({
   setStartupPage?: (page: string) => void
   isFullscreen?: boolean
   setIsFullscreen?: (val: boolean) => void
+  onOpenHelp?: (targetId?: string) => void
 }) {
   const currentTheme = theme || "dark";
   const globalToggleTheme = toggleTheme || (() => {});
@@ -344,6 +347,14 @@ export default function Settings({
             <Icon className="h-6 w-6" />
           </div>
           <h3 className="text-xl font-bold">{title}</h3>
+          <button 
+            type="button"
+            onClick={() => onOpenHelp?.("settings")}
+            className="ml-auto p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-white transition-all focus:outline-none"
+            title={`Explain ${title}`}
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
         {children}
       </div>
@@ -430,7 +441,12 @@ export default function Settings({
             {/* 2FA */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
               <div>
-                <div className="font-bold">Two-Factor Auth</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-bold">Two-Factor Auth</div>
+                  <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-purple-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                    <HelpCircle className="h-3 w-3" />
+                  </button>
+                </div>
                 <div className="text-xs opacity-50">Additional layer of security</div>
               </div>
               <button onClick={handleToggle2FA} className={`relative h-8 w-14 rounded-full transition-colors ${twoFactorEnabled ? 'bg-green-500' : 'bg-gray-700'}`}>
@@ -526,7 +542,12 @@ export default function Settings({
                   <Grid className="h-4 w-4" />
                 </div>
                 <div>
-                  <h4 className="font-black text-sm uppercase tracking-widest">Startup View Configuration</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-black text-sm uppercase tracking-widest">Startup View Configuration</h4>
+                    <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </div>
                   <p className="text-[10px] text-gray-500">Choose your landing page after login.</p>
                 </div>
               </div>
@@ -585,7 +606,7 @@ export default function Settings({
                         {isSectionActive && (
                           <div className="mt-2.5 flex items-center gap-1.5 animate-in fade-in">
                             <div className="h-1 w-1 rounded-full bg-blue-500 animate-pulse" />
-                            <span className="text-[10px] font-bold text-gray-200 truncate max-w-[80px]">{activeItemName}</span>
+                            <span className="text-[10px] font-bold text-gray-200 break-words">{activeItemName}</span>
                           </div>
                         )}
                       </button>
@@ -626,7 +647,12 @@ export default function Settings({
             {/* Auto-Fill */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
               <div>
-                <div className="font-bold">Auto-Fill</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-bold">Auto-Fill</div>
+                  <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                    <HelpCircle className="h-3 w-3" />
+                  </button>
+                </div>
                 <div className={`text-xs ${autoFillEnabled ? 'text-blue-400' : 'text-gray-500'}`}>
                   {autoFillEnabled ? "Extension Access Enabled" : "Manual Copy/Paste Only"}
                 </div>
@@ -699,7 +725,12 @@ export default function Settings({
             {/* Recents Reset */}
             <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
               <div>
-                <div className="font-bold">Reset Recent Items</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-bold">Reset Recent Items</div>
+                  <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                    <HelpCircle className="h-3 w-3" />
+                  </button>
+                </div>
                 <div className="text-xs text-blue-400 font-medium">Reset 'Recents' folder history to start fresh from now</div>
               </div>
               <button 
@@ -719,7 +750,12 @@ export default function Settings({
 
         {/* Access Control */}
         <SettingsCard title="Module Access" icon={Lock} color="emerald" className="lg:col-span-2">
-          <p className="mb-4 text-sm opacity-60">Restrict specific areas with a PIN</p>
+          <div className="flex items-center gap-2 mb-4">
+            <p className="text-sm opacity-60">Restrict specific areas with a PIN</p>
+            <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-emerald-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+              <HelpCircle className="h-3 w-3" />
+            </button>
+          </div>
           <ModuleAccessSettings theme={theme || "dark"} />
         </SettingsCard>
 
@@ -734,12 +770,19 @@ export default function Settings({
           deleteItem={deleteItem}
           bulkAddItems={bulkAddItems}
           theme={theme || "dark"}
+          onOpenHelp={onOpenHelp}
         />
       </div>
 
       {/* Advanced & Danger Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <SettingsCard title="Test Data" icon={Database} color="yellow">
+          <div className="flex items-center gap-2 mb-2">
+            <h4 className="font-bold text-sm uppercase opacity-70">Demo Data</h4>
+            <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-yellow-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+              <HelpCircle className="h-3 w-3" />
+            </button>
+          </div>
           <MockDataGenerator bulkAddItems={bulkAddItems} records={records} deleteItem={deleteItem} updateItem={updateItem} />
         </SettingsCard>
 
@@ -751,12 +794,22 @@ export default function Settings({
               </div>
               <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Restricted Security Area</h3>
               <p className="text-gray-500 mb-8 max-w-md mx-auto">This area contains destructive actions that cannot be undone. Please proceed with extreme caution.</p>
-              <button
-                onClick={() => setShowPinScreen(true)}
-                className="bg-red-500 hover:bg-red-400 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-red-900/40 uppercase tracking-widest text-sm"
-              >
-                Unlock Danger Zone
-              </button>
+              <div className="flex justify-center gap-4 mb-8">
+                <button
+                  onClick={() => setShowPinScreen(true)}
+                  className="bg-red-500 hover:bg-red-400 text-white px-10 py-4 rounded-2xl font-black transition-all shadow-xl shadow-red-900/40 uppercase tracking-widest text-sm active:scale-95"
+                >
+                  Unlock Danger Zone
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onOpenHelp?.("settings")}
+                  className="p-4 rounded-2xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                  title="Explain Danger Zone"
+                >
+                  <HelpCircle className="h-6 w-6" />
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">

@@ -387,7 +387,7 @@ export default function SecureNotes({
 
                     <div className="flex-1 truncate">
                         <div className="flex justify-between items-center">
-                            <h3 className={`font-bold text-sm truncate ${isSelected ? 'text-white' : ''}`}>{note.title}</h3>
+                            <h3 className={`font-bold text-sm break-words ${isSelected ? 'text-white' : ''}`}>{note.title}</h3>
                             {note.isFavorite && <Star className={`h-2.5 w-2.5 fill-current ${isSelected ? 'text-white' : 'text-yellow-500'}`} />}
                         </div>
                         <p className={`text-[10px] truncate ${isSelected ? 'text-blue-100 opacity-60' : 'text-gray-500'}`}>
