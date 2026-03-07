@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Login from "@/components/login"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
@@ -71,6 +71,38 @@ function HomeContent() {
   const [helpInitialPage, setHelpInitialPage] = useState<string | undefined>(undefined)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [startupPage, setStartupPage] = useState("dashboard")
+
+  // Swipe-to-open sidebar gesture
+  const touchStartX = useRef<number | null>(null)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    touchStartX.current = touch.clientX
+    touchStartY.current = touch.clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return
+    const touch = e.changedTouches[0]
+    const deltaX = touch.clientX - touchStartX.current
+    const deltaY = Math.abs(touch.clientY - touchStartY.current)
+
+    // Only process mostly-horizontal swipes
+    if (deltaY > 60) return
+
+    // Open sidebar: swipe right from left edge (within 30px)
+    if (deltaX > 60 && touchStartX.current < 30) {
+      setSidebarOpen(true)
+    }
+    // Close sidebar: swipe left when open
+    else if (deltaX < -60 && sidebarOpen) {
+      setSidebarOpen(false)
+    }
+
+    touchStartX.current = null
+    touchStartY.current = null
+  }
 
   // Auth from Context
   const { user, loading: authLoading, signOut, isLocked, setIsLocked } = useAuth()
@@ -459,6 +491,8 @@ function HomeContent() {
     <ErrorBoundary>
       <div
         className={`flex flex-col h-screen overflow-hidden ${theme === "light" ? "bg-gray-100 text-gray-900" : "bg-[#1a1a1a] text-white"} ${isFullscreen ? 'overscroll-none select-none touch-pan-y' : ''}`}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Header is ALWAYS visible — even in fullscreen mode */}
         <Header
