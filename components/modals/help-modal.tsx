@@ -15,9 +15,25 @@ interface HelpPage {
 export const HELP_MAP: Record<string, string> = {
     "dashboard": "intro",
     "pulse-personalizer": "pulse-personalizer",
+    // Vault / Passwords
+    "passwords": "passwords",
     "all-items": "passwords",
-    "type-payment-cards": "finance",
+    "all": "passwords",
+    "type-logins": "passwords",
+    "favorites": "passwords",
     "type-secure-notes": "passwords",
+    "type-wifi": "passwords",
+    "type-servers": "passwords",
+    "type-software-licenses": "passwords",
+    "secure-notes": "passwords",
+    // Finance
+    "financial-cards": "finance",
+    "type-payment-cards": "finance",
+    "type-business": "finance",
+    "type-clients": "finance",
+    "type-assets": "finance",
+    "type-budget": "finance",
+    // Health
     "type-health-records": "health",
     "health-records": "health",
     "type-vitals": "health",
@@ -32,18 +48,26 @@ export const HELP_MAP: Record<string, string> = {
     "doctors": "health",
     "type-medical": "health",
     "medical": "health",
+    // Vehicle / Mobility
     "type-vehicles": "mobility",
     "type-vehicle-docs": "mobility",
     "type-maintenance": "mobility",
-    "type-business": "finance",
-    "type-clients": "finance",
-    "type-assets": "finance",
-    "type-budget": "finance",
+    "type-travel": "mobility",
+    // Social / Life
     "type-digital-life": "social",
     "type-social": "social",
     "type-diary": "social",
+    "diary": "social",
     "type-subscriptions": "social",
-    "type-travel": "mobility",
+    // Goals / Media
+    "type-goals": "goals",
+    "goals": "goals",
+    "type-media": "media",
+    "media-vault": "media",
+    "media": "media",
+    "type-knowledge": "knowledge",
+    "knowledge": "knowledge",
+    // Settings
     "settings": "settings",
     "settings-account": "settings-account",
     "settings-security": "settings-security",
@@ -54,12 +78,6 @@ export const HELP_MAP: Record<string, string> = {
     "settings-test-data": "settings-test-data",
     "settings-danger-zone": "settings-danger-zone",
     "user-settings": "settings",
-    "type-goals": "goals",
-    "goals": "goals",
-    "type-media": "media",
-    "media": "media",
-    "type-knowledge": "knowledge",
-    "knowledge": "knowledge"
 }
 
 const HELP_PAGES: HelpPage[] = [

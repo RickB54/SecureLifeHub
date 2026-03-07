@@ -173,7 +173,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
 
         {/* Life Pulse Widget */}
         <div className="flex-1 space-y-4">
-          <div className={`rounded-3xl ${glassPanel} relative overflow-hidden group min-h-[160px] flex flex-col justify-center`}>
+          <div className={`rounded-3xl ${glassPanel} relative overflow-hidden group`}>
             <div className="absolute top-4 right-4 z-20">
               <button 
                 onClick={() => onOpenHelp?.("dashboard")}
@@ -184,35 +184,30 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-            <div className="flex items-center justify-start lg:justify-around overflow-x-auto overflow-y-hidden custom-scrollbar-hide gap-3 sm:gap-6 px-8 md:px-10 py-6 w-full snap-x snap-mandatory relative scroll-smooth" style={{ WebkitMaskImage: 'linear-gradient(to right, transparent, black 15%, black 85%, transparent)' }}>
+            <div className={`flex flex-wrap justify-center gap-2 px-6 py-4 w-full relative ${activePulses.length === 0 ? 'min-h-[80px] items-center' : ''}`}>
               {activePulses.length === 0 ? (
-                <div className="w-full text-center opacity-30 italic text-sm py-4">No analytics pinned. Click the settings icon to add.</div>
+                <div className="w-full text-center opacity-30 italic text-sm">No analytics pinned. Click the settings icon to add.</div>
               ) : (
-                activePulses.map((pulse, idx) => (
-                  <div key={pulse.id} className="flex items-center flex-shrink-0 snap-center transition-all duration-300">
-                    <div className="text-center z-10 px-4 group/item">
-                      {pulse.id === 'security' ? (
-                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto flex items-center justify-center transition-transform group-hover/item:scale-105">
-                          <svg className="w-full h-full transform -rotate-90">
-                            <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-gray-700/20" />
-                            <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="8" fill="transparent"
-                              strokeDasharray={`${2 * Math.PI * 36}`}
-                              strokeDashoffset={`${2 * Math.PI * 36 * (1 - (pulse.value || 0) / 100)}`}
-                              className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
-                          </svg>
-                          <Shield className="absolute h-6 w-6 sm:h-8 sm:w-8 opacity-80" />
-                        </div>
-                      ) : (
-                        <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto flex items-center justify-center bg-gray-500/10 rounded-full mb-2 transition-transform group-hover/item:scale-105">
-                          <pulse.icon className={`h-6 w-6 sm:h-8 sm:w-8 ${pulse.color}`} />
-                        </div>
-                      )}
-                      <p className="mt-1 sm:mt-2 font-bold text-[10px] sm:text-xs uppercase tracking-wider opacity-70 whitespace-nowrap">{pulse.label}</p>
-                      <p className={`text-[9px] sm:text-xs opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
-                    </div>
-                    {idx < activePulses.length - 1 && (
-                      <div className="h-10 w-px bg-white/5 mx-2 hidden lg:block"></div>
+                activePulses.map((pulse) => (
+                  <div key={pulse.id} className="flex flex-col items-center gap-1 px-3 py-2 rounded-2xl bg-white/5 min-w-[64px] hover:bg-white/10 transition-all group/item">
+                    {pulse.id === 'security' ? (
+                      <div className="relative w-10 h-10 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90">
+                          <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-700/20" />
+                          <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent"
+                            strokeDasharray={`${2 * Math.PI * 16}`}
+                            strokeDashoffset={`${2 * Math.PI * 16 * (1 - (pulse.value || 0) / 100)}`}
+                            className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
+                        </svg>
+                        <Shield className="absolute h-4 w-4 opacity-80" />
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 flex items-center justify-center bg-gray-500/10 rounded-full group-hover/item:scale-105 transition-transform">
+                        <pulse.icon className={`h-5 w-5 ${pulse.color}`} />
+                      </div>
                     )}
+                    <p className="text-[9px] font-bold uppercase tracking-wide opacity-60 whitespace-nowrap">{pulse.label}</p>
+                    <p className={`text-[9px] opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
                   </div>
                 ))
               )}

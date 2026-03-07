@@ -40,6 +40,7 @@ import SubDashboard from "@/components/sub-dashboard"
 import MediaVault from "@/components/media-vault"
 import VehicleDocs from "@/components/vehicle-docs"
 import MaintenanceLogs from "@/components/maintenance-logs"
+import Subscriptions from "@/components/subscriptions"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
 import SecureNotes from "@/components/secure-notes"
@@ -419,6 +420,11 @@ function HomeContent() {
         return <DigitalLife {...commonProps} />
       case "type-diary":
         return <Diary {...commonProps} />
+
+      // Subscriptions
+      case "type-subscriptions":
+        return <Subscriptions records={records} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} onOpenHelp={commonProps.onOpenHelp} />
+
 
       // Knowledge
       case "type-knowledge":

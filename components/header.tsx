@@ -103,11 +103,12 @@ export default function Header({
         <div className="flex items-center space-x-2 md:space-x-4">
           <button
             onClick={onOpenHelp}
-            className={`${theme === "light" ? "text-gray-800 hover:text-blue-500" : "text-white hover:text-blue-400"} transition-colors`}
+            className={`flex items-center gap-1.5 px-2 py-1.5 rounded-xl transition-all ${theme === "light" ? "text-gray-600 hover:bg-blue-50 hover:text-blue-600" : "text-gray-300 hover:bg-blue-500/10 hover:text-blue-400"}`}
             aria-label="Help"
             title="App Manual & Help"
           >
             <HelpCircle className="h-5 w-5" />
+            <span className="text-xs font-bold hidden sm:inline">Help</span>
           </button>
           <button
             onClick={() => onNavigate("settings")}
