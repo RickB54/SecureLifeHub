@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import {
   Plus,
   Lock,
@@ -162,6 +162,11 @@ export default function Passwords({
   // State for showing password in details panel
   const [showPasswordInDetails, setShowPasswordInDetails] = useState(false);
 
+  // A-Z Selector States
+  const [isDraggingAZ, setIsDraggingAZ] = useState(false);
+  const [activeAZLetter, setActiveAZLetter] = useState<string | null>(null);
+  const azSidebarRef = useRef<HTMLDivElement>(null);
+
   // Scroll to letter function
   const scrollToLetter = (letter: string) => {
     // Reveal list if hidden
@@ -176,44 +181,56 @@ export default function Passwords({
 
   const performScroll = (letter: string) => {
     const element = document.getElementById(`letter-group-${letter}`);
-
-    // Find the scrollable container - could be table container or grid container
-    let container: Element | null = null;
-
-    // Try to find the overflow container based on view mode
-    if (viewMode === 'list') {
-      // In list view, find the table's parent overflow container
-      container = element?.closest('.overflow-x-auto') || null;
-    } else if (viewMode === 'grid') {
-      // In grid view, find the grid's parent overflow container
-      container = element?.closest('.overflow-y-auto') || null;
-    }
-
-    // Fallback to main container if specific container not found
-    if (!container) {
-      container = document.querySelector('main');
-    }
+    
+    // Find containers
+    const listContainer = document.getElementById('vault-list-container');
+    const tableContainer = document.getElementById('vault-table-container');
+    const container = listContainer || tableContainer || document.querySelector('main');
 
     if (element && container) {
-      // Calculate position relative to the container
-      const elementRect = element.getBoundingClientRect();
+      // Reveal if hidden
+      if (!listVisible) setListVisible(true);
+
       const containerRect = container.getBoundingClientRect();
-      const offset = elementRect.top - containerRect.top;
-
-      // Current scroll position
-      const currentScroll = container.scrollTop;
-
-      // Target scroll position (minus header height ~160px to clear fixed header + search bar)
-      const targetScroll = currentScroll + offset - 160;
+      const elementRect = element.getBoundingClientRect();
+      const relativeTop = elementRect.top - containerRect.top + container.scrollTop;
+      
+      // Target scroll position (minus header offset)
+      const targetScroll = relativeTop - 10; 
 
       container.scrollTo({
         top: targetScroll,
-        behavior: 'smooth'
+        behavior: isDraggingAZ ? 'auto' : 'smooth'
       });
-    }
-  }
 
-  const alphabet = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      // Feedback
+      setActiveAZLetter(letter);
+      if (!isDraggingAZ) {
+        setTimeout(() => setActiveAZLetter(null), 1000);
+      }
+    } else if (letter === "#") {
+      // Jump to top for #
+      container?.scrollTo({ top: 0, behavior: isDraggingAZ ? 'auto' : 'smooth' });
+      setActiveAZLetter("#");
+      if (!isDraggingAZ) setTimeout(() => setActiveAZLetter(null), 1000);
+    }
+  };
+
+  const alphabet = ["#", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")];
+
+  // Handle slide gesture for A-Z
+  const handleAZMove = (clientY: number) => {
+    if (!azSidebarRef.current) return;
+    const rect = azSidebarRef.current.getBoundingClientRect();
+    const y = clientY - rect.top;
+    const percent = Math.max(0, Math.min(1, y / rect.height));
+    const index = Math.floor(percent * alphabet.length);
+    const letter = alphabet[Math.min(index, alphabet.length - 1)];
+    
+    if (letter !== activeAZLetter) {
+      performScroll(letter);
+    }
+  };
 
 
   // Toggle folder expansion
@@ -509,33 +526,23 @@ export default function Passwords({
   ]
 
   // Build folder structure
-  const topLevelFolders = folders.filter((folder) => !folder.parent_id)
+  const topLevelFolders = useMemo(() => folders.filter((folder) => !folder.parent_id), [folders]);
 
   // Determine if any non-default filter is active (Favorites, Archived, Recent, search)
-  const isFilterActive = favoriteFilter || archivedFilter || timeFilter === 'recent' || searchQuery.trim() !== ""
+  const isFilterActive = useMemo(() => 
+    favoriteFilter || archivedFilter || timeFilter === 'recent' || searchQuery.trim() !== ""
+  , [favoriteFilter, archivedFilter, timeFilter, searchQuery]);
 
   // Function to get direct subfolders of a folder
   const getSubfolders = (parentId: string) => {
     return folders.filter((folder) => folder.parent_id === parentId)
   }
 
-  // Function to get direct passwords in a folder (not in subfolders) from a specific set of items
-  const getDirectPasswordsInFolder = (folderId: string, items: any[] = passwords) => {
-    return items.filter((password) => password.folder_id === folderId)
-  }
-
-  // Add a function to filter passwords based on selected filters and folder
-  const getFilteredPasswords = (ignoreFolder = false) => {
-    let filtered = passwords
-
-    // Filter by folder - ONLY if not ignored
-    if (!ignoreFolder && selectedFolder) {
-      if (selectedFolder === "no-folder") {
-        filtered = filtered.filter((password) => !password.folder_id || password.folder_id === "")
-      } else {
-        filtered = filtered.filter((password) => password.folder_id === selectedFolder)
-      }
-    }
+  // --- MEMOIZED FILTERING & SORTING (CRITICAL FOR PERFORMANCE) ---
+  
+  // Base list of passwords filtered by everything EXCEPT folder
+  const allFilteredSortedPasswords = useMemo(() => {
+    let filtered = [...passwords];
 
     // Filter by type
     if (typeFilter !== "all") {
@@ -566,31 +573,19 @@ export default function Passwords({
         const itemDay = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate())
 
         switch (timeFilter) {
-          case "today":
-            return itemDay.getTime() === today.getTime()
-          case "yesterday":
-            return itemDay.getTime() === yesterday.getTime()
-          case "last7days":
-            return itemDate >= last7Days
-          case "last30days":
-            return itemDate >= last30Days
-          case "last3months":
-            return itemDate >= last3Months
-          case "last12months":
-            return itemDate >= last12Months
+          case "today": return itemDay.getTime() === today.getTime()
+          case "yesterday": return itemDay.getTime() === yesterday.getTime()
+          case "last7days": return itemDate >= last7Days
+          case "last30days": return itemDate >= last30Days
+          case "last3months": return itemDate >= last3Months
+          case "last12months": return itemDate >= last12Months
           case "on":
             if (!customDate) return true
-            const onDate = new Date(customDate)
-            const onDay = new Date(onDate.getFullYear(), onDate.getMonth(), onDate.getDate())
+            const onDay = new Date(new Date(customDate).getFullYear(), new Date(customDate).getMonth(), new Date(customDate).getDate())
             return itemDay.getTime() === onDay.getTime()
-          case "before":
-            if (!customDate) return true
-            return itemDate < new Date(customDate)
-          case "after":
-            if (!customDate) return true
-            return itemDate > new Date(customDate)
-          default:
-            return true
+          case "before": return customDate ? itemDate < new Date(customDate) : true
+          case "after": return customDate ? itemDate > new Date(customDate) : true
+          default: return true
         }
       })
     }
@@ -618,14 +613,14 @@ export default function Passwords({
       )
     }
 
-    // Sort by title (default)
+    // Sort by title (default) - Case-insensitive and natural sort
     filtered.sort((a, b) => {
-      const titleA = a.title || a.website || "Untitled";
-      const titleB = b.title || b.website || "Untitled";
-      return titleA.localeCompare(titleB);
+      const titleA = (a.title || a.website || "Untitled").toLowerCase();
+      const titleB = (b.title || b.website || "Untitled").toLowerCase();
+      return titleA.localeCompare(titleB, undefined, { sensitivity: 'base', numeric: true });
     });
 
-    // Special case for 'recent' - override sorting and limit to 10
+    // Recent sorting if 'recent' mode
     if (timeFilter === 'recent') {
       filtered.sort((a, b) => {
         const dateA = new Date(a.updatedAt || a.created_at).getTime();
@@ -635,7 +630,23 @@ export default function Passwords({
       return filtered.slice(0, 10);
     }
 
-    return filtered
+    return filtered;
+  }, [passwords, typeFilter, categoryFilter, timeFilter, favoriteFilter, archivedFilter, searchQuery, customDate]);
+
+  // Final filtered list including current folder selection
+  const filteredPasswords = useMemo(() => {
+    if (!selectedFolder) return allFilteredSortedPasswords;
+    
+    if (selectedFolder === "no-folder") {
+      return allFilteredSortedPasswords.filter((p) => !p.folder_id || p.folder_id === "");
+    }
+    
+    return allFilteredSortedPasswords.filter((p) => p.folder_id === selectedFolder);
+  }, [allFilteredSortedPasswords, selectedFolder]);
+
+  // Function to get direct passwords in a folder (for folder mode)
+  const getDirectPasswordsInFolder = (folderId: string, items: any[] = passwords) => {
+    return items.filter((password) => password.folder_id === folderId)
   }
 
   const renderPasswordCard = (password: any) => {
@@ -1049,9 +1060,9 @@ export default function Passwords({
 
   // Render table rows for passwords
   const renderPasswordRows = () => {
-    const filteredPasswords = getFilteredPasswords()
+    const filteredPasswordsList = filteredPasswords
 
-    if (filteredPasswords.length === 0) {
+    if (filteredPasswordsList.length === 0) {
       return (
         <tr>
           <td colSpan={6} className={`py-4 text-center ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
@@ -1061,14 +1072,15 @@ export default function Passwords({
       )
     }
 
-    return filteredPasswords.map((password, index) => {
+    return filteredPasswordsList.map((password, index) => {
       const title = password.title || password.website || "Untitled";
       const firstLetter = title.charAt(0).toUpperCase();
-      const prevTitle = index > 0 ? (filteredPasswords[index - 1].title || filteredPasswords[index - 1].website || "Untitled") : "";
+      const prevTitle = index > 0 ? (filteredPasswordsList[index - 1].title || filteredPasswordsList[index - 1].website || "Untitled") : "";
       const prevLetter = index > 0 ? prevTitle.charAt(0).toUpperCase() : null;
 
       const isFirstOfLetter = firstLetter !== prevLetter;
-      const anchorId = isFirstOfLetter ? `letter-group-${firstLetter}` : undefined;
+      const cleanLetter = /^[A-Z]$/.test(firstLetter) ? firstLetter : "#";
+      const anchorId = isFirstOfLetter ? `letter-group-${cleanLetter}` : undefined;
 
       const isFolder = password.type === 'folder';
 
@@ -1177,9 +1189,9 @@ export default function Passwords({
 
   // Render grid items for passwords
   const renderPasswordGrid = () => {
-    const filteredPasswords = getFilteredPasswords()
+    const filteredPasswordsList = filteredPasswords
 
-    if (filteredPasswords.length === 0) {
+    if (filteredPasswordsList.length === 0) {
       return (
         <div className={`col-span-full py-8 text-center ${theme === "light" ? "text-gray-500" : "text-gray-400"}`}>
           No passwords found. Try changing your filters or adding a new password.
@@ -1187,14 +1199,16 @@ export default function Passwords({
       )
     }
 
-    return filteredPasswords.map((password, index) => {
-      const firstLetter = (password.title || password.website || "Untitled").charAt(0).toUpperCase();
+    return filteredPasswordsList.map((password, index) => {
+      const title = password.title || password.website || "Untitled";
+      const firstLetter = title.charAt(0).toUpperCase();
       const prevLetter = index > 0
-        ? (filteredPasswords[index - 1].title || filteredPasswords[index - 1].website || "Untitled").charAt(0).toUpperCase()
+        ? (filteredPasswordsList[index - 1].title || filteredPasswordsList[index - 1].website || "Untitled").charAt(0).toUpperCase()
         : null;
 
       const isFirstOfLetter = firstLetter !== prevLetter;
-      const anchorId = isFirstOfLetter ? `letter-group-${firstLetter}` : "";
+      const cleanLetter = /^[A-Z]$/.test(firstLetter) ? firstLetter : "#";
+      const anchorId = isFirstOfLetter ? `letter-group-${cleanLetter}` : "";
 
       return (
         <div
@@ -1467,7 +1481,7 @@ export default function Passwords({
     const folderName = isNoFolder ? "No Folder" : (folder?.name || "Unknown Folder")
     const folderId = fId
 
-    const itemsForStructure = getFilteredPasswords(true)
+    const itemsForStructure = allFilteredSortedPasswords
     const directItems = isNoFolder
       ? itemsForStructure.filter((p) => !p.folder_id)
       : itemsForStructure.filter((p) => p.folder_id === folderId)
@@ -1938,7 +1952,7 @@ export default function Passwords({
   // Render folder view for passwords (Split Layout)
   const renderFolderView = () => {
     // Get filtered items ignoring folder selection (so we can distribute them into structure)
-    const itemsForStructure = getFilteredPasswords(true)
+    const itemsForStructure = allFilteredSortedPasswords
     const topLevelFolders = folders.filter((f: any) => !f.parent_id)
 
     return (
@@ -2021,21 +2035,72 @@ export default function Passwords({
 
   // Render A-Z Scrollbar Sidebar
   const renderAZSidebar = () => {
-    // Only show A-Z in List View (per user request to avoid clutter)
-    if (viewMode !== 'list') return null;
+    if (!forceListView || selectedRecord) return null;
+    // Don't show if list is short
+    if (allFilteredSortedPasswords.length < 20) return null;
 
     return (
-      <div className={`fixed right-2 top-1/2 transform -translate-y-1/2 z-50 flex flex-col gap-1 p-1 rounded-full ${theme === 'light' ? 'bg-gray-100/80' : 'bg-black/40'} backdrop-blur-sm shadow-sm max-h-[80vh] overflow-y-auto w-6 items-center`}>
-        {alphabet.map(letter => (
-          <button
-            key={letter}
-            onClick={() => scrollToLetter(letter)}
-            className={`text-[10px] w-4 h-4 flex items-center justify-center rounded-full hover:bg-blue-500 hover:text-white transition-colors ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}
-          >
-            {letter}
-          </button>
-        ))}
-      </div>
+      <>
+        {/* Alphabet Bar */}
+        <div 
+          ref={azSidebarRef}
+          className={`fixed right-0 top-24 bottom-6 z-[100] flex flex-col items-center justify-center w-10 select-none touch-none transition-all duration-300 ${isDraggingAZ ? 'bg-black/60 backdrop-blur-md' : 'bg-transparent'}`}
+          onMouseDown={(e) => {
+            setIsDraggingAZ(true);
+            handleAZMove(e.clientY);
+          }}
+          onMouseMove={(e) => {
+            if (isDraggingAZ) handleAZMove(e.clientY);
+          }}
+          onMouseUp={() => {
+            setIsDraggingAZ(false);
+            setActiveAZLetter(null);
+          }}
+          onMouseLeave={() => {
+            setIsDraggingAZ(false);
+            setActiveAZLetter(null);
+          }}
+          onTouchStart={(e) => {
+            setIsDraggingAZ(true);
+            handleAZMove(e.touches[0].clientY);
+          }}
+          onTouchMove={(e) => {
+            if (isDraggingAZ) handleAZMove(e.touches[0].clientY);
+          }}
+          onTouchEnd={() => {
+            setIsDraggingAZ(false);
+            setActiveAZLetter(null);
+          }}
+        >
+          <div className="flex flex-col h-full w-full py-4 items-center justify-between">
+            {alphabet.map(letter => (
+              <div
+                key={letter}
+                className={`text-[10px] font-black w-full flex items-center justify-center transition-all ${
+                  activeAZLetter === letter 
+                    ? 'text-blue-400 scale-150' 
+                    : theme === 'light' ? 'text-gray-400 opacity-90' : 'text-gray-200 opacity-60 hover:opacity-100 hover:text-white'
+                }`}
+              >
+                {letter}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Large Letter Popup Overlay */}
+        {activeAZLetter && (
+          <div className="fixed inset-0 pointer-events-none z-[200] flex items-center justify-center animate-in zoom-in-50 fade-in duration-150">
+            <div className={`w-36 h-36 rounded-3xl flex items-center justify-center text-7xl font-black shadow-2xl border ${
+              theme === 'light' 
+                ? 'bg-white/90 border-gray-200 text-blue-600' 
+                : 'bg-black/80 border-white/20 text-blue-400'
+            } backdrop-blur-xl`}>
+              {activeAZLetter}
+            </div>
+          </div>
+        )}
+      </>
     );
   };
 
@@ -2246,63 +2311,74 @@ export default function Passwords({
           <div className="flex-1 h-full flex flex-col gap-2">
             <div className={`flex items-center gap-2 px-1 py-1 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
               <ListIcon className="h-3.5 w-3.5" />
-              <span>{getFilteredPasswords().length} record{getFilteredPasswords().length !== 1 ? 's' : ''}</span>
+              <span>{filteredPasswords.length} record{filteredPasswords.length !== 1 ? 's' : ''}</span>
               {favoriteFilter && <span className="text-yellow-400">· Favorites</span>}
               {archivedFilter && <span className="text-green-400">· Archived</span>}
               {timeFilter === 'recent' && <span className="text-purple-400">· Recent</span>}
               {searchQuery && <span className="text-blue-400">· "{searchQuery}"</span>}
             </div>
-            <div className={`flex-1 rounded-2xl border overflow-y-auto custom-scrollbar ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
-              {getFilteredPasswords().length === 0 ? (
+            <div id="vault-list-container" className={`flex-1 rounded-2xl border overflow-y-auto custom-scrollbar relative pr-6 ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'}`}>
+              {filteredPasswords.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center p-12 text-center opacity-40">
                   <Search className="h-10 w-10 mb-3" />
                   <p className="font-bold text-sm">No results found</p>
                   <p className="text-xs mt-1">Try adjusting your filter or search</p>
                 </div>
               ) : (
-                <div className="divide-y divide-white/5">
-                  {getFilteredPasswords().map((pw) => (
-                    <div
-                      key={pw.id}
-                      className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
-                      onClick={() => handleEditPassword(pw.id)}
-                    >
-                      <div className="flex-shrink-0">
-                        {pw.website ? (
-                          <div className="p-2 bg-blue-500/10 rounded-lg">
-                            <ExternalLink className="h-4 w-4 text-blue-400" />
-                          </div>
-                        ) : (
-                          <div className="p-2 bg-purple-500/10 rounded-lg">
-                            <Lock className="h-4 w-4 text-purple-400" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-                          <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
+                <div id="vault-table-container" className="divide-y divide-white/5">
+                  {filteredPasswords.map((pw, index) => {
+                    const title = pw.title || pw.website || "Untitled";
+                    const firstLetter = title.charAt(0).toUpperCase();
+                    const prevTitle = index > 0 ? (filteredPasswords[index - 1].title || filteredPasswords[index - 1].website || "Untitled") : "";
+                    const prevLetter = index > 0 ? prevTitle.charAt(0).toUpperCase() : null;
+                    const isFirstOfLetter = firstLetter !== prevLetter;
+                    const cleanLetter = /^[A-Z]$/.test(firstLetter) ? firstLetter : "#";
+                    const anchorId = isFirstOfLetter ? `letter-group-${cleanLetter}` : undefined;
+
+                    return (
+                      <div
+                        key={pw.id}
+                        id={anchorId}
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
+                        onClick={() => handleEditPassword(pw.id)}
+                      >
+                        <div className="flex-shrink-0">
+                          {pw.website ? (
+                            <div className="p-2 bg-blue-500/10 rounded-lg">
+                              <ExternalLink className="h-4 w-4 text-blue-400" />
+                            </div>
+                          ) : (
+                            <div className="p-2 bg-purple-500/10 rounded-lg">
+                              <Lock className="h-4 w-4 text-purple-400" />
+                            </div>
+                          )}
                         </div>
-                        {pw.website && (
-                          <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
-                        )}
-                        {pw.username && (
-                          <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
-                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
+                            <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
+                          </div>
+                          {pw.website && (
+                            <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
+                          )}
+                          {pw.username && (
+                            <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            className={`p-1.5 rounded-md transition-colors ${
+                              pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
+                            }`}
+                            onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
+                            title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                          >
+                            <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          className={`p-1.5 rounded-md transition-colors ${
-                            pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
-                          }`}
-                          onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
-                          title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                        >
-                          <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -2391,7 +2467,7 @@ export default function Passwords({
                        </div>
                      )}
 
-                     {renderFolderStructure(folders.filter((f: any) => !f.parent_id), getFilteredPasswords(true))}
+                     {renderFolderStructure(folders.filter((f: any) => !f.parent_id), allFilteredSortedPasswords)}
                    </div>
                 ) : (
                   <div className="space-y-2">
@@ -2424,7 +2500,7 @@ export default function Passwords({
                             {renderPasswordRows()}
                           </tbody>
                         </table>
-                        {getFilteredPasswords().length === 0 && (
+                        {filteredPasswords.length === 0 && (
                           <div className="h-full flex flex-col items-center justify-center p-20 text-center opacity-50">
                             <Search className="h-12 w-12 mb-4" />
                             <p className="font-bold">No records matched your search</p>
