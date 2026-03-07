@@ -51,7 +51,7 @@ export default function Logo({ className = "", showText = false, size = "md", on
 
             {!imgError && (
                 <img
-                    src="/securelifehub-logo.png"
+                    src="/icon.png"
                     alt="Secure Life Hub"
                     className="w-full h-full object-cover z-10"
                     onError={() => setImgError(true)}
