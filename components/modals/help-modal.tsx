@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -13,7 +13,8 @@ interface HelpPage {
 
 // Map page IDs to help indices or IDs
 export const HELP_MAP: Record<string, string> = {
-    "dashboard": "pulse",
+    "dashboard": "intro",
+    "pulse-personalizer": "pulse-personalizer",
     "all-items": "passwords",
     "type-payment-cards": "finance",
     "type-secure-notes": "passwords",
@@ -44,6 +45,14 @@ export const HELP_MAP: Record<string, string> = {
     "type-subscriptions": "social",
     "type-travel": "mobility",
     "settings": "settings",
+    "settings-account": "settings-account",
+    "settings-security": "settings-security",
+    "settings-automation": "settings-automation",
+    "settings-appearance": "settings-appearance",
+    "settings-recents": "settings-recents",
+    "settings-access": "settings-access",
+    "settings-test-data": "settings-test-data",
+    "settings-danger-zone": "settings-danger-zone",
     "user-settings": "settings",
     "type-goals": "goals",
     "goals": "goals",
@@ -77,6 +86,39 @@ const HELP_PAGES: HelpPage[] = [
         )
     },
     {
+        id: "pulse-personalizer",
+        title: "Personalize Your Pulse",
+        icon: Target,
+        content: (
+            <div className="space-y-6">
+                <p className="text-lg text-gray-300 leading-relaxed">
+                    The Pulse Personalizer allows you to choose exactly which metrics and analytics you want to see at a glance on your dashboard.
+                </p>
+                <div className="space-y-4">
+                    <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
+                        <h4 className="font-bold text-blue-400 mb-2 flex items-center gap-2">How it Works</h4>
+                        <p className="text-sm text-gray-400">
+                            Click on any category (Security, Finance, Health, etc.) to see available pulses. Toggle them on or off to pin or unpin them from your dashboard "Life Pulse" bar.
+                        </p>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/10">
+                        <h4 className="font-bold text-purple-400 mb-2 flex items-center gap-2">Available Pulses</h4>
+                        <ul className="text-xs text-gray-400 space-y-2 list-disc pl-4">
+                            <li><strong>Security Score:</strong> Live health of your password vault.</li>
+                            <li><strong>Net Worth:</strong> Total value of all assets tracked in the Assets hub.</li>
+                            <li><strong>Health Vitals:</strong> Quick look at your latest biological measurements.</li>
+                            <li><strong>Subscription Burn:</strong> Monthly recurring costs for digital services.</li>
+                            <li><strong>Travel Hub:</strong> Quick access to your next itineraries and plans.</li>
+                        </ul>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 text-xs text-gray-400 italic">
+                        Note: Your preferences are saved locally to this device.
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
         id: "pulse",
         title: "Life Pulse Analytics",
         icon: Activity,
@@ -92,16 +134,16 @@ const HELP_PAGES: HelpPage[] = [
                         <h5 className="text-emerald-400 font-black text-xs uppercase mb-2">Net Worth Tracker</h5>
                         <p className="text-[10px] text-gray-500">Calculates the total value of your assets (Homes, Vehicles, Collections). Useful for tracking overall financial growth.</p>
                     </div>
-                    <div className="p-4 bg-red-400 font-black text-xs uppercase mb-2">Active Health Vitals</div>
                     <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                        <h5 className="text-red-400 font-black text-xs uppercase mb-2">Active Health Vitals</h5>
                         <p className="text-[10px] text-gray-500">Summary of recent vitals (BP/Weight) and medication compliance. Warns you if a required dose has been missed.</p>
                     </div>
-                    <div className="p-4 bg-indigo-400 font-black text-xs uppercase mb-2">Subscription Burn</div>
                     <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                        <h5 className="text-indigo-400 font-black text-xs uppercase mb-2">Subscription Burn</h5>
                         <p className="text-[10px] text-gray-500">Monitors your monthly expenditures on digital services. Helps you see where your "digital leaks" are coming from.</p>
                     </div>
-                    <div className="p-4 bg-amber-400 font-black text-xs uppercase mb-2">Goal Trajectory</div>
                     <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                        <h5 className="text-amber-400 font-black text-xs uppercase mb-2">Goal Trajectory</h5>
                         <p className="text-[10px] text-gray-500">A progress indicator for your most important life targets. Shows percentage of sub-tasks completed.</p>
                     </div>
                 </div>
@@ -375,103 +417,196 @@ const HELP_PAGES: HelpPage[] = [
     },
     {
         id: "settings",
-        title: "Settings Configuration",
+        title: "Global Settings Overview",
         icon: Settings,
         content: (
             <div className="space-y-6">
-                <p className="text-gray-300">Control your experience and manage vault-wide security protocols. Below are the key modules you can configure:</p>
-                
-                <div className="space-y-6">
-                    <div className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                        <h5 className="text-blue-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Shield className="h-4 w-4" /> Security & Access
-                        </h5>
-                        <div className="space-y-4">
-                            <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                                <span className="text-white font-bold text-sm block mb-1">Two-Factor Authentication (2FA)</span>
-                                <p className="text-xs text-gray-400 leading-relaxed">Adds a critical second layer of protection. When logging in from an unrecognized device, you will be required to verify your identity via a secure code sent to your registered Email or SMS. This ensures that even if your password is stolen, your vault remains locked.</p>
-                            </div>
-                            <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                                <span className="text-white font-bold text-sm block mb-1">Startup Configuration</span>
-                                <p className="text-xs text-gray-400 leading-relaxed">Personalize your entry point. Instead of landing on the dashboard every time, you can set the Hub to immediately open your <span className="text-blue-300">Medications</span>, <span className="text-purple-300">Vault</span>, or <span className="text-emerald-300">Financial Cards</span> upon successful sign-in.</p>
-                            </div>
-                            <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                                <span className="text-white font-bold text-sm block mb-1">Auto-Fill Integration</span>
-                                <p className="text-xs text-gray-400 leading-relaxed">Enable seamless logins across the web. This setting bridges your vault with the Secure Life Hub browser extension, allowing you to instantly inject credentials into login forms without leaving your current tab.</p>
-                            </div>
-                        </div>
+                <p className="text-gray-300">Take full control of your vault's security, automation, and appearance. These settings are local to this device and browser unless synced via your account provider. Use the specific help icons within each section for deeper explanations.</p>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-black/20 rounded-xl border border-white/5 text-[10px] text-gray-500">
+                        <strong className="text-white block mb-1 uppercase tracking-tighter tracking-widest">Account & Identity</strong>
+                        Manage your profile and linked providers (Google/Email).
                     </div>
-
-                    <div className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                        <h5 className="text-orange-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Database className="h-4 w-4" /> Data Management
-                        </h5>
-                        <div className="space-y-4">
-                            <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                                <span className="text-white font-bold text-sm block mb-1">Backup & Recovery (JSON Export)</span>
-                                <p className="text-xs text-gray-400 leading-relaxed">You own your data. Download a complete, encrypted JSON archive of your entire hub at any time. This file can be used to restore your data on a new instance or kept as an offline safety copy.</p>
-                            </div>
-                            <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                                <span className="text-white font-bold text-sm block mb-1">Module Access & PINs</span>
-                                <p className="text-xs text-gray-400 leading-relaxed">Create "Vaults within Vaults." Set secondary PIN codes for specific modules like Medical Hub, Social Diary, or Business Assets. This prevents someone who has access to your unlocked phone from viewing your most sensitive files.</p>
-                            </div>
-                            <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                                <span className="text-white font-bold text-sm block mb-1">Reset Recent Items</span>
-                                <p className="text-xs text-gray-400 leading-relaxed">Privacy maintenance. This tool wipes your "Recently Visited" history from the dashboard sidebar. It does <span className="text-orange-400">not</span> delete any records; it simply resets the navigation shortcuts to maintain your privacy from shoulder-surfers.</p>
-                            </div>
-                        </div>
+                    <div className="p-3 bg-black/20 rounded-xl border border-white/5 text-[10px] text-gray-500">
+                        <strong className="text-white block mb-1 uppercase tracking-tighter tracking-widest">Security Protocols</strong>
+                        2FA, Biometrics, and Master Password management.
                     </div>
-
-                    <div className="p-6 bg-white/5 border border-white/5 rounded-3xl">
-                        <h5 className="text-purple-400 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <Activity className="h-4 w-4" /> Test Data Utilities
-                        </h5>
-                        <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                            <span className="text-white font-bold text-sm block mb-2 font-mono">Demo Data Injection</span>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="text-[10px] text-gray-500 bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <strong className="text-gray-300 block mb-1 italic">Medical Demo</strong>
-                                    Injects mock prescriptions, vitals, and hospital visits.
-                                </div>
-                                <div className="text-[10px] text-gray-500 bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <strong className="text-gray-300 block mb-1 italic">Vault Demo</strong>
-                                    Generates example logins, secure notes, and API keys.
-                                </div>
-                                <div className="text-[10px] text-gray-500 bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <strong className="text-gray-300 block mb-1 italic">Finance Demo</strong>
-                                    Populates sample credit cards and asset inventories.
-                                </div>
-                                <div className="text-[10px] text-gray-500 bg-white/5 p-2 rounded-lg border border-white/5">
-                                    <strong className="text-gray-300 block mb-1 italic">Social Demo</strong>
-                                    Adds sample diary entries and social profiles.
-                                </div>
-                            </div>
-                            <p className="text-[9px] text-blue-400/60 mt-3 font-bold uppercase tracking-tighter">* Useful for exploring layout possibilities before adding your real data.</p>
-                        </div>
+                </div>
+                <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-2xl text-[11px] text-gray-400 italic">
+                    Tip: Most settings are saved automatically. Look for the "Saved" toast notification at the bottom of your screen.
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-account",
+        title: "Account & Identity",
+        icon: User,
+        content: (
+            <div className="space-y-4">
+                <p className="text-gray-300 italic">Your digital footprint within the Secure Life Hub ecosystem.</p>
+                <div className="space-y-4">
+                    <div className="p-5 bg-blue-500/5 border border-blue-500/10 rounded-2xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-2 flex items-center gap-2"><Globe className="h-4 w-4" /> Provider Transparency</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            We support both Google OAuth and traditional Email/Password logins. Your provider is shown here to help you identify which credentials you need for the Chrome Extension.
+                        </p>
                     </div>
-
-                    <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-3xl group">
-                        <h5 className="text-red-500 font-black text-xs uppercase tracking-widest mb-4 flex items-center gap-2 group-hover:animate-pulse">
-                            <AlertCircle className="h-4 w-4" /> The Danger Zone
-                        </h5>
-                        <div className="space-y-3">
-                            <p className="text-xs text-gray-400">Irreversible actions that modify the fundamental state of your hub. <span className="text-red-400 font-bold underline">Proceed with extreme caution.</span></p>
-                            <ul className="space-y-2">
-                                <li className="text-[10px] flex gap-2">
-                                    <span className="text-red-500 font-bold">WIPE SECTIONS:</span> 
-                                    <span className="text-gray-500">Mass-delete every record in a specific hub (e.g. Delete all 400 passwords at once).</span>
-                                </li>
-                                <li className="text-[10px] flex gap-2">
-                                    <span className="text-red-500 font-bold">MASTER RESET:</span> 
-                                    <span className="text-gray-500">Removes all local biometrics, custom themes, and cached settings without deleting vault data.</span>
-                                </li>
-                                <li className="text-[10px] flex gap-2">
-                                    <span className="text-red-500 font-bold">FACTORY RESET:</span> 
-                                    <span className="text-gray-500 font-black uppercase italic">Permanent destruction.</span> 
-                                    <span className="text-gray-500">Wipes your entire account, all encrypted records, and all backups from our servers.</span>
-                                </li>
-                            </ul>
-                        </div>
+                    <div className="p-5 bg-white/5 border border-white/5 rounded-2xl">
+                        <h5 className="font-bold text-white text-sm mb-2">Security Note</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Logging in via Google uses their secure authentication flow. We never receive your Google password; we only receive a secure token to verify your identity.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-security",
+        title: "Security Protocols",
+        icon: Shield,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300">The core mechanisms protecting your encrypted vault.</p>
+                <div className="space-y-4">
+                    <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl">
+                        <h5 className="font-bold text-purple-400 text-sm mb-1">Two-Factor Auth (2FA)</h5>
+                        <p className="text-xs text-gray-400">The most important defense. Even if someone steals your Master Password, they cannot enter without your secondary physical device or app code. We use standard TOTP/Email 2FA for maximum compatibility.</p>
+                    </div>
+                    <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-1">Biometric Login / Passkeys</h5>
+                        <p className="text-xs text-gray-400">Unlock your vault instantly using your Fingerprint or FaceID. This registers a unique cryptographic "Passkey" on this hardware. Note: You must re-enable this on every new device you use.</p>
+                    </div>
+                    <div className="p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+                        <h5 className="font-bold text-amber-400 text-sm mb-1">Remember Master Password</h5>
+                        <p className="text-[10px] text-gray-500 italic mb-2">⚠️ CAUTION: Only for trusted personal computers.</p>
+                        <p className="text-xs text-gray-400 leading-relaxed">Saves your master secret in your browser's local storage so you don't have to type it every time. <span className="text-amber-300">Never enable this on shared or public computers.</span></p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-automation",
+        title: "Automation & Access",
+        icon: Clock,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300">Streamline your workflow without sacrificing security.</p>
+                <div className="space-y-4">
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-2 flex items-center gap-2"><Clock className="h-4 w-4" /> Auto-Lock Timer</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Sets the "idle timeout." After this period of inactivity, the hub will automatically purge your session and lock the vault. For maximum security, use <span className="text-white">5-10 minutes</span>.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                        <h5 className="font-bold text-purple-400 text-sm mb-2">Startup Configuration</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Choose your landing page. If you primarily use the hub for health tracking, set your startup page to <span className="text-white">Health records</span> to skip the dashboard on login.</p>
+                    </div>
+                    <div className="p-4 bg-white/10 border border-white/5 rounded-2xl">
+                        <h5 className="font-bold text-emerald-400 text-sm mb-2 flex items-center gap-2"><Globe className="h-4 w-4" /> Browser Auto-Fill</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Allows the Secure Life Hub extension to talk to this vault. When enabled, your passwords can be injected directly into login forms on other websites.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-appearance",
+        title: "Interface & Appearance",
+        icon: Sun,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300 italic">"Security should be beautiful." Customize your visual experience.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 bg-blue-500/5 border border-white/5 rounded-xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-1 uppercase tracking-tighter">Theme Modes</h5>
+                        <p className="text-[10px] text-gray-500">Toggle between Dark and Light mode. Our Dark theme reduces eye strain and implements glassmorphism for a premium feel.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-recents",
+        title: "Recent Activity History",
+        icon: RotateCcw,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300 leading-relaxed">Manage your navigation footprint. The "Recents" list tracks your latest changes and page visits for quick jumping.</p>
+                <div className="space-y-4">
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                        <h5 className="font-bold text-emerald-400 text-sm mb-2 flex items-center gap-2"><Trash className="h-4 w-4" /> Individual Deletion</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">You can now remove single items from your recently visited list in Settings without clearing your entire history. This is ideal for hiding specific records you just edited from shoulder-surfers.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-2">Reset All History</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">The <span className="text-blue-200">Reset</span> button wipes your entire recent history by setting a new "Cutoff Date." Old activity is hidden, while new activity starting <span className="italic">now</span> will begin to populate normally.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-access",
+        title: "Module Access Controls",
+        icon: Lock,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300">Create "Vaults within Vaults" for granular privacy.</p>
+                <div className="space-y-4">
+                    <div className="p-5 bg-emerald-500/5 border border-emerald-500/10 rounded-3xl">
+                        <h5 className="font-black text-emerald-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><Key className="h-4 w-4" /> PIN Protection</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Some modules (like your Diary or Health Records) are more sensitive than others. You can lock these with an independent 4-digit PIN. 
+                            <br /><br />
+                            Even if your computer is unlocked and the main vault is open, these specific modules will remain shielded until the correct PIN is entered.
+                        </p>
+                    </div>
+                    <div className="p-4 border border-white/5 bg-black/20 rounded-xl text-[10px] text-gray-500 italic">
+                        Note: For your privacy, these PINs are stored in your browser's encrypted local storage. They are device-specific.
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-test-data",
+        title: "Test Data Utilities",
+        icon: Database,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300 leading-relaxed">Perfect for exploring the possibilities of Secure Life Hub without having to manually input your data at the start.</p>
+                <div className="p-6 bg-purple-500/5 border border-purple-500/10 rounded-3xl">
+                    <h5 className="font-bold text-purple-400 text-sm mb-3">Live Injection</h5>
+                    <p className="text-xs text-gray-400 leading-relaxed">Using these tools will add sample records to your vault. These look and act exactly like real data, allowing you to see how different hubs interact, how graphs trend, and how categories organize themselves.</p>
+                    <p className="text-[10px] text-orange-400 font-bold mt-3 uppercase tracking-widest">Cleanup is easy:</p>
+                    <p className="text-[10px] text-gray-500 italic">You can delete individual demo items later, or use the "Danger Zone" mass-wipe tools to clear a whole category at once.</p>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-danger-zone",
+        title: "The Danger Zone",
+        icon: AlertCircle,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300 leading-relaxed font-bold bg-red-500/10 p-3 rounded-lg border border-red-500/20 text-red-500">
+                    Irreversible Actions. We cannot recover data deleted using these tools.
+                </p>
+                <div className="space-y-4">
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                        <h5 className="font-bold text-red-400 text-sm mb-2">Individual Page Wipe</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Choose a specific module (like <span className="text-white">Vehicles</span> or <span className="text-white">Passwords</span>) and delete all items within it in one click. Other sections remain untouched.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                        <h5 className="font-bold text-red-400 text-sm mb-2">Master Reset</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Removes local customizations like PINs, biometrics, and themes without deleting your encrypted vault records.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                        <h5 className="font-bold text-red-400 text-sm mb-2">Nuclear Wipe</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">The absolute last resort. This deletes EVERY record across your entire vault, including folders, passwords, and medical data. This resets your account to a baseline, factory-fresh state.</p>
                     </div>
                 </div>
             </div>

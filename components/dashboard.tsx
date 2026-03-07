@@ -110,16 +110,18 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   }, [])
 
   const handleClearActivity = () => {
-    const now = Date.now()
-    setClearedAt(now)
-    localStorage.setItem('dashboard_activity_cleared_at', now.toString())
+    if (window.confirm("Are you sure you want to clear your recent activity history? This will only remove the shortcuts from this dashboard view.")) {
+      const now = Date.now()
+      setClearedAt(now)
+      localStorage.setItem('dashboard_activity_cleared_at', now.toString())
+    }
   }
 
   // Recent Activity
   const recentItems = [...records]
     .filter((item: any) => new Date(item.updatedAt || 0).getTime() > clearedAt)
     .sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
-    .slice(0, 5)
+    .slice(0, 25)
 
   // Styles
   const glassPanel = theme === 'light'
@@ -230,7 +232,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                           Personalize Your Pulse
                           <HelpCircle 
                             className="h-3 w-3 text-blue-500/40 hover:text-blue-400 cursor-help" 
-                            onClick={(e) => { e.stopPropagation(); onOpenHelp?.("dashboard"); }}
+                            onClick={(e) => { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); }}
                           />
                         </h3>
                         <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
@@ -321,28 +323,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
         </div>
       </div>
 
-      {/* Biometric Enrollment Prompt (Smart Alert) */}
-      {typeof window !== 'undefined' && !localStorage.getItem('biometric_id') && (
-        <div className={`p-5 rounded-3xl border animate-in slide-in-from-top-4 duration-500 overflow-hidden relative group ${theme === 'light' ? 'bg-blue-50 border-blue-200' : 'bg-blue-500/10 border-blue-500/20'
-          }`}>
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="p-3 bg-blue-500 rounded-2xl shadow-lg shadow-blue-500/30">
-              <Key className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-lg leading-tight uppercase tracking-tighter">Fast Login with Biometrics</h3>
-              <p className="text-sm opacity-70">Unlock instantly with Fingerprint/FaceID. <span className="text-blue-400 font-bold">(Choose "This Device" when asked)</span></p>
-            </div>
-            <button
-              onClick={() => setActivePage('settings')}
-              className="px-6 py-3 bg-white text-blue-600 font-bold rounded-xl shadow-xl hover:scale-105 transition-all text-sm whitespace-nowrap"
-            >
-              Enable Now
-            </button>
-          </div>
-        </div>
-      )}
+
 
       <div className="flex items-center gap-3 pl-1">
         <h2 className="text-xl font-bold opacity-80">Your Hubs</h2>
@@ -497,8 +478,15 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                   <div className="text-left">
                     <h2 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
                       Recent Activity
-                      <span onClick={(e) => { e.stopPropagation(); onOpenHelp?.("dashboard"); }} className="p-1 hover:bg-white/5 rounded-full text-gray-400 hover:text-blue-400 cursor-pointer">
-                        <HelpCircle className="h-3 w-3" />
+                      <span 
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => { e.stopPropagation(); onOpenHelp?.("settings-recents"); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onOpenHelp?.("settings-recents"); }}}
+                        className="p-1 px-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-blue-400 transition-all flex items-center gap-1 cursor-pointer"
+                      >
+                        <HelpCircle className="h-3.5 w-3.5" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">Help</span>
                       </span>
                     </h2>
                     <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-tight">{recentItems.length} Changes Captured</p>
@@ -608,7 +596,7 @@ function ModuleCard({ title, description, icon, colorClass, buttonColorClass, on
           </div>
           <button 
             onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-600 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
+            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-600 hover:text-blue-400 transition-all opacity-100"
           >
             <HelpCircle className="h-4 w-4" />
           </button>

@@ -2209,7 +2209,7 @@ export default function Passwords({
                       {[
                         { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                         { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
-                        { name: 'Recent', icon: RotateCcw, count: Math.min(10, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
+                        { name: 'Recent', icon: RotateCcw, count: Math.min(25, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
                         { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                       ].map((cat) => (
                         <button
@@ -2412,7 +2412,7 @@ export default function Passwords({
                         {[
                           { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                           { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
-                          { name: 'Recent', icon: RotateCcw, count: Math.min(10, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
+                          { name: 'Recent', icon: RotateCcw, count: Math.min(25, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
                           { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                         ].map((cat) => (
                           <button 

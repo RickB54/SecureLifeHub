@@ -336,7 +336,7 @@ export default function Settings({
     e.target.value = "" // Reset the file input
   }
 
-  const SettingsCard = ({ title, icon: Icon, children, color = "blue", className = "" }: any) => (
+  const SettingsCard = ({ title, icon: Icon, children, color = "blue", className = "", helpId }: any) => (
     <div className={`p-6 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200 shadow-xl shadow-gray-200/50" : "bg-[#1a1a1a] border-white/5"} ${className}`}>
       <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none`}>
         <Icon className="h-32 w-32" />
@@ -349,8 +349,8 @@ export default function Settings({
           <h3 className="text-xl font-bold">{title}</h3>
           <button 
             type="button"
-            onClick={() => onOpenHelp?.("settings")}
-            className="ml-auto p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-white transition-all focus:outline-none"
+            onClick={() => onOpenHelp?.(helpId || "settings")}
+            className="ml-auto p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-white transition-all focus:outline-none opacity-100"
             title={`Explain ${title}`}
           >
             <HelpCircle className="h-4 w-4" />
@@ -384,7 +384,7 @@ export default function Settings({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Account Section */}
-        <SettingsCard title="Account" icon={User} color="blue">
+        <SettingsCard title="Account" icon={User} color="blue" helpId="settings-account">
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
               <div className="flex items-center gap-4">
@@ -412,7 +412,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Security Section */}
-        <SettingsCard title="Security" icon={Shield} color="purple">
+        <SettingsCard title="Security" icon={Shield} color="purple" helpId="settings-security">
           <div className="space-y-6">
             {/* Master Password */}
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
@@ -443,7 +443,7 @@ export default function Settings({
               <div>
                 <div className="flex items-center gap-2">
                   <div className="font-bold">Two-Factor Auth</div>
-                  <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-purple-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                  <button type="button" onClick={() => onOpenHelp?.("settings-security")} className="text-purple-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </div>
@@ -481,7 +481,7 @@ export default function Settings({
                 <div>
                   <div className="flex items-center gap-2">
                     <div className="font-bold">Remember Master Password</div>
-                    <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-amber-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                    <button type="button" onClick={() => onOpenHelp?.("settings-security")} className="text-amber-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
                       <HelpCircle className="h-4 w-4" />
                     </button>
                   </div>
@@ -514,7 +514,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Automation Section */}
-        <SettingsCard title="Automation" icon={Clock} color="blue">
+        <SettingsCard title="Automation" icon={Clock} color="blue" helpId="settings-automation">
           <div className="space-y-6">
             {/* Auto-Lock */}
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
@@ -546,7 +546,7 @@ export default function Settings({
                 <div>
                   <div className="flex items-center gap-2">
                     <h4 className="font-black text-sm uppercase tracking-widest">Startup View Configuration</h4>
-                    <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                    <button type="button" onClick={() => onOpenHelp?.("settings-automation")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
                       <HelpCircle className="h-3 w-3" />
                     </button>
                   </div>
@@ -651,7 +651,7 @@ export default function Settings({
               <div>
                 <div className="flex items-center gap-2">
                   <div className="font-bold">Auto-Fill</div>
-                  <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                  <button type="button" onClick={() => onOpenHelp?.("settings-automation")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
                     <HelpCircle className="h-3 w-3" />
                   </button>
                 </div>
@@ -705,7 +705,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Appearance Section */}
-        <SettingsCard title="Appearance" icon={Sun} color="amber">
+        <SettingsCard title="Appearance" icon={Sun} color="amber" helpId="settings-appearance">
           <div className="space-y-6">
             <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
               <div>
@@ -724,37 +724,104 @@ export default function Settings({
             
             <div className={`h-px w-full ${currentTheme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`} />
 
-            {/* Recents Reset */}
-            <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="font-bold">Reset Recent Items</div>
-                  <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
-                    <HelpCircle className="h-3 w-3" />
-                  </button>
+            {/* Recents Management */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold">Recent History Management</div>
+                  </div>
+                  <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">Manage individual items in your activity feed</div>
                 </div>
-                <div className="text-xs text-blue-400 font-medium">Reset 'Recents' folder history to start fresh from now</div>
               </div>
-              <button 
-                onClick={() => {
-                  if (confirm("Reset recent items history? New items from this point forward will show in Recents.")) {
-                    localStorage.setItem('hub_recents_reset_date', new Date().toISOString());
-                    toast.success("Recents history reset");
-                  }
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${currentTheme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
-              >
-                <RotateCcw className="h-4 w-4" /> Reset
-              </button>
+
+              <div className={`max-h-60 overflow-y-auto pr-2 custom-scrollbar space-y-2 rounded-2xl p-2 ${currentTheme === 'light' ? 'bg-gray-50' : 'bg-black/40 border border-white/5'}`}>
+                {records
+                  .filter(r => {
+                      if (!r.updatedAt && !r.updated_at) return false;
+                      const resetDate = localStorage.getItem('hub_recents_reset_date');
+                      const updateDate = new Date(r.updatedAt || r.updated_at);
+                      if (resetDate && updateDate < new Date(resetDate)) return false;
+                      
+                      const hiddenIds = JSON.parse(localStorage.getItem('hub_hidden_recent_ids') || '[]');
+                      if (hiddenIds.includes(r.id)) return false;
+                      
+                      return true;
+                  })
+                  .sort((a,b) => new Date(b.updatedAt || b.updated_at).getTime() - new Date(a.updatedAt || a.updated_at).getTime())
+                  .slice(0, 15)
+                  .map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all group">
+                       <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-1.5 rounded-lg bg-black/20 text-gray-500">
+                             <RotateCcw className="h-3 w-3" />
+                          </div>
+                          <div className="truncate">
+                             <div className="text-xs font-bold text-gray-200 truncate">{item.title || item.name || "Untitled"}</div>
+                             <div className="text-[9px] text-gray-500 uppercase tracking-tighter">{item.category || "General"}</div>
+                          </div>
+                       </div>
+                       <button 
+                         onClick={() => {
+                            const hiddenIds = JSON.parse(localStorage.getItem('hub_hidden_recent_ids') || '[]');
+                            localStorage.setItem('hub_hidden_recent_ids', JSON.stringify([...hiddenIds, item.id]));
+                            window.dispatchEvent(new Event('storage'));
+                            toast.success("Item removed from recents");
+                         }}
+                         className="p-2 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                         title="Remove from recents"
+                       >
+                         <Trash className="h-3.5 w-3.5" />
+                       </button>
+                    </div>
+                  ))
+                }
+                {[...records].filter(r => {
+                    if (!r.updatedAt && !r.updated_at) return false;
+                    const resetDate = localStorage.getItem('hub_recents_reset_date');
+                    const updateDate = new Date(r.updatedAt || r.updated_at);
+                    if (resetDate && updateDate < new Date(resetDate)) return false;
+                    const hiddenIds = JSON.parse(localStorage.getItem('hub_hidden_recent_ids') || '[]');
+                    return !hiddenIds.includes(r.id);
+                }).length === 0 && (
+                  <div className="text-center py-8">
+                     <p className="text-[10px] text-gray-500 font-bold uppercase">No recent activity to manage</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold">Reset Recent Items</div>
+                    <button type="button" onClick={() => onOpenHelp?.("settings-recents")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="text-xs text-blue-400 font-medium">Reset 'Recents' folder history to start fresh from now</div>
+                </div>
+                <button 
+                  onClick={() => {
+                    if (confirm("Reset recent items history? New items from this point forward will show in Recents.")) {
+                      localStorage.setItem('hub_recents_reset_date', new Date().toISOString());
+                      localStorage.removeItem('hub_hidden_recent_ids');
+                      toast.success("Recents history reset");
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all ${currentTheme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
+                >
+                  <RotateCcw className="h-4 w-4" /> Reset
+                </button>
+              </div>
             </div>
           </div>
         </SettingsCard>
 
         {/* Access Control */}
-        <SettingsCard title="Module Access" icon={Lock} color="emerald" className="lg:col-span-2">
+        <SettingsCard title="Module Access" icon={Lock} color="emerald" className="lg:col-span-2" helpId="settings-access">
           <div className="flex items-center gap-2 mb-4">
             <p className="text-sm opacity-60">Restrict specific areas with a PIN</p>
-            <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-emerald-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+            <button type="button" onClick={() => onOpenHelp?.("settings-access")} className="text-emerald-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
               <HelpCircle className="h-3 w-3" />
             </button>
           </div>
@@ -778,17 +845,17 @@ export default function Settings({
 
       {/* Advanced & Danger Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <SettingsCard title="Test Data" icon={Database} color="yellow">
+        <SettingsCard title="Test Data" icon={Database} color="yellow" helpId="settings-test-data">
           <div className="flex items-center gap-2 mb-2">
             <h4 className="font-bold text-sm uppercase opacity-70">Demo Data</h4>
-            <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-yellow-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+            <button type="button" onClick={() => onOpenHelp?.("settings-test-data")} className="text-yellow-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
               <HelpCircle className="h-3 w-3" />
             </button>
           </div>
           <MockDataGenerator bulkAddItems={bulkAddItems} records={records} deleteItem={deleteItem} updateItem={updateItem} />
         </SettingsCard>
 
-        <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20 lg:col-span-2">
+        <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20 lg:col-span-2" helpId="settings-danger-zone">
           {!isDangerZoneUnlocked ? (
             <div className="text-center py-12">
               <div className="h-20 w-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
