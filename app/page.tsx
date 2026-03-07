@@ -88,15 +88,15 @@ function HomeContent() {
     const deltaX = touch.clientX - touchStartX.current
     const deltaY = Math.abs(touch.clientY - touchStartY.current)
 
-    // Only process mostly-horizontal swipes
-    if (deltaY > 60) return
+    // Allow more vertical wobble for angled swipes
+    if (deltaY > 80) return
 
-    // Open sidebar: swipe right from left edge (within 30px)
-    if (deltaX > 60 && touchStartX.current < 30) {
+    // Open sidebar: swipe right starting within 80px of the left edge, only 40px travel needed
+    if (deltaX > 40 && touchStartX.current < 80) {
       setSidebarOpen(true)
     }
     // Close sidebar: swipe left when open
-    else if (deltaX < -60 && sidebarOpen) {
+    else if (deltaX < -40 && sidebarOpen) {
       setSidebarOpen(false)
     }
 
