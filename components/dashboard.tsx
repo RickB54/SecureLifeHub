@@ -139,13 +139,6 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
             <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
               Secure Life Hub
             </h1>
-            <button
-              onClick={() => onOpenHelp?.("dashboard")}
-              className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 hover:text-white transition-all shadow-xl"
-              title="Open Manual"
-            >
-              <HelpCircle className="h-6 w-6" />
-            </button>
           </div>
           <p className="text-gray-400 text-lg">Your entire digital and physical life, centralized.</p>
 
@@ -223,10 +216,10 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full pr-6 gap-3">
                     <div className="text-left flex items-center gap-2">
                       <div className="flex flex-col">
-                        <h3 className="font-black uppercase tracking-widest text-xs text-blue-400 group-hover/trigger:text-blue-300 transition-colors flex items-center gap-2">
+                        <h3 className="text-xl font-bold text-blue-400 group-hover/trigger:text-blue-300 transition-colors flex items-center gap-2">
                           Personalize Your Pulse
                           <HelpCircle 
-                            className="h-3 w-3 text-blue-500/40 hover:text-blue-400 cursor-help" 
+                            className="h-4 w-4 text-blue-500/40 hover:text-blue-400 cursor-help" 
                             onClick={(e) => { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); }}
                           />
                         </h3>
