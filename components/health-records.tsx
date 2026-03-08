@@ -494,7 +494,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     <div className="text-right flex flex-col items-end">
                                         <div className="flex items-center gap-2 mb-1">
                                             <div className="text-xs font-black uppercase text-gray-500">{group.title}</div>
-                                            {latest && (
+                                            {latest ? (
                                                 <button
                                                     onClick={() => {
                                                         setEditingVital(latest)
@@ -504,6 +504,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                     className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
                                                 >
                                                     <Edit className="h-3 w-3" />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingVital({ title: group.title, _isDummy: true })
+                                                        setAddModalType('vital')
+                                                        setShowAddModal(true)
+                                                    }}
+                                                    className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                >
+                                                    <Plus className="h-3 w-3" />
                                                 </button>
                                             )}
                                         </div>
@@ -938,7 +949,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         }
                                     }
 
-                                    if (editingVital) {
+                                    if (editingVital && !editingVital._isDummy) {
                                         await updateItem(editingVital.id, payload)
                                     } else {
                                         await addItem(payload)
@@ -1006,7 +1017,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </div>
 
                                     <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-rose-600 to-red-600 text-white font-black italic uppercase tracking-tighter hover:from-rose-500 hover:to-red-500 transition-all shadow-2xl shadow-rose-500/20 active:scale-95">
-                                        {editingVital ? 'Update Vital' : 'Finalize Entry'}
+                                        {(editingVital && !editingVital._isDummy) ? 'Update Vital' : 'Finalize Entry'}
                                     </button>
                                 </form>
                             ) : addModalType === 'appointment' ? (
