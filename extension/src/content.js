@@ -145,7 +145,7 @@ function fillCredentials(data) {
         website: data.website
     });
 
-    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"])'));
+    const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"])'));
 
     // 1. Identify Password Field
     let passwordInput = inputs.find(i => i.type === 'password' && i.offsetParent !== null);
@@ -153,24 +153,38 @@ function fillCredentials(data) {
     // 2. Identify Username Field
     let usernameInput = null;
 
-    // Strategy A: Find by common attributes
-    const usernamePatterns = ['user', 'email', 'login', 'id', 'account'];
+    // Strategy A: Find by common attributes (broad match)
+    const usernamePatterns = ['user', 'email', 'login', 'id', 'account', 'name', 'uname', 'userid', 'username'];
     usernameInput = inputs.find(i => {
         if (i.type === 'password') return false;
-        const meta = (i.name + i.id + i.placeholder + (i.getAttribute('aria-label') || '')).toLowerCase();
-        return usernamePatterns.some(p => meta.includes(p)) && i.offsetParent !== null;
+        if (i.offsetParent === null) return false;
+        const meta = [
+            i.name || '',
+            i.id || '',
+            i.placeholder || '',
+            i.getAttribute('aria-label') || '',
+            i.getAttribute('autocomplete') || '',
+            i.getAttribute('data-testid') || ''
+        ].join(' ').toLowerCase();
+        return usernamePatterns.some(p => meta.includes(p));
     });
 
-    // Strategy B: If password exists, look for the text input closest preceding it
+    // Strategy B: If password exists, look for ANY visible text/email/tel input preceding it
     if (!usernameInput && passwordInput) {
         let idx = inputs.indexOf(passwordInput);
         for (let i = idx - 1; i >= 0; i--) {
             const candidate = inputs[i];
-            if ((candidate.type === 'text' || candidate.type === 'email') && candidate.offsetParent !== null) {
+            const t = candidate.type;
+            if ((t === 'text' || t === 'email' || t === 'tel' || t === '') && candidate.offsetParent !== null) {
                 usernameInput = candidate;
                 break;
             }
         }
+    }
+
+    // Strategy C: Absolute fallback — first visible non‑password input on the page
+    if (!usernameInput && passwordInput) {
+        usernameInput = inputs.find(i => i.type !== 'password' && i.offsetParent !== null);
     }
 
     // Fill them
@@ -187,31 +201,43 @@ function fillCredentials(data) {
 
 
 function performFill(element, value) {
-    // Clear the field first
-    element.value = '';
-
-    // Use native setter to bypass React/Vue watchers
-    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-    nativeInputValueSetter.call(element, value);
-
-    // Trigger all possible events to ensure frameworks detect the change
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-    element.dispatchEvent(new Event('keyup', { bubbles: true }));
-    element.dispatchEvent(new Event('keydown', { bubbles: true }));
-
-    // Focus the element to ensure it's recognized
+    // Focus first so the field is "active"
     element.focus();
 
-    console.log("SecureLifeHub: Filled field with value length:", value.length);
+    // Clear the field using native setter to bypass React/Vue watchers
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    nativeInputValueSetter.call(element, '');
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Set the new value via native setter
+    nativeInputValueSetter.call(element, value);
+
+    // Fire a comprehensive set of events so all JS frameworks detect the change
+    ['input', 'change', 'keydown', 'keyup', 'keypress'].forEach(evtName => {
+        element.dispatchEvent(new Event(evtName, { bubbles: true, cancelable: true }));
+    });
+
+    // Some frameworks (Angular, older jQuery) need a blur to commit
+    element.dispatchEvent(new Event('blur', { bubbles: true }));
+    // Then re-focus so the user sees it active
+    element.focus();
+
+    console.log("SecureLifeHub: Filled field '", element.name || element.id || element.placeholder, "' with", value.length, "chars");
 }
 
 // Listen for manual fill requests from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'ping') {
+        // Confirm the content script is alive so popup doesn't try to re-inject
+        sendResponse({ status: 'alive' });
+        return true;
+    }
     if (request.action === 'fill' && request.data) {
         console.log("SecureLifeHub: Manual fill requested", request.data);
         fillCredentials(request.data);
+        sendResponse({ status: 'ok' });
     }
+    return true; // Keep message channel open for async response
 });
 
 // --- SESSION SYNC LOGIC ---

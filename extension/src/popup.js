@@ -842,11 +842,56 @@ async function checkForMatches() {
 const manualFillBtn = document.getElementById('manual-fill-btn')
 if (manualFillBtn) {
     manualFillBtn.addEventListener('click', async () => {
-        if (!selectedItem) return
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-        if (tab) {
-            chrome.tabs.sendMessage(tab.id, { action: 'fill', data: selectedItem })
+        if (!selectedItem) {
+            console.warn("SecureLifeHub: No item selected for Auto-Fill")
+            return
         }
+
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
+        if (!tab) {
+            console.error("SecureLifeHub: No active tab found")
+            return
+        }
+
+        // Visual feedback: show "Filling..."
+        const originalHTML = manualFillBtn.innerHTML
+        manualFillBtn.textContent = 'Filling...'
+        manualFillBtn.disabled = true
+
+        const doFill = () => {
+            chrome.tabs.sendMessage(tab.id, { action: 'fill', data: selectedItem }, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.warn("SecureLifeHub: sendMessage error:", chrome.runtime.lastError.message)
+                }
+            })
+            setTimeout(() => {
+                manualFillBtn.innerHTML = originalHTML
+                manualFillBtn.disabled = false
+            }, 800)
+        }
+
+        // First try sending directly; if that fails, inject the content script and retry
+        chrome.tabs.sendMessage(tab.id, { action: 'ping' }, (response) => {
+            if (chrome.runtime.lastError || !response) {
+                // Content script not loaded — inject it first
+                console.log("SecureLifeHub: Content script not detected, injecting...")
+                chrome.scripting.executeScript(
+                    { target: { tabId: tab.id }, files: ['src/content.js'] },
+                    () => {
+                        if (chrome.runtime.lastError) {
+                            console.error("SecureLifeHub: Script injection failed:", chrome.runtime.lastError.message)
+                            manualFillBtn.innerHTML = originalHTML
+                            manualFillBtn.disabled = false
+                            return
+                        }
+                        // Give the script a moment to initialise before filling
+                        setTimeout(doFill, 300)
+                    }
+                )
+            } else {
+                doFill()
+            }
+        })
     })
 }
 
