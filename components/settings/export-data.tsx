@@ -1,6 +1,7 @@
 "use client"
 
-import { FileJson, FileSpreadsheet, FileText, Download } from "lucide-react"
+import { useState } from "react"
+import { FileJson, FileSpreadsheet, FileText, Download, ChevronDown, ChevronUp } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import { handleExport, getRecordsForItem } from "@/lib/export-utils"
 
@@ -18,21 +19,30 @@ export default function ExportData({ records, theme }: ExportDataProps) {
         !['dashboard', 'settings', 'favorites', 'trash', 'generate-password'].includes(item.id)
     );
 
+    const [isExpanded, setIsExpanded] = useState(false);
+
     return (
         <div className={`space-y-6 ${theme === 'light' ? 'text-gray-800' : 'text-gray-100'}`}>
-            <div className="flex items-center gap-3 mb-6">
+            <div 
+                className={`flex items-center gap-3 mb-2 cursor-pointer p-2 rounded-xl transition-colors ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/5'}`}
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
                 <div className={`p-3 rounded-2xl ${theme === 'light' ? 'bg-orange-100 text-orange-600' : 'bg-orange-500/20 text-orange-400'}`}>
                     <Download className="h-6 w-6" />
                 </div>
-                <div>
+                <div className="flex-1">
                     <h2 className="text-xl font-bold">Export Specific Data</h2>
                     <p className={`text-sm ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
                         Download individual records data from your vault directly in PDF, CSV, or JSON format.
                     </p>
                 </div>
+                <div className={`p-2 rounded-full ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`}>
+                    {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {isExpanded && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-4 duration-300 pt-4">
                 {exportableItems.map(item => {
                     const itemCount = getRecordsForItem(item.id, records).length;
                     
@@ -82,6 +92,7 @@ export default function ExportData({ records, theme }: ExportDataProps) {
                     );
                 })}
             </div>
+            )}
         </div>
     )
 }
