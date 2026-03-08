@@ -118,11 +118,25 @@ export default function Settings({
   const [isDangerZoneUnlocked, setIsDangerZoneUnlocked] = useState(false)
   const [showPinScreen, setShowPinScreen] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [sessionDurationDays, setSessionDurationDays] = useState(90)
+  const [showSessionHelp, setShowSessionHelp] = useState(false)
 
-  // Load Biometric State
+  // Load Biometric State + Session Duration
   useEffect(() => {
     setBiometricEnabled(localStorage.getItem('biometric_enabled') === 'true')
+    const saved = parseInt(localStorage.getItem('session_duration_days') || '90')
+    setSessionDurationDays(isNaN(saved) ? 90 : saved)
   }, [])
+
+  const handleSaveSessionDuration = (days: number) => {
+    setSessionDurationDays(days)
+    localStorage.setItem('session_duration_days', days.toString())
+    // Also stamp the last full-login time if not already set, so the timer starts now
+    if (!localStorage.getItem('full_login_timestamp')) {
+      localStorage.setItem('full_login_timestamp', Date.now().toString())
+    }
+    showNotification(`Session duration set to ${days === 0 ? 'Never expire' : days + ' days'}`)
+  }
 
   const { user } = useAuth()
 
@@ -471,6 +485,67 @@ export default function Settings({
               >
                 <div className={`absolute top-1 left-1 h-6 w-6 rounded-full bg-white transition-transform ${biometricEnabled ? 'translate-x-6' : ''}`} />
               </button>
+            </div>
+
+            {/* Biometric Session Duration */}
+            <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="font-bold">Biometric Session Duration</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSessionHelp(!showSessionHelp)}
+                      className="text-purple-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none"
+                      title="What is session duration?"
+                    >
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="text-xs text-purple-400 font-medium mt-0.5">
+                    {sessionDurationDays === 0
+                      ? 'Fingerprint valid until you sign out'
+                      : `Re-enter master password every ${sessionDurationDays} days`}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={sessionDurationDays}
+                    onChange={(e) => handleSaveSessionDuration(parseInt(e.target.value))}
+                    className="bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 text-sm outline-none focus:border-purple-500/50 transition-colors"
+                  >
+                    <option value={7}>7 days</option>
+                    <option value={30}>30 days</option>
+                    <option value={60}>60 days</option>
+                    <option value={90}>90 days</option>
+                    <option value={180}>180 days</option>
+                    <option value={365}>1 year</option>
+                    <option value={0}>Never expire</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Inline Help Tooltip */}
+              {showSessionHelp && (
+                <div className="mt-2 p-4 rounded-xl bg-purple-900/20 border border-purple-500/20 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center gap-2 text-purple-400 font-bold text-xs uppercase tracking-wider">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    About Biometric Session Duration
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">
+                    Your fingerprint/face login works by verifying your identity on this device, then reusing a saved secure session token. That token doesn&apos;t last forever — this setting controls <strong className="text-gray-200">how many days</strong> it stays valid before you&apos;re asked to sign in with your Master Password again.
+                  </p>
+                  <ul className="text-xs text-gray-500 space-y-1 list-disc list-inside">
+                    <li><strong className="text-gray-300">7 days</strong> — Highest security; re-login weekly</li>
+                    <li><strong className="text-gray-300">30/60/90 days</strong> — Good balance for daily use</li>
+                    <li><strong className="text-gray-300">180 days / 1 year</strong> — Convenient for trusted personal devices</li>
+                    <li><strong className="text-gray-300">Never expire</strong> — Fingerprint works until you manually sign out</li>
+                  </ul>
+                  <p className="text-[10px] text-gray-600">
+                    💡 Tip: After changing this, sign in once with your Master Password to restart the timer.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">

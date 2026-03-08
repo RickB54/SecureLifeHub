@@ -51,6 +51,20 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       return
     }
 
+    // Check if user's custom session duration has elapsed since last full login
+    const durationDays = parseInt(localStorage.getItem('session_duration_days') || '90')
+    const lastFullLogin = parseInt(localStorage.getItem('full_login_timestamp') || '0')
+    if (durationDays > 0 && lastFullLogin > 0) {
+      const elapsedMs = Date.now() - lastFullLogin
+      const durationMs = durationDays * 24 * 60 * 60 * 1000
+      if (elapsedMs > durationMs) {
+        setError(
+          `Your secure session has fully expired (after ${durationDays} days). Please sign in with your Master Password once to re-enable biometrics for this visit.`
+        )
+        return
+      }
+    }
+
     setLoading(true)
     setError(null)
 
@@ -183,6 +197,8 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
         if (error) throw error
         localStorage.setItem('lastLoginEmail', trimmedEmail)
+        // Stamp the time of full master-password login so biometric session duration can be enforced
+        localStorage.setItem('full_login_timestamp', Date.now().toString())
         router.push('/?page=dashboard')
       }
     } catch (err: any) { setError(err.message) } finally { setLoading(false) }
