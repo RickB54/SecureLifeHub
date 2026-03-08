@@ -1015,9 +1015,6 @@ ${selectedMed ? `
                             <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
                                 Medications
                             </h1>
-                            <button type="button" onClick={() => onOpenHelp?.("medications")} className="p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-white transition-all focus:outline-none" title="Explain Medications">
-                                <HelpCircle className="h-6 w-6" />
-                            </button>
                         </div>
                         <p className="text-sm md:text-base text-gray-400">Track medications, set reminders, and maintain your health</p>
                     </div>

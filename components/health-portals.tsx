@@ -114,7 +114,6 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
           <h1 className="text-3xl font-black flex items-center gap-3">
             <Globe className="h-8 w-8 text-blue-500" />
             Health Portals & Logins
-            <button onClick={() => onOpenHelp?.('type-health-portals')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
           </h1>
           <p className="text-gray-500 text-sm mt-1">Manage links and access details for your medical provider portals.</p>
         </div>

@@ -113,7 +113,6 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
           <h1 className="text-2xl md:text-3xl font-black flex items-center gap-3">
             <Users className="h-8 w-8 text-blue-500" />
             My Medical Team
-            <button onClick={() => onOpenHelp?.('type-doctors')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-5 w-5" /></button>
           </h1>
           <p className="text-gray-500 text-sm mt-1">Directory of specialists, facilities, and care providers.</p>
         </div>
