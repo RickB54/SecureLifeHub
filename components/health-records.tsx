@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -26,6 +26,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
     const [editingVital, setEditingVital] = useState<any>(null)
+    const [historicalLogDateFilter, setHistoricalLogDateFilter] = useState<'all' | '7d' | '30d' | '1y'>('all')
+    const [historicalLogStatusFilter, setHistoricalLogStatusFilter] = useState<'active' | 'archived'>('active')
     const [showPillLibrary, setShowPillLibrary] = useState(false)
 
     // Calendar State
@@ -105,6 +107,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
     }, [records])
 
+    const activeVitalRecords = useMemo(() => {
+        return vitalRecords.filter(r => !r.item_metadata?.is_archived)
+    }, [vitalRecords])
+
     const diaryEntries = useMemo(() => {
         return records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary)
             .sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
@@ -158,12 +164,12 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         currentStreak = streak
     }
 
-    const weightData = vitalRecords.filter(r => r.title === "Weight").map(r => ({
+    const weightData = activeVitalRecords.filter(r => r.title === "Weight").map(r => ({
         date: r.item_metadata.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
         value: parseFloat(r.item_metadata.value) || 0
     }))
 
-    const bpData = vitalRecords.filter(r => r.title === "Blood Pressure").map(r => {
+    const bpData = activeVitalRecords.filter(r => r.title === "Blood Pressure").map(r => {
         const parts = (r.item_metadata.value || "0/0").split('/')
         const sys = parseInt(parts[0]) || 0
         const dia = parseInt(parts[1]) || 0
@@ -230,68 +236,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         setLightboxOpen(true)
     }
 
-    const loadMockData = async (target: 'vitals' | 'records' | 'meds' | 'all') => {
-        if (!confirm(`Generate mock ${target === 'all' ? 'data' : target} for testing?`)) return;
 
-        if (target === 'vitals' || target === 'all') {
-            const vitals = [
-                { title: 'Weight', value: '185', unit: 'lbs', date: subDays(new Date(), 14).toISOString() },
-                { title: 'Weight', value: '182', unit: 'lbs', date: subDays(new Date(), 7).toISOString() },
-                { title: 'Weight', value: '180', unit: 'lbs', date: new Date().toISOString() },
-                { title: 'Blood Pressure', value: '130/85', unit: 'mmHg', date: subDays(new Date(), 5).toISOString() },
-                { title: 'Blood Pressure', value: '118/78', unit: 'mmHg', date: new Date().toISOString() },
-                { title: 'Heart Rate', value: '72', unit: 'bpm', date: new Date().toISOString() },
-                { title: 'Glucose', value: '95', unit: 'mg/dL', date: new Date().toISOString() },
-            ];
-            for (const v of vitals) {
-                await addItem({
-                    type: "note",
-                    category: "Vitals",
-                    title: v.title,
-                    item_metadata: { is_vital: true, value: v.value, unit: v.unit, date: v.date, notes: 'Sample vital entry for dashboard testing.', is_mock: true }
-                });
-            }
-        }
-
-        if (target === 'records' || target === 'all') {
-            const records = [
-                { title: 'Annual Physical Examination', doctor: 'Dr. Sarah Smith', date: subMonths(new Date(), 2).toISOString(), notes: 'All metrics within normal range. Recommended increased Vitamin D intake.' },
-                { title: 'Dental Cleaning & X-Ray', doctor: 'City Dental Care', date: subMonths(new Date(), 1).toISOString(), notes: 'No cavities found. Next cleaning in 6 months.' }
-            ];
-            for (const r of records) {
-                await addItem({
-                    type: "note",
-                    title: r.title,
-                    category: "Health Records",
-                    item_metadata: { is_health_record: true, date: r.date, doctor: r.doctor, notes: r.notes, type: "Clinic Visit", is_mock: true }
-                });
-            }
-        }
-
-        if (target === 'meds' || target === 'all') {
-            const meds = [
-                { title: 'Lisinopril', dosage: '10mg', frequency: 'Once Daily', notes: 'For blood pressure management.' },
-                { title: 'Vitamin D3', dosage: '2000 IU', frequency: 'Daily', notes: 'Supplement for bone health.' }
-            ];
-            for (const m of meds) {
-                await addItem({
-                    type: 'note',
-                    title: m.title,
-                    category: 'Medications',
-                    item_metadata: { dosage: m.dosage, frequency: m.frequency, notes: m.notes, is_mock: true }
-                });
-            }
-        }
-    }
 
     // --- VIEWS ---
     const renderDashboard = () => (
         <div className="space-y-6 animate-in fade-in duration-300">
             <div className="flex justify-between items-center px-1">
                 <h2 className="text-xl font-bold opacity-50 uppercase tracking-widest text-xs">Overview Dashboard</h2>
-                <button onClick={() => loadMockData('all')} className="text-[10px] font-black uppercase tracking-tighter text-blue-400 hover:text-blue-300 transition-colors">
-                    Initialize Test Environment
-                </button>
             </div>
             {/* Quick Stats - ALWAYS AT TOP */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -398,12 +349,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <button onClick={() => onOpenHelp?.('type-health-records')} className="p-1 hover:text-blue-400"><HelpCircle className="h-4 w-4" /></button>
                 </h2>
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                    <button
-                        onClick={() => loadMockData('records')}
-                        className="flex-1 md:flex-none bg-white/5 hover:bg-white/10 text-gray-400 px-3 py-1.5 rounded-xl transition-all font-bold text-[10px] uppercase"
-                    >
-                        Load Samples
-                    </button>
+
                     <button
                         onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
                         className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-lg transition-all font-bold text-xs flex items-center justify-center gap-2"
@@ -495,23 +441,33 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         const vitalGroups = [
             { id: 'bp', title: 'Blood Pressure', icon: Activity, color: 'rose', data: bpData, multi: true },
             { id: 'weight', title: 'Weight', icon: Weight, color: 'orange', data: weightData },
-            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: vitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: vitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: vitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: vitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
         ]
+
+        const filteredHistoricalLog = vitalRecords.filter(vital => {
+            const isArchived = Boolean(vital.item_metadata?.is_archived)
+            if (historicalLogStatusFilter === 'active' && isArchived) return false
+            if (historicalLogStatusFilter === 'archived' && !isArchived) return false
+            
+            if (historicalLogDateFilter !== 'all' && vital.item_metadata?.date) {
+                const date = new Date(vital.item_metadata.date)
+                const now = new Date()
+                if (historicalLogDateFilter === '7d' && date < subDays(now, 7)) return false
+                if (historicalLogDateFilter === '30d' && date < subDays(now, 30)) return false
+                if (historicalLogDateFilter === '1y' && date.getFullYear() !== now.getFullYear()) return false
+            }
+            return true
+        }).sort((a, b) => new Date(b.item_metadata.date).getTime() - new Date(a.item_metadata.date).getTime())
 
         return (
             <div className="space-y-6">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-bold">Vital Sign Trends</h2>
                     <div className="flex gap-2">
-                        <button
-                            onClick={() => loadMockData('vitals')}
-                            className="bg-white/5 hover:bg-white/10 text-gray-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase"
-                        >
-                            Load Samples
-                        </button>
+
                         <button
                             onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
                             className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold flex items-center gap-2"
@@ -523,7 +479,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {vitalGroups.map((group) => {
-                        const latest = vitalRecords.filter(v => v.title === group.title).slice(-1)[0]
+                        const latest = activeVitalRecords.filter(v => v.title === group.title).slice(-1)[0]
                         const colorMap: any = { rose: '#f43f5e', orange: '#f97316', yellow: '#eab308', cyan: '#06b6d4', red: '#ef4444', emerald: '#10b981' }
                         const color = colorMap[group.color]
 
@@ -602,15 +558,37 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 </div>
 
                 <div className="mt-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                        <CalendarIcon className="h-5 w-5 text-gray-500" /> Historical Log
-                    </h3>
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                            <CalendarIcon className="h-5 w-5 text-gray-500" /> Historical Log
+                        </h3>
+                        <div className="flex gap-2 text-sm">
+                            <select 
+                                value={historicalLogDateFilter} 
+                                onChange={e => setHistoricalLogDateFilter(e.target.value as any)} 
+                                className={`px-2 py-1 rounded-lg outline-none cursor-pointer text-xs font-bold ${theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-white/5 text-gray-300'}`}
+                            >
+                                <option value="all" className={theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}>All Time</option>
+                                <option value="7d" className={theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}>Last 7 Days</option>
+                                <option value="30d" className={theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}>Last 30 Days</option>
+                                <option value="1y" className={theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}>This Year</option>
+                            </select>
+                            <select 
+                                value={historicalLogStatusFilter} 
+                                onChange={e => setHistoricalLogStatusFilter(e.target.value as any)} 
+                                className={`px-2 py-1 rounded-lg outline-none cursor-pointer text-xs font-bold ${theme === 'light' ? 'bg-gray-100 text-gray-800' : 'bg-white/5 text-gray-300'}`}
+                            >
+                                <option value="active" className={theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}>Active Logs</option>
+                                <option value="archived" className={theme === 'light' ? 'bg-white' : 'bg-[#1a1a1a]'}>Archived</option>
+                            </select>
+                        </div>
+                    </div>
                     <div className={`p-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/10'}`}>
-                        {vitalRecords.length === 0 ? (
-                            <div className="p-8 text-center text-gray-500 italic text-sm">No historical vitals recorded.</div>
+                        {filteredHistoricalLog.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 italic text-sm">No historical vitals found.</div>
                         ) : (
                             <div className="divide-y divide-white/5">
-                                {vitalRecords.sort((a, b) => new Date(b.item_metadata.date).getTime() - new Date(a.item_metadata.date).getTime()).map(vital => (
+                                {filteredHistoricalLog.map(vital => (
                                     <div key={vital.id} className="p-4 hover:bg-black/5 dark:hover:bg-white/5 transition-all flex justify-between items-center group">
                                         <div className="flex items-center gap-4">
                                             <div className="p-2 rounded-xl bg-gray-500/10 text-gray-400">
@@ -640,10 +618,25 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                     <Edit className="h-3 w-3" />
                                                 </button>
                                                 <button
+                                                    onClick={() => {
+                                                        const confirmMsg = vital.item_metadata?.is_archived ? "Restore this entry to active trends?" : "Archive this entry from trends?"
+                                                        if (confirm(confirmMsg)) {
+                                                            updateItem(vital.id, {
+                                                                item_metadata: { ...vital.item_metadata, is_archived: !vital.item_metadata?.is_archived }
+                                                            })
+                                                        }
+                                                    }}
+                                                    className="p-1.5 hover:bg-white/10 hover:text-yellow-400 rounded-md transition-all text-gray-500"
+                                                    title={vital.item_metadata?.is_archived ? "Restore" : "Archive"}
+                                                >
+                                                    <Archive className="h-3 w-3" />
+                                                </button>
+                                                <button
                                                     onClick={() => { if (confirm("Delete this vital entry?")) deleteItem(vital.id) }}
                                                     className="p-1.5 hover:bg-white/10 hover:text-red-400 rounded-md transition-all text-gray-500"
+                                                    title="Delete"
                                                 >
-                                                    <X className="h-3 w-3" />
+                                                    <Trash2 className="h-3 w-3" />
                                                 </button>
                                             </div>
                                         </div>
@@ -877,12 +870,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             >
                                 <Pill className="h-4 w-4" /> Pill Library
                             </button>
-                            <button
-                                onClick={() => loadMockData('meds')}
-                                className="bg-white/5 hover:bg-white/10 text-gray-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase"
-                            >
-                                Load Samples
-                            </button>
+
                         </div>
                         <Medications records={records} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />
                         {showPillLibrary && <PillLibraryModal isOpen={showPillLibrary} onClose={() => setShowPillLibrary(false)} theme={theme} addItem={addItem} />}
