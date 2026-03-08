@@ -23,7 +23,6 @@ import HealthInsurance from "@/components/health-insurance"
 import SecurityAudit from "@/components/security-audit"
 import HealthRecords from "@/components/health-records"
 import Medications from "@/components/medications"
-import Vitals from "@/components/vitals"
 import HealthDiary from "@/components/health-diary"
 import Vehicles from "@/components/vehicles"
 import Business from "@/components/business"
@@ -355,11 +354,11 @@ function HomeContent() {
         )
       // New Record Types Routing
       case "type-health-records":
-        return <HealthRecords {...commonProps} />
+        return <HealthRecords key="type-health-records" {...commonProps} initialTab="dashboard" />
       case "type-vitals":
-        return <Vitals {...commonProps} />
+        return <HealthRecords key="type-vitals" {...commonProps} initialTab="vitals" />
       case "type-medications":
-        return <Medications {...commonProps} />
+        return <HealthRecords key="type-medications" {...commonProps} initialTab="meds" />
       case "type-health-diary":
         return <HealthDiary {...commonProps} />
       case "type-health-portals":

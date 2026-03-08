@@ -38,7 +38,7 @@ export const sidebarSections = [
         title: "Health & Fitness",
         color: "rose",
         items: [
-            { id: "type-health-records", label: "Health Records", icon: <FileText className="h-4 w-4" /> },
+            { id: "type-health-records", label: "Health Hub", icon: <FileText className="h-4 w-4" /> },
             { id: "type-medications", label: "Medications", icon: <Pill className="h-4 w-4" /> },
             { id: "type-vitals", label: "Vitals", icon: <FileText className="h-4 w-4" /> },
             { id: "type-health-diary", label: "Health Diary", icon: <FileText className="h-4 w-4" /> },

@@ -18,10 +18,11 @@ interface HealthDashboardProps {
     theme: string
     setRecords?: any
     onOpenHelp?: (targetId?: string) => void
+    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai"
 }
 
-export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: HealthDashboardProps) {
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai">("dashboard")
+export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard" }: HealthDashboardProps) {
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai">(initialTab)
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
     const [editingVital, setEditingVital] = useState<any>(null)
@@ -598,6 +599,59 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </div>
                         )
                     })}
+                </div>
+
+                <div className="mt-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+                    <h3 className="text-xl font-bold flex items-center gap-2">
+                        <CalendarIcon className="h-5 w-5 text-gray-500" /> Historical Log
+                    </h3>
+                    <div className={`p-1 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/10'}`}>
+                        {vitalRecords.length === 0 ? (
+                            <div className="p-8 text-center text-gray-500 italic text-sm">No historical vitals recorded.</div>
+                        ) : (
+                            <div className="divide-y divide-white/5">
+                                {vitalRecords.sort((a, b) => new Date(b.item_metadata.date).getTime() - new Date(a.item_metadata.date).getTime()).map(vital => (
+                                    <div key={vital.id} className="p-4 hover:bg-black/5 dark:hover:bg-white/5 transition-all flex justify-between items-center group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2 rounded-xl bg-gray-500/10 text-gray-400">
+                                                <Activity className="h-4 w-4" />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-sm">{vital.title}</div>
+                                                <div className="text-xs text-gray-400 flex items-center gap-2">
+                                                    <span>{format(new Date(vital.item_metadata.date), 'PP')}</span>
+                                                    {vital.item_metadata.context && <span className="opacity-50 border-l border-gray-500/50 pl-2">{vital.item_metadata.context}</span>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-right">
+                                                <div className="font-mono font-black text-blue-400">{vital.item_metadata.value} <span className="text-[10px] text-gray-500 font-normal uppercase">{vital.item_metadata.unit}</span></div>
+                                            </div>
+                                            <div className="flex gap-2 p-1 bg-black/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingVital(vital)
+                                                        setAddModalType('vital')
+                                                        setShowAddModal(true)
+                                                    }}
+                                                    className="p-1.5 hover:bg-white/10 hover:text-blue-400 rounded-md transition-all text-gray-500"
+                                                >
+                                                    <Edit className="h-3 w-3" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { if (confirm("Delete this vital entry?")) deleteItem(vital.id) }}
+                                                    className="p-1.5 hover:bg-white/10 hover:text-red-400 rounded-md transition-all text-gray-500"
+                                                >
+                                                    <X className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         )
