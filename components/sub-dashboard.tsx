@@ -1,7 +1,8 @@
 "use client"
 
 import { useMemo } from "react"
-import { ArrowRight, HelpCircle } from "lucide-react"
+import { ArrowRight, HelpCircle, FileText, FileSpreadsheet, FileJson, Download } from "lucide-react"
+import { handleExport } from "@/lib/export-utils"
 
 interface SubDashboardProps {
     section: {
@@ -83,8 +84,30 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                             </div>
                             <div className="flex gap-2">
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); onOpenHelp?.(item.id); }}
+                                    onClick={(e) => handleExport(e, item, records, 'json')}
                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
+                                    title="Export to JSON"
+                                >
+                                    <FileJson className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => handleExport(e, item, records, 'csv')}
+                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-green-400 transition-all opacity-0 group-hover:opacity-100"
+                                    title="Export to CSV"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => handleExport(e, item, records, 'pdf')}
+                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
+                                    title="Export to PDF"
+                                >
+                                    <FileText className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onOpenHelp?.(item.id); }}
+                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-purple-400 transition-all opacity-0 group-hover:opacity-100"
+                                    title="Help"
                                 >
                                     <HelpCircle className="h-4 w-4" />
                                 </button>

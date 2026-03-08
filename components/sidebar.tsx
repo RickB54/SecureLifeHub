@@ -20,8 +20,6 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     dashboard: false,
     vault: false,
-    'payment-cards': false,
-    'vault-advanced': false,
     healthFitness: false,
     vehicles: false,
     business: false,
@@ -36,9 +34,9 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   const [pinnedItems, setPinnedItems] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem("hub_pinned_shortcuts")
-      return saved ? JSON.parse(saved) : ["type-medications", "all-items"] // Default pins
+      return saved ? JSON.parse(saved) : ["type-medications", "passwords"] // Default pins
     } catch (e) {
-      return ["type-medications", "all-items"]
+      return ["type-medications", "passwords"]
     }
   })
 

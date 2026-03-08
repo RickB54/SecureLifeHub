@@ -44,6 +44,7 @@ import MockDataGenerator from "./mock-data-generator"
 import PinAuthScreen from "./security/pin-auth-screen"
 import { VaultItem } from "@/hooks/use-vault"
 import BackupRecovery from "./settings/backup-recovery"
+import ExportData from "./settings/export-data"
 
 export default function Settings({
   records,
@@ -918,6 +919,11 @@ export default function Settings({
         />
       </div>
 
+      {/* Export Data Module (Full Width) */}
+      <div className={`p-8 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"}`}>
+        <ExportData records={records} theme={theme || "dark"} />
+      </div>
+
       {/* Advanced & Danger Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <SettingsCard title="Test Data" icon={Database} color="yellow" helpId="settings-test-data">
@@ -968,7 +974,7 @@ export default function Settings({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {sidebarSections.filter(s => !['dashboard', 'vault-advanced', 'configuration'].includes(s.id)).map(section => (
+                  {sidebarSections.filter(s => !['dashboard', 'vault', 'configuration'].includes(s.id)).map(section => (
                     <div key={section.id} className="p-4 rounded-2xl bg-black/40 border border-white/5 space-y-3">
                       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
                         <div className={`p-1.5 rounded-lg bg-${section.color}-500/20 text-${section.color}-400`}>

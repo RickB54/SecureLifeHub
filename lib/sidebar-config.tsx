@@ -11,9 +11,13 @@ export const sidebarSections = [
     {
         id: "vault",
         title: "Vault",
-        color: "purple",
-        items: [{ id: "all-items", label: "Vault", icon: <Key className="h-5 w-5" /> }],
-        isTopLevel: true,
+        color: "orange",
+        items: [
+            { id: "passwords", label: "Passwords", icon: <Key className="h-5 w-5" /> },
+            { id: "favorites", label: "Favorites", icon: <Star className="h-5 w-5" /> },
+            { id: "trash", label: "Deleted", icon: <Trash className="h-5 w-5" /> },
+            { id: "generate-password", label: "Generate Password", icon: <Wand2 className="h-5 w-5" /> },
+        ],
     },
     {
         id: "payment-cards",
@@ -28,16 +32,6 @@ export const sidebarSections = [
         color: "blue",
         items: [{ id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-5 w-5" /> }],
         isTopLevel: true,
-    },
-    {
-        id: "vault-advanced",
-        title: "Vault Advanced",
-        color: "orange",
-        items: [
-            { id: "favorites", label: "Favorites", icon: <Star className="h-5 w-5" /> },
-            { id: "trash", label: "Deleted", icon: <Trash className="h-5 w-5" /> },
-            { id: "generate-password", label: "Generate Password", icon: <Wand2 className="h-5 w-5" /> },
-        ],
     },
     {
         id: "healthFitness",
