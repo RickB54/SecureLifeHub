@@ -13,8 +13,9 @@ interface VitalsProps {
     onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Vitals({ records, addItem, deleteItem, theme, onOpenHelp }: VitalsProps) {
+export default function Vitals({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: VitalsProps) {
     const [showAddModal, setShowAddModal] = useState(false)
+    const [editingVital, setEditingVital] = useState<any>(null)
     const [viewMode, setViewMode] = useState<"list" | "timeline">("list")
     const [currentDate, setCurrentDate] = useState(new Date())
     const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("week")
@@ -90,7 +91,7 @@ export default function Vitals({ records, addItem, deleteItem, theme, onOpenHelp
                             </button>
                         </div>
                         <button
-                            onClick={() => setShowAddModal(true)}
+                            onClick={() => { setEditingVital(null); setShowAddModal(true) }}
                             className="flex items-center bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-6 py-2 rounded-xl shadow-md transition-all transform hover:scale-105"
                         >
                             <Plus className="h-5 w-5 mr-2" />
@@ -136,8 +137,8 @@ export default function Vitals({ records, addItem, deleteItem, theme, onOpenHelp
                                                 onClick={(e) => {
                                                     e.preventDefault()
                                                     e.stopPropagation()
-                                                    // TODO: Add edit modal
-                                                    alert(`Edit ${vital.title} (Coming Soon - Use the form to add a new entry for now)`)
+                                                    setEditingVital(vital)
+                                                    setShowAddModal(true)
                                                 }}
                                                 title="Edit"
                                             >
@@ -253,29 +254,40 @@ export default function Vitals({ records, addItem, deleteItem, theme, onOpenHelp
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${glassCardStyle} border-none`}>
-                        <h2 className="text-2xl font-bold mb-4">Log Vitals</h2>
+                        <h2 className="text-2xl font-bold mb-4">{editingVital ? "Edit Vital Log" : "Log Vitals"}</h2>
                         <form onSubmit={(e: any) => {
                             e.preventDefault()
                             const fd = new FormData(e.target)
                             const type = fd.get("type")
-                            addItem({
-                                type: "note",
-                                category: "Vitals",
-                                title: type,
-                                item_metadata: {
-                                    is_vital: true,
-                                    value: fd.get("value"),
-                                    unit: fd.get("unit"),
-                                    date: fd.get("date"),
-                                    time: fd.get("time"),
-                                    notes: fd.get("notes")
-                                }
-                            })
+                            
+                            const metadata = {
+                                is_vital: true,
+                                value: fd.get("value"),
+                                unit: fd.get("unit"),
+                                date: fd.get("date"),
+                                time: fd.get("time"),
+                                notes: fd.get("notes")
+                            }
+
+                            if (editingVital) {
+                                updateItem(editingVital.id, {
+                                    title: type,
+                                    item_metadata: metadata
+                                })
+                            } else {
+                                addItem({
+                                    type: "note",
+                                    category: "Vitals",
+                                    title: type,
+                                    item_metadata: metadata
+                                })
+                            }
                             setShowAddModal(false)
+                            setEditingVital(null)
                         }} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Vital Type</label>
-                                <select name="type" className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`}>
+                                <select name="type" defaultValue={editingVital?.title || "Blood Pressure"} className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`}>
                                     <option>Blood Pressure</option>
                                     <option>Blood Oxygen</option>
                                     <option>Cholesterol</option>
@@ -289,33 +301,33 @@ export default function Vitals({ records, addItem, deleteItem, theme, onOpenHelp
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Value</label>
-                                    <input name="value" required className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="e.g. 120/80" />
+                                    <input name="value" defaultValue={editingVital?.item_metadata?.value || ""} required className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="e.g. 120/80" />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Unit</label>
-                                    <input name="unit" className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="e.g. mmHg" />
+                                    <input name="unit" defaultValue={editingVital?.item_metadata?.unit || ""} className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="e.g. mmHg" />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Date</label>
-                                    <input type="date" name="date" required className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 dark:text-gray-100' : 'bg-black/30 text-white'}`} style={{ colorScheme: theme }} defaultValue={new Date().toISOString().split('T')[0]} />
+                                    <input type="date" name="date" required className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 dark:text-gray-100' : 'bg-black/30 text-white'}`} style={{ colorScheme: theme }} defaultValue={editingVital?.item_metadata?.date || new Date().toISOString().split('T')[0]} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-1">Time</label>
-                                    <input type="time" name="time" defaultValue={new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 dark:text-gray-100' : 'bg-black/30 text-white'}`} style={{ colorScheme: theme }} />
+                                    <input type="time" name="time" defaultValue={editingVital?.item_metadata?.time || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100 dark:text-gray-100' : 'bg-black/30 text-white'}`} style={{ colorScheme: theme }} />
                                 </div>
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-1">Notes</label>
-                                <textarea name="notes" className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="Context (e.g. after running)" />
+                                <textarea name="notes" defaultValue={editingVital?.item_metadata?.notes || ""} className={`w-full p-3 rounded-lg outline-none ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'}`} placeholder="Context (e.g. after running)" />
                             </div>
 
                             <div className="flex justify-end gap-3 mt-6">
-                                <button type="button" onClick={() => setShowAddModal(false)} className="px-5 py-2 rounded-lg hover:bg-gray-500/20">Cancel</button>
-                                <button type="submit" className="px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600">Save Log</button>
+                                <button type="button" onClick={() => { setShowAddModal(false); setEditingVital(null); }} className="px-5 py-2 rounded-lg hover:bg-gray-500/20">Cancel</button>
+                                <button type="submit" className="px-5 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600">{editingVital ? "Save Changes" : "Save Log"}</button>
                             </div>
                         </form>
                     </div>

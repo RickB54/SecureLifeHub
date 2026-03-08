@@ -355,8 +355,9 @@ function HomeContent() {
         )
       // New Record Types Routing
       case "type-health-records":
-      case "type-vitals":
         return <HealthRecords {...commonProps} />
+      case "type-vitals":
+        return <Vitals {...commonProps} />
       case "type-medications":
         return <Medications {...commonProps} />
       case "type-health-diary":
