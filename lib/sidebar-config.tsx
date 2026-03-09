@@ -20,20 +20,6 @@ export const sidebarSections = [
         ],
     },
     {
-        id: "payment-cards",
-        title: "Payment Cards",
-        color: "emerald",
-        items: [{ id: "type-payment-cards", label: "Payment Cards", icon: <CreditCard className="h-5 w-5" /> }],
-        isTopLevel: true,
-    },
-    {
-        id: "all-notes",
-        title: "Secure Notes",
-        color: "blue",
-        items: [{ id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-5 w-5" /> }],
-        isTopLevel: true,
-    },
-    {
         id: "healthFitness",
         title: "Health & Fitness",
         color: "rose",
@@ -71,6 +57,7 @@ export const sidebarSections = [
         title: "Assets & Inventory",
         color: "cyan",
         items: [
+            { id: "type-payment-cards", label: "Payment Cards", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-assets", label: "Asset Ledger", icon: <Box className="h-4 w-4" /> },
             { id: "type-budget", label: "Budget Manager", icon: <CreditCard className="h-4 w-4" /> },
         ]
@@ -96,6 +83,7 @@ export const sidebarSections = [
         title: "Social Life",
         color: "violet",
         items: [
+            { id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-4 w-4" /> },
             { id: "type-digital-life", label: "Online Presence", icon: <Globe className="h-4 w-4" /> },
             { id: "type-diary", label: "My Diary", icon: <Book className="h-4 w-4" /> },
             { id: "type-subscriptions", label: "Subscription Manager", icon: <CreditCard className="h-4 w-4" /> },
@@ -111,4 +99,3 @@ export const sidebarSections = [
         ],
     },
 ]
-

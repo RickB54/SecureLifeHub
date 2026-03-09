@@ -138,8 +138,12 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             }, currentLimit)
         }
 
-        const events = ['mousedown', 'keydown', 'scroll', 'touchstart']
-        const handleActivity = () => resetTimer()
+        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
+        const handleActivity = () => {
+          // If we are already locked, don't reset the timer (avoids weird unlock-without-auth edge cases)
+          if (isLocked) return;
+          resetTimer()
+        }
 
         const handleTimeoutChange = (e: CustomEvent) => {
             if (e.detail?.timeout !== undefined) {
@@ -154,7 +158,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             }
         }
 
-        events.forEach(event => window.addEventListener(event, handleActivity))
+        events.forEach(event => window.addEventListener(event, handleActivity, { passive: true }))
         window.addEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
         resetTimer()
 
