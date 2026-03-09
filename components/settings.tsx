@@ -121,6 +121,8 @@ export default function Settings({
   const [biometricEnabled, setBiometricEnabled] = useState(false)
   const [sessionDurationDays, setSessionDurationDays] = useState(90)
   const [showSessionHelp, setShowSessionHelp] = useState(false)
+  const [selectedWipeIds, setSelectedWipeIds] = useState<string[]>([])
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   // Load Biometric State + Session Duration
   useEffect(() => {
@@ -965,13 +967,89 @@ export default function Settings({
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
               {/* Individual Page Wipe Section */}
               <div className="space-y-6">
-                <div className="flex items-center gap-3 border-b border-red-500/20 pb-4">
-                  <Trash className="h-6 w-6 text-red-500" />
-                  <div>
-                    <h4 className="text-xl font-black uppercase tracking-tighter">Individual Page Wipe</h4>
-                    <p className="text-xs text-gray-500">Delete all records for a specific section without affecting other data.</p>
-                  </div>
-                </div>
+                 <div className="flex items-center justify-between border-b border-red-500/20 pb-4">
+                   <div className="flex items-center gap-3">
+                     <Trash className="h-6 w-6 text-red-500" />
+                     <div>
+                       <h4 className="text-xl font-black uppercase tracking-tighter">Individual Page Wipe</h4>
+                       <p className="text-xs text-gray-500">Delete all records for a specific section without affecting other data.</p>
+                     </div>
+                   </div>
+                   {selectedWipeIds.length > 0 && (
+                     <div className="flex items-center gap-4 animate-in fade-in slide-in-from-right-4">
+                       <div className="text-right">
+                         <div className="text-xs font-black text-red-400 uppercase tracking-widest">{selectedWipeIds.length} Categories Selected</div>
+                         <button 
+                           onClick={() => setSelectedWipeIds([])}
+                           className="text-[10px] text-gray-500 hover:text-white uppercase font-bold"
+                         >
+                           Clear Selection
+                         </button>
+                       </div>
+                       <button
+                         disabled={isBulkDeleting}
+                         onClick={async () => {
+                           if (confirm(`⚠️ MASS WIPE: Are you sure you want to delete ALL data in ${selectedWipeIds.length} selected categories? This cannot be undone.`)) {
+                             setIsBulkDeleting(true);
+                             showNotification(`Initializing bulk wipe...`, "error");
+                             
+                             try {
+                               for (const id of selectedWipeIds) {
+                                 // We need to re-find the filter logic for each ID
+                                 // This is a bit redundant but safe
+                                 const item = sidebarSections.flatMap(s => s.items).find(i => i.id === id);
+                                 if (!item) continue;
+                                 
+                                 const getFilter = (id: string, label: string) => {
+                                   if (id === 'all-items') return (r: any) => r.type !== 'folder';
+                                   if (id === 'type-secure-notes') return (r: any) => r.type === 'note' || r.type === 'secure-note';
+                                   if (id === 'type-payment-cards') return (r: any) => r.type === 'card' || r.type === 'financial-card';
+                                   if (id === 'type-health-records') return (r: any) => r.category === 'Health Records' || r.type === 'health-record';
+                                   if (id === 'type-medications') return (r: any) => r.type === 'medication' || r.category?.toLowerCase() === 'medications';
+                                   if (id === 'type-vitals') return (r: any) => r.category?.toLowerCase() === 'vitals' || r.item_metadata?.is_vital === true;
+                                   if (id === 'type-health-diary') return (r: any) => r.category?.toLowerCase() === 'health diary';
+                                   if (id === 'type-medical') return (r: any) => r.category === 'Health Insurance';
+                                   if (id === 'type-vehicles') return (r: any) => r.type === 'vehicle' || r.category === 'Vehicle Profiles';
+                                   if (id === 'type-vehicle-docs') return (r: any) => r.category === 'Registration & Docs';
+                                   if (id === 'type-maintenance') return (r: any) => r.type === 'maintenance' || r.category === 'Maintenance Logs';
+                                   if (id === 'type-business') return (r: any) => r.type === 'business' || r.category === 'Business Hub';
+                                   if (id === 'type-clients') return (r: any) => r.type === 'client' || r.category === 'Client Records';
+                                   if (id === 'type-assets') return (r: any) => r.type === 'asset' || r.category === 'Asset Ledger';
+                                   if (id === 'type-budget') return (r: any) => r.type === 'budget' || r.category === 'Budget Manager';
+                                   if (id === 'type-media') return (r: any) => r.type === 'media' || r.category === 'Secure Media' || r.category === 'Memories & Media';
+                                   if (id === 'type-goals') return (r: any) => r.type === 'goal' || r.category === 'Goals & Timeline';
+                                   if (id === 'type-digital-life') return (r: any) => r.category === 'Online Presence' || r.type === 'online-presence';
+                                   if (id === 'type-diary') return (r: any) => r.type === 'diary' || r.category === 'My Diary';
+                                   if (id === 'type-subscriptions') return (r: any) => r.category === 'Subscriptions';
+                                   if (id === 'type-social') return (r: any) => r.category === 'Social Media';
+                                   return (r: any) => r.category === label || (r.type === 'password' && r.category === label);
+                                 };
+
+                                 const filter = getFilter(id, item.label);
+                                 const targets = records.filter(filter);
+                                 for (const r of targets) {
+                                   await deleteItem(r.id, r.type || "item", { skipRefresh: true });
+                                 }
+                               }
+                               window.dispatchEvent(new CustomEvent('vault-refresh'));
+                               toast.success(`Bulk wipe complete.`);
+                               setSelectedWipeIds([]);
+                             } catch (e) {
+                               console.error(e);
+                               toast.error("Bulk wipe failed mid-process.");
+                             } finally {
+                               setIsBulkDeleting(false);
+                             }
+                           }
+                         }}
+                         className="px-6 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-red-900/40 transition-all flex items-center gap-2"
+                       >
+                         {isBulkDeleting ? <RotateCcw className="h-3 w-3 animate-spin" /> : <Trash className="h-3 w-3" />}
+                         Wipe Selected
+                       </button>
+                     </div>
+                   )}
+                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sidebarSections.filter(s => !['dashboard', 'vault', 'configuration'].includes(s.id)).map(section => (
@@ -1022,41 +1100,79 @@ export default function Settings({
                           const count = records.filter(filter).length;
                           const displayLabel = id === 'type-vitals' ? 'Vitals Historical Log' : item.label;
 
-                          return (
-                            <button
-                              key={item.id}
-                              onClick={async () => {
-                                if (count === 0) {
-                                  toast.error(`No data found for ${displayLabel}`);
-                                  return;
-                                }
+                           const isSelected = selectedWipeIds.includes(item.id);
 
-                                if (confirm(`⚠️ CRITICAL: Are you sure you want to delete ALL ${count} items in "${displayLabel}"? This action is permanent and cannot be undone.`)) {
-                                  if (!deleteItem) return;
-                                  showNotification(`Wiping ${count} items...`, "error");
-                                  
-                                  try {
-                                    const targets = records.filter(filter);
-                                    for (const r of targets) {
-                                      await deleteItem(r.id, r.type || "item", { skipRefresh: true });
-                                    }
-                                    window.dispatchEvent(new CustomEvent('vault-refresh'));
-                                    toast.success(`Successfully deleted all ${displayLabel} data.`);
-                                  } catch (e) {
-                                    console.error(e);
-                                    toast.error("Failed to complete wipe.");
-                                  }
-                                }
-                              }}
-                              className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/5 hover:bg-red-500/15 border border-red-500/10 transition-all group"
-                            >
-                              <div className="text-left">
-                                <div className="text-xs font-bold text-red-400 group-hover:text-red-300">Wipe {displayLabel}</div>
-                                <div className="text-[10px] opacity-40">{count} items recorded</div>
-                              </div>
-                              <Trash className="h-4 w-4 text-red-500 opacity-30 group-hover:opacity-100" />
-                            </button>
-                          );
+                           return (
+                             <div 
+                               key={item.id}
+                               className={`relative group rounded-xl border transition-all ${
+                                 isSelected 
+                                   ? 'border-red-500 bg-red-500/10 shadow-lg shadow-red-900/20' 
+                                   : 'border-red-500/10 bg-red-500/5 hover:bg-red-500/15'
+                               }`}
+                             >
+                               <div className="absolute top-2 right-2 flex items-center gap-1.5">
+                                 <input 
+                                   type="checkbox"
+                                   checked={isSelected}
+                                   onChange={() => {
+                                     setSelectedWipeIds(prev => 
+                                       prev.includes(item.id) 
+                                         ? prev.filter(i => i !== item.id) 
+                                         : [...prev, item.id]
+                                     )
+                                   }}
+                                   className="h-3.5 w-3.5 rounded border-red-500/30 bg-black/40 text-red-600 focus:ring-red-500/50 cursor-pointer"
+                                 />
+                               </div>
+
+                               <button
+                                 disabled={isBulkDeleting}
+                                 onClick={async () => {
+                                   if (isSelected) {
+                                      // Toggle off if clicking while selected
+                                      setSelectedWipeIds(prev => prev.filter(i => i !== item.id));
+                                      return;
+                                   }
+
+                                   if (count === 0) {
+                                     toast.error(`No data found for ${displayLabel}`);
+                                     return;
+                                   }
+
+                                   if (confirm(`⚠️ CRITICAL: Are you sure you want to delete ALL ${count} items in "${displayLabel}"? This action is permanent and cannot be undone.`)) {
+                                     if (!deleteItem) return;
+                                     showNotification(`Wiping ${count} items...`, "error");
+                                     
+                                     try {
+                                       const targets = records.filter(filter);
+                                       for (const r of targets) {
+                                         await deleteItem(r.id, r.type || "item", { skipRefresh: true });
+                                       }
+                                       window.dispatchEvent(new CustomEvent('vault-refresh'));
+                                       toast.success(`Successfully deleted all ${displayLabel} data.`);
+                                     } catch (e) {
+                                       console.error(e);
+                                       toast.error("Failed to complete wipe.");
+                                     }
+                                   }
+                                 }}
+                                 className="w-full h-full flex items-center justify-between p-3 transition-all text-left"
+                               >
+                                 <div className="text-left">
+                                   <div className={`text-xs font-bold transition-colors ${isSelected ? 'text-white' : 'text-red-400 group-hover:text-red-300'}`}>
+                                     Wipe {displayLabel}
+                                   </div>
+                                   <div className={`text-[10px] transition-opacity ${isSelected ? 'opacity-70' : 'opacity-40'}`}>
+                                     {count} items recorded
+                                   </div>
+                                 </div>
+                                 {!isSelected && (
+                                   <Trash className="h-4 w-4 text-red-500 opacity-30 group-hover:opacity-100" />
+                                 )}
+                               </button>
+                             </div>
+                           );
                         })}
                       </div>
                     </div>
