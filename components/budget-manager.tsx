@@ -341,21 +341,21 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
     const COLORS = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
 
     return (
-        <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50' : 'bg-[#0a0a0a]'} text-white overflow-y-auto no-scrollbar`}>
+        <div className={`min-h-full ${theme === 'light' ? 'bg-gray-50' : 'bg-[#0a0a0a]'} text-white pb-20`}>
             
             <style jsx global>{`
                 .no-scrollbar::-webkit-scrollbar { display: none; }
                 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
 
-            {/* Header - Matching Screenshot */}
-            <div className={`px-4 md:px-8 py-4 shrink-0 sticky top-0 z-10 ${theme === 'light' ? 'bg-gray-50/80' : 'bg-[#0a0a0a]/80'} backdrop-blur-md`}>
+            {/* Header - Simple and Sticky Title Bar */}
+            <div className={`px-4 md:px-8 py-4 shrink-0 sticky top-0 z-30 ${theme === 'light' ? 'bg-gray-50/95' : 'bg-[#0a0a0a]/95'} backdrop-blur-md border-b border-white/5`}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div className="flex items-center gap-6">
-                        <h1 className={`text-4xl font-bold tracking-tight flex items-center gap-3 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
-                            Financial Dashboard
+                    <div className="flex items-center gap-4 md:gap-6">
+                        <h1 className={`text-2xl md:text-4xl font-black tracking-tight flex items-center gap-3 ${theme === 'light' ? 'text-gray-900' : 'text-white'} uppercase italic`}>
+                            Pulse Finance
                             <button onClick={() => onOpenHelp?.('budget')} className="p-1.5 rounded-full hover:bg-white/10 text-blue-500 transition-colors">
-                                <HelpCircle className="h-6 w-6" />
+                                <HelpCircle className="h-5 w-5 md:h-6 md:w-6" />
                             </button>
                         </h1>
                         {/* Personal/Business Switcher */}
@@ -455,7 +455,7 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                 )}
 
                 {/* Main Hero Cards */}
-                <div className="grid grid-cols-3 gap-2 md:gap-6 mt-6 md:mt-8 px-4 md:px-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-6 mt-6 md:mt-8">
                     {/* Income Card */}
                     <div className="p-3 md:p-6 rounded-2xl bg-[#0d1a0d] border border-green-500/20 shadow-lg flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-2 md:mb-4 gap-1">
@@ -495,7 +495,7 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                     </div>
 
                     {/* Profit/Loss Card */}
-                    <div className={`p-3 md:p-6 rounded-2xl shadow-xl transition-colors duration-500 flex flex-col justify-between ${
+                    <div className={`col-span-2 sm:col-span-1 p-3 md:p-6 rounded-2xl shadow-xl transition-colors duration-500 flex flex-col justify-between ${
                         stats.profit > 0 ? 'bg-green-600 border border-green-500 shadow-green-500/10' : 
                         stats.profit < 0 ? 'bg-red-600 border border-red-500 shadow-red-500/10' : 
                         'bg-blue-600 border border-blue-500 shadow-blue-500/10'
@@ -523,8 +523,8 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                     <ChevronDown className="h-5 w-5 text-purple-400 opacity-50 transition-transform group-hover:translate-y-0.5" />
                 </div>
 
-                {/* Tab Navigation */}
-                <div className="flex items-center gap-1 mt-6 border-b border-white/5 overflow-x-auto no-scrollbar">
+                {/* Tab Navigation - Sticky so user knows current context */}
+                <div className={`flex items-center gap-1 mt-8 border-b border-white/5 overflow-x-auto no-scrollbar sticky top-[108px] md:top-[88px] z-20 ${theme === 'light' ? 'bg-gray-50/95' : 'bg-[#0a0a0a]/95'} backdrop-blur-md pb-1`}>
                     {[
                         { id: 'overview', label: 'Overview' },
                         { id: 'transactions', label: 'Transactions' },
@@ -534,20 +534,19 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                         <button
                             key={tab.id}
                             onClick={() => setViewMode(tab.id as any)}
-                            className={`px-4 md:px-8 py-2.5 text-[10px] md:text-xs font-bold uppercase tracking-tight transition-all relative shrink-0 ${viewMode === tab.id 
+                            className={`px-4 md:px-6 py-3 text-[10px] md:text-xs font-black uppercase tracking-widest transition-all relative shrink-0 ${viewMode === tab.id 
                                 ? 'text-white' 
                                 : 'text-gray-500 hover:text-gray-300'}`}
                         >
                             {tab.label}
                             {viewMode === tab.id && (
-                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 animate-in fade-in" />
+                                <div className="absolute bottom-0 left-4 right-4 h-1 bg-blue-500 rounded-full animate-in fade-in" />
                             )}
                         </button>
                     ))}
                 </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-12 custom-scrollbar">
+                {/* View Content wrapper closed at the end of the body section */}
+                <div className="mt-8">
                 {viewMode === 'overview' && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4 animate-in fade-in duration-500 pb-10">
                         {/* Summary Chart (Pie) */}
@@ -961,6 +960,7 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                         </div>
                     </div>
                 )}
+                </div>
             </div>
 
             {/* Add Modal */}
@@ -1139,6 +1139,7 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                     </div>
                 </div>
             )}
+
             {/* AI Advisor Modal */}
             {showAdvisor && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-4 animate-in fade-in duration-300">

@@ -425,8 +425,17 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
         <td className="py-3 px-4">{card.name}</td>
         <td className="py-3 px-4">
           <div className="flex items-center">
-            <span>{formatCardNumber(card.cardNumber, card.id)}</span>
-            <button className="ml-2 text-gray-400 hover:text-white" onClick={() => toggleCardNumberVisibility(card.id)}>
+            <span 
+              className="cursor-pointer hover:text-blue-400 transition-colors" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyCardNumber(card.cardNumber);
+              }}
+              title="Click to Copy"
+            >
+              {formatCardNumber(card.cardNumber, card.id)}
+            </span>
+            <button className="ml-2 text-gray-400 hover:text-white" onClick={(e) => { e.stopPropagation(); toggleCardNumberVisibility(card.id); }}>
               {visibleCardNumbers[card.id] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
             <button
@@ -598,7 +607,14 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
               </div>
             </div>
 
-            <div className="mb-6">
+            <div 
+              className="mb-6 cursor-pointer hover:text-blue-400 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCopyCardNumber(card.cardNumber);
+              }}
+              title="Click to Copy"
+            >
               <div className="text-lg font-mono tracking-wider">{formatCardNumber(card.cardNumber, card.id)}</div>
               {visibleCardNumbers[card.id] && (
                 <div className="mt-2 text-sm">

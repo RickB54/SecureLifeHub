@@ -125,6 +125,49 @@ export default function Settings({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [show2FA, setShow2FA] = useState(false)
 
+  // Robust mock identification logic
+  const isItemMock = (r: any) => {
+    // 1. Check explicit metadata flags
+    if (r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true) return true;
+    
+    // 2. Check heuristically based on known internal demo patterns
+    const title = (r.title || "").toLowerCase();
+    const patterns = [
+      /adobe suite/i,
+      /bank account/i,
+      /database prod/i,
+      /login service/i,
+      /membership .* gym/i,
+      /server node/i,
+      /ssh key .* aws/i,
+      /wifi password/i,
+      /credit card [0-9]+ - bank [0-9]+/i,
+      /membership [0-9]+/i,
+      /server [0-9]+/i,
+      /database [0-9]+/i,
+      /john doe/i,
+      /jane doe/i
+    ];
+    
+    const username = ((r.username || r.item_metadata?.username || r.item_metadata?.email || "") + "").toLowerCase();
+    const commonMockUsers = ["no username", "db_admin", "member_id", "admin", "root", "user1@example.com"];
+    
+    if (patterns.some(p => p.test(title))) return true;
+    if (commonMockUsers.some(u => username.includes(u))) return true;
+    if (username.includes("example.com") && (title.includes("service") || title.includes("login"))) return true;
+    
+    // Check specific combinations of names that indicate mock data
+    if ((title.includes("membership") || title.includes("gym")) && (title.includes("member_id") || title.includes("no username"))) return true;
+    if (title.includes("ssh key") && title.includes("aws")) return true;
+    if (title.includes("adobe suite")) return true;
+
+    // 3. User information based checks (e.g. John Doe for cards)
+    const holder = ((r.item_metadata?.name || r.item_metadata?.cardHolder || "") + "").toUpperCase();
+    if (holder === "JOHN DOE") return true;
+
+    return false;
+  };
+
   // Load Biometric State + Session Duration
   useEffect(() => {
     setBiometricEnabled(localStorage.getItem('biometric_enabled') === 'true')
@@ -359,7 +402,7 @@ export default function Settings({
     e.target.value = "" // Reset the file input
   }
 
-  const SettingsCard = ({ title, icon: Icon, children, color = "blue", className = "", helpId }: any) => (
+  const SettingsCard = ({ title, icon: Icon, children, color = "blue", className = "", helpId, hideHeaderHelp = false }: any) => (
     <div className={`p-6 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200 shadow-xl shadow-gray-200/50" : "bg-[#1a1a1a] border-white/5"} ${className}`}>
       <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none`}>
         <Icon className="h-32 w-32" />
@@ -369,15 +412,19 @@ export default function Settings({
           <div className={`p-3 rounded-2xl ${theme === "light" ? `bg-${color}-100 text-${color}-600` : `bg-${color}-500/20 text-${color}-400`}`}>
             <Icon className="h-6 w-6" />
           </div>
-          <h3 className="text-xl font-bold">{title}</h3>
-          <button 
-            type="button"
-            onClick={() => onOpenHelp?.(helpId || "settings")}
-            className="ml-auto p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-white transition-all focus:outline-none opacity-100"
-            title={`Explain ${title}`}
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <h3 className="text-xl font-bold">{title}</h3>
+            {!hideHeaderHelp && (
+              <button 
+                type="button"
+                onClick={() => onOpenHelp?.(helpId || "settings")}
+                className="p-1 rounded-lg hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all focus:outline-none opacity-100"
+                title={`Explain ${title}`}
+              >
+                <HelpCircle className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
         {children}
       </div>
@@ -735,9 +782,6 @@ export default function Settings({
               <div>
                 <div className="flex items-center gap-2">
                   <div className="font-bold">Auto-Fill</div>
-                  <button type="button" onClick={() => onOpenHelp?.("settings-automation")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
-                    <HelpCircle className="h-3 w-3" />
-                  </button>
                 </div>
                 <div className={`text-xs ${autoFillEnabled ? 'text-blue-400' : 'text-gray-500'}`}>
                   {autoFillEnabled ? "Extension Access Enabled" : "Manual Copy/Paste Only"}
@@ -878,9 +922,6 @@ export default function Settings({
                 <div>
                   <div className="flex items-center gap-2">
                     <div className="font-bold">Reset Recent Items</div>
-                    <button type="button" onClick={() => onOpenHelp?.("settings-recents")} className="text-blue-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
-                      <HelpCircle className="h-3 w-3" />
-                    </button>
                   </div>
                   <div className="text-xs text-blue-400 font-medium">Reset 'Recents' folder history to start fresh from now</div>
                 </div>
@@ -913,24 +954,56 @@ export default function Settings({
           />
         </SettingsCard>
 
-
-      </div>
-
-      {/* Backup & Recovery (Full Width) */}
-      <div className={`p-8 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"}`}>
-        <BackupRecovery
-          records={records}
-          addItem={addItem}
-          deleteItem={deleteItem}
-          bulkAddItems={bulkAddItems}
-          theme={theme || "dark"}
-          onOpenHelp={onOpenHelp}
-        />
-      </div>
-
-      {/* Export Data Module (Full Width) */}
-      <div className={`p-8 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200" : "bg-[#1a1a1a] border-white/5"}`}>
-        <ExportData records={records} theme={theme || "dark"} />
+        {/* Combined Data Management Section */}
+        <SettingsCard title="Data Management" icon={Database} color="blue" helpId="settings-data" className="lg:col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-2 p-1.5 rounded-lg bg-blue-500/10 w-fit">
+                <Download className="h-4 w-4 text-blue-400" />
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400">Backup & Restore</h4>
+              </div>
+              <BackupRecovery
+                records={records}
+                addItem={addItem}
+                deleteItem={deleteItem}
+                bulkAddItems={bulkAddItems}
+                theme={theme || "dark"}
+                onOpenHelp={onOpenHelp}
+              />
+            </div>
+            <div className="space-y-4 md:border-l border-white/5 md:pl-8 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2 p-1.5 rounded-lg bg-pink-500/10 w-fit">
+                  <Upload className="h-4 w-4 text-pink-400" />
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-pink-400">Export Vault</h4>
+                </div>
+                <ExportData records={records} theme={theme || "dark"} />
+              </div>
+              
+              <div className="pt-6 border-t border-white/5 mt-auto">
+                <button 
+                  onClick={async () => {
+                    const mockItems = records.filter(isItemMock);
+                    if (mockItems.length === 0) return toast.info("No mock data detected in your vault.");
+                    
+                    if (confirm(`DETECTED: ${mockItems.length} leftover mock/demo records. \n\nWould you like to PERMANENTLY delete them now to sanitize your vault?`)) {
+                      if (!deleteItem) return;
+                      toast.info("Sanitizing vault...");
+                      for (const item of mockItems) {
+                        await deleteItem(item.id, item.type || "item", { skipRefresh: true });
+                      }
+                      window.dispatchEvent(new CustomEvent('vault-refresh'));
+                      toast.success(`Sanitized: Removed ${mockItems.length} mock records.`);
+                    }
+                  }}
+                  className="w-full py-4 px-6 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-[10px]"
+                >
+                  <Database className="h-4 w-4" /> Sanitize Vault (Wipe Mocks)
+                </button>
+              </div>
+            </div>
+          </div>
+        </SettingsCard>
       </div>
 
       {/* Advanced & Danger Zone */}
@@ -1240,7 +1313,8 @@ export default function Settings({
 
                   <button
                     onClick={async () => {
-                      const mockItems = records.filter(r => r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true);
+                      const mockItems = records.filter(isItemMock);
+                      
                       if (mockItems.length === 0) return toast.info("No mock data found to clean up.");
                       
                       if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records. Do you want to permanently delete them and keep only your real data?`)) {
@@ -1390,19 +1464,18 @@ function ModuleAccessSettings({
         // Identify mock items for this module. 
         // We look for item_metadata.mock === true OR budget_mock === true
         const mockItems = records.filter(r => {
-          const isMock = r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true;
-          if (!isMock) return false;
+          if (!isItemMock(r)) return false;
           
           // Match module
           if (moduleId === "passwords" && (r.type === "password" || r.type === "login")) return true;
           if (moduleId === "diary" && r.type === "diary") return true;
-          if (moduleId === "financial" && (r.type === "card" || r.type === "payment-card")) return true;
+          if (moduleId === "financial" && (r.type === "card" || r.type === "payment-card" || r.type === "financial-card")) return true;
           if (moduleId === "type-budget" && r.item_metadata?.is_budget === true) return true;
           if (moduleId === "type-health-records" && (r.type === "health-record" || r.category === "Health Records")) return true;
           if (moduleId === "type-vehicles" && r.type === "vehicle") return true;
           if (moduleId === "type-secure-notes" && (r.type === "note" || r.type === "secure-note")) return true;
           
-          return false; // Fallback
+          return false;
         });
 
         for (const item of mockItems) {
@@ -1440,7 +1513,7 @@ function ModuleAccessSettings({
         const confirmCleanup = window.confirm("You are turning off the Master Demo Switch. Would you like to PERMANENTLY DELETE all demo records currently in your vault? \n\n(This ensures your real data is clean and unmixed)");
         if (confirmCleanup) {
           toast.info("Mass cleaning demo data...");
-          const mockItems = records.filter(r => r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true);
+          const mockItems = records.filter(isItemMock);
           for (const item of mockItems) {
             await deleteItem(item.id, item.type || "item", { skipRefresh: true });
           }

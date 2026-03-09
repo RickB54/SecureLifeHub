@@ -77,6 +77,7 @@ export const HELP_MAP: Record<string, string> = {
     "settings-recents": "settings-recents",
     "settings-access": "settings-access",
     "settings-test-data": "settings-test-data",
+    "settings-data": "settings-data",
     "settings-danger-zone": "settings-danger-zone",
     "user-settings": "settings",
 }
@@ -602,6 +603,30 @@ const HELP_PAGES: HelpPage[] = [
         )
     },
     {
+        id: "settings-data",
+        title: "Vault Data Management",
+        icon: Database,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300">Maintain full control over your vault's data lifecycle.</p>
+                <div className="space-y-4">
+                    <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-1 uppercase tracking-tighter">Backup & Recovery</h5>
+                        <p className="text-xs text-gray-400">Export your entire vault as an encrypted JSON file. This is the ultimate safety net. You can re-import this file on a new device to restore all your secrets instantly.</p>
+                    </div>
+                    <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-xl">
+                        <h5 className="font-bold text-purple-400 text-sm mb-1 uppercase tracking-tighter">Export Vault</h5>
+                        <p className="text-xs text-gray-400">Downloads a raw copy of your data. Keep this file extremely safe, as it contains all your stored credentials and health history.</p>
+                    </div>
+                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl text-yellow-500 font-bold border-dashed">
+                        <h5 className="font-bold text-yellow-400 text-sm mb-1 uppercase tracking-tighter">Wipe All Mock Data</h5>
+                        <p className="text-xs text-yellow-600">The "Demo Mode" toggle adds sample records for you to explore. If you've finished testing and want to clean those up while keeping your real records, use this mass-cleanup tool.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
         id: "settings-access",
         title: "Module Access Controls",
         icon: Lock,
@@ -747,12 +772,17 @@ export default function HelpModal({ isOpen, onClose, theme, initialPageId }: { i
 
     // Handle initial page jump on open
     useEffect(() => {
-        if (isOpen && initialPageId) {
-            const helpId = HELP_MAP[initialPageId] || initialPageId
-            const idx = HELP_PAGES.findIndex(p => p.id === helpId)
-            if (idx !== -1) {
-                setCurrentPageIndex(idx)
+        if (isOpen) {
+            if (initialPageId) {
+                const helpId = HELP_MAP[initialPageId] || initialPageId
+                const idx = HELP_PAGES.findIndex(p => p.id === helpId)
+                if (idx !== -1) {
+                    setCurrentPageIndex(idx)
+                    return
+                }
             }
+            // Fallback to page 0 if no valid initial ID is provided for the CURRENT open action
+            setCurrentPageIndex(0)
         }
     }, [isOpen, initialPageId])
 

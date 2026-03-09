@@ -149,25 +149,33 @@ function HomeContent() {
   useEffect(() => {
     if (typeof window === "undefined") return
     const pos = scrollPositions.current[activePage] || 0
-    const mainEl = document.getElementById("main-scroll-container")
     
-    if (mainEl) {
-      // First attempt
-      const tm1 = setTimeout(() => {
+    // Use a slightly longer sequence for complex pages
+    const restore = () => {
+      const mainEl = document.getElementById("main-scroll-container")
+      if (mainEl) {
         mainEl.scrollTo({ top: pos, behavior: "instant" })
-      }, 50)
-      
-      // Secondary attempt for slower rendering components
-      const tm2 = setTimeout(() => {
-        if (mainEl.scrollTop !== pos) {
-           mainEl.scrollTo({ top: pos, behavior: "instant" })
-        }
-      }, 250)
-      
-      return () => {
-        clearTimeout(tm1)
-        clearTimeout(tm2)
+        return true
       }
+      return false
+    }
+
+    // Attempt 1: Immediate
+    restore()
+
+    // Attempt 2: Short delay
+    const tm1 = setTimeout(restore, 50)
+    
+    // Attempt 3: Medium delay (most reliable for complex lists)
+    const tm2 = setTimeout(restore, 250)
+
+    // Attempt 4: Safety catch for very slow renders
+    const tm3 = setTimeout(restore, 600)
+    
+    return () => {
+      clearTimeout(tm1)
+      clearTimeout(tm2)
+      clearTimeout(tm3)
     }
   }, [activePage])
 

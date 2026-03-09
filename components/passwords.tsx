@@ -688,17 +688,30 @@ export default function Passwords({
             {/* Bottom Line: Username • Password */}
             <div className="flex items-center text-sm mt-1 gap-2 text-gray-500 dark:text-gray-400">
               <span
-                className="truncate max-w-[120px] cursor-pointer hover:text-blue-400 transition-colors p-0.5 -m-0.5 rounded hover:bg-white/5"
+                className="truncate max-w-[100px] cursor-pointer hover:text-blue-400 transition-colors p-0.5 -m-0.5 rounded hover:bg-white/5"
                 title="Click to Copy Username"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigator.clipboard.writeText(password.username || "");
-                  toast.success("Username copied to clipboard");
+                  toast.success("Username copied");
                 }}
               >
-                {password.username}
+                {password.username || "No user"}
               </span>
-              <span className="text-xs opacity-50 cursor-default">•</span>
+              <span className="text-xs opacity-50 cursor-default px-1">•</span>
+              
+              {/* Masked Password - copies on click */}
+              <span
+                className="font-mono text-xs cursor-pointer hover:text-blue-400 transition-colors p-0.5 -m-0.5 rounded hover:bg-white/5"
+                title="Click to Copy Password"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(password.password || "");
+                  toast.success("Password copied");
+                }}
+              >
+                ••••••••••
+              </span>
 
               {/* Eye Icon / Toggle */}
               <button
@@ -707,7 +720,7 @@ export default function Passwords({
                   // Toggle logic
                   setActivePasswordPopup(activePasswordPopup === password.id ? null : password.id)
                 }}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white ml-auto"
               >
                 {activePasswordPopup === password.id ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               </button>
@@ -717,9 +730,8 @@ export default function Passwords({
                   className="absolute left-0 bottom-full mb-1 z-[9999] bg-black text-white px-3 py-2 rounded shadow-lg text-sm font-mono cursor-pointer border border-gray-700 animate-in fade-in zoom-in-95"
                   onClick={(e) => {
                     e.stopPropagation()
-                    console.log("Popup clicked - copying text")
                     navigator.clipboard.writeText(password.password)
-                    toast.success("Password copied to clipboard")
+                    toast.success("Password copied")
                     setActivePasswordPopup(null)
                   }}
                   style={{ minWidth: "max-content" }}
@@ -1134,14 +1146,14 @@ export default function Passwords({
                 className={`truncate font-mono cursor-pointer hover:text-blue-400 transition-colors ${activePasswordPopup === password.id ? "text-white select-all" : "text-gray-500"}`}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (activePasswordPopup === password.id) {
-                    navigator.clipboard.writeText(password.password)
-                    toast.success("Password copied to clipboard")
-                  } else {
-                    setActivePasswordPopup(password.id)
+                  navigator.clipboard.writeText(password.password)
+                  toast.success("Password copied")
+                  if (activePasswordPopup !== password.id) {
+                    // Optionally show it too
+                    // setActivePasswordPopup(password.id)
                   }
                 }}
-                title={activePasswordPopup === password.id ? "Click to Copy Password" : "Click to Show Password"}
+                title="Click to Copy Password"
               >
                 {activePasswordPopup === password.id ? password.password : "••••••••••"}
               </span>
