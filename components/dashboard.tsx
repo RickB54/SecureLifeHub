@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
   Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
-  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap
+  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign
 } from "lucide-react"
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
@@ -21,7 +21,7 @@ interface DashboardProps {
   setActivePage: (page: string) => void
   theme: string
   addItem: (item: any) => Promise<any>
-  addFolder: (name: string, parentId?: string) => Promise<any>
+  addFolder: (name: string, parentId?: string, extra?: any) => Promise<any>
   securitySettings?: Record<string, { isLocked: boolean }>
   onOpenHelp?: (targetId?: string) => void
 }
@@ -82,9 +82,20 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   const passCount = records.filter((r: any) => r.type === "password" || r.type === "login").length
   const favoriteCount = records.filter((r: any) => r.is_favorite).length
 
+  // Budget / Financial Stats
+  const budgetItems = records.filter((r: any) => r.category === "Budget" || r.item_metadata?.is_budget)
+  const totalIncome = budgetItems
+    .filter((r: any) => r.item_metadata?.entry_type === 'income')
+    .reduce((sum: number, r: any) => sum + (parseFloat(r.item_metadata.amount) || 0), 0)
+  const totalExpenses = budgetItems
+    .filter((r: any) => r.item_metadata?.entry_type === 'expense')
+    .reduce((sum: number, r: any) => sum + (parseFloat(r.item_metadata.amount) || 0), 0)
+  const netProfit = totalIncome - totalExpenses
+
   // Pulse Definitions
   const ALL_PULSES = [
     { id: 'security', label: 'Security', icon: Shield, color: 'text-yellow-500', value: securityScore, valueText: `${securityScore}% Safe` },
+    { id: 'budget', label: 'Financials', icon: DollarSign, color: 'text-blue-500', valueText: `$${netProfit.toLocaleString()} Net` },
     { id: 'assets', label: 'Net Worth', icon: Activity, color: 'text-emerald-500', valueText: `$${totalAssetValue.toLocaleString()}` },
     { id: 'goals', label: 'Active Goals', icon: Target, color: 'text-violet-500', valueText: `${goalsCount} Targets` },
     { id: 'health', label: 'Health Vitals', icon: Heart, color: 'text-red-500', valueText: `${healthCount} Records` },
@@ -181,28 +192,54 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
               {activePulses.length === 0 ? (
                 <div className="w-full text-center opacity-30 italic text-sm">No analytics pinned. Click the settings icon to add.</div>
               ) : (
-                activePulses.map((pulse) => (
-                  <div key={pulse.id} className="flex flex-col items-center gap-1 px-3 py-2 rounded-2xl bg-white/5 min-w-[64px] hover:bg-white/10 transition-all group/item">
-                    {pulse.id === 'security' ? (
-                      <div className="relative w-10 h-10 flex items-center justify-center">
-                        <svg className="w-full h-full transform -rotate-90">
-                          <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-700/20" />
-                          <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent"
-                            strokeDasharray={`${2 * Math.PI * 16}`}
-                            strokeDashoffset={`${2 * Math.PI * 16 * (1 - (pulse.value || 0) / 100)}`}
-                            className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
-                        </svg>
-                        <Shield className="absolute h-4 w-4 opacity-80" />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 flex items-center justify-center bg-gray-500/10 rounded-full group-hover/item:scale-105 transition-transform">
-                        <pulse.icon className={`h-5 w-5 ${pulse.color}`} />
-                      </div>
-                    )}
-                    <p className="text-[9px] font-bold uppercase tracking-wide opacity-60 whitespace-nowrap">{pulse.label}</p>
-                    <p className={`text-[9px] opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
-                  </div>
-                ))
+                activePulses.map((pulse) => {
+                  const goToPage = (id: string) => {
+                    const mapping: Record<string, string> = {
+                      security: 'security-audit',
+                      assets: 'type-assets',
+                      goals: 'type-goals',
+                      health: 'type-health-records',
+                      subscriptions: 'type-subscriptions',
+                      media: 'type-media',
+                      vehicles: 'type-vehicles',
+                      business: 'type-business',
+                      knowledge: 'type-knowledge',
+                      travel: 'type-travel',
+                      vault: 'passwords',
+                      budget: 'type-budget',
+                      favorites: 'favorites',
+                      diary: 'type-diary'
+                    }
+                    setActivePage(mapping[id] || 'dashboard')
+                  }
+
+                  return (
+                    <button
+                      key={pulse.id}
+                      onClick={() => goToPage(pulse.id)}
+                      className="flex flex-col items-center gap-1 px-3 py-2 rounded-2xl bg-white/5 min-w-[64px] hover:bg-white/10 hover:scale-105 active:scale-95 transition-all group/item"
+                    >
+                      {pulse.id === 'security' ? (
+                        <div className="relative w-10 h-10 flex items-center justify-center">
+                          <svg className="w-full h-full transform -rotate-90">
+                            <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-700/20" />
+                            <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent"
+                              strokeDasharray={`${2 * Math.PI * 16}`}
+                              strokeDashoffset={`${2 * Math.PI * 16 * (1 - (pulse.value || 0) / 100)}`}
+                              className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
+                          </svg>
+                          <Shield className="absolute h-4 w-4 opacity-80" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 flex items-center justify-center bg-gray-500/10 rounded-full group-hover/item:scale-105 transition-transform">
+                          <pulse.icon className={`h-5 w-5 ${pulse.color}`} />
+                        </div>
+                      )}
+                      <p className="text-[9px] font-bold uppercase tracking-wide opacity-60 whitespace-nowrap">{pulse.label}</p>
+                      <p className={`text-[9px] opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
+                    </button>
+                  )
+                })
               )}
             </div>
           </div>

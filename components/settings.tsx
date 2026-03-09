@@ -1015,7 +1015,7 @@ export default function Settings({
                                    if (id === 'type-business') return (r: any) => r.type === 'business' || r.category === 'Business Hub';
                                    if (id === 'type-clients') return (r: any) => r.type === 'client' || r.category === 'Client Records';
                                    if (id === 'type-assets') return (r: any) => r.type === 'asset' || r.category === 'Asset Ledger';
-                                   if (id === 'type-budget') return (r: any) => r.type === 'budget' || r.category === 'Budget Manager';
+                                   if (id === 'type-budget') return (r: any) => r.category === 'Budget' || r.item_metadata?.is_budget === true;
                                    if (id === 'type-media') return (r: any) => r.type === 'media' || r.category === 'Secure Media' || r.category === 'Memories & Media';
                                    if (id === 'type-goals') return (r: any) => r.type === 'goal' || r.category === 'Goals & Timeline';
                                    if (id === 'type-digital-life') return (r: any) => r.category === 'Online Presence' || r.type === 'online-presence';
@@ -1083,7 +1083,7 @@ export default function Settings({
                             if (id === 'type-business') return (r: any) => r.type === 'business' || r.category === 'Business Hub';
                             if (id === 'type-clients') return (r: any) => r.type === 'client' || r.category === 'Client Records';
                             if (id === 'type-assets') return (r: any) => r.type === 'asset' || r.category === 'Asset Ledger';
-                            if (id === 'type-budget') return (r: any) => r.type === 'budget' || r.category === 'Budget Manager';
+                            if (id === 'type-budget') return (r: any) => r.category === 'Budget' || r.item_metadata?.is_budget === true;
                             if (id === 'type-media') return (r: any) => r.type === 'media' || r.category === 'Secure Media' || r.category === 'Memories & Media';
                             if (id === 'type-goals') return (r: any) => r.type === 'goal' || r.category === 'Goals & Timeline';
                             if (id === 'type-digital-life') return (r: any) => r.category === 'Online Presence' || r.type === 'online-presence';

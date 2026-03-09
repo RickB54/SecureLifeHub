@@ -1,4 +1,4 @@
-import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill } from "lucide-react"
+import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -14,6 +14,7 @@ export const sidebarSections = [
         color: "orange",
         items: [
             { id: "passwords", label: "Passwords", icon: <Key className="h-5 w-5" /> },
+            { id: "security-audit", label: "Security Audit", icon: <Shield className="h-5 w-5" /> },
             { id: "favorites", label: "Favorites", icon: <Star className="h-5 w-5" /> },
             { id: "trash", label: "Deleted", icon: <Trash className="h-5 w-5" /> },
             { id: "generate-password", label: "Generate Password", icon: <Wand2 className="h-5 w-5" /> },
@@ -59,7 +60,7 @@ export const sidebarSections = [
         items: [
             { id: "type-payment-cards", label: "Payment Cards", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-assets", label: "Asset Ledger", icon: <Box className="h-4 w-4" /> },
-            { id: "type-budget", label: "Budget Manager", icon: <CreditCard className="h-4 w-4" /> },
+            { id: "type-budget", label: "Budget Manager", icon: <PieChartIcon className="h-4 w-4" /> },
         ]
     },
     {

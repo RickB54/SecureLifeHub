@@ -19,6 +19,7 @@ import {
   Download,
   Sliders,
 } from "lucide-react"
+import { toast } from "sonner"
 import AddFinancialCardModal from "./modals/add-financial-card-modal"
 import EditFinancialCardModal from "./modals/edit-financial-card-modal"
 import DeleteConfirmationModal from "./modals/delete-confirmation-modal"
@@ -311,11 +312,11 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
     navigator.clipboard
       .writeText(cardNumber)
       .then(() => {
-        console.log("Card number copied to clipboard")
-        // Could add a toast notification here
+        toast.success("Card number copied to clipboard")
       })
       .catch((err) => {
         console.error("Failed to copy card number:", err)
+        toast.error("Failed to copy card number")
       })
   }
 

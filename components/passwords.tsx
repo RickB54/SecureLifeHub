@@ -688,16 +688,17 @@ export default function Passwords({
             {/* Bottom Line: Username • Password */}
             <div className="flex items-center text-sm mt-1 gap-2 text-gray-500 dark:text-gray-400">
               <span
-                className="truncate max-w-[120px] cursor-pointer hover:text-white transition-colors p-0.5 -m-0.5 rounded hover:bg-white/5"
-                title="Click to Edit Username"
+                className="truncate max-w-[120px] cursor-pointer hover:text-blue-400 transition-colors p-0.5 -m-0.5 rounded hover:bg-white/5"
+                title="Click to Copy Username"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleEditPassword(password.id);
+                  navigator.clipboard.writeText(password.username || "");
+                  toast.success("Username copied to clipboard");
                 }}
               >
                 {password.username}
               </span>
-              <span className="text-xs opacity-50">•</span>
+              <span className="text-xs opacity-50 cursor-default">•</span>
 
               {/* Eye Icon / Toggle */}
               <button
@@ -718,6 +719,7 @@ export default function Passwords({
                     e.stopPropagation()
                     console.log("Popup clicked - copying text")
                     navigator.clipboard.writeText(password.password)
+                    toast.success("Password copied to clipboard")
                     setActivePasswordPopup(null)
                   }}
                   style={{ minWidth: "max-content" }}
@@ -1119,15 +1121,28 @@ export default function Passwords({
             className="py-3 px-4 hidden md:table-cell hover:text-blue-400 transition-colors break-words max-w-[150px]"
             onClick={(e) => {
               e.stopPropagation()
-              handleEditPassword(password.id)
+              navigator.clipboard.writeText(password.username || "")
+              toast.success("Username copied to clipboard")
             }}
-            title="Click to Edit"
+            title="Click to Copy Username"
           >
             {password.username}
           </td>
           <td className="py-3 px-4 hidden lg:table-cell relative min-w-[140px]">
             <div className="flex items-center justify-between group/pass">
-              <span className={`truncate font-mono ${activePasswordPopup === password.id ? "text-white select-all" : "text-gray-500"}`}>
+              <span
+                className={`truncate font-mono cursor-pointer hover:text-blue-400 transition-colors ${activePasswordPopup === password.id ? "text-white select-all" : "text-gray-500"}`}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (activePasswordPopup === password.id) {
+                    navigator.clipboard.writeText(password.password)
+                    toast.success("Password copied to clipboard")
+                  } else {
+                    setActivePasswordPopup(password.id)
+                  }
+                }}
+                title={activePasswordPopup === password.id ? "Click to Copy Password" : "Click to Show Password"}
+              >
                 {activePasswordPopup === password.id ? password.password : "••••••••••"}
               </span>
               <button
@@ -1321,6 +1336,7 @@ export default function Passwords({
                       onClick={(e) => {
                         e.stopPropagation()
                         navigator.clipboard.writeText(password.password)
+                        toast.success("Password copied to clipboard")
                         setActivePasswordPopup(null)
                       }}
                     >
@@ -1368,9 +1384,12 @@ export default function Passwords({
             <div className="flex items-center">
               <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Username:</span>
               <span
-                className="flex-1 truncate cursor-pointer hover:text-white transition-colors"
-                onClick={() => handleEditPassword(password.id)}
-                title="Click to edit username"
+                className="flex-1 truncate cursor-pointer hover:text-blue-400 transition-colors"
+                onClick={() => {
+                  navigator.clipboard.writeText(password.username || "");
+                  toast.success("Username copied to clipboard");
+                }}
+                title="Click to Copy Username"
               >
                 {password.username}
               </span>
@@ -1379,7 +1398,18 @@ export default function Passwords({
             <div className="flex items-center">
               <span className={`${theme === "light" ? "text-gray-600" : "text-gray-400"} w-24`}>Password:</span>
               <div className="flex items-center flex-1 relative">
-                <span className={`truncate font-mono ${activePasswordPopup === password.id ? "text-white select-all" : "text-gray-500"}`}>
+                <span
+                  className={`truncate font-mono cursor-pointer hover:text-blue-400 transition-colors ${activePasswordPopup === password.id ? "text-white select-all" : "text-gray-500"}`}
+                  onClick={() => {
+                    if (activePasswordPopup === password.id) {
+                      navigator.clipboard.writeText(password.password)
+                      toast.success("Password copied to clipboard")
+                    } else {
+                      setActivePasswordPopup(password.id)
+                    }
+                  }}
+                  title={activePasswordPopup === password.id ? "Click to Copy Password" : "Click to Show Password"}
+                >
                   {activePasswordPopup === password.id ? password.password : "••••••••••"}
                 </span>
                 <button

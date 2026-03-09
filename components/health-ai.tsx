@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Bot, User, Send, Sparkles, AlertTriangle, Info, CheckCircle, Clock, Plus, Stethoscope, Pill, Activity, Brain, FileText, ChevronDown, ChevronUp, Search, Book, ExternalLink, ShieldCheck, Thermometer, Copy, Download, X, Minimize2, Maximize2 } from "lucide-react"
+import { toast } from "sonner"
 
 enum UrgencyLevel {
     INFO = 'info',
@@ -98,7 +99,7 @@ export default function HealthAI({ theme, records, onScheduleAppointment }: Heal
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text)
-        alert("Copied to clipboard!")
+        toast.success("Copied to clipboard")
     }
 
     const copyConversation = () => {
@@ -247,18 +248,78 @@ export default function HealthAI({ theme, records, onScheduleAppointment }: Heal
 
     const searchMedicalWiki = async (query: string) => {
         try {
-            const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=1&namespace=0&format=json&origin=*`)
+            // 1. Clean the query (remove conversational filler)
+            let cleanQuery = query.toLowerCase()
+                .replace(/^tell me (about|on|the|info on|details on)\s+/i, '')
+                .replace(/^what (is|are|details|info)\s+/i, '')
+                .replace(/^research\s+/i, '')
+                .replace(/^info (on|about)\s+/i, '')
+                .replace(/(\?|\.|!)$/, '')
+                .trim();
+
+            if (!cleanQuery) return null;
+
+            // 2. Perform OpenSearch to get the best matching title (handles typos)
+            const searchRes = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(cleanQuery)}&limit=3&namespace=0&format=json&origin=*`)
             const searchJson = await searchRes.json()
-            const title = searchJson[1][0]
+            
+            // Try the first 3 search results if the exact match fails
+            let title = searchJson[1][0]
             if (!title) return null
 
+            // 3. Fetch summary for the best title
             const summaryRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
             const summaryJson = await summaryRes.json()
+
+            // If we got a 404 or missing extract, try the next search result
+            if (summaryJson.type === 'no-extract' && searchJson[1][1]) {
+                title = searchJson[1][1];
+                const retryRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`)
+                const retryJson = await retryRes.json()
+                if (retryJson.extract) {
+                    // Update variables with retry results
+                    Object.assign(summaryJson, retryJson);
+                }
+            }
+
+            // Fetch more sections for "info from links"
+            let sections: { title: string, content: string }[] = []
+            try {
+                const sectionsRes = await fetch(`https://en.wikipedia.org/api/rest_v1/page/mobile-sections/${encodeURIComponent(title)}`)
+                const sectionsJson = await sectionsRes.json()
+                if (sectionsJson.remaining && sectionsJson.remaining.sections) {
+                    // Get first 3 meaningful sections
+                    const rawSections = sectionsJson.remaining.sections;
+                    for (const section of rawSections) {
+                        if (section.text && section.line && 
+                           (section.line.toLowerCase().includes('symptom') || 
+                            section.line.toLowerCase().includes('cause') || 
+                            section.line.toLowerCase().includes('treatment') ||
+                            section.line.toLowerCase().includes('diagnosis'))) {
+                            
+                            // Clean HTML tags from wiki text
+                            const cleanText = section.text.replace(/<[^>]*>?/gm, '')
+                                .replace(/&nbsp;/g, ' ')
+                                .replace(/&#\d+;/g, '')
+                                .substring(0, 500) + '...';
+                                
+                            sections.push({
+                                title: section.line,
+                                content: cleanText
+                            });
+                        }
+                        if (sections.length >= 3) break;
+                    }
+                }
+            } catch (e) {
+                console.warn("Deeper wiki search failed", e)
+            }
 
             return {
                 title: summaryJson.title,
                 extract: summaryJson.extract,
-                url: summaryJson.content_urls.desktop.page
+                url: summaryJson.content_urls.desktop.page,
+                extraSections: sections
             }
         } catch (e) {
             console.error("Wiki search failed", e)
@@ -316,6 +377,17 @@ export default function HealthAI({ theme, records, onScheduleAppointment }: Heal
                     content: wikiData.extract,
                     type: 'info'
                 })
+
+                // Add deep research sections from the "links" (simulated via mobile sections)
+                if (wikiData.extraSections && wikiData.extraSections.length > 0) {
+                    wikiData.extraSections.forEach(s => {
+                        sections.push({
+                            title: `🔍 ${s.title}`,
+                            content: s.content,
+                            type: 'info'
+                        })
+                    })
+                }
 
                 sections.push({
                     title: "🔗 Deep Research & References",
@@ -399,7 +471,7 @@ export default function HealthAI({ theme, records, onScheduleAppointment }: Heal
     }
 
     const handleSaveToNotes = (msgId: string) => {
-        alert("Guidance saved to Health Diary!")
+        toast.success("Guidance saved to Health Diary!")
     }
 
     return (

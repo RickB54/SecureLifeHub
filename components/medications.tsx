@@ -7,6 +7,7 @@ import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Cl
 import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, startOfDay, endOfDay, eachHourOfInterval, addWeeks, subWeeks, addMonths, subMonths, parse, addHours } from "date-fns"
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { toast } from 'sonner'
 
 // Pill shapes and their icon components
 const PILL_SHAPES = [
@@ -449,7 +450,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         })
 
         // Visual feedback
-        alert(`✓ Skipped ${med.title}`)
+        toast.success(`✓ Skipped ${med.title}`)
     }
 
     const openRescheduleModal = (med: any) => {
@@ -479,7 +480,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         })
 
         setShowRescheduleModal(false)
-        alert(`✓ ${selectedMed.title} rescheduled to ${format(newDateTime, 'PPp')}`)
+        toast.success(`✓ ${selectedMed.title} rescheduled to ${format(newDateTime, 'PPp')}`)
     }
 
     const handlePrintAll = () => {
