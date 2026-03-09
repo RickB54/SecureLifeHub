@@ -169,7 +169,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           <div className={`rounded-3xl ${glassPanel} relative overflow-hidden group`}>
             <div className="absolute top-4 right-4 z-20">
               <button 
-                onClick={() => onOpenHelp?.("dashboard")}
+                onClick={() => onOpenHelp?.("pulse-personalizer")}
                 className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
               >
                 <HelpCircle className="h-4 w-4" />
@@ -218,10 +218,12 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                       <div className="flex flex-col">
                         <h3 className="text-xl font-bold text-blue-400 group-hover/trigger:text-blue-300 transition-colors flex items-center gap-2">
                           Personalize Your Pulse
-                          <HelpCircle 
-                            className="h-4 w-4 text-blue-500/40 hover:text-blue-400 cursor-help" 
+                          <button
                             onClick={(e) => { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); }}
-                          />
+                            className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-blue-500/40 hover:text-blue-400 transition-all cursor-help"
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
                         </h3>
                         <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
                       </div>

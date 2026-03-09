@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2 } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -445,6 +445,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
             { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
             { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
         ]
 
         const filteredHistoricalLog = vitalRecords.filter(vital => {
@@ -479,8 +482,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {vitalGroups.map((group) => {
-                        const latest = activeVitalRecords.filter(v => v.title === group.title).slice(-1)[0]
-                        const colorMap: any = { rose: '#f43f5e', orange: '#f97316', yellow: '#eab308', cyan: '#06b6d4', red: '#ef4444', emerald: '#10b981' }
+                        const activeFilter = activeVitalRecords.filter(v => v.title === group.title)
+                        const latest = activeFilter[activeFilter.length - 1]
+                        const colorMap: any = { rose: '#f43f5e', orange: '#f97316', yellow: '#eab308', cyan: '#06b6d4', red: '#ef4444', emerald: '#10b981', violet: '#8b5cf6', blue: '#3b82f6' }
                         const color = colorMap[group.color]
 
                         return (
@@ -931,7 +935,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     const type = fd.get("type") as string
                                     const value = fd.get("value") as string
 
-                                    const units: any = { 'Blood Pressure': 'mmHg', 'Weight': 'lbs', 'Temperature': '°F', 'Blood Oxygen': '%', 'Heart Rate': 'bpm', 'Glucose': 'mg/dL' }
+                                    const units: any = { 
+                                        'Blood Pressure': 'mmHg', 
+                                        'Weight': 'lbs', 
+                                        'Temperature': '°F', 
+                                        'Blood Oxygen': '%', 
+                                        'Heart Rate': 'bpm', 
+                                        'Glucose': 'mg/dL',
+                                        'Sleep Duration': 'hrs',
+                                        'Water Intake': 'oz',
+                                        'Calorie Intake': 'kcal'
+                                    }
 
                                     const payload = {
                                         type: "note",
@@ -967,6 +981,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 <option className="bg-[#1a1a1a]">Blood Oxygen</option>
                                                 <option className="bg-[#1a1a1a]">Glucose</option>
                                                 <option className="bg-[#1a1a1a]">Temperature</option>
+                                                <option className="bg-[#1a1a1a]">Sleep Duration</option>
+                                                <option className="bg-[#1a1a1a]">Water Intake</option>
+                                                <option className="bg-[#1a1a1a]">Calorie Intake</option>
                                             </select>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
