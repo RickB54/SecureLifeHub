@@ -26,7 +26,8 @@ import {
   ChevronDown,
   Download,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  HelpCircle
 } from "lucide-react"
 import { 
   BarChart, 
@@ -42,7 +43,7 @@ import {
   LineChart,
   Line
 } from 'recharts'
-import { format } from "date-fns"
+import { format, isToday, isThisWeek, isThisMonth, isThisYear, parseISO, isWithinInterval } from "date-fns"
 import { toast } from "sonner"
 import { saveAs } from 'file-saver'
 import jsPDF from 'jspdf'
@@ -53,19 +54,75 @@ interface Props {
     addItem: (item: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    onOpenHelp?: (targetId?: string) => void
 }
+
+const MOCK_BUDGET_ITEMS = [
+    // Personal 
+    { id: 'm1', category: 'Budget', title: 'Groceries', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 150.00, category: 'Food', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm2', category: 'Budget', title: 'Rent', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 1200.00, category: 'Housing', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm3', category: 'Budget', title: 'Electric Bill', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 95.50, category: 'Utilities', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm4', category: 'Budget', title: 'Internet', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 80.00, category: 'Utilities', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm5', category: 'Budget', title: 'Car Insurance', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 110.00, category: 'Transportation', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm6', category: 'Budget', title: 'Gas', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 45.00, category: 'Transportation', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm7', category: 'Budget', title: 'Gym Membership', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 50.00, category: 'Health', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm8', category: 'Budget', title: 'Restaurant', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 65.00, category: 'Food', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm9', category: 'Budget', title: 'Movie Tickets', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 30.00, category: 'Entertainment', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm10', category: 'Budget', title: 'Pharmacy', item_metadata: { budget_type: 'personal', entry_type: 'expense', amount: 25.00, category: 'Health', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm11', category: 'Budget', title: 'Salary', item_metadata: { budget_type: 'personal', entry_type: 'income', amount: 2500.00, category: 'Salary', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm12', category: 'Budget', title: 'Freelance Work', item_metadata: { budget_type: 'personal', entry_type: 'income', amount: 450.00, category: 'Freelance', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm13', category: 'Budget', title: 'Dividend', item_metadata: { budget_type: 'personal', entry_type: 'income', amount: 120.00, category: 'Investments', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm14', category: 'Budget', title: 'Sold Item', item_metadata: { budget_type: 'personal', entry_type: 'income', amount: 80.00, category: 'Other Income', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'm15', category: 'Budget', title: 'Side Hustle', item_metadata: { budget_type: 'personal', entry_type: 'income', amount: 150.00, category: 'Other Income', date: format(new Date(), 'yyyy-MM-dd') } },
+    
+    // Business 
+    { id: 'b1', category: 'Budget', title: 'Office Supplies', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 150.00, category: 'Supplies', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b2', category: 'Budget', title: 'Software Subs', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 200.00, category: 'Software', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b3', category: 'Budget', title: 'Hosting', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 50.00, category: 'Infrastructure', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b4', category: 'Budget', title: 'Freelancer', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 500.00, category: 'Contractors', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b5', category: 'Budget', title: 'Marketing Ads', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 300.00, category: 'Marketing', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b6', category: 'Budget', title: 'Legal Fees', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 1500.00, category: 'Legal', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b7', category: 'Budget', title: 'Business Lunch', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 80.00, category: 'Meals', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b8', category: 'Budget', title: 'Travel Flight', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 450.00, category: 'Travel', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b9', category: 'Budget', title: 'Hotel', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 320.00, category: 'Travel', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b10', category: 'Budget', title: 'Internet', item_metadata: { budget_type: 'business', entry_type: 'expense', amount: 100.00, category: 'Utilities', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b11', category: 'Budget', title: 'Client A Invoice', item_metadata: { budget_type: 'business', entry_type: 'income', amount: 3500.00, category: 'Service Income', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b12', category: 'Budget', title: 'Client B Retainer', item_metadata: { budget_type: 'business', entry_type: 'income', amount: 2000.00, category: 'Service Income', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b13', category: 'Budget', title: 'Product Launch', item_metadata: { budget_type: 'business', entry_type: 'income', amount: 1500.00, category: 'Product Sales', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b14', category: 'Budget', title: 'Consulting Call', item_metadata: { budget_type: 'business', entry_type: 'income', amount: 250.00, category: 'Consulting', date: format(new Date(), 'yyyy-MM-dd') } },
+    { id: 'b15', category: 'Budget', title: 'Affiliate Payout', item_metadata: { budget_type: 'business', entry_type: 'income', amount: 180.00, category: 'Other Income', date: format(new Date(), 'yyyy-MM-dd') } }
+]
 
 type BudgetType = 'personal' | 'business'
 type ViewMode = 'overview' | 'transactions' | 'categories' | 'planning'
 
-export default function BudgetManager({ records, addItem, deleteItem, theme }: Props) {
+export default function BudgetManager({ records, addItem, deleteItem, theme, onOpenHelp }: Props) {
     const [budgetType, setBudgetType] = useState<BudgetType>('personal')
     const [viewMode, setViewMode] = useState<ViewMode>('overview')
     const [showAddModal, setShowAddModal] = useState(false)
     const [showAddCategoryModal, setShowAddCategoryModal] = useState(false)
     const [addEntryType, setAddEntryType] = useState<'income' | 'expense'>('expense')
     const [searchQuery, setSearchQuery] = useState("")
-    const [currentTimeRange, setCurrentTimeRange] = useState("This Month")
+    
+    // Filters & Mocks
+    const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'year' | 'custom'>('all')
+    const [customRange, setCustomRange] = useState({ start: '', end: '' })
+    
+    // Check local storage for forced mock data from settings
+    const [forceMockData, setForceMockData] = useState(false);
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setForceMockData(localStorage.getItem('budget_mock_data_enabled') === 'true');
+            const handler = () => setForceMockData(localStorage.getItem('budget_mock_data_enabled') === 'true');
+            window.addEventListener('storage', handler);
+            return () => window.removeEventListener('storage', handler);
+        }
+    }, []);
+
+    const [showMockData, setShowMockData] = useState(true)
+
+    const [selectedAddCategory, setSelectedAddCategory] = useState("")
+    const [newCategoryName, setNewCategoryName] = useState("")
 
     // Categories derived from records
     const financialCategories = useMemo(() => {
@@ -86,12 +143,39 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
     }, [records, budgetType])
 
     // Filter records for the current budget type (Personal vs Business)
-    const allBudgetItems = useMemo(() => {
+    const realBudgetItems = useMemo(() => {
         return records.filter(r => 
             (r.category === "Budget" || r.item_metadata?.is_budget) && 
             (r.item_metadata?.budget_type === budgetType)
         )
     }, [records, budgetType])
+
+    const isShowingMock = forceMockData || (showMockData && realBudgetItems.length === 0)
+
+    const baseBudgetItems = useMemo(() => {
+        if (isShowingMock) {
+            return MOCK_BUDGET_ITEMS.filter(r => r.item_metadata.budget_type === budgetType)
+        }
+        return realBudgetItems
+    }, [isShowingMock, budgetType, realBudgetItems])
+
+    const allBudgetItems = useMemo(() => {
+        return baseBudgetItems.filter(item => {
+            const dateStr = item.item_metadata?.date || new Date().toISOString()
+            const date = parseISO(dateStr.split('T')[0])
+            if (dateFilter === 'all') return true
+            if (dateFilter === 'today') return isToday(date)
+            if (dateFilter === 'week') return isThisWeek(date)
+            if (dateFilter === 'month') return isThisMonth(date)
+            if (dateFilter === 'year') return isThisYear(date)
+            if (dateFilter === 'custom' && customRange.start && customRange.end) {
+                try {
+                    return isWithinInterval(date, { start: parseISO(customRange.start), end: parseISO(customRange.end + 'T23:59:59') })
+                } catch(e) { return true }
+            }
+            return true
+        })
+    }, [baseBudgetItems, dateFilter, customRange])
 
     // Stats Calculation
     const stats = useMemo(() => {
@@ -268,8 +352,11 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
             <div className={`px-4 md:px-8 py-4 shrink-0 sticky top-0 z-10 ${theme === 'light' ? 'bg-gray-50/80' : 'bg-[#0a0a0a]/80'} backdrop-blur-md`}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div className="flex items-center gap-6">
-                        <h1 className={`text-4xl font-bold tracking-tight ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
+                        <h1 className={`text-4xl font-bold tracking-tight flex items-center gap-3 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                             Financial Dashboard
+                            <button onClick={() => onOpenHelp?.('budget')} className="p-1.5 rounded-full hover:bg-white/10 text-blue-500 transition-colors">
+                                <HelpCircle className="h-6 w-6" />
+                            </button>
                         </h1>
                         {/* Personal/Business Switcher */}
                         <div className="flex items-center bg-white/5 p-1 rounded-xl border border-white/10">
@@ -290,14 +377,39 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
 
                     <div className="flex flex-wrap items-center gap-2">
                         <div className="flex items-center gap-2 mr-2">
-                             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-700' : 'bg-[#151515] border-white/10 text-gray-400'}`}>
-                                <span>{currentTimeRange}</span>
-                                <ChevronDown className="h-4 w-4" />
+                             <div className="relative">
+                                 <select 
+                                     value={dateFilter}
+                                     onChange={(e) => setDateFilter(e.target.value as any)}
+                                     className={`appearance-none flex items-center gap-2 px-3 py-2 pr-8 rounded-lg text-xs font-bold border outline-none cursor-pointer ${theme === 'light' ? 'bg-white border-gray-200 text-gray-700' : 'bg-[#151515] border-white/10 text-gray-400'}`}
+                                 >
+                                     <option value="all">All Time</option>
+                                     <option value="today">Today</option>
+                                     <option value="week">This Week</option>
+                                     <option value="month">This Month</option>
+                                     <option value="year">This Year</option>
+                                     <option value="custom">Custom Range</option>
+                                 </select>
+                                 <ChevronDown className="h-4 w-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                              </div>
-                             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-700' : 'bg-[#151515] border-white/10 text-gray-400'}`}>
-                                <Calendar className="h-4 w-4" />
-                                <span>Custom Range</span>
-                             </div>
+                             
+                             {dateFilter === 'custom' && (
+                                <div className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-700' : 'bg-[#151515] border-white/10 text-gray-400'}`}>
+                                    <input 
+                                        type="date" 
+                                        className="bg-transparent text-[10px] uppercase font-bold outline-none"
+                                        value={customRange.start}
+                                        onChange={(e) => setCustomRange(prev => ({ ...prev, start: e.target.value }))}
+                                    />
+                                    <span className="text-gray-500 text-[10px] uppercase font-bold">to</span>
+                                    <input 
+                                        type="date" 
+                                        className="bg-transparent text-[10px] uppercase font-bold outline-none"
+                                        value={customRange.end}
+                                        onChange={(e) => setCustomRange(prev => ({ ...prev, end: e.target.value }))}
+                                    />
+                                </div>
+                             )}
                         </div>
                         <div className="flex items-center gap-2">
                             <button onClick={handleExportPDF} className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-200 text-gray-700' : 'bg-[#151515] border-white/10 text-gray-400'}`}>
@@ -318,51 +430,85 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                     </div>
                 </div>
 
+                {isShowingMock && (
+                    <div className="bg-blue-500/10 border border-blue-500/20 text-blue-400 p-4 mt-6 mx-4 md:mx-0 rounded-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4">
+                        <div className="flex items-center gap-3">
+                            <AlertCircle className="h-5 w-5 shrink-0" />
+                            <div className="text-sm">
+                                <strong className="font-bold uppercase tracking-widest text-[#FFF]">Viewing Mock Data</strong>
+                                <p className="opacity-80">{forceMockData ? "Mock data is enabled in Settings. Real data is hidden." : "You have no real transactions yet. Using sample data to demonstrate features."}</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => {
+                                setShowMockData(false);
+                                if (typeof window !== 'undefined') {
+                                    localStorage.setItem('budget_mock_data_enabled', 'false');
+                                    window.dispatchEvent(new Event('storage'));
+                                }
+                            }}
+                            className="px-4 py-2 w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors shrink-0 shadow-lg shadow-blue-500/20"
+                        >
+                            Clear & Start Real Tracking
+                        </button>
+                    </div>
+                )}
+
                 {/* Main Hero Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                <div className="grid grid-cols-3 gap-2 md:gap-6 mt-6 md:mt-8 px-4 md:px-0">
                     {/* Income Card */}
-                    <div className="p-6 rounded-2xl bg-[#0d1a0d] border border-green-500/20 shadow-lg">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-gray-400">Total Income</h3>
+                    <div className="p-3 md:p-6 rounded-2xl bg-[#0d1a0d] border border-green-500/20 shadow-lg flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-2 md:mb-4 gap-1">
+                            <h3 className="text-[9px] md:text-sm font-bold text-gray-400 leading-tight">Total Income</h3>
                             <button 
-                                onClick={() => { setAddEntryType('income'); setShowAddModal(true); }}
-                                className="flex items-center gap-1.5 text-xs font-bold text-green-500 hover:text-green-400"
+                                onClick={() => { 
+                                    setAddEntryType('income'); 
+                                    setSelectedAddCategory(financialCategories.income[0]);
+                                    setNewCategoryName("");
+                                    setShowAddModal(true); 
+                                }}
+                                className="flex items-center justify-center p-1 md:p-0 md:gap-1.5 text-green-500 hover:text-green-400 bg-green-500/10 md:bg-transparent rounded-md transition-colors shrink-0"
                             >
-                                <Plus className="h-3.5 w-3.5" /> Add Income <ChevronDown className="h-3.5 w-3.5" />
+                                <Plus className="h-3 md:h-3.5 w-3 md:w-3.5" /> <span className="hidden md:inline text-xs font-bold">Add Income</span> <ChevronDown className="hidden md:inline h-3.5 w-3.5" />
                             </button>
                         </div>
-                        <div className="text-4xl font-bold text-green-500">${stats.income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-lg md:text-4xl font-black text-green-500 truncate">${stats.income.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
 
                     {/* Expense Card */}
-                    <div className="p-6 rounded-2xl bg-[#1a0d0d] border border-red-500/20 shadow-lg">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-gray-400">Total Expenses</h3>
+                    <div className="p-3 md:p-6 rounded-2xl bg-[#1a0d0d] border border-red-500/20 shadow-lg flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-2 md:mb-4 gap-1">
+                            <h3 className="text-[9px] md:text-sm font-bold text-gray-400 leading-tight">Total Expenses</h3>
                             <button 
-                                onClick={() => { setAddEntryType('expense'); setShowAddModal(true); }}
-                                className="flex items-center gap-1.5 text-xs font-bold text-red-500 hover:text-red-400"
+                                onClick={() => { 
+                                    setAddEntryType('expense'); 
+                                    setSelectedAddCategory(financialCategories.expense[0]);
+                                    setNewCategoryName("");
+                                    setShowAddModal(true); 
+                                }}
+                                className="flex items-center justify-center p-1 md:p-0 md:gap-1.5 text-red-500 hover:text-red-400 bg-red-500/10 md:bg-transparent rounded-md transition-colors shrink-0"
                             >
-                                <Plus className="h-3.5 w-3.5" /> Add Expense <ChevronDown className="h-3.5 w-3.5" />
+                                <Plus className="h-3 md:h-3.5 w-3 md:w-3.5" /> <span className="hidden md:inline text-xs font-bold">Add Expense</span> <ChevronDown className="hidden md:inline h-3.5 w-3.5" />
                             </button>
                         </div>
-                        <div className="text-4xl font-bold text-red-500">${stats.expenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-lg md:text-4xl font-black text-red-500 truncate">${stats.expenses.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                     </div>
 
                     {/* Profit/Loss Card */}
-                    <div className={`p-6 rounded-2xl shadow-xl transition-colors duration-500 ${
+                    <div className={`p-3 md:p-6 rounded-2xl shadow-xl transition-colors duration-500 flex flex-col justify-between ${
                         stats.profit > 0 ? 'bg-green-600 border border-green-500 shadow-green-500/10' : 
                         stats.profit < 0 ? 'bg-red-600 border border-red-500 shadow-red-500/10' : 
                         'bg-blue-600 border border-blue-500 shadow-blue-500/10'
                     }`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-sm font-bold text-white/70">Net Profit/Loss</h3>
-                            <button onClick={() => setShowAdvisor(true)} className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all">
-                                <Sparkles className="h-3.5 w-3.5" />
+                        <div className="flex items-center justify-between mb-2 md:mb-4 gap-1">
+                            <h3 className="text-[9px] md:text-sm font-bold text-white/70 leading-tight">Net Profit/Loss</h3>
+                            <button onClick={() => setShowAdvisor(true)} className="p-1 md:p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-all shrink-0">
+                                <Sparkles className="h-3 md:h-3.5 w-3 md:w-3.5" />
                             </button>
                         </div>
-                        <div className="text-4xl font-bold text-white">${stats.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-                        <div className="text-xs font-bold text-white/80 mt-2 uppercase tracking-tight">
-                            {stats.profit > 0 ? 'Profit Margin Active' : stats.profit < 0 ? 'Deficit Warning' : 'Break-Even Status'}
+                        <div className="text-lg md:text-4xl font-black text-white truncate">${stats.profit.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-[7px] md:text-xs font-bold text-white/80 mt-1 md:mt-2 uppercase tracking-tight truncate leading-none">
+                            {stats.profit > 0 ? 'Profit Margin' : stats.profit < 0 ? 'Deficit' : 'Break-Even'}
                         </div>
                     </div>
                 </div>
@@ -543,7 +689,7 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                     <div className="mt-6 animate-in slide-in-from-bottom-4 duration-500">
                          <div className={`p-8 rounded-3xl ${glassCardStyle}`}>
                             <div className="mb-8">
-                                <h3 className="text-2xl font-bold mb-2">Budget vs Actual ({currentTimeRange})</h3>
+                                <h3 className="text-2xl font-bold mb-2">Budget vs Actual</h3>
                                 <p className="text-xs text-gray-500 leading-relaxed max-w-2xl">
                                     Set monthly targets and track your performance. Positive variance in Income is good (<span className="text-green-500 underline underline-offset-4 decoration-2">Green</span>), positive variance in Expenses is bad (<span className="text-red-500 underline underline-offset-4 decoration-2">Red</span>).
                                 </p>
@@ -658,7 +804,10 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                                                 <div key={item.id} className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
                                                     <div className="flex justify-between items-start">
                                                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.item_metadata?.date}</div>
-                                                        <div className="text-sm font-black text-green-500">${parseFloat(item.item_metadata?.amount).toLocaleString()}</div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="text-sm font-black text-green-500">${parseFloat(item.item_metadata?.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                                            <button onClick={() => deleteItem(item.id)} className="text-gray-500 hover:text-red-500 p-1.5 bg-white/5 rounded-md transition-colors"><Trash2 className="h-3 w-3" /></button>
+                                                        </div>
                                                     </div>
                                                     <div className="text-xs font-bold text-white">{item.item_metadata?.category || 'Revenue'}</div>
                                                     <div className="text-[11px] text-gray-400">{item.title}</div>
@@ -677,20 +826,26 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                                                         <th className="text-left p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Source</th>
                                                         <th className="text-left p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Description</th>
                                                         <th className="text-left p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Amount</th>
+                                                        <th className="text-right p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {allBudgetItems.filter(i => i.item_metadata?.entry_type === 'income').length === 0 ? (
                                                         <tr>
-                                                            <td colSpan={4} className="p-8 text-center text-xs text-gray-600 italic">No income records found.</td>
+                                                            <td colSpan={5} className="p-8 text-center text-xs text-gray-600 italic">No income records found.</td>
                                                         </tr>
                                                     ) : (
                                                         allBudgetItems.filter(i => i.item_metadata?.entry_type === 'income').map(item => (
-                                                            <tr key={item.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+                                                            <tr key={item.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors group">
                                                                 <td className="p-4 text-xs font-medium text-gray-400">{item.item_metadata?.date}</td>
                                                                 <td className="p-4 text-xs font-bold text-white">{item.item_metadata?.category || 'Revenue'}</td>
                                                                 <td className="p-4 text-xs text-gray-400">{item.title}</td>
-                                                                <td className="p-4 text-sm font-black text-green-500">${parseFloat(item.item_metadata?.amount).toLocaleString()}</td>
+                                                                <td className="p-4 text-sm font-black text-green-500">${parseFloat(item.item_metadata?.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                <td className="p-4 text-right">
+                                                                    <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-500 hover:bg-white/10 rounded-lg transition-all">
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </td>
                                                             </tr>
                                                         ))
                                                     )}
@@ -713,7 +868,10 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                                                 <div key={item.id} className="p-4 rounded-xl bg-white/5 border border-white/5 space-y-2">
                                                     <div className="flex justify-between items-start">
                                                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{item.item_metadata?.date}</div>
-                                                        <div className="text-sm font-black text-red-500">${parseFloat(item.item_metadata?.amount).toLocaleString()}</div>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="text-sm font-black text-red-500">${parseFloat(item.item_metadata?.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                                            <button onClick={() => deleteItem(item.id)} className="text-gray-500 hover:text-red-500 p-1.5 bg-white/5 rounded-md transition-colors"><Trash2 className="h-3 w-3" /></button>
+                                                        </div>
                                                     </div>
                                                     <div className="text-xs font-bold text-white">{item.item_metadata?.category || 'General'}</div>
                                                     <div className="text-[11px] text-gray-400">{item.title}</div>
@@ -732,20 +890,26 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                                                         <th className="text-left p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Category</th>
                                                         <th className="text-left p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Description</th>
                                                         <th className="text-left p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Amount</th>
+                                                        <th className="text-right p-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {allBudgetItems.filter(i => i.item_metadata?.entry_type === 'expense').length === 0 ? (
                                                         <tr>
-                                                            <td colSpan={4} className="p-8 text-center text-xs text-gray-600 italic">No expense records found.</td>
+                                                            <td colSpan={5} className="p-8 text-center text-xs text-gray-600 italic">No expense records found.</td>
                                                         </tr>
                                                     ) : (
                                                         allBudgetItems.filter(i => i.item_metadata?.entry_type === 'expense').map(item => (
-                                                            <tr key={item.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors">
+                                                            <tr key={item.id} className="border-t border-white/5 hover:bg-white/[0.02] transition-colors group">
                                                                 <td className="p-4 text-xs font-medium text-gray-400">{item.item_metadata?.date}</td>
                                                                 <td className="p-4 text-xs font-bold text-white">{item.item_metadata?.category || 'General'}</td>
                                                                 <td className="p-4 text-xs text-gray-400">{item.title}</td>
-                                                                <td className="p-4 text-sm font-black text-red-500">${parseFloat(item.item_metadata?.amount).toLocaleString()}</td>
+                                                                <td className="p-4 text-sm font-black text-red-500">${parseFloat(item.item_metadata?.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                                                                <td className="p-4 text-right">
+                                                                    <button onClick={() => deleteItem(item.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-500 hover:bg-white/10 rounded-lg transition-all">
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </button>
+                                                                </td>
                                                             </tr>
                                                         ))
                                                     )}
@@ -820,6 +984,27 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                                 return
                             }
 
+                            let finalCategory = fd.get("category")
+                            if (finalCategory === "CREATE_NEW") {
+                                if (!newCategoryName.trim()) {
+                                    toast.error("Please provide a name for the new category")
+                                    return
+                                }
+                                finalCategory = newCategoryName.trim()
+                                
+                                // Save the new category as a record for future use
+                                await addItem({
+                                    type: "note",
+                                    category: "Budget",
+                                    title: finalCategory,
+                                    item_metadata: {
+                                        is_financial_category: true,
+                                        budget_type: budgetType,
+                                        category_type: addEntryType,
+                                    }
+                                })
+                            }
+
                             await addItem({
                                 type: "note",
                                 category: "Budget",
@@ -829,14 +1014,14 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
                                     budget_type: budgetType,
                                     entry_type: addEntryType,
                                     amount: fd.get("amount"),
-                                    category: fd.get("category"),
+                                    category: finalCategory,
                                     date: fd.get("date") || format(new Date(), 'yyyy-MM-dd'),
                                     is_tax_deductible: fd.get("is_tax_deductible") === 'on',
                                     notes: fd.get("notes")
                                 }
                             })
                             setShowAddModal(false)
-                            toast.success("Command captured.")
+                            toast.success("Transaction recorded.")
                         }} className="p-10 space-y-8">
                             
                             <div className="grid grid-cols-2 gap-6">
@@ -847,12 +1032,31 @@ export default function BudgetManager({ records, addItem, deleteItem, theme }: P
 
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1">Category</label>
-                                    <select name="category" className={inputStyle}>
+                                    <select 
+                                        name="category" 
+                                        className={inputStyle}
+                                        value={selectedAddCategory}
+                                        onChange={(e) => setSelectedAddCategory(e.target.value)}
+                                    >
                                         {(addEntryType === 'income' ? financialCategories.income : financialCategories.expense).map(cat => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
+                                        <option value="CREATE_NEW">Other...</option>
                                     </select>
                                 </div>
+
+                                {selectedAddCategory === 'CREATE_NEW' && (
+                                    <div className="col-span-2 animate-in slide-in-from-top-2 duration-300">
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-blue-500 mb-2 ml-1">New Category Name</label>
+                                        <input 
+                                            value={newCategoryName}
+                                            onChange={(e) => setNewCategoryName(e.target.value)}
+                                            required 
+                                            className={inputStyle + " border-blue-500/30"} 
+                                            placeholder="e.g. Subscription, Repairs..." 
+                                        />
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 ml-1">Amount</label>

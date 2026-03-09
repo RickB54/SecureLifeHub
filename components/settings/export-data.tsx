@@ -42,50 +42,50 @@ export default function ExportData({ records, theme }: ExportDataProps) {
             </div>
 
             {isExpanded && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-top-4 duration-300 pt-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-4 duration-300 pt-4">
                 {exportableItems.map(item => {
                     const itemCount = getRecordsForItem(item.id, records).length;
                     
                     return (
-                        <div key={item.id} className={`flex flex-col p-4 rounded-2xl border transition-all ${theme === 'light'
+                        <div key={item.id} className={`flex flex-col p-3 rounded-xl border transition-all ${theme === 'light'
                             ? 'bg-white border-gray-200 shadow-sm hover:border-orange-500/30'
                             : 'bg-[#1a1a1a] border-white/10 hover:border-orange-500/30'
                             }`}>
                             
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2.5 rounded-xl ${theme === 'light' ? 'bg-gray-100 text-gray-600' : 'bg-white/5 text-gray-400'}`}>
-                                        {item.icon}
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 relative">
+                                    <div className={`p-2 rounded-lg ${theme === 'light' ? 'bg-gray-100 text-gray-600' : 'bg-white/5 text-gray-400'}`}>
+                                        <div className="scale-75 origin-center">{item.icon}</div>
                                     </div>
                                     <div>
-                                        <h3 className="font-bold">{item.label}</h3>
-                                        <p className="text-xs opacity-50 font-medium uppercase tracking-widest">{itemCount} Records</p>
+                                        <h3 className="text-xs font-bold leading-tight">{item.label}</h3>
+                                        <p className="text-[9px] opacity-70 font-medium uppercase tracking-widest mt-0.5">{itemCount} Records</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div className={`flex items-center justify-end gap-1 pt-3 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
-                                <div className="mr-auto text-[10px] font-black uppercase tracking-widest opacity-30">Export AS</div>
+                            <div className={`flex items-center justify-end gap-1 pt-2 border-t ${theme === 'light' ? 'border-gray-100' : 'border-white/5'}`}>
+                                <div className="mr-auto text-[9px] font-black uppercase tracking-widest opacity-40">Export AS</div>
                                 <button 
                                     onClick={(e) => handleExport(e, item, records, 'json')}
-                                    className="p-2 rounded-xl text-gray-500 hover:bg-blue-500/10 hover:text-blue-500 transition-all focus:outline-none"
-                                    title={`Export ${item.label} to JSON ${item.id === 'passwords' ? '(Recommended for Passwords)' : ''}`}
+                                    className="p-1.5 rounded-lg text-gray-500 hover:bg-blue-500/10 hover:text-blue-500 transition-all focus:outline-none"
+                                    title={`Export JSON`}
                                 >
-                                    <FileJson className="h-4 w-4" />
+                                    <FileJson className="h-3.5 w-3.5" />
                                 </button>
                                 <button 
                                     onClick={(e) => handleExport(e, item, records, 'csv')}
-                                    className="p-2 rounded-xl text-gray-500 hover:bg-green-500/10 hover:text-green-500 transition-all focus:outline-none"
-                                    title={`Export ${item.label} to CSV`}
+                                    className="p-1.5 rounded-lg text-gray-500 hover:bg-green-500/10 hover:text-green-500 transition-all focus:outline-none"
+                                    title={`Export CSV`}
                                 >
-                                    <FileSpreadsheet className="h-4 w-4" />
+                                    <FileSpreadsheet className="h-3.5 w-3.5" />
                                 </button>
                                 <button 
                                     onClick={(e) => handleExport(e, item, records, 'pdf')}
-                                    className="p-2 rounded-xl text-gray-500 hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none"
-                                    title={`Export ${item.label} to PDF`}
+                                    className="p-1.5 rounded-lg text-gray-500 hover:bg-red-500/10 hover:text-red-500 transition-all focus:outline-none"
+                                    title={`Export PDF`}
                                 >
-                                    <FileText className="h-4 w-4" />
+                                    <FileText className="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </div>

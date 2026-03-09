@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -32,7 +32,8 @@ export const HELP_MAP: Record<string, string> = {
     "type-business": "finance",
     "type-clients": "finance",
     "type-assets": "finance",
-    "type-budget": "finance",
+    "type-budget": "budget",
+    "budget": "budget",
     // Health
     "type-health-records": "health",
     "health-records": "health",
@@ -394,6 +395,13 @@ const HELP_PAGES: HelpPage[] = [
                         </div>
                     </div>
                     <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                        <DollarSign className="h-5 w-5 text-green-400" />
+                        <div>
+                            <div className="text-sm font-bold">Budget Manager</div>
+                            <div className="text-xs text-gray-500">Track personal and business income, expenses, and profit vs loss.</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
                         <Briefcase className="h-5 w-5 text-emerald-400" />
                         <div>
                             <div className="text-sm font-bold">Business Hub</div>
@@ -406,6 +414,34 @@ const HELP_PAGES: HelpPage[] = [
                             <div className="text-sm font-bold">Assets & Inventory</div>
                             <div className="text-xs text-gray-500">Log high-value property, warranties, and serial numbers.</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "budget",
+        title: "Budget Manager",
+        icon: DollarSign,
+        content: (
+            <div className="space-y-4">
+                <p className="text-gray-300">Take control of your finances with dual Personal and Business ledgers.</p>
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                        <h5 className="font-bold text-emerald-400 text-sm mb-1 uppercase tracking-tighter">Mock Data Demonstration</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">If you haven't entered any real data yet, the dashboard will pre-populate with sample entries to show how graphs, filters, and tables work. Simply click the "Clear & Start Real Tracking" button on the banner to wipe the fake data and begin tracking your true numbers.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-1 uppercase tracking-tighter">Tracking Incomes & Expenses</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Quickly add transactions specifying the date, customizable categories, and whether they are tax-deductible. The system auto-calculates your Net Profit/Loss and updates the visual cards accordingly.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl">
+                        <h5 className="font-bold text-purple-400 text-sm mb-1 uppercase tracking-tighter">Date & Custom Range Filters</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">The Date dropdown lets you filter items from 'All Time' down to 'Today', 'This Week', 'This Month', and 'This Year'. Picking 'Custom Range' allows you to select specific Start and End dates to visualize transaction history over unique timeframes.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl">
+                        <h5 className="font-bold text-amber-400 text-sm mb-1 uppercase tracking-tighter">Graphs & Charts</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Data visualization breaks down where your money is going via interactive bar charts, pie charts, and monthly performance line charts automatically. Hover or tap the graphs to reveal exact metric snapshots.</p>
                     </div>
                 </div>
             </div>
@@ -571,18 +607,26 @@ const HELP_PAGES: HelpPage[] = [
         icon: Lock,
         content: (
             <div className="space-y-6">
-                <p className="text-gray-300">Create "Vaults within Vaults" for granular privacy.</p>
+                <p className="text-gray-300">Control PIN restriction and mock data demonstration for each module.</p>
                 <div className="space-y-4">
                     <div className="p-5 bg-emerald-500/5 border border-emerald-500/10 rounded-3xl">
-                        <h5 className="font-black text-emerald-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><Key className="h-4 w-4" /> PIN Protection</h5>
+                        <h5 className="font-black text-emerald-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><Lock className="h-4 w-4" /> Toggle Access Lock</h5>
                         <p className="text-xs text-gray-400 leading-relaxed">
-                            Some modules (like your Diary or Health Records) are more sensitive than others. You can lock these with an independent 4-digit PIN. 
+                            Some modules (like your Diary or Health Records) are more sensitive than others. You can lock these with an independent 4-digit PIN using the right-side toggle switch. 
                             <br /><br />
                             Even if your computer is unlocked and the main vault is open, these specific modules will remain shielded until the correct PIN is entered.
                         </p>
                     </div>
+                    <div className="p-5 bg-yellow-500/5 border border-yellow-500/10 rounded-3xl">
+                        <h5 className="font-black text-yellow-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><Database className="h-4 w-4" /> Toggle Mock Data</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Perfect for exploring the possibilities of Secure Life Hub without having to manually input your data at the start. Use the left-side yellow toggle to flip a module into "Demo Data" mode.
+                            <br /><br />
+                            This replaces your real data with interactive fake transactions temporarily. Safe to toggle without affecting your real records! Toggle it back off to return to your real information.
+                        </p>
+                    </div>
                     <div className="p-4 border border-white/5 bg-black/20 rounded-xl text-[10px] text-gray-500 italic">
-                        Note: For your privacy, these PINs are stored in your browser's encrypted local storage. They are device-specific.
+                        Note: For your privacy, these settings and PINs are stored in your browser's encrypted local storage. They are device-specific.
                     </div>
                 </div>
             </div>

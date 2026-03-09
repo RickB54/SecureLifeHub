@@ -208,16 +208,16 @@ export default function BackupRecovery({ records, addItem, deleteItem, bulkAddIt
     const ActionCard = ({ icon: Icon, title, sub, onClick, color = "blue" }: any) => (
         <button
             onClick={onClick}
-            className={`flex flex-col items-start p-6 rounded-2xl border transition-all text-left group relative overflow-hidden ${theme === 'light'
+            className={`flex flex-col items-start p-3 sm:p-4 rounded-xl border transition-all text-left group relative overflow-hidden ${theme === 'light'
                 ? 'bg-white border-gray-200 hover:border-blue-500/50 hover:shadow-lg'
                 : 'bg-[#1a1a1a] border-white/10 hover:border-blue-500/50 hover:bg-[#202020]'
                 }`}
         >
-            <div className={`p-3 rounded-xl mb-4 transition-colors ${theme === 'light' ? `bg-${color}-50 text-${color}-600` : `bg-${color}-500/10 text-${color}-400`}`}>
-                <Icon className="h-6 w-6" />
+            <div className={`p-2 rounded-lg mb-2 transition-colors ${theme === 'light' ? `bg-${color}-50 text-${color}-600` : `bg-${color}-500/10 text-${color}-400`}`}>
+                <Icon className="h-4 w-4" />
             </div>
-            <h3 className="text-lg font-bold mb-1">{title}</h3>
-            <p className={`text-sm ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>{sub}</p>
+            <h3 className="text-sm font-bold mb-0.5 leading-tight">{title}</h3>
+            <p className={`text-[10px] leading-snug ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>{sub}</p>
         </button>
     )
 
@@ -236,7 +236,7 @@ export default function BackupRecovery({ records, addItem, deleteItem, bulkAddIt
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
                 <ActionCard
                     icon={Download}
                     title="Download Backup"

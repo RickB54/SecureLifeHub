@@ -114,20 +114,26 @@ function HomeContent() {
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
   }, [])
 
-  // -- Navigation History --
+  // -- Navigation History & Scroll Memory --
   const [navHistory, setNavHistory] = useState<string[]>([])
+  const scrollPositions = useRef<Record<string, number>>({})
 
   const handleNavigate = (page: string) => {
     if (page === activePage) return
+    const mainEl = document.getElementById("main-scroll-container")
+    if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
     setNavHistory(prev => [...prev, activePage])
     setActivePage(page)
-    router.push(`/?page=${page}`)
+    router.push(`/?page=${page}`, { scroll: false })
   }
 
   const handleBack = () => {
+    const mainEl = document.getElementById("main-scroll-container")
+    if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
+    
     if (navHistory.length === 0) {
       setActivePage("dashboard")
-      router.push("/?page=dashboard")
+      router.push("/?page=dashboard", { scroll: false })
       return
     }
     const newHistory = [...navHistory]
@@ -135,9 +141,41 @@ function HomeContent() {
     setNavHistory(newHistory)
     if (prevPage) {
       setActivePage(prevPage)
-      router.push(`/?page=${prevPage}`)
+      router.push(`/?page=${prevPage}`, { scroll: false })
     }
   }
+
+  // Restore scroll positions when activePage changes
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const pos = scrollPositions.current[activePage] || 0
+    // Find the main scrollable container
+    const mainEl = document.getElementById("main-scroll-container")
+    if (mainEl) {
+      // Slight delay to ensure DOM has updated
+      const tm = setTimeout(() => {
+        mainEl.scrollTo({ top: pos, behavior: "instant" })
+      }, 10)
+      return () => clearTimeout(tm)
+    }
+  }, [activePage])
+
+  // Restore scroll positions after closing Help Modal
+  const lastScrollHelp = useRef(0)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mainEl = document.getElementById("main-scroll-container")
+    if (!mainEl) return
+    
+    if (helpOpen) {
+      lastScrollHelp.current = mainEl.scrollTop
+    } else {
+      const tm = setTimeout(() => {
+        mainEl.scrollTo({ top: lastScrollHelp.current, behavior: "instant" })
+      }, 50)
+      return () => clearTimeout(tm)
+    }
+  }, [helpOpen])
 
   // 2. CONSOLIDATED STARTUP & NAVIGATION EFFECT
   useEffect(() => {
@@ -160,6 +198,8 @@ function HomeContent() {
 
     // B. Handle URL -> State Synchronization (Browser Back/Forward)
     if (pageParam && pageParam !== activePage) {
+      const mainEl = document.getElementById("main-scroll-container")
+      if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
       setActivePage(pageParam)
     }
 
@@ -177,15 +217,21 @@ function HomeContent() {
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
 
-
-  // Load security settings on mount and when activePage changes (to ensure we have latest)
+  // Load security settings on mount, when activePage changes, and listen for live updates from settings.tsx
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("hub_security_settings")
-      if (saved) setSecuritySettings(JSON.parse(saved))
-    } catch (e) {
-      console.error("Failed to load security settings", e)
+    const handleStorage = () => {
+      try {
+        const saved = localStorage.getItem("hub_security_settings")
+        if (saved) setSecuritySettings(JSON.parse(saved))
+      } catch (e) {
+        console.error("Failed to load security settings", e)
+      }
     }
+    handleStorage() // Initial load
+    
+    // Listen for custom event triggered by Settings component
+    window.addEventListener("hub_security_settings_changed", handleStorage)
+    return () => window.removeEventListener("hub_security_settings_changed", handleStorage)
   }, [activePage])
 
 
@@ -241,9 +287,7 @@ function HomeContent() {
   // Handle logout
   const handleLogout = async () => {
     setNavHistory([])
-    // If biometrics are enabled, "Log Out" from the UI actually performs a soft-logout (Lock).
-    // This preserves the Supabase session so they can unlock with their fingerprint later.
-    // If they truly want to switch accounts, they can use "Sign out / Change Account" from the lock screen.
+    scrollPositions.current = {} // Reset scroll memory on logout
     if (typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') === 'true') {
       setIsLocked(true)
       router.push("/")
@@ -524,7 +568,9 @@ function HomeContent() {
             theme={theme}
             onOpenHelp={() => commonProps.onOpenHelp()}
           />
-          <main className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>{renderActivePage()}</main>
+          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
+            {renderActivePage()}
+          </main>
         </div>
         <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} initialPageId={helpInitialPage || activePage} />
       </div>

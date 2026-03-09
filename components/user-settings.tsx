@@ -39,7 +39,7 @@ export default function UserSettings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
   const [twoFactorMethod, setTwoFactorMethod] = useState("")
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target
     setUserData({
       ...userData,
@@ -47,7 +47,7 @@ export default function UserSettings() {
     })
   }
 
-  const handleChangePassword = (newPassword) => {
+  const handleChangePassword = (newPassword: any) => {
     console.log("Password changed to:", newPassword)
     setChangePasswordModalOpen(false)
     setSuccessMessage("Password changed successfully!")
@@ -58,7 +58,7 @@ export default function UserSettings() {
     }, 3000)
   }
 
-  const handleEnableTwoFactor = (method) => {
+  const handleEnableTwoFactor = (method: string) => {
     console.log("Two-factor authentication enabled with method:", method)
     setTwoFactorAuthModalOpen(false)
     setTwoFactorEnabled(true)
@@ -71,7 +71,7 @@ export default function UserSettings() {
     }, 3000)
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 

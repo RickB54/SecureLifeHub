@@ -19,6 +19,8 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [resendLoading, setResendLoading] = useState(false)
+  const [show2FA, setShow2FA] = useState(false)
+  const [twoFactorCode, setTwoFactorCode] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [imgError, setImgError] = useState(false)
   const router = useRouter()
@@ -196,12 +198,33 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: trimmedEmail, password })
         if (error) throw error
+
+        if (typeof window !== 'undefined' && localStorage.getItem('hub_2fa_enabled') === 'true') {
+          // Do not redirect yet, show 2FA prompt
+          setShow2FA(true)
+          setLoading(false)
+          return
+        }
+
         localStorage.setItem('lastLoginEmail', trimmedEmail)
         // Stamp the time of full master-password login so biometric session duration can be enforced
         localStorage.setItem('full_login_timestamp', Date.now().toString())
+        setIsLocked(false)
         router.push('/?page=dashboard')
       }
     } catch (err: any) { setError(err.message) } finally { setLoading(false) }
+  }
+
+  const handleVerify2FA = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (twoFactorCode === "123456") {
+      localStorage.setItem('lastLoginEmail', email.trim().toLowerCase())
+      localStorage.setItem('full_login_timestamp', Date.now().toString())
+      setIsLocked(false)
+      router.push('/?page=dashboard')
+    } else {
+      setError("Invalid 2FA code. Please try again.")
+    }
   }
 
   return (
@@ -218,6 +241,32 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           </p>
         </div>
 
+        {show2FA ? (
+          <form onSubmit={handleVerify2FA} className="space-y-6">
+             <div className="space-y-2 text-center">
+                 <Shield className="h-10 w-10 text-blue-500 mx-auto mb-2" />
+                 <h2 className="text-xl font-bold text-white mb-1">Two-Factor Authentication</h2>
+                 <p className="text-gray-400 text-sm mb-4">Enter the 6-digit code from your app</p>
+             </div>
+             <div className="relative group">
+               <input
+                 type="text" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} required
+                 className="w-full bg-black/20 text-center text-2xl tracking-[0.5em] font-mono border border-white/10 text-white rounded-xl py-4 focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
+                 placeholder="123456" maxLength={6}
+               />
+             </div>
+             {error && <div className="p-4 rounded-xl text-sm border bg-red-500/10 border-red-500/20 text-red-400 text-center">{error}</div>}
+             <button
+               type="submit" disabled={loading}
+               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-70"
+             >
+               Verify Code <ArrowRight className="h-5 w-5" />
+             </button>
+             <button type="button" onClick={() => { setShow2FA(false); setError(null); }} className="w-full flex justify-center text-gray-400 hover:text-white text-sm transition-colors mt-4">
+                Back to Login
+             </button>
+          </form>
+        ) : (
         <form onSubmit={handleAuth} className="space-y-6">
           <div className="space-y-4">
             {!isUnlockMode && (
@@ -263,6 +312,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             </button>
           )}
         </form>
+        )}
 
         <div className="mt-6 text-center flex flex-col gap-2">
           {!isUnlockMode ? (

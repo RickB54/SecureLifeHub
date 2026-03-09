@@ -40,11 +40,11 @@ import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
 import CsvImporter from "./csv-importer"
 import JsonImporter from "./json-importer"
-import MockDataGenerator from "./mock-data-generator"
 import PinAuthScreen from "./security/pin-auth-screen"
 import { VaultItem } from "@/hooks/use-vault"
 import BackupRecovery from "./settings/backup-recovery"
 import ExportData from "./settings/export-data"
+import TwoFactorAuthModal from "@/components/modals/two-factor-auth-modal"
 
 export default function Settings({
   records,
@@ -123,6 +123,7 @@ export default function Settings({
   const [showSessionHelp, setShowSessionHelp] = useState(false)
   const [selectedWipeIds, setSelectedWipeIds] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [show2FA, setShow2FA] = useState(false)
 
   // Load Biometric State + Session Duration
   useEffect(() => {
@@ -221,8 +222,13 @@ export default function Settings({
 
   // Handle toggling 2FA
   const handleToggle2FA = () => {
-    setTwoFactorEnabled(!twoFactorEnabled)
-    showNotification(`Two-factor authentication ${!twoFactorEnabled ? "enabled" : "disabled"}`)
+    if (!twoFactorEnabled) {
+      setShow2FA(true)
+    } else {
+      setTwoFactorEnabled(false)
+      localStorage.setItem('hub_2fa_enabled', 'false')
+      showNotification("Two-factor authentication disabled")
+    }
   }
 
   // Handle saving master password
@@ -898,10 +904,7 @@ export default function Settings({
         {/* Access Control */}
         <SettingsCard title="Module Access" icon={Lock} color="emerald" className="lg:col-span-2" helpId="settings-access">
           <div className="flex items-center gap-2 mb-4">
-            <p className="text-sm opacity-60">Restrict specific areas with a PIN</p>
-            <button type="button" onClick={() => onOpenHelp?.("settings-access")} className="text-emerald-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
-              <HelpCircle className="h-3 w-3" />
-            </button>
+            <p className="text-sm opacity-60">Control PIN restriction and mock data demonstration for each module.</p>
           </div>
           <ModuleAccessSettings theme={theme || "dark"} />
         </SettingsCard>
@@ -928,16 +931,6 @@ export default function Settings({
 
       {/* Advanced & Danger Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <SettingsCard title="Test Data" icon={Database} color="yellow" helpId="settings-test-data">
-          <div className="flex items-center gap-2 mb-2">
-            <h4 className="font-bold text-sm uppercase opacity-70">Demo Data</h4>
-            <button type="button" onClick={() => onOpenHelp?.("settings-test-data")} className="text-yellow-400 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
-              <HelpCircle className="h-3 w-3" />
-            </button>
-          </div>
-          <MockDataGenerator bulkAddItems={bulkAddItems} records={records} deleteItem={deleteItem} updateItem={updateItem} />
-        </SettingsCard>
-
         <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20 lg:col-span-2" helpId="settings-danger-zone">
           {!isDangerZoneUnlocked ? (
             <div className="text-center py-12">
@@ -1279,6 +1272,19 @@ export default function Settings({
           onCancel={() => setShowPinScreen(false)}
         />
       )}
+
+      {show2FA && (
+        <TwoFactorAuthModal 
+          onClose={() => setShow2FA(false)} 
+          onEnable={(method: any) => {
+            setTwoFactorEnabled(true)
+            localStorage.setItem('hub_2fa_enabled', 'true')
+            localStorage.setItem('hub_2fa_method', method)
+            setShow2FA(false)
+            showNotification("Two-factor authentication enabled successfully")
+          }} 
+        />
+      )}
     </div>
   )
 }
@@ -1289,6 +1295,7 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
     { id: "passwords", label: "Vault (Passwords)" },
     { id: "diary", label: "My Diary" },
     { id: "financial", label: "Financial Hub" },
+    { id: "type-budget", label: "Budget Manager" },
     { id: "type-health-records", label: "Health Records" },
     { id: "type-vehicles", label: "Vehicles" },
     { id: "type-business", label: "Business Hub" },
@@ -1309,12 +1316,23 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
     } catch (e) { return {} }
   })
 
+  const [mockSettings, setMockSettings] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem("hub_mock_settings");
+      if (saved) return JSON.parse(saved);
+      // Fallback for budget mock setting if it exists
+      const budgetMock = localStorage.getItem("budget_mock_data_enabled") === "true";
+      return { "type-budget": budgetMock };
+    } catch (e) { return {} }
+  })
+
   const [editingPin, setEditingPin] = useState<string | null>(null)
   const [tempPin, setTempPin] = useState("")
 
   const saveSettings = (newSettings: any) => {
     setSecuritySettings(newSettings)
     localStorage.setItem("hub_security_settings", JSON.stringify(newSettings))
+    window.dispatchEvent(new Event("hub_security_settings_changed"))
   }
 
   const toggleLock = (moduleId: string) => {
@@ -1326,6 +1344,41 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
       ...securitySettings,
       [moduleId]: newVal
     })
+  }
+
+  const toggleMock = (moduleId: string) => {
+    const newVal = !mockSettings[moduleId];
+    const updated = { ...mockSettings, [moduleId]: newVal };
+    setMockSettings(updated);
+    localStorage.setItem("hub_mock_settings", JSON.stringify(updated));
+    
+    // Explicitly handle budget for backwards compatibility
+    if (moduleId === "type-budget") {
+      localStorage.setItem("budget_mock_data_enabled", newVal.toString());
+    }
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  const handleToggleAllMocks = () => {
+    const isAnyOn = Object.values(mockSettings).some(Boolean);
+    const newVal = !isAnyOn; // If any is on, turn all off. If all off, turn all on.
+    
+    // Add warning when enabling all
+    if (newVal) {
+      const confirmWarning = window.confirm(
+        "WARNING: You are about to turn on Demo Data for ALL modules at once.\n\nThis will instantly place fake demonstration data into your Vault, Passwords, Financial Cards, and every other active list. If you already have your own real, personal data scattered in these modules, it may become confusing to see them mixed with demo records.\n\nPlease note: Turning this OFF later will ONLY remove the fake entries. Your real data will be perfectly safe.\n\nStill, we highly recommend turning demo mode on 'one module at a time' simply for a cleaner viewing experience.\n\nAre you absolutely sure you want to flood the entire app with demo data right now?"
+      );
+      if (!confirmWarning) return;
+    }
+    
+    const updated: Record<string, boolean> = {};
+    modules.forEach(m => {
+      updated[m.id] = newVal;
+    });
+    setMockSettings(updated);
+    localStorage.setItem("hub_mock_settings", JSON.stringify(updated));
+    localStorage.setItem("budget_mock_data_enabled", newVal.toString());
+    window.dispatchEvent(new Event('storage'));
   }
 
   const handleSetPin = (moduleId: string) => {
@@ -1352,9 +1405,35 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
       </button>
 
       {isOpen && (
-        <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2`}>
+        <div className="animate-in fade-in slide-in-from-top-2">
+          {/* Master Mock Toggle */}
+          <div className={`flex items-center justify-between p-4 mb-4 rounded-2xl border transition-all ${theme === 'light' ? 'bg-yellow-50 border-yellow-200' : 'bg-black/40 border-yellow-500/20 shadow-lg shadow-yellow-500/5'}`}>
+            <div className="flex items-center gap-3">
+               <div className={`p-2 rounded-lg ${Object.values(mockSettings).some(Boolean) ? 'bg-yellow-500/20 text-yellow-400' : 'bg-gray-500/10 text-gray-500'}`}>
+                 <Database className="h-5 w-5" />
+               </div>
+               <div>
+                 <h4 className={`text-sm font-bold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>Master Demo Data Switch</h4>
+                 <p className="text-[10px] text-gray-400 mt-1 max-w-[280px]">
+                    Turn Demo Mode ON/OFF across all modules simultaneously. <br/>
+                    <span className="text-yellow-500 font-bold mt-1 inline-block">Heads up: We recommend turning these on one-by-one instead.</span><br/>
+                    <span className="opacity-70">Turning Demo off deletes the fake data, your real data is never touched.</span>
+                 </p>
+               </div>
+            </div>
+            <button
+                onClick={handleToggleAllMocks}
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all focus:outline-none ${Object.values(mockSettings).some(Boolean) ? 'bg-yellow-500' : 'bg-gray-700'}`}
+                title="Toggle Master Mock Data"
+            >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${Object.values(mockSettings).some(Boolean) ? "translate-x-6" : "translate-x-1"}`} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {modules.map(mod => {
             const setting = securitySettings[mod.id] || { isLocked: false, pin: "" }
+            const isMockEnabled = mockSettings[mod.id] || false
             const isEditing = editingPin === mod.id
 
             return (
@@ -1370,42 +1449,63 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {isEditing ? (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5">
-                      <input
-                        type="text"
-                        maxLength={4}
-                        placeholder="PIN"
-                        value={tempPin}
-                        onChange={(e) => setTempPin(e.target.value.replace(/[^0-9]/g, ''))}
-                        className={`w-16 px-2 py-1 text-center text-sm rounded bg-transparent border focus:outline-none focus:border-blue-500 ${theme === 'light' ? 'border-gray-300' : 'border-white/20'} `}
-                        autoFocus
-                      />
-                      <button onClick={() => handleSetPin(mod.id)} className="p-1 hover:bg-green-500/20 text-green-500 rounded transition-colors"><Check className="h-4 w-4" /></button>
-                      <button onClick={() => { setEditingPin(null); setTempPin("") }} className="p-1 hover:bg-red-500/20 text-red-500 rounded transition-colors"><X className="h-4 w-4" /></button>
-                    </div>
-                  ) : (
-                    <>
-                      {setting.isLocked && (
-                        <button
-                          onClick={() => setEditingPin(mod.id)}
-                          className="text-[10px] font-medium text-blue-400 hover:text-blue-300 transition-colors"
-                        >
-                          CHANGE PIN
-                        </button>
-                      )}
+                  {/* Mock Data Toggle */}
+                  <div className="flex flex-col items-center gap-1 mr-2 border-r border-white/10 pr-4">
+                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">Toggle Mock Data</span>
+                    <div className="flex items-center gap-2">
+                      <Database className={`h-4 w-4 ${isMockEnabled ? 'text-yellow-400' : 'text-gray-500'}`} />
                       <button
-                        onClick={() => toggleLock(mod.id)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${setting.isLocked ? 'bg-blue-600' : 'bg-gray-700'} `}
+                        onClick={() => toggleMock(mod.id)}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all focus:outline-none ${isMockEnabled ? 'bg-yellow-500' : 'bg-gray-700'}`}
+                        title="Toggle Mock/Demo Data"
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${setting.isLocked ? "translate-x-6" : "translate-x-1"}`} />
+                        <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isMockEnabled ? "translate-x-5" : "translate-x-1"}`} />
                       </button>
-                    </>
-                  )}
+                    </div>
+                  </div>
+
+                  {/* Lock Toggle */}
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-[9px] uppercase tracking-wider text-gray-500 font-bold">Toggle Access Lock</span>
+                    {isEditing ? (
+                      <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-5 mt-1">
+                        <input
+                          type="text"
+                          maxLength={4}
+                          placeholder="PIN"
+                          value={tempPin}
+                          onChange={(e) => setTempPin(e.target.value.replace(/[^0-9]/g, ''))}
+                          className={`w-16 px-2 py-1 text-center text-sm rounded bg-transparent border focus:outline-none focus:border-blue-500 ${theme === 'light' ? 'border-gray-300' : 'border-white/20'} `}
+                          autoFocus
+                        />
+                        <button onClick={() => handleSetPin(mod.id)} className="p-1 hover:bg-green-500/20 text-green-500 rounded transition-colors"><Check className="h-4 w-4" /></button>
+                        <button onClick={() => { setEditingPin(null); setTempPin("") }} className="p-1 hover:bg-red-500/20 text-red-500 rounded transition-colors"><X className="h-4 w-4" /></button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center mt-1">
+                        {setting.isLocked && (
+                          <button
+                            onClick={() => setEditingPin(mod.id)}
+                            className="text-[10px] font-medium text-blue-400 hover:text-blue-300 transition-colors mr-2"
+                          >
+                            CHANGE PIN
+                          </button>
+                        )}
+                        <button
+                          onClick={() => toggleLock(mod.id)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${setting.isLocked ? 'bg-blue-600' : 'bg-gray-700'} `}
+                          title="Toggle Access Lock"
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${setting.isLocked ? "translate-x-6" : "translate-x-1"}`} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )
           })}
+        </div>
         </div>
       )}
     </div>
