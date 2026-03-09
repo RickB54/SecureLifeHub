@@ -446,8 +446,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
             { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
             { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
             { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
             { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
         ]
 
         const filteredHistoricalLog = vitalRecords.filter(vital => {
@@ -849,25 +852,25 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <Activity className="h-8 w-8 text-blue-400" /> Health Hub
                 </h1>
 
-                <div className={`flex flex-wrap gap-2 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'} pb-4`}>
+                <div className={`flex flex-wrap gap-1.5 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'} pb-3`}>
                     {[
                         { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-                        { id: 'records', label: 'Medical Records', icon: FileText },
-                        { id: 'meds', label: 'Meds', icon: Activity },
-                        { id: 'vitals', label: 'Vitals', icon: Heart },
-                        { id: 'appointments', label: 'Appointments', icon: Clock },
+                        { id: 'records', label: 'Medical History', icon: FileText },
+                        { id: 'meds', label: 'Meds', icon: Pill },
+                        { id: 'vitals', label: 'Vitals', icon: Activity },
+                        { id: 'appointments', label: 'Visits', icon: Clock },
                         { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
-                        { id: 'ai', label: 'AI Assistant', icon: Sparkles }
+                        { id: 'ai', label: 'Health AI', icon: Sparkles }
                     ].map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === tab.id
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 whitespace-nowrap ${activeTab === tab.id
                                 ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
                                 : theme === 'light' ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "text-gray-400 hover:text-white hover:bg-white/5"
                                 }`}
                         >
-                            <tab.icon className="h-4 w-4" /> {tab.label}
+                            <tab.icon className="h-3.5 w-3.5" /> {tab.label}
                         </button>
                     ))}
                 </div>
@@ -943,6 +946,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         'Heart Rate': 'bpm', 
                                         'Glucose': 'mg/dL',
                                         'Sleep Duration': 'hrs',
+                                        'Sleep Score': '/100',
+                                        'Steps': 'steps',
+                                        'Activity (Mins)': 'mins',
                                         'Water Intake': 'oz',
                                         'Calorie Intake': 'kcal'
                                     }
@@ -982,6 +988,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 <option className="bg-[#1a1a1a]">Glucose</option>
                                                 <option className="bg-[#1a1a1a]">Temperature</option>
                                                 <option className="bg-[#1a1a1a]">Sleep Duration</option>
+                                                <option className="bg-[#1a1a1a]">Sleep Score</option>
+                                                <option className="bg-[#1a1a1a]">Steps</option>
+                                                <option className="bg-[#1a1a1a]">Activity (Mins)</option>
                                                 <option className="bg-[#1a1a1a]">Water Intake</option>
                                                 <option className="bg-[#1a1a1a]">Calorie Intake</option>
                                             </select>

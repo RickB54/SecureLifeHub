@@ -559,7 +559,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
         <AddFolderModal
           onClose={() => setAddFolderModalOpen(false)}
           onAdd={async (folder: any) => {
-            await addFolder(folder.name, folder.parentFolder)
+            await addFolder(folder.name, undefined, folder.parentFolder)
             setAddFolderModalOpen(false)
           }}
           folders={folders}

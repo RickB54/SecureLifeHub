@@ -289,7 +289,8 @@ export default function Passwords({
 
   // Handle adding a new folder
   const handleAddFolder = async (folderData: any) => {
-    await addFolder(folderData.name, folderData.parentFolder)
+    // Note: addFolder signature is (name, category, parentId)
+    await addFolder(folderData.name, undefined, folderData.parentFolder)
     setAddFolderModalOpen(false)
   }
 

@@ -124,7 +124,7 @@ export default function EditVehicleModal({ onClose, onSave, vehicle, theme }: Ed
                             </div>
                             <div>
                                 <label className={labelClass}>License Plate</label>
-                                <input name="plate" defaultValue={metadata.plate} className={`${inputClass} uppercase`} placeholder="PLATE #" />
+                                <input name="plate" defaultValue={metadata.plate} className={inputClass} placeholder="PLATE #" />
                             </div>
                         </div>
                     </section>

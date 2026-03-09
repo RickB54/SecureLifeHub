@@ -37,15 +37,6 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     // Handle initial lock state and persistence
     useEffect(() => {
         const isCurrentlyLocked = localStorage.getItem('vault_locked') === 'true'
-        const bioEnabled = localStorage.getItem('biometric_enabled') === 'true'
-        
-        // If biometrics are enabled, we default to LOCKED on new page loads for security
-        if (bioEnabled && !isCurrentlyLocked) {
-           // We don't automatically lock if they just signed in, 
-           // but we do if they refresh or come back later.
-           // For now, let's just trust the persistent state.
-        }
-        
         setIsLocked(isCurrentlyLocked)
     }, [])
 
@@ -58,68 +49,15 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         }
     }
 
+    // Separate effect for Auto-lock Activity Listeners
     useEffect(() => {
-        let initialized = false
+        if (loading || isLocked) return
 
-        const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log("Auth State Change:", event)
-            
-            // Handle refresh token expiration or invalidation
-            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
-                console.warn("Session invalid or refreshed without session, clearing local auth state...")
-                setSession(null)
-                setUser(null)
-                setIsLocked(false)
-                localStorage.removeItem('vault_locked')
-            } else {
-                setSession(session)
-                setUser(session?.user ?? null)
-                // If we were locked and but a new session appeared, we might want to stay locked or unlock.
-                // Usually, if they just signed in, they are unlocked.
-                if (event === 'SIGNED_IN') {
-                    setLockedWithPersistence(false)
-                }
-            }
-
-            if (!initialized) {
-                initialized = true
-                setLoading(false)
-            }
-        })
-
-        // Backup check if listener doesn't fire immediately with session
-        const initSession = async () => {
-            try {
-                const { data: { session: currentSession }, error } = await supabase.auth.getSession()
-                
-                if (error) {
-                    console.error("Session initialization error:", error.message)
-                    if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
-                        await supabase.auth.signOut()
-                    }
-                }
-
-                if (!initialized) {
-                    setSession(currentSession)
-                    setUser(currentSession?.user ?? null)
-                    setLoading(false)
-                    initialized = true
-                }
-            } catch (err) {
-                console.error("Fatal auth init error:", err)
-                setLoading(false)
-                initialized = true
-            }
-        }
-        initSession()
-
-        // Auto-logout/lock functionality
         let inactivityTimer: NodeJS.Timeout
 
-        // Initial limit setup
         const getTimeoutDuration = () => {
             const saved = typeof window !== 'undefined' ? localStorage.getItem("auto_lock_timeout") : null
-            if (saved === "0" || saved === "disabled") return null;
+            if (saved === "0" || saved === "disabled") return null
             return (saved ? parseInt(saved) : 15) * 60 * 1000
         }
 
@@ -127,32 +65,31 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         const resetTimer = () => {
             if (inactivityTimer) clearTimeout(inactivityTimer)
-            if (currentLimit === null) return; // Auto-lock disabled
+            if (currentLimit === null) return
 
             inactivityTimer = setTimeout(async () => {
-                console.log("User inactive, locking vault...")
-                // INSTEAD of full signOut, we just lock the view.
-                // This keeps the Supabase session alive so Fingerprint (WebAuthn) can "unlock" it.
+                console.log("Vault auto-locked due to inactivity")
                 setLockedWithPersistence(true)
-                router.refresh()
             }, currentLimit)
         }
 
-        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
+        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'mousemove']
+        
+        // Throttled activity handler for mousemove
+        let lastActivity = Date.now()
         const handleActivity = () => {
-          // If we are already locked, don't reset the timer (avoids weird unlock-without-auth edge cases)
-          if (isLocked) return;
-          resetTimer()
+            const now = Date.now()
+            if (now - lastActivity < 2000) return // Throttled to 2s
+            lastActivity = now
+            resetTimer()
         }
 
         const handleTimeoutChange = (e: CustomEvent) => {
             if (e.detail?.timeout !== undefined) {
                 if (e.detail.timeout === 0 || e.detail.timeout === "disabled") {
                     currentLimit = null
-                    console.log("Auto-lock disabled")
                 } else {
                     currentLimit = e.detail.timeout * 60 * 1000
-                    console.log(`Auto-lock timeout updated to ${e.detail.timeout} minutes`)
                 }
                 resetTimer()
             }
@@ -160,18 +97,65 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         events.forEach(event => window.addEventListener(event, handleActivity, { passive: true }))
         window.addEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
+        
+        // Initial timer start
         resetTimer()
 
         return () => {
-            listener.subscription.unsubscribe()
+            if (inactivityTimer) clearTimeout(inactivityTimer)
             events.forEach(event => window.removeEventListener(event, handleActivity))
             window.removeEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
-            if (inactivityTimer) clearTimeout(inactivityTimer)
+        }
+    }, [isLocked, loading])
+
+    // Auth state listener
+    useEffect(() => {
+        let initialized = false
+        const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log("Auth State Change:", event)
+            if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+                setSession(null)
+                setUser(null)
+                setIsLocked(false)
+                localStorage.removeItem('vault_locked')
+            } else {
+                setSession(session)
+                setUser(session?.user ?? null)
+                if (event === 'SIGNED_IN') {
+                    setLockedWithPersistence(false)
+                }
+            }
+            if (!initialized) { initialized = true; setLoading(false) }
+        })
+
+        const initSession = async () => {
+            try {
+                const { data: { session: currentSession }, error } = await supabase.auth.getSession()
+                if (error) {
+                    if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
+                        await supabase.auth.signOut()
+                    }
+                }
+                if (!initialized) {
+                    setSession(currentSession)
+                    setUser(currentSession?.user ?? null)
+                    setLoading(false)
+                    initialized = true
+                }
+            } catch (err) {
+                setLoading(false)
+                initialized = true
+            }
+        }
+        initSession()
+
+        return () => {
+            listener.subscription.unsubscribe()
         }
     }, [])
 
     const signOut = async () => {
-        setIsLocked(false)
+        setLockedWithPersistence(false)
         await supabase.auth.signOut()
         setUser(null)
         setSession(null)
