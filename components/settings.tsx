@@ -995,9 +995,9 @@ export default function Settings({
                             if (id === 'type-secure-notes') return (r: any) => r.type === 'note' || r.type === 'secure-note';
                             if (id === 'type-payment-cards') return (r: any) => r.type === 'card' || r.type === 'financial-card';
                             if (id === 'type-health-records') return (r: any) => r.category === 'Health Records' || r.type === 'health-record';
-                            if (id === 'type-medications') return (r: any) => r.type === 'medication' || r.category === 'medications';
-                            if (id === 'type-vitals') return (r: any) => r.category === 'vitals';
-                            if (id === 'type-health-diary') return (r: any) => r.category === 'Health Diary';
+                            if (id === 'type-medications') return (r: any) => r.type === 'medication' || r.category?.toLowerCase() === 'medications';
+                            if (id === 'type-vitals') return (r: any) => r.category?.toLowerCase() === 'vitals' || r.item_metadata?.is_vital === true;
+                            if (id === 'type-health-diary') return (r: any) => r.category?.toLowerCase() === 'health diary';
                             if (id === 'type-medical') return (r: any) => r.category === 'Health Insurance';
                             if (id === 'type-vehicles') return (r: any) => r.type === 'vehicle' || r.category === 'Vehicle Profiles';
                             if (id === 'type-vehicle-docs') return (r: any) => r.category === 'Registration & Docs';
@@ -1020,17 +1020,18 @@ export default function Settings({
 
                           const filter = getFilter();
                           const count = records.filter(filter).length;
+                          const displayLabel = id === 'type-vitals' ? 'Vitals Historical Log' : item.label;
 
                           return (
                             <button
                               key={item.id}
                               onClick={async () => {
                                 if (count === 0) {
-                                  toast.error(`No data found for ${item.label}`);
+                                  toast.error(`No data found for ${displayLabel}`);
                                   return;
                                 }
 
-                                if (confirm(`⚠️ CRITICAL: Are you sure you want to delete ALL ${count} items in "${item.label}"? This action is permanent and cannot be undone.`)) {
+                                if (confirm(`⚠️ CRITICAL: Are you sure you want to delete ALL ${count} items in "${displayLabel}"? This action is permanent and cannot be undone.`)) {
                                   if (!deleteItem) return;
                                   showNotification(`Wiping ${count} items...`, "error");
                                   
@@ -1040,7 +1041,7 @@ export default function Settings({
                                       await deleteItem(r.id, r.type || "item", { skipRefresh: true });
                                     }
                                     window.dispatchEvent(new CustomEvent('vault-refresh'));
-                                    toast.success(`Successfully deleted all ${item.label} data.`);
+                                    toast.success(`Successfully deleted all ${displayLabel} data.`);
                                   } catch (e) {
                                     console.error(e);
                                     toast.error("Failed to complete wipe.");
@@ -1050,7 +1051,7 @@ export default function Settings({
                               className="w-full flex items-center justify-between p-3 rounded-xl bg-red-500/5 hover:bg-red-500/15 border border-red-500/10 transition-all group"
                             >
                               <div className="text-left">
-                                <div className="text-xs font-bold text-red-400 group-hover:text-red-300">Wipe {item.label}</div>
+                                <div className="text-xs font-bold text-red-400 group-hover:text-red-300">Wipe {displayLabel}</div>
                                 <div className="text-[10px] opacity-40">{count} items recorded</div>
                               </div>
                               <Trash className="h-4 w-4 text-red-500 opacity-30 group-hover:opacity-100" />

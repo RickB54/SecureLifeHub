@@ -218,12 +218,15 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                       <div className="flex flex-col">
                         <h3 className="text-xl font-bold text-blue-400 group-hover/trigger:text-blue-300 transition-colors flex items-center gap-2">
                           Personalize Your Pulse
-                          <button
+                          <span
+                            role="button"
+                            tabIndex={0}
                             onClick={(e) => { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); } }}
                             className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-blue-500/40 hover:text-blue-400 transition-all cursor-help"
                           >
                             <HelpCircle className="h-4 w-4" />
-                          </button>
+                          </span>
                         </h3>
                         <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
                       </div>

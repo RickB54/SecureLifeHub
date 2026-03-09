@@ -83,34 +83,46 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                                 {item.icon}
                             </div>
                             <div className="flex gap-2">
-                                <button
-                                    onClick={(e) => handleExport(e, item, records, 'json')}
-                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
-                                    title="Export to JSON"
-                                >
-                                    <FileJson className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={(e) => handleExport(e, item, records, 'csv')}
-                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-green-400 transition-all opacity-0 group-hover:opacity-100"
-                                    title="Export to CSV"
-                                >
-                                    <FileSpreadsheet className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={(e) => handleExport(e, item, records, 'pdf')}
-                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100"
-                                    title="Export to PDF"
-                                >
-                                    <FileText className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); onOpenHelp?.(item.id); }}
-                                    className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-purple-400 transition-all opacity-0 group-hover:opacity-100"
-                                    title="Help"
-                                >
-                                    <HelpCircle className="h-4 w-4" />
-                                </button>
+                                 <span
+                                     role="button"
+                                     tabIndex={0}
+                                     onClick={(e) => handleExport(e, item, records, 'json')}
+                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExport(e as any, item, records, 'json'); }}
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     title="Export to JSON"
+                                 >
+                                     <FileJson className="h-4 w-4" />
+                                 </span>
+                                 <span
+                                     role="button"
+                                     tabIndex={0}
+                                     onClick={(e) => handleExport(e, item, records, 'csv')}
+                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExport(e as any, item, records, 'csv'); }}
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-green-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     title="Export to CSV"
+                                 >
+                                     <FileSpreadsheet className="h-4 w-4" />
+                                 </span>
+                                 <span
+                                     role="button"
+                                     tabIndex={0}
+                                     onClick={(e) => handleExport(e, item, records, 'pdf')}
+                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExport(e as any, item, records, 'pdf'); }}
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     title="Export to PDF"
+                                 >
+                                     <FileText className="h-4 w-4" />
+                                 </span>
+                                 <span
+                                     role="button"
+                                     tabIndex={0}
+                                     onClick={(e) => { e.stopPropagation(); onOpenHelp?.(item.id); }}
+                                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onOpenHelp?.(item.id); }}}
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-purple-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     title="Help"
+                                 >
+                                     <HelpCircle className="h-4 w-4" />
+                                 </span>
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-500 ${theme === 'dark' ? 'bg-white/5 group-hover:bg-white/10' : 'bg-gray-50 group-hover:bg-white'}`}>
                                     <ArrowRight className={`w-5 h-5 transition-transform duration-500 group-hover:translate-x-1 ${theme === 'dark' ? 'text-gray-500 group-hover:text-white' : 'text-gray-400 group-hover:text-black'}`} />
                                 </div>
