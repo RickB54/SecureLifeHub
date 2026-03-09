@@ -149,14 +149,25 @@ function HomeContent() {
   useEffect(() => {
     if (typeof window === "undefined") return
     const pos = scrollPositions.current[activePage] || 0
-    // Find the main scrollable container
     const mainEl = document.getElementById("main-scroll-container")
+    
     if (mainEl) {
-      // Slight delay to ensure DOM has updated
-      const tm = setTimeout(() => {
+      // First attempt
+      const tm1 = setTimeout(() => {
         mainEl.scrollTo({ top: pos, behavior: "instant" })
-      }, 10)
-      return () => clearTimeout(tm)
+      }, 50)
+      
+      // Secondary attempt for slower rendering components
+      const tm2 = setTimeout(() => {
+        if (mainEl.scrollTop !== pos) {
+           mainEl.scrollTo({ top: pos, behavior: "instant" })
+        }
+      }, 250)
+      
+      return () => {
+        clearTimeout(tm1)
+        clearTimeout(tm2)
+      }
     }
   }, [activePage])
 

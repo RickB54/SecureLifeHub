@@ -906,7 +906,11 @@ export default function Settings({
           <div className="flex items-center gap-2 mb-4">
             <p className="text-sm opacity-60">Control PIN restriction and mock data demonstration for each module.</p>
           </div>
-          <ModuleAccessSettings theme={theme || "dark"} />
+          <ModuleAccessSettings 
+            theme={theme || "dark"} 
+            records={records}
+            deleteItem={deleteItem}
+          />
         </SettingsCard>
 
 
@@ -1236,6 +1240,26 @@ export default function Settings({
 
                   <button
                     onClick={async () => {
+                      const mockItems = records.filter(r => r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true);
+                      if (mockItems.length === 0) return toast.info("No mock data found to clean up.");
+                      
+                      if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records. Do you want to permanently delete them and keep only your real data?`)) {
+                        if (!deleteItem) return;
+                        toast.info("Cleaning up mock data...");
+                        for (const item of mockItems) {
+                          await deleteItem(item.id, item.type || "item", { skipRefresh: true });
+                        }
+                        window.dispatchEvent(new CustomEvent('vault-refresh'));
+                        toast.success(`Successfully removed ${mockItems.length} mock records.`);
+                      }
+                    }}
+                    className="w-full py-5 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/50 text-yellow-500 rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs"
+                  >
+                    <Database className="h-5 w-5" /> Wipe All Mock Data
+                  </button>
+
+                  <button
+                    onClick={async () => {
                       if (confirm("⚠️ NUCLEAR OPTION: Delete EVERY SINGLE PIECE of data in this vault (including folders and passwords)?")) {
                         if (confirm("FINAL WARNING: This is absolutely irreversible. Type 'DELETE' to continue.")) {
                           const input = prompt("Type 'DELETE' to confirm nuclear wipe:");
@@ -1289,12 +1313,20 @@ export default function Settings({
   )
 }
 
-function ModuleAccessSettings({ theme }: { theme: string }) {
+function ModuleAccessSettings({ 
+  theme, 
+  records, 
+  deleteItem 
+}: { 
+  theme: string, 
+  records: any[], 
+  deleteItem: (id: string, type?: string, options?: any) => Promise<void> 
+}) {
   // These IDs must match `activePage` values used in page.tsx
   const modules = [
     { id: "passwords", label: "Vault (Passwords)" },
-    { id: "diary", label: "My Diary" },
-    { id: "financial", label: "Financial Hub" },
+    { id: "type-diary", label: "My Diary" },
+    { id: "financial-cards", label: "Financial Hub" },
     { id: "type-budget", label: "Budget Manager" },
     { id: "type-health-records", label: "Health Records" },
     { id: "type-vehicles", label: "Vehicles" },
@@ -1346,8 +1378,41 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
     })
   }
 
-  const toggleMock = (moduleId: string) => {
+  const toggleMock = async (moduleId: string) => {
     const newVal = !mockSettings[moduleId];
+    
+    // If turning OFF, we need to actually remove any mock data from this module
+    if (!newVal && deleteItem && records) {
+      const confirmCleanup = window.confirm(`Turning off demo data for this module. Would you like to PERMANENTLY REMOVE all currently existing demo records from your database for "${modules.find(m => m.id === moduleId)?.label || moduleId}"? \n\n(Your real data will not be affected)`);
+      
+      if (confirmCleanup) {
+        toast.info("Cleaning up demo data...");
+        // Identify mock items for this module. 
+        // We look for item_metadata.mock === true OR budget_mock === true
+        const mockItems = records.filter(r => {
+          const isMock = r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true;
+          if (!isMock) return false;
+          
+          // Match module
+          if (moduleId === "passwords" && (r.type === "password" || r.type === "login")) return true;
+          if (moduleId === "diary" && r.type === "diary") return true;
+          if (moduleId === "financial" && (r.type === "card" || r.type === "payment-card")) return true;
+          if (moduleId === "type-budget" && r.item_metadata?.is_budget === true) return true;
+          if (moduleId === "type-health-records" && (r.type === "health-record" || r.category === "Health Records")) return true;
+          if (moduleId === "type-vehicles" && r.type === "vehicle") return true;
+          if (moduleId === "type-secure-notes" && (r.type === "note" || r.type === "secure-note")) return true;
+          
+          return false; // Fallback
+        });
+
+        for (const item of mockItems) {
+          await deleteItem(item.id, item.type || "item", { skipRefresh: true });
+        }
+        window.dispatchEvent(new CustomEvent('vault-refresh'));
+        toast.success(`Removed ${mockItems.length} demo records.`);
+      }
+    }
+
     const updated = { ...mockSettings, [moduleId]: newVal };
     setMockSettings(updated);
     localStorage.setItem("hub_mock_settings", JSON.stringify(updated));
@@ -1359,7 +1424,7 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
     window.dispatchEvent(new Event('storage'));
   }
 
-  const handleToggleAllMocks = () => {
+  const handleToggleAllMocks = async () => {
     const isAnyOn = Object.values(mockSettings).some(Boolean);
     const newVal = !isAnyOn; // If any is on, turn all off. If all off, turn all on.
     
@@ -1369,6 +1434,20 @@ function ModuleAccessSettings({ theme }: { theme: string }) {
         "WARNING: You are about to turn on Demo Data for ALL modules at once.\n\nThis will instantly place fake demonstration data into your Vault, Passwords, Financial Cards, and every other active list. If you already have your own real, personal data scattered in these modules, it may become confusing to see them mixed with demo records.\n\nPlease note: Turning this OFF later will ONLY remove the fake entries. Your real data will be perfectly safe.\n\nStill, we highly recommend turning demo mode on 'one module at a time' simply for a cleaner viewing experience.\n\nAre you absolutely sure you want to flood the entire app with demo data right now?"
       );
       if (!confirmWarning) return;
+    } else {
+      // Turning OFF all mocks - cleanup records
+      if (deleteItem && records) {
+        const confirmCleanup = window.confirm("You are turning off the Master Demo Switch. Would you like to PERMANENTLY DELETE all demo records currently in your vault? \n\n(This ensures your real data is clean and unmixed)");
+        if (confirmCleanup) {
+          toast.info("Mass cleaning demo data...");
+          const mockItems = records.filter(r => r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true);
+          for (const item of mockItems) {
+            await deleteItem(item.id, item.type || "item", { skipRefresh: true });
+          }
+          window.dispatchEvent(new CustomEvent('vault-refresh'));
+          toast.success(`Cleaned up ${mockItems.length} demo items.`);
+        }
+      }
     }
     
     const updated: Record<string, boolean> = {};
