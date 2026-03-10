@@ -462,8 +462,8 @@ export default function Settings({
                   <User className="h-6 w-6" />
                 </div>
                 <div>
-                  <div className="text-sm text-gray-400">Signed in as</div>
-                  <div className="font-bold text-lg">{user?.email}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-blue-400/70 mb-1">Authenticated Account</div>
+                  <div className="font-black text-xl md:text-2xl text-white">{user?.email}</div>
                   <div className="flex items-center gap-2 mt-1">
                     {user?.app_metadata?.provider === 'google' ? (
                       <span className="text-[10px] bg-white/10 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
