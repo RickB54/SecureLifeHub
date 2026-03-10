@@ -133,8 +133,9 @@ export default function Header({
               <div className="bg-purple-600 rounded-full p-1">
                 <User className="h-4 w-4 text-white" />
               </div>
-              <div className="flex flex-col items-start min-w-0">
-                <span className="text-xs font-bold break-words">{displayName}</span>
+              <div className="flex flex-col items-start min-w-0 leading-none">
+                <span className="text-xs font-black truncate max-w-[100px]">{displayName}</span>
+                <span className="text-[9px] font-bold text-blue-400 opacity-100 truncate max-w-[100px]">{email}</span>
               </div>
               <ChevronDown className="h-4 w-4" />
             </button>

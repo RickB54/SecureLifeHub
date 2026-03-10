@@ -124,6 +124,9 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
                 if (event === 'SIGNED_IN') {
                     setLockedWithPersistence(false)
                 }
+                if (event === 'PASSWORD_RECOVERY') {
+                    setLockedWithPersistence(true)
+                }
             }
             if (!initialized) { initialized = true; setLoading(false) }
         })

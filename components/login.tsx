@@ -33,10 +33,19 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
   // Load last used email and optional saved password from localStorage
   useEffect(() => {
-    const savedEmail = localStorage.getItem('lastLoginEmail')
-    if (savedEmail) {
-      setEmail(savedEmail)
-      setIsSignUp(false) // Force to login mode if they have been here before
+    const params = new URLSearchParams(window.location.search)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const type = params.get('type') || hashParams.get('type')
+
+    if (type === 'recovery') {
+      setIsResetMode(true)
+      // We will fill email later from the session once handleSSO runs
+    } else {
+      const savedEmail = localStorage.getItem('lastLoginEmail')
+      if (savedEmail) {
+        setEmail(savedEmail)
+        setIsSignUp(false) // Force to login mode if they have been here before
+      }
     }
 
     // Auto-fill password if "Remember Master Password" is enabled (Desktop Only feature)
@@ -49,6 +58,26 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         console.warn("Failed to decode saved password")
       }
     }
+  }, [])
+
+  // Robust recovery detection via listener & URL check
+  useEffect(() => {
+    // 1. Direct URL check (Aggressive backup)
+    const params = new URLSearchParams(window.location.search)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1))
+    const type = params.get('type') || hashParams.get('type')
+    if (type === 'recovery') {
+      setIsResetMode(true)
+    }
+
+    // 2. Auth State listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetMode(true)
+        if (session?.user?.email) setEmail(session.user.email)
+      }
+    })
+    return () => subscription.unsubscribe()
   }, [])
 
   const handleBiometricLogin = async () => {
@@ -159,21 +188,27 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     }
   }
 
-  // SSO & Auth Handlers (Logic remains unchanged for stability)
+  // SSO & Auth Handlers
   useEffect(() => {
-    if (isUnlockMode) return;
     const handleSSO = async () => {
       const params = new URLSearchParams(window.location.search)
       const hashParams = new URLSearchParams(window.location.hash.substring(1))
       
       const type = params.get('type') || hashParams.get('type')
-      if (type === 'recovery') {
+      const isRecovery = type === 'recovery'
+
+      if (isRecovery) {
         setIsResetMode(true)
-        return
       }
 
       const { data: { session: existingSession } } = await supabase.auth.getSession()
-      if (existingSession) {
+      
+      // PRE-FILL EMAIL IF IN RECOVERY
+      if (isRecovery && existingSession?.user?.email) {
+        setEmail(existingSession.user.email)
+      }
+
+      if (existingSession && !isRecovery) {
         const page = searchParams.get('page')
         const savedStartup = localStorage.getItem("hub_startup_page")
         if (page) router.push(`/?page=${page}`)
@@ -190,8 +225,9 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           const { data, error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
           if (error) throw error
           
-          if (type === 'recovery') {
+          if (isRecovery || type === 'recovery') {
             setIsResetMode(true)
+            if (data.session?.user?.email) setEmail(data.session.user.email)
           } else {
             window.history.replaceState({}, '', window.location.pathname)
             router.push('/?page=dashboard')
@@ -461,6 +497,29 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
               </div>
               <span className="text-[10px] opacity-40 uppercase tracking-widest mt-1">Select "This Device" 📲 if asked</span>
             </button>
+          )}
+
+          {!isUnlockMode && (
+            <>
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-[#0F172A] px-2 text-gray-500 font-bold tracking-widest">Or continue with</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full py-3.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold flex items-center justify-center gap-3 transition-all hover:scale-[1.02] shadow-lg"
+              >
+                <Globe className="h-5 w-5 text-blue-400" />
+                <span>Google Account</span>
+              </button>
+            </>
           )}
         </form>
         )}

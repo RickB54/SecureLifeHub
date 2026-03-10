@@ -446,6 +446,7 @@ export default function BudgetManager({ records, addItem, deleteItem, theme, onO
                                     localStorage.setItem('budget_mock_data_enabled', 'false');
                                     window.dispatchEvent(new Event('storage'));
                                 }
+                                toast.success("Mock data hidden. You can re-enable it in Settings > Danger Zone.");
                             }}
                             className="px-4 py-2 w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-colors shrink-0 shadow-lg shadow-blue-500/20"
                         >

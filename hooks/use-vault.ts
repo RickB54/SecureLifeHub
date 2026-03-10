@@ -333,6 +333,18 @@ export function useVault() {
 
     const deleteItem = async (id: string, type: string = "item", options?: { skipRefresh?: boolean }) => {
         try {
+            // Handle mock records locally - they don't exist in Supabase
+            if (id.startsWith('m') || id.includes('mock')) {
+                console.log(`🧹 Removing mock ${type} locally: ${id}`);
+                if (type === "folder") {
+                    setFolders(prev => prev.filter(f => f.id !== id))
+                } else {
+                    setItems(prev => prev.filter(i => i.id !== id))
+                }
+                toast.success(`${type === 'folder' ? 'Folder' : 'Item'} (Demo) removed`);
+                return;
+            }
+
             const table = type === "folder" ? "folders" : "vault_items"
             const { error } = await supabase
                 .from(table)

@@ -1314,23 +1314,29 @@ export default function Settings({
 
                   <button
                     onClick={async () => {
-                      const mockItems = records.filter(isItemMock);
+                      // EXPLICITLY filter out anything related to passwords/logins
+                      const mockItems = records.filter(r => isItemMock(r) && r.type !== 'password' && r.type !== 'login');
                       
                       if (mockItems.length === 0) return toast.info("No mock data found to clean up.");
                       
-                      if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records. Do you want to permanently delete them and keep only your real data?`)) {
+                      if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records. Do you want to permanently delete them and keep only your real data? \n\n(IMPORTANT: This will NOT touch your secure Passwords)`)) {
                         if (!deleteItem) return;
                         toast.info("Cleaning up mock data...");
                         for (const item of mockItems) {
                           await deleteItem(item.id, item.type || "item", { skipRefresh: true });
                         }
                         window.dispatchEvent(new CustomEvent('vault-refresh'));
-                        toast.success(`Successfully removed ${mockItems.length} mock records.`);
+                        toast.success(`Successfully removed ${mockItems.length} mock records. Your actual passwords remained untouched.`);
                       }
                     }}
                     className="w-full py-5 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/50 text-yellow-500 rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs"
                   >
-                    <Database className="h-5 w-5" /> Wipe All Mock Data
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-2">
+                         <Database className="h-4 w-4" /> Sanitize Vault (Wipe Mocks)
+                      </div>
+                      <span className="text-[8px] opacity-60 normal-case font-medium">Safe: Skips Passwords</span>
+                    </div>
                   </button>
 
                   <button
@@ -1355,6 +1361,68 @@ export default function Settings({
                   >
                     <AlertCircle className="h-5 w-5" /> Nuclear Wipe (All Data)
                   </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-red-500/20 my-8" />
+
+              {/* Mock Data Playground */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-red-500/20 pb-4">
+                  <div className="flex items-center gap-3">
+                    <Database className="h-6 w-6 text-emerald-500" />
+                    <div>
+                      <h4 className="text-xl font-black uppercase tracking-tighter text-emerald-500">Mock Data Playground</h4>
+                      <p className="text-xs text-gray-500">Inject sample records to test features or explore modules.</p>
+                    </div>
+                  </div>
+                  <HelpCircle 
+                    className="h-5 w-5 text-gray-600 hover:text-white cursor-pointer transition-colors"
+                    onClick={() => onOpenHelp?.("settings-mock-data")}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                   <button
+                    onClick={async () => {
+                      if (confirm("Restore Budget Mock Data? This will allow you to see charts and trends if you have no real data yet.")) {
+                        localStorage.removeItem('budget_mock_data_enabled');
+                        window.dispatchEvent(new Event('storage'));
+                        toast.success("Budget demonstration data re-enabled!");
+                      }
+                    }}
+                    className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                       <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform">
+                          <Activity className="h-4 w-4" />
+                       </div>
+                       <div className="font-bold text-sm">Budget Demo Data</div>
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">Restore sample transactions and goals to explore the Financial Dashboard.</p>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      toast.info("Module demonstration injection coming soon!");
+                    }}
+                    className="p-4 rounded-2xl bg-white/5 border border-white/5 opacity-50 cursor-not-allowed text-left"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                       <div className="p-2 rounded-lg bg-white/10 text-gray-400">
+                          <Grid className="h-4 w-4" />
+                       </div>
+                       <div className="font-bold text-sm">Health Hub Demo</div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">Inject sample vitals and medications for testing.</p>
+                  </button>
+
+                   <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 flex items-center gap-3">
+                      <Shield className="h-8 w-8 text-blue-500 opacity-40 shrink-0" />
+                      <div className="text-[10px] text-blue-400/80 font-medium italic">
+                        Notice: Mock injection never affects your secure passwords.
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>

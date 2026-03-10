@@ -79,6 +79,7 @@ export const HELP_MAP: Record<string, string> = {
     "settings-test-data": "settings-test-data",
     "settings-data": "settings-data",
     "settings-danger-zone": "settings-danger-zone",
+    "settings-mock-data": "settings-mock-data",
     "user-settings": "settings",
 }
 
@@ -669,6 +670,26 @@ const HELP_PAGES: HelpPage[] = [
                     <p className="text-xs text-gray-400 leading-relaxed">Using these tools will add sample records to your vault. These look and act exactly like real data, allowing you to see how different hubs interact, how graphs trend, and how categories organize themselves.</p>
                     <p className="text-[10px] text-orange-400 font-bold mt-3 uppercase tracking-widest">Cleanup is easy:</p>
                     <p className="text-[10px] text-gray-500 italic">You can delete individual demo items later, or use the "Danger Zone" mass-wipe tools to clear a whole category at once.</p>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "settings-mock-data",
+        title: "Mock Data Playground",
+        icon: Database,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-300">Test the hub's capabilities by injecting sample data into specific modules.</p>
+                <div className="space-y-4">
+                    <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+                        <h5 className="font-bold text-emerald-400 text-sm mb-1 uppercase tracking-tighter">Budget Demo Data</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Instantly populate your Budget Manager with transactions, income, and goals. This lets you see the trend charts and category breakdowns without entering your own data first.</p>
+                    </div>
+                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
+                        <h5 className="font-bold text-yellow-400 text-sm mb-1 uppercase tracking-tighter">Safe Cleanup</h5>
+                        <p className="text-xs text-gray-400">Use the "Sanitize Vault" tool to remove all injected mock data in one click. Our cleanup tools are specifically designed to PROTECT your real passwords and manual entries.</p>
+                    </div>
                 </div>
             </div>
         )
