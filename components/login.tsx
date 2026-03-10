@@ -239,6 +239,27 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     }
   }
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email address first.")
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: `${window.location.origin}/?page=settings`,
+      })
+      if (error) throw error
+      toast.success("Password reset link sent! Check your email.")
+      setError("Check your email for the reset link.")
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
     if (twoFactorCode === "123456") {
@@ -310,7 +331,18 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
                 className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
                 placeholder="Master Password"
               />
+              <div className="flex justify-end">
+              {!isSignUp && !isUnlockMode && (
+                <button 
+                  type="button" 
+                  onClick={handleForgotPassword}
+                  className="text-[11px] font-bold text-blue-400/60 hover:text-blue-400 transition-colors uppercase tracking-widest"
+                >
+                  Forgot Password?
+                </button>
+              )}
             </div>
+          </div>
           </div>
 
           {error && (
