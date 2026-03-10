@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
 import Logo from "./logo"
+import { toast } from "sonner"
 import { useAuth } from "@/components/auth-provider"
 
 interface LoginProps {
@@ -212,7 +213,30 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         setIsLocked(false)
         router.push('/?page=dashboard')
       }
-    } catch (err: any) { setError(err.message) } finally { setLoading(false) }
+    } catch (err: any) { 
+      setError(err.message)
+    } finally { setLoading(false) }
+  }
+
+  const handleResendConfirmation = async () => {
+    if (!email) return;
+    setResendLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      })
+      if (error) throw error
+      toast.success("Confirmation email resent! Please check your inbox.")
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setResendLoading(false)
+    }
   }
 
   const handleVerify2FA = (e: React.FormEvent) => {
@@ -289,7 +313,21 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             </div>
           </div>
 
-          {error && <div className="p-4 rounded-xl text-sm border bg-red-500/10 border-red-500/20 text-red-400 text-center">{error}</div>}
+          {error && (
+            <div className="p-4 rounded-xl text-sm border bg-red-500/10 border-red-500/20 text-red-400 text-center flex flex-col gap-2">
+              <span>{error}</span>
+              {(error.toLowerCase().includes("not confirmed") || error.toLowerCase().includes("verify your email")) && (
+                <button 
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendLoading}
+                  className="text-blue-400 font-bold hover:text-blue-300 underline underline-offset-4 disabled:opacity-50"
+                >
+                  {resendLoading ? "Sending..." : "Resend Confirmation Link"}
+                </button>
+              )}
+            </div>
+          )}
 
           <button
             type="submit" disabled={loading}

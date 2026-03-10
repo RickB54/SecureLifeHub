@@ -1025,7 +1025,7 @@ export default function Settings({
                 </button>
                 <button
                   type="button"
-                  onClick={() => onOpenHelp?.("settings")}
+                  onClick={() => onOpenHelp?.("settings-danger-zone")}
                   className="p-4 rounded-2xl bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
                   title="Explain Danger Zone"
                 >

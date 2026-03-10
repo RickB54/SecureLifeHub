@@ -228,7 +228,7 @@ export default function BackupRecovery({ records, addItem, deleteItem, bulkAddIt
                 <div>
                     <div className="flex items-center gap-2">
                         <h2 className="text-xl font-bold">Data Management</h2>
-                        <button type="button" onClick={() => onOpenHelp?.("settings")} className="text-blue-500 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
+                        <button type="button" onClick={() => onOpenHelp?.("settings-data")} className="text-blue-500 hover:text-white transform hover:scale-110 transition-all focus:outline-none">
                             <HelpCircle className="h-4 w-4" />
                         </button>
                     </div>
