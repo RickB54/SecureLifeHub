@@ -16,6 +16,9 @@ interface LoginProps {
 
 export default function Login({ isUnlockMode = false }: LoginProps) {
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isResetMode, setIsResetMode] = useState(false)
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -160,6 +163,15 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
   useEffect(() => {
     if (isUnlockMode) return;
     const handleSSO = async () => {
+      const params = new URLSearchParams(window.location.search)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      
+      const type = params.get('type') || hashParams.get('type')
+      if (type === 'recovery') {
+        setIsResetMode(true)
+        return
+      }
+
       const { data: { session: existingSession } } = await supabase.auth.getSession()
       if (existingSession) {
         const page = searchParams.get('page')
@@ -169,8 +181,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         else router.push('/?page=dashboard')
         return
       }
-      const params = new URLSearchParams(window.location.search)
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+
       const accessToken = params.get('access_token') || hashParams.get('access_token')
       const refreshToken = params.get('refresh_token') || hashParams.get('refresh_token')
       if (accessToken && refreshToken) {
@@ -178,8 +189,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         try {
           const { data, error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
           if (error) throw error
-          window.history.replaceState({}, '', window.location.pathname)
-          router.push('/?page=dashboard')
+          
+          if (type === 'recovery') {
+            setIsResetMode(true)
+          } else {
+            window.history.replaceState({}, '', window.location.pathname)
+            router.push('/?page=dashboard')
+          }
         } catch (e) { setError("Session sync failed.") } finally { setLoading(false) }
       }
     }
@@ -260,6 +276,34 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     }
   }
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.")
+      return
+    }
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters.")
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
+      if (error) throw error
+      toast.success("Password updated successfully!")
+      setIsResetMode(false)
+      setIsLocked(false)
+      // Redirect to dashboard to force refresh with new session
+      router.push('/?page=dashboard')
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleVerify2FA = (e: React.FormEvent) => {
     e.preventDefault()
     if (twoFactorCode === "123456") {
@@ -286,7 +330,40 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           </p>
         </div>
 
-        {show2FA ? (
+        {isResetMode ? (
+          <form onSubmit={handleUpdatePassword} className="space-y-6">
+            <div className="space-y-2 text-center">
+                <Shield className="h-10 w-10 text-blue-500 mx-auto mb-2" />
+                <h2 className="text-xl font-bold text-white mb-1">Set New Password</h2>
+                <p className="text-gray-400 text-sm mb-4">Protect your vault with a new master password</p>
+            </div>
+            <div className="space-y-4">
+              <div className="relative group">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
+                <PasswordInput
+                  value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required
+                  className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
+                  placeholder="New Master Password"
+                />
+              </div>
+              <div className="relative group">
+                <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-500 group-focus-within:text-blue-400 transition-colors" />
+                <PasswordInput
+                  value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required
+                  className="w-full bg-black/20 border border-white/10 text-white rounded-xl py-3 pl-10 focus:outline-none focus:border-blue-500/50 transition-all placeholder:text-gray-600"
+                  placeholder="Confirm New Password"
+                />
+              </div>
+            </div>
+            {error && <div className="p-4 rounded-xl text-sm border bg-red-500/10 border-red-500/20 text-red-400 text-center">{error}</div>}
+            <button
+              type="submit" disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-70"
+            >
+              Update & Login <ArrowRight className="h-5 w-5" />
+            </button>
+          </form>
+        ) : show2FA ? (
           <form onSubmit={handleVerify2FA} className="space-y-6">
              <div className="space-y-2 text-center">
                  <Shield className="h-10 w-10 text-blue-500 mx-auto mb-2" />
