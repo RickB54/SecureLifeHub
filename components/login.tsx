@@ -230,7 +230,11 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         router.push('/?page=dashboard')
       }
     } catch (err: any) { 
-      setError(err.message)
+      let msg = err.message
+      if (msg.toLowerCase().includes("rate limit")) {
+        msg = "Email limit reached. Please wait a few minutes before requesting another link."
+      }
+      setError(msg)
     } finally { setLoading(false) }
   }
 

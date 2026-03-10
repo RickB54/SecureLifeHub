@@ -46,6 +46,49 @@ import BackupRecovery from "./settings/backup-recovery"
 import ExportData from "./settings/export-data"
 import TwoFactorAuthModal from "@/components/modals/two-factor-auth-modal"
 
+// Robust mock identification logic helper
+const isItemMock = (r: any) => {
+  // 1. Check explicit metadata flags
+  if (r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true) return true;
+  
+  // 2. Check heuristically based on known internal demo patterns
+  const title = (r.title || "").toLowerCase();
+  const patterns = [
+    /adobe suite/i,
+    /bank account/i,
+    /database prod/i,
+    /login service/i,
+    /membership .* gym/i,
+    /server node/i,
+    /ssh key .* aws/i,
+    /wifi password/i,
+    /credit card [0-9]+ - bank [0-9]+/i,
+    /membership [0-9]+/i,
+    /server [0-9]+/i,
+    /database [0-9]+/i,
+    /john doe/i,
+    /jane doe/i
+  ];
+  
+  const username = ((r.username || r.item_metadata?.username || r.item_metadata?.email || "") + "").toLowerCase();
+  const commonMockUsers = ["no username", "db_admin", "member_id", "admin", "root", "user1@example.com"];
+  
+  if (patterns.some(p => p.test(title))) return true;
+  if (commonMockUsers.some(u => username.includes(u))) return true;
+  if (username.includes("example.com") && (title.includes("service") || title.includes("login"))) return true;
+  
+  // Check specific combinations of names that indicate mock data
+  if ((title.includes("membership") || title.includes("gym")) && (title.includes("member_id") || title.includes("no username"))) return true;
+  if (title.includes("ssh key") && title.includes("aws")) return true;
+  if (title.includes("adobe suite")) return true;
+
+  // 3. User information based checks (e.g. John Doe for cards)
+  const holder = ((r.item_metadata?.name || r.item_metadata?.cardHolder || "") + "").toUpperCase();
+  if (holder === "JOHN DOE") return true;
+
+  return false;
+};
+
 export default function Settings({
   records,
   items,
@@ -125,48 +168,6 @@ export default function Settings({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [show2FA, setShow2FA] = useState(false)
 
-  // Robust mock identification logic
-  const isItemMock = (r: any) => {
-    // 1. Check explicit metadata flags
-    if (r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true) return true;
-    
-    // 2. Check heuristically based on known internal demo patterns
-    const title = (r.title || "").toLowerCase();
-    const patterns = [
-      /adobe suite/i,
-      /bank account/i,
-      /database prod/i,
-      /login service/i,
-      /membership .* gym/i,
-      /server node/i,
-      /ssh key .* aws/i,
-      /wifi password/i,
-      /credit card [0-9]+ - bank [0-9]+/i,
-      /membership [0-9]+/i,
-      /server [0-9]+/i,
-      /database [0-9]+/i,
-      /john doe/i,
-      /jane doe/i
-    ];
-    
-    const username = ((r.username || r.item_metadata?.username || r.item_metadata?.email || "") + "").toLowerCase();
-    const commonMockUsers = ["no username", "db_admin", "member_id", "admin", "root", "user1@example.com"];
-    
-    if (patterns.some(p => p.test(title))) return true;
-    if (commonMockUsers.some(u => username.includes(u))) return true;
-    if (username.includes("example.com") && (title.includes("service") || title.includes("login"))) return true;
-    
-    // Check specific combinations of names that indicate mock data
-    if ((title.includes("membership") || title.includes("gym")) && (title.includes("member_id") || title.includes("no username"))) return true;
-    if (title.includes("ssh key") && title.includes("aws")) return true;
-    if (title.includes("adobe suite")) return true;
-
-    // 3. User information based checks (e.g. John Doe for cards)
-    const holder = ((r.item_metadata?.name || r.item_metadata?.cardHolder || "") + "").toUpperCase();
-    if (holder === "JOHN DOE") return true;
-
-    return false;
-  };
 
   // Load Biometric State + Session Duration
   useEffect(() => {
