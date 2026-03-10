@@ -31,27 +31,31 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
   const searchParams = useSearchParams()
   const { setIsLocked, signOut } = useAuth()
 
-  // Load last used email and optional saved password from localStorage
+  // Consolidated Initialization: Recovery Detection and Storage Loading
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     const type = params.get('type') || hashParams.get('type')
+    const isRecovery = type === 'recovery'
 
-    if (type === 'recovery') {
+    if (isRecovery) {
+      console.log("🛠️ Recovery URL Detected - Entering Reset Mode")
       setIsResetMode(true)
-      // We will fill email later from the session once handleSSO runs
+      setEmail("") // Ensure email is blank until session is established
+      setIsSignUp(false)
     } else {
+      // Normal flow: Load last used email
       const savedEmail = localStorage.getItem('lastLoginEmail')
       if (savedEmail) {
         setEmail(savedEmail)
-        setIsSignUp(false) // Force to login mode if they have been here before
+        setIsSignUp(false)
       }
     }
 
-    // Auto-fill password if "Remember Master Password" is enabled (Desktop Only feature)
+    // Auto-fill password if "Remember Master Password" is enabled (Desktop Only)
     const rememberPass = localStorage.getItem('remember_master_pass') === 'true'
     const savedPass = localStorage.getItem('saved_master_pass')
-    if (rememberPass && savedPass) {
+    if (rememberPass && savedPass && !isRecovery) {
       try {
         setPassword(atob(savedPass))
       } catch (e) {
@@ -68,10 +72,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     const type = params.get('type') || hashParams.get('type')
     if (type === 'recovery') {
       setIsResetMode(true)
+      // Don't use the cached email if we are in recovery
+      setEmail("") 
     }
 
     // 2. Auth State listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("🔐 Login Auth Event:", event)
       if (event === 'PASSWORD_RECOVERY') {
         setIsResetMode(true)
         if (session?.user?.email) setEmail(session.user.email)
@@ -79,6 +86,15 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // 3. Fallback: If in reset mode and email is empty, try to get it from current user periodically
+  useEffect(() => {
+    if (isResetMode && !email) {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user?.email) setEmail(data.user.email)
+      })
+    }
+  }, [isResetMode, email])
 
   const handleBiometricLogin = async () => {
     if (!window.PublicKeyCredential) {
@@ -297,18 +313,20 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      setError("Please enter your email address first.")
+      setError("Please enter your email address first")
       return
     }
-    setLoading(true)
-    setError(null)
+
+    const confirmed = confirm(`Do you want to send a password reset link to: ${email}?`)
+    if (!confirmed) return
+
     try {
+      setLoading(true)
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/?page=settings`,
+        redirectTo: window.location.origin + '?type=recovery',
       })
       if (error) throw error
-      toast.success("Password reset link sent! Check your email.")
-      setError("Check your email for the reset link.")
+      toast.success(`Reset link sent to ${email}. Check your inbox!`)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -375,7 +393,11 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             <div className="space-y-2 text-center">
                 <Shield className="h-10 w-10 text-blue-500 mx-auto mb-2" />
                 <h2 className="text-xl font-bold text-white mb-1">Set New Password</h2>
-                <p className="text-gray-400 text-sm mb-4">Protect your vault with a new master password</p>
+                <div className="bg-blue-500/10 border border-blue-500/20 py-1.5 px-3 rounded-lg inline-block mb-2">
+                   <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest">Account Identified</p>
+                   <p className="text-sm text-white font-bold">{email || "Finalizing authorization..."}</p>
+                </div>
+                <p className="text-gray-400 text-xs leading-relaxed">Protect your internal vault with a new master password.</p>
             </div>
             <div className="space-y-4">
               <div className="relative group">
@@ -401,6 +423,16 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-70"
             >
               Update & Login <ArrowRight className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsResetMode(false)
+                window.history.replaceState({}, '', '/')
+              }}
+              className="w-full text-center text-gray-400 hover:text-white text-xs font-bold transition-all uppercase tracking-widest mt-2"
+            >
+              Cancel Reset
             </button>
           </form>
         ) : show2FA ? (

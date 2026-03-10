@@ -222,8 +222,9 @@ function HomeContent() {
       setActivePage(pageParam)
     }
 
-    // C. Clean URL tokens while preserving page
-    if (typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
+    // C. Clean URL tokens while preserving page (SKIP if recovery flow is active)
+    const isRecovery = window.location.hash.includes('type=recovery') || searchParams.get('type') === 'recovery'
+    if (!isRecovery && typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
       const cleanParams = new URLSearchParams(window.location.search)
       cleanParams.delete('access_token')
       cleanParams.delete('refresh_token')
