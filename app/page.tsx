@@ -423,6 +423,8 @@ function HomeContent() {
         return <HealthRecords key="type-vitals" {...commonProps} initialTab="vitals" />
       case "type-medications":
         return <HealthRecords key="type-medications" {...commonProps} initialTab="meds" />
+      case "type-health-ai":
+        return <HealthRecords key="type-health-ai" {...commonProps} initialTab="ai" />
       case "type-health-diary":
         return <HealthDiary {...commonProps} />
       case "type-health-portals":

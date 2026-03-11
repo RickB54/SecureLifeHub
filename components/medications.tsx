@@ -68,7 +68,6 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const [viewMode, setViewMode] = useState<"list" | "timeline">("list")
     const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("day")
     const [showFullTimeline, setShowFullTimeline] = useState(false) // NEW: Toggle full timeline view
-    const [showDiagnostics, setShowDiagnostics] = useState(false) // NEW: Toggle diagnostic panel
 
     // Global handler for triggering Import Rx from child modals
     useEffect(() => {
@@ -1097,73 +1096,6 @@ ${selectedMed ? `
                         <div className="text-xl md:text-2xl font-bold text-green-400">{medRecords.reduce((sum, m) => sum + (m.item_metadata?.takenLog?.length || 0), 0)}</div>
                         <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Doses Taken</div>
                     </div>
-                </div>
-
-                {/* Diagnostic Panel - Accordion */}
-                <div className={`mb-6 rounded-xl border overflow-hidden transition-all ${showDiagnostics ? 'border-yellow-500' : 'border-yellow-500/30'}`}>
-                    <button
-                        onClick={() => setShowDiagnostics(!showDiagnostics)}
-                        className="w-full p-4 bg-yellow-900/20 hover:bg-yellow-900/30 transition-all flex justify-between items-center"
-                    >
-                        <h3 className="text-yellow-400 font-bold flex items-center gap-2">
-                            🔍 DIAGNOSTIC DATA
-                            <span className="text-xs opacity-60">(for debugging only)</span>
-                        </h3>
-                        <ChevronDown className={`h-5 w-5 transition-transform ${showDiagnostics ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {showDiagnostics && (
-                        <div className="p-4 bg-yellow-900/40 border-t border-yellow-500/30 font-mono text-xs">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
-                                <div>
-                                    <div>Raw Records: <span className="text-white font-bold">{records.length}</span></div>
-                                    <div>Filtered Meds: <span className="text-white font-bold">{medRecords.length}</span></div>
-                                    <div className="mt-2 mb-2 text-cyan-400">User ID: {user?.id || "NOT LOGGED IN"}</div>
-                                    <div className="text-xs text-gray-500 break-all">DB: {(supabase as any).supabaseUrl}</div>
-                                    <div className="mt-2 text-yellow-500/80">Filter Criteria:</div>
-                                    <ul className="list-disc pl-4">
-                                        <li>Category == "Medications"</li>
-                                        <li>Type == "medication"</li>
-                                        <li>Note (Metadata) == "Imported Prescription"</li>
-                                        <li>Titles: Hydroxyzine, Prednisone, Loratadine, Famotidine</li>
-                                    </ul>
-                                    <div className="mt-4">
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    const { data, error } = await supabase.from("vault_items").insert({
-                                                        user_id: user?.id,
-                                                        type: "note",
-                                                        title: "DEBUG_PROBE_" + Date.now(),
-                                                        category: "Medications",
-                                                        item_metadata: { notes: "Imported Prescription" }
-                                                    }).select().single()
-
-                                                    if (error) alert("❌ WRITE FAILED:\n" + JSON.stringify(error, null, 2))
-                                                    else alert("✅ WRITE SUCCESS!\nID: " + data.id + "\n(Refresh page to see if it appears)")
-                                                } catch (e: any) {
-                                                    alert("❌ CRASH: " + e.message)
-                                                }
-                                            }}
-                                            className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded font-bold uppercase text-[10px]"
-                                        >
-                                            Force Test Write
-                                        </button>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div className="mb-1 text-white">Raw Item Dump (First 5):</div>
-                                    {records.slice(0, 5).map((r: any, i: number) => (
-                                        <div key={i} className="mb-1 border-b border-white/10 pb-1">
-                                            [{i}] <span className="text-cyan-400">{r.title}</span> <span className="text-gray-500">({r.category}, {r.type})</span>
-                                            <br />
-                                            MetaNote: {r.item_metadata?.notes || "N/A"}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Search and Views */}

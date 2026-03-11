@@ -857,10 +857,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
                         { id: 'records', label: 'Medical History', icon: FileText },
                         { id: 'meds', label: 'Meds', icon: Pill },
+                        { id: 'ai', label: 'Dr. AI', icon: Sparkles },
                         { id: 'vitals', label: 'Vitals', icon: Activity },
                         { id: 'appointments', label: 'Visits', icon: Clock },
-                        { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
-                        { id: 'ai', label: 'Health AI', icon: Sparkles }
+                        { id: 'calendar', label: 'Timeline', icon: CalendarIcon }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -903,6 +903,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <HealthAI
                             theme={theme}
                             records={records}
+                            onOpenHelp={onOpenHelp}
                             onScheduleAppointment={() => {
                                 setAddModalType('appointment')
                                 setShowAddModal(true)

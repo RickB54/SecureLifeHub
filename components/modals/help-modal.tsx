@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -81,6 +81,7 @@ export const HELP_MAP: Record<string, string> = {
     "settings-danger-zone": "settings-danger-zone",
     "settings-mock-data": "settings-mock-data",
     "user-settings": "settings",
+    "dr-ai": "dr-ai",
 }
 
 const HELP_PAGES: HelpPage[] = [
@@ -351,6 +352,90 @@ const HELP_PAGES: HelpPage[] = [
                             Centralize policy numbers, group IDs, and carrier contact info.
                             <br /><br />
                             <strong>How to use:</strong> Take photos of your insurance cards front and back. Have them ready at the clinic check-in desk.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "dr-ai",
+        title: "Dr. AI Clinical Intelligence",
+        icon: Sparkles,
+        content: (
+            <div className="space-y-6">
+                <p className="text-lg text-gray-300 leading-relaxed italic">
+                    "Your global clinical research assistant, powered by authoritative medical databases."
+                </p>
+                <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="p-6 rounded-[2rem] bg-indigo-600/10 border border-indigo-500/20 shadow-xl">
+                        <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                             <Sparkles className="h-5 w-5" /> Comprehensive Explanations
+                        </h4>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Unlike simple search engines, Dr. AI provides deep clinical summaries first. It synthesizes data from Wikipedia Medical, Mayo Clinic, and PubMed to give you a full overview of symptoms, causes, and treatments.
+                        </p>
+                    </div>
+
+                    <div className="p-6 rounded-[2rem] bg-white/5 border border-white/10">
+                        <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <HelpCircle className="h-4 w-4 text-blue-400" /> How to use Dr. AI
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="flex gap-4">
+                                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-black font-mono">01</span>
+                                <div>
+                                    <h5 className="text-[11px] font-bold text-gray-200">The Bottom Input Field</h5>
+                                    <p className="text-[10px] text-gray-500">This is your primary command center. Type your medical query or symptoms here and hit the Send button to begin an investigation.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-black font-mono">02</span>
+                                <div>
+                                    <h5 className="text-[11px] font-bold text-gray-200">The Top Title Area</h5>
+                                    <p className="text-[10px] text-gray-500">The text at the very top is the <strong>Title</strong> of your current session. You can click it to rename the investigation for your records (e.g. "Sore Throat Log"). It is not for asking questions.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <span className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-[10px] font-black font-mono">03</span>
+                                <div>
+                                    <h5 className="text-[11px] font-bold text-gray-200">History & Suggestions</h5>
+                                    <p className="text-[10px] text-gray-500">Use the left sidebar to jump between past sessions. After an AI response, look for "AI Suggested Investigations" chips—click them to quickly dive into related topics.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-5 rounded-2xl bg-blue-500/5 border border-white/5">
+                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2 flex items-center gap-2">
+                                <Maximize2 className="h-4 w-4" /> Focus Mode
+                            </h5>
+                            <p className="text-[11px] text-gray-500">Enable expanded workspace to fill your screen for deep reading. Press ESC at any time to return to the dashboard.</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-emerald-500/5 border border-white/5">
+                            <h5 className="text-[10px] font-black text-emerald-400 uppercase mb-2 flex items-center gap-2">
+                                <FileText className="h-4 w-4" /> Research Notes
+                            </h5>
+                            <p className="text-[11px] text-gray-500">Keep side-notes during your session. Dr. AI automatically tracks topics but your personal observations are kept in the session notes panel.</p>
+                        </div>
+                    </div>
+
+                    <div className="p-6 rounded-[2rem] bg-black/40 border border-white/5">
+                        <h4 className="text-xs font-black text-gray-300 uppercase tracking-widest mb-3">Core Features & Icons</h4>
+                        <ul className="space-y-3 text-[11px] text-gray-400">
+                            <li className="flex gap-3"><Printer className="h-4 w-4 text-gray-500 mt-1" /> <strong>Print & PDF:</strong> Direct export of the consultation history for your physical doctor.</li>
+                            <li className="flex gap-3"><Archive className="h-4 w-4 text-gray-500 mt-1" /> <strong>History Vault:</strong> All sessions are saved, editable, and archivable in the left sidebar.</li>
+                            <li className="flex gap-3"><Shield className="h-4 w-4 text-gray-500 mt-1" /> <strong>Privacy:</strong> Research queries are parsed through an anonymized proxy. No medical data is tied to your ID in clinical databases.</li>
+                        </ul>
+                    </div>
+
+                    <div className="p-5 rounded-[2rem] bg-rose-500/10 border border-rose-500/20">
+                        <h4 className="text-xs font-black text-rose-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5" /> Medical Disclaimer
+                        </h4>
+                        <p className="text-[10px] text-rose-300/60 font-medium">
+                            Dr. AI is a research tool, not a diagnostic medical service. Always consult with a licensed healthcare professional for medical advice, diagnoses, or treatment.
                         </p>
                     </div>
                 </div>
