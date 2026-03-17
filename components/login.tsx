@@ -158,12 +158,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         if (session) {
           console.log("Active session found, unlocking UI...")
           setIsLocked(false)
-          const targetPage = searchParams.get("page")
-          const savedStartup = localStorage.getItem("hub_startup_page")
+          const isRecoveryFlow = searchParams.get('type') === 'recovery' || window.location.hash.includes('type=recovery')
+          const target = searchParams.get('page')
           
-          if (targetPage) {
-            router.push(`/?page=${targetPage}`)
+          if (isRecoveryFlow && target) {
+            router.push(`/?page=${target}`)
           } else {
+            // Always go to root to let startup logic take over after unlock
             router.push('/')
           }
         } else {
@@ -242,9 +243,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       if (existingSession && !isRecovery) {
         // Mark session as fresh for biometric purposes
         localStorage.setItem('full_login_timestamp', Date.now().toString())
-        const page = searchParams.get('page')
-        if (page) router.push(`/?page=${page}`)
-        else router.push('/')
+        const target = searchParams.get('page')
+        
+        if (isRecovery && target) {
+            router.push(`/?page=${target}`)
+        } else {
+            router.push('/')
+        }
         return
       }
 
@@ -274,10 +279,14 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             if (data.session?.user?.email) setEmail(data.session.user.email)
           } else {
             localStorage.setItem('full_login_timestamp', Date.now().toString())
-            const targetPage = params.get('page') || hashParams.get('page')
+            const target = params.get('page') || hashParams.get('page')
             window.history.replaceState({}, '', window.location.pathname)
-            if (targetPage) router.push(`/?page=${targetPage}`)
-            else router.push('/')
+            
+            if (isRecovery && target) {
+              router.push(`/?page=${target}`)
+            } else {
+              router.push('/')
+            }
           }
         } catch (e: any) { 
           console.error("Session sync failed:", e)
