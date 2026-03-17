@@ -1,0 +1,190 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Plus, X, Layout, Type, Calendar, CheckSquare, List as ListIcon, FileText, Image as ImageIcon, Hash } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import type { Database, Field, FieldType } from "@/types/secure-database"
+
+interface FormBuilderProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onDatabaseCreate: (database: Database) => void
+  templateDatabase?: Database
+}
+
+export function FormBuilder({
+  open,
+  onOpenChange,
+  onDatabaseCreate,
+  templateDatabase,
+}: FormBuilderProps) {
+  const [title, setTitle] = useState("")
+  const [fields, setFields] = useState<Field[]>([{ name: "Title", type: "text" }])
+  const [newOption, setNewOption] = useState("")
+
+  useEffect(() => {
+    if (open && templateDatabase) {
+      setFields(JSON.parse(JSON.stringify(templateDatabase.fields)))
+      setTitle(`${templateDatabase.title} (Clone)`)
+    } else if (open) {
+      setTitle("")
+      setFields([{ name: "Title", type: "text" }])
+    }
+  }, [open, templateDatabase])
+
+  const handleAddField = () => {
+    setFields([...fields, { name: "", type: "text" }])
+  }
+
+  const handleRemoveField = (index: number) => {
+    setFields(fields.filter((_, i) => i !== index))
+  }
+
+  const handleFieldChange = (index: number, field: Partial<Field>) => {
+    const newFields = [...fields]
+    newFields[index] = { ...newFields[index], ...field }
+    setFields(newFields)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title || fields.some((f) => !f.name)) return
+
+    onDatabaseCreate({
+      title,
+      fields,
+      records: [],
+    })
+    onOpenChange(false)
+  }
+
+  const fieldTypes: { value: FieldType; label: string; icon: any; color: string }[] = [
+    { value: "text", label: "Short Text", icon: Type, color: "text-blue-400" },
+    { value: "number", label: "Numeric", icon: Hash, color: "text-amber-400" },
+    { value: "date", label: "Date/Time", icon: Calendar, color: "text-emerald-400" },
+    { value: "checkbox", label: "Multi Select", icon: CheckSquare, color: "text-purple-400" },
+    { value: "dropdown", label: "Single Select", icon: ListIcon, color: "text-indigo-400" },
+    { value: "textarea", label: "Long Text", icon: FileText, color: "text-gray-400" },
+    { value: "gallery", label: "Media Assets", icon: ImageIcon, color: "text-rose-400" },
+  ]
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl w-[95vw] h-[85vh] p-0 bg-[#0a0a0a] border-white/10 text-white overflow-hidden flex flex-col">
+        <DialogHeader className="p-8 bg-gradient-to-b from-indigo-500/10 to-transparent border-b border-white/5">
+            <div className="flex items-center gap-4 mb-2">
+                <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400">
+                    <Layout className="h-6 w-6" />
+                </div>
+                <div>
+                   <DialogTitle className="text-2xl font-black uppercase tracking-tight">Architect Blueprint</DialogTitle>
+                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Define new data schema</p>
+                </div>
+            </div>
+        </DialogHeader>
+
+        <ScrollArea className="flex-1 p-8">
+            <form id="builder-form" onSubmit={handleSubmit} className="space-y-8">
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Database Identity</label>
+                    <Input
+                        placeholder="e.g. Bio-Metrics Vault"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        className="h-14 bg-white/5 border-white/10 rounded-2xl text-lg font-bold focus:ring-indigo-500"
+                        required
+                    />
+                </div>
+
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-1">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Schema Fields</label>
+                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">{fields.length} Fields Defined</Badge>
+                    </div>
+
+                    <div className="space-y-3">
+                        {fields.map((field, index) => (
+                            <div key={index} className="group flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all animate-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex-1 space-y-2">
+                                     <Input
+                                        placeholder="Field Label"
+                                        value={field.name}
+                                        onChange={(e) => handleFieldChange(index, { name: e.target.value })}
+                                        className="bg-transparent border-none p-0 h-auto text-sm font-bold focus-visible:ring-0 placeholder:text-gray-700"
+                                        required
+                                    />
+                                    <p className="text-[9px] text-gray-600 font-black uppercase tracking-tighter">Attribute Name</p>
+                                </div>
+                                <div className="flex-1">
+                                    <Select
+                                        value={field.type}
+                                        onValueChange={(value: FieldType) => handleFieldChange(index, { type: value })}
+                                    >
+                                        <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
+                                            {fieldTypes.map(type => (
+                                                <SelectItem key={type.value} value={type.value} className="focus:bg-white/10">
+                                                    <div className="flex items-center gap-2">
+                                                        <type.icon className={`h-3.5 w-3.5 ${type.color}`} />
+                                                        <span className="text-[11px] font-bold uppercase tracking-tight">{type.label}</span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleRemoveField(index)}
+                                    className="h-10 w-10 text-gray-700 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl"
+                                    disabled={fields.length === 1}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <Button 
+                        type="button" 
+                        onClick={handleAddField} 
+                        variant="ghost" 
+                        className="w-full h-14 rounded-2xl border-2 border-dashed border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/5 text-gray-500 hover:text-indigo-400 transition-all group"
+                    >
+                        <Plus className="w-5 h-5 mr-3 group-hover:rotate-90 transition-transform" />
+                        <span className="font-black uppercase tracking-[0.2em] text-[10px]">Add Data Channel</span>
+                    </Button>
+                </div>
+            </form>
+        </ScrollArea>
+
+        <div className="p-8 border-t border-white/5 bg-[#111] flex items-center justify-between">
+            <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                className="px-8 text-gray-500 hover:text-white uppercase font-black text-[10px] tracking-widest"
+            >
+                Abort
+            </Button>
+            <Button 
+                type="submit" 
+                form="builder-form"
+                className="px-10 h-12 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20"
+            >
+                Initialize Database
+            </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

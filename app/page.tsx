@@ -43,6 +43,7 @@ import Subscriptions from "@/components/subscriptions"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
 import SecureNotes from "@/components/secure-notes"
+import SecureDatabase from "@/components/secure-database/secure-database"
 import { Minimize } from "lucide-react"
 
 function HomeContent() {
@@ -446,6 +447,8 @@ function HomeContent() {
         return <FinancialCards {...commonProps} />
       case "generate-password":
         return <GeneratePassword />
+      case "secure-database":
+        return <SecureDatabase onOpenHelp={commonProps.onOpenHelp} />
       case "settings":
         return <Settings {...commonProps} />
       case "user-settings":

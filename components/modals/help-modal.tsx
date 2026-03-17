@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -94,6 +94,7 @@ export const HELP_MAP: Record<string, string> = {
     "settings-mock-data": "settings-mock-data",
     "user-settings": "settings",
     "dr-ai": "dr-ai",
+    "secure-database": "secure-database",
 }
 
 const HELP_PAGES: HelpPage[] = [
@@ -786,6 +787,36 @@ const HELP_PAGES: HelpPage[] = [
                     <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
                         <h5 className="font-bold text-yellow-400 text-sm mb-1 uppercase tracking-tighter">Safe Cleanup</h5>
                         <p className="text-xs text-gray-400">Use the "Sanitize Vault" tool to remove all injected mock data in one click. Our cleanup tools are specifically designed to PROTECT your real passwords and manual entries.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "secure-database",
+        title: "Adaptive Secure Database",
+        icon: Database,
+        content: (
+            <div className="space-y-6">
+                <p className="text-lg text-gray-300 leading-relaxed">
+                    A flexible, high-performance database engine that adapts to your unique data structures. Build your own collections with custom fields, validation, and analytics.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-3xl bg-indigo-500/5 border border-indigo-500/10">
+                        <h4 className="font-black text-indigo-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><LayoutGrid className="h-4 w-4" /> Custom Schemas</h4>
+                        <p className="text-xs text-gray-400">Define your own fields: Text, Numbers, Dates, Dropdowns, and Multi-select lists. Perfect for tracking everything from antique collections to family health history.</p>
+                    </div>
+                    <div className="p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
+                        <h4 className="font-black text-emerald-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><ListTodo className="h-4 w-4" /> Task Integration</h4>
+                        <p className="text-xs text-gray-400">Link database records directly to your global mission tasks. Never miss a deadline associated with your structured data.</p>
+                    </div>
+                    <div className="p-5 rounded-3xl bg-rose-500/5 border border-rose-500/10">
+                        <h4 className="font-black text-rose-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><TrendingUp className="h-4 w-4" /> Power Analytics</h4>
+                        <p className="text-xs text-gray-400">Interactive charts and distribution tables automatically generated from your data. Visualize trends and counts across your collections.</p>
+                    </div>
+                    <div className="p-5 rounded-3xl bg-amber-500/5 border border-amber-500/10">
+                        <h4 className="font-black text-amber-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><Globe className="h-4 w-4" /> Portability</h4>
+                        <p className="text-xs text-gray-400">Export your data to CSV or JSON snapshots. Your data is never locked in; you have 100% control over your architecture.</p>
                     </div>
                 </div>
             </div>

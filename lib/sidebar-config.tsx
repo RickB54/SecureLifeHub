@@ -1,4 +1,4 @@
-import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles } from "lucide-react"
+import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -6,6 +6,13 @@ export const sidebarSections = [
         title: "Dashboard",
         color: "blue",
         items: [{ id: "dashboard", label: "Dashboard", icon: <Home className="h-5 w-5" /> }],
+        isTopLevel: true,
+    },
+    {
+        id: "secure-database",
+        title: "Secure Database",
+        color: "indigo",
+        items: [{ id: "secure-database", label: "Secure Database", icon: <Database className="h-5 w-5" /> }],
         isTopLevel: true,
     },
     {

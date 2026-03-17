@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
   Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
-  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign
+  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign, Database
 } from "lucide-react"
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
@@ -31,6 +31,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
   const [showPersonalizer, setShowPersonalizer] = useState(false)
   const [enabledPulseIds, setEnabledPulseIds] = useState<string[]>(['security', 'assets', 'goals'])
+  const [dbCount, setDbCount] = useState(0)
 
   useEffect(() => {
     const saved = localStorage.getItem('dashboard_pulses')
@@ -40,6 +41,15 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
       } catch (e) {
         console.error("Failed to parse pulses", e)
       }
+    }
+
+    // Calculate DB Count for the new card
+    const savedDbs = localStorage.getItem('slh_custom_databases')
+    if (savedDbs) {
+      try {
+        const parsed = JSON.parse(savedDbs)
+        setDbCount(Array.isArray(parsed) ? parsed.length : 0)
+      } catch (e) {}
     }
   }, [])
 
@@ -447,6 +457,17 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           isLocked={securitySettings['type-digital-life']?.isLocked}
         />
         <ModuleCard
+          title="Secure Database"
+          count={dbCount}
+          description="High-fidelity kolektions with custom schemas and dynamic reports."
+          icon={<Database className="h-6 w-6 text-indigo-500" />}
+          colorClass="border-indigo-500"
+          shadowColor="rgba(99, 102, 241, 0.35)"
+          buttonColorClass="text-indigo-400 hover:bg-indigo-500"
+          onClick={() => setActivePage('secure-database')}
+          onHelp={() => onOpenHelp?.("secure-database")}
+        />
+        <ModuleCard
           title="My Diary"
           count={diaryCount}
           description="Personal journal and daily thoughts."
@@ -646,7 +667,9 @@ function ModuleCard({ title, description, icon, colorClass, buttonColorClass, sh
             </div>
           </div>
           <button
+            type="button"
             onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
+            onPointerDown={(e) => e.stopPropagation()}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onHelp?.(); }}}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all cursor-pointer bg-white/5"
             title="Help"
