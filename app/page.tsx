@@ -64,8 +64,16 @@ function HomeContent() {
   // 1. Initial State
   const searchParams = useSearchParams()
   const router = useRouter()
-  // Try to be smart about initial render
-  const [activePage, setActivePage] = useState(searchParams.get("page") || "dashboard")
+  // Ensure we initialize exactly to the desired start state to avoid flicker/loops
+  const [activePage, setActivePage] = useState(() => {
+    if (typeof window !== "undefined") {
+      const pageParam = new URLSearchParams(window.location.search).get("page")
+      if (pageParam) return pageParam
+      const savedStartup = localStorage.getItem("hub_startup_page")
+      if (savedStartup) return savedStartup
+    }
+    return "dashboard"
+  })
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [helpInitialPage, setHelpInitialPage] = useState<string | undefined>(undefined)
@@ -212,27 +220,23 @@ function HomeContent() {
     // Sync local state for Settings UI
     if (savedStartup !== startupPage) setStartupPage(savedStartup)
 
-    // A. Handle Startup Redirection
-    // If authenticated, unlocked, at the root URL, and haven't navigated yet
-    const isSpecialPath = pageParam || isRecovery || navHistory.length > 0
-    if (user && !isLocked && !isSpecialPath) {
-      if (savedStartup !== activePage) {
-        console.log(`🚀 Applying Startup Preference: ${savedStartup}`)
-        setActivePage(savedStartup)
-        if (savedStartup !== "dashboard") {
-          router.push(`/?page=${savedStartup}`)
-        }
-        return
-      }
-    }
+    // A. Unified Landing Logic (Startup preference vs URL sync)
+    // - If we have a URL param, prioritize it.
+    // - If we are at root, check if we've navigated or if it's special.
+    // - If not navigated, use startup preference.
+    const isNavigated = navHistory.length > 0
+    const desiredPage = pageParam || (isNavigated || isRecovery ? "dashboard" : savedStartup)
 
-    // B. Handle URL -> State Synchronization (Browser Back/Forward)
-    const effectivePage = pageParam || "dashboard"
-    if (effectivePage !== activePage) {
+    if (desiredPage !== activePage && !isLocked && user) {
+      console.log(`🚀 Navigating to: ${desiredPage} (Context: ${pageParam ? 'URL' : 'Startup'})`)
       const mainEl = document.getElementById("main-scroll-container")
       if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
-      console.log(`🔄 Syncing state to URL: ${effectivePage}`)
-      setActivePage(effectivePage)
+      setActivePage(desiredPage)
+      
+      // If we landed on a non-root page via startup, update URL to match
+      if (!pageParam && desiredPage !== "dashboard") {
+        router.push(`/?page=${desiredPage}`)
+      }
     }
 
     // C. Reset history on lock to ensure startup preference applies on next unlock
