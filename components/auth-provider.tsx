@@ -135,7 +135,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             try {
                 const { data: { session: currentSession }, error } = await supabase.auth.getSession()
                 if (error) {
-                    if (error.message.includes("Refresh Token Not Found") || error.message.includes("invalid_refresh_token")) {
+                    if (error.message.includes("Refresh Token Not Found") || 
+                        error.message.includes("invalid_refresh_token") ||
+                        error.message.includes("Already Used")) {
+                        console.warn("Auth session error, signing out:", error.message)
                         await supabase.auth.signOut()
                     }
                 }

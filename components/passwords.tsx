@@ -289,8 +289,8 @@ export default function Passwords({
 
   // Handle adding a new folder
   const handleAddFolder = async (folderData: any) => {
-    // Note: addFolder signature is (name, category, parentId)
-    await addFolder(folderData.name, undefined, folderData.parentFolder)
+    // Note: addFolder signature is (name, parentId)
+    await addFolder(folderData.name, folderData.parentFolder)
     setAddFolderModalOpen(false)
   }
 
@@ -601,6 +601,9 @@ export default function Passwords({
     // Filter by archived
     if (archivedFilter) {
       filtered = filtered.filter((password) => password.is_archived || password.isArchived)
+    } else {
+      // DEFAULT: Hide archived items unless specifically viewing them
+      filtered = filtered.filter((password) => !password.is_archived && !password.isArchived)
     }
 
     // Filter by search query
@@ -2180,9 +2183,9 @@ export default function Passwords({
           <div className={`flex-shrink-0 ${selectedRecord ? 'hidden md:block' : 'block'}`}>
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight">Vault</h1>
             <div className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"} flex items-center gap-1.5 sm:gap-2 flex-wrap`}>
-              <span>{passwords.length} Records</span>
+              <span>{passwords.filter(p => archivedFilter || (!p.is_archived && !p.isArchived)).length} Records</span>
               <span className="opacity-30">•</span>
-              <span>{records.filter(r => r.type === 'note' || r.type === 'secure-note' || r.category === 'Secure Notes').length} Notes</span>
+              <span>{passwords.filter(p => p.is_archived || p.isArchived).length} Archived</span>
               <span className="opacity-30">•</span>
               <span>{folders.length} Folders</span>
             </div>
@@ -2300,21 +2303,6 @@ export default function Passwords({
                   <ListIcon className="h-4 w-4" />
                 </button>
               </div>
-
-              {/* Expand/Collapse All — only in folder mode */}
-              {!forceListView && (
-                <button
-                  onClick={handleToggleAllFolders}
-                  className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} px-2 py-1.5 rounded-lg transition-all shadow-sm`}
-                  title="Expand/Collapse All Folders"
-                >
-                  {folders.some(f => !expandedFolders[f.id]) ? (
-                    <ChevronsDown className="h-4 w-4 text-blue-400" />
-                  ) : (
-                    <ChevronsUp className="h-4 w-4 text-blue-400" />
-                  )}
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -2453,7 +2441,7 @@ export default function Passwords({
                     <AccordionContent className="px-2 pb-2">
                       <div className="grid grid-cols-1 gap-1">
                         {[
-                          { name: 'All Items', icon: Folder, count: passwords.length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
+                          { name: 'All Items', icon: Folder, count: passwords.filter(p => !p.is_archived && !p.isArchived).length, color: 'text-blue-500', action: () => { setFavoriteFilter(false); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                           { name: 'Favorites', icon: Star, count: passwords.filter(p => p.is_favorite || p.isFavorite).length, color: 'text-yellow-500', action: () => { setFavoriteFilter(true); setArchivedFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
                           { name: 'Recent', icon: RotateCcw, count: Math.min(25, passwords.length), color: 'text-purple-500', action: () => { setTimeFilter('recent'); setFavoriteFilter(false); setArchivedFilter(false); setCategoryFilter('all'); setSelectedFolder(""); } },
                           { name: 'Archived', icon: Archive, count: passwords.filter(p => p.is_archived || p.isArchived).length, color: 'text-green-500', action: () => { setArchivedFilter(true); setFavoriteFilter(false); setTimeFilter('all'); setCategoryFilter('all'); setSelectedFolder(""); } },
@@ -2485,6 +2473,21 @@ export default function Passwords({
                    <div className="space-y-4">
                      <div className="flex items-center justify-between px-4">
                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Folders</h3>
+                       
+                       {/* Move Expand/Collapse All here */}
+                       {!forceListView && (
+                        <button
+                          onClick={handleToggleAllFolders}
+                          className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} p-1.5 rounded-lg transition-all shadow-sm`}
+                          title="Expand/Collapse All Folders"
+                        >
+                          {folders.some(f => !expandedFolders[f.id]) ? (
+                            <ChevronsDown className="h-3.5 w-3.5 text-blue-400" />
+                          ) : (
+                            <ChevronsUp className="h-3.5 w-3.5 text-blue-400" />
+                          )}
+                        </button>
+                      )}
                      </div>
                      
                      {/* Root Folder Entry - only shown when unorganised passwords exist */}

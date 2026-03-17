@@ -226,16 +226,17 @@ function filterItems(query = "") {
     itemsList.innerHTML = ""
     query = query.toLowerCase().trim()
 
-    // 1. Get filtered passwords
+    // 1. Get filtered items (Passwords and Financial Cards)
     const passwordItems = allItems.filter(item =>
-        item.type === 'password' &&
+        (item.type === 'password' || item.type === 'financial-card') &&
         item.category !== 'Medications' &&
         item.category !== 'Health Records' && // STRICT EXCLUSION
         !item.title?.startsWith("[SYSTEM]") &&
         (
             item.title?.toLowerCase().includes(query) ||
             item.username?.toLowerCase().includes(query) ||
-            item.website?.toLowerCase().includes(query)
+            item.website?.toLowerCase().includes(query) ||
+            (item.item_metadata?.cardNumber && item.item_metadata.cardNumber.includes(query))
         )
     )
 
@@ -383,22 +384,43 @@ function createListItem(item, isRecent = false) {
     div.className = `flex items-center group gap-3 p-3 rounded-r cursor-pointer transition-colors ${bgClass}`
 
     // Icon
-    const letter = (item.title || "?")[0].toUpperCase()
+    let iconHTML = `<div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">${(item.title || "?")[0].toUpperCase()}</div>`
+    if (item.type === 'financial-card') {
+        iconHTML = `<div class="w-8 h-8 rounded-lg bg-emerald-900/40 border border-emerald-500/30 flex items-center justify-center text-xs text-emerald-400 shrink-0">💳</div>`
+    }
+
     div.innerHTML = `
-        <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">
-            ${letter}
-        </div>
+        ${iconHTML}
         <div class="overflow-hidden flex-1">
             <div class="text-sm font-medium text-gray-200 truncate">${item.title || "Untitled"}</div>
-            <div class="text-xs text-gray-500 truncate">${item.username || ""}</div>
+            <div class="text-xs text-gray-500 truncate">${item.type === 'financial-card' ? (item.item_metadata?.cardNumber ? '•••• ' + item.item_metadata.cardNumber.slice(-4) : 'Card') : (item.username || "")}</div>
         </div>
-        ${isRecent ? `
-        <div class="opacity-0 group-hover:opacity-100 transition-opacity">
-            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
-            </svg>
-        </div>` : ''}
+        <div class="flex items-center gap-1 shrink-0">
+            ${item.type === 'financial-card' && item.item_metadata?.cardNumber ? `
+                <button class="list-copy-fin-btn p-1.5 hover:bg-[#444] rounded text-emerald-400 opacity-0 group-hover:opacity-100 transition-all" data-value="${item.item_metadata.cardNumber}" title="Copy Card Number">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </button>
+            ` : ''}
+            ${isRecent ? `
+                <div class="${item.type === 'financial-card' ? 'hidden group-hover:hidden' : 'opacity-0 group-hover:opacity-100'} transition-opacity">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                    </svg>
+                </div>` : ''}
+        </div>
     `
+
+    // Stop propagation for the copy button so it doesn't select the item
+    const copyBtn = div.querySelector('.list-copy-fin-btn')
+    if (copyBtn) {
+        copyBtn.addEventListener('click', (e) => {
+            e.stopPropagation()
+            navigator.clipboard.writeText(copyBtn.dataset.value)
+            const originalHTML = copyBtn.innerHTML
+            copyBtn.innerHTML = `<svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+            setTimeout(() => { if (copyBtn) copyBtn.innerHTML = originalHTML }, 1500)
+        })
+    }
 
     div.addEventListener('click', () => {
         selectItem(item)
@@ -442,6 +464,18 @@ function renderDetailView(item) {
         viewFavBtn.classList.add('text-yellow-500')
     } else {
         viewFavBtn.classList.remove('text-yellow-500')
+    }
+
+    // Hide auto-fill, website, and password if financial card (unless they have values/website)
+    const manualFillBtn = document.getElementById('manual-fill-btn')
+    const passField = viewPassword.parentElement.parentElement
+    if (item.type === 'financial-card') {
+        if (!item.website) manualFillBtn.parentElement.parentElement.classList.add('hidden')
+        else manualFillBtn.parentElement.parentElement.classList.remove('hidden')
+        passField.classList.add('hidden')
+    } else {
+        manualFillBtn.parentElement.parentElement.classList.remove('hidden')
+        passField.classList.remove('hidden')
     }
 
     // Custom Fields
@@ -507,6 +541,75 @@ function renderDetailView(item) {
 
     } else {
         customFieldsContainer.classList.add('hidden')
+    }
+
+    // Financial Card Fields
+    const financialFieldsContainer = document.getElementById('view-financial-fields-container')
+    const financialFieldsList = document.getElementById('financial-fields-list')
+    
+    if (item.type === 'financial-card') {
+        financialFieldsContainer.classList.remove('hidden')
+        financialFieldsList.innerHTML = ""
+        
+        const metadata = item.item_metadata || {}
+        const fields = [
+            { label: "Card Number", value: metadata.cardNumber },
+            { label: "Card Holder", value: metadata.name },
+            { label: "Expiration", value: metadata.expiry },
+            { label: "CVV", value: metadata.cvv, sensitive: true }
+        ]
+        
+        fields.forEach(field => {
+            if (field.value) {
+                const fieldDiv = document.createElement('div')
+                fieldDiv.className = "group"
+                const displayValue = field.sensitive ? "•••" : field.value
+                const fieldId = `fin-${field.label.replace(/\s/g, '-')}`
+                
+                fieldDiv.innerHTML = `
+                    <label class="block text-[10px] text-gray-500 uppercase font-bold mb-0.5">${field.label}</label>
+                    <div class="flex items-center justify-between text-gray-200 text-sm py-1 border-b border-[#333] group-hover:border-gray-500 transition-colors">
+                        <span id="${fieldId}" class="${field.sensitive ? 'tracking-widest' : 'truncate'} select-all mr-2 font-mono scrollbar-hide overflow-x-auto whitespace-nowrap">${displayValue}</span>
+                        <div class="flex gap-1 shrink-0">
+                            ${field.sensitive ? `
+                                <button class="toggle-fin-btn text-gray-500 hover:text-white p-1" data-id="${fieldId}" data-value="${field.value}">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                </button>
+                            ` : ''}
+                            <button class="copy-fin-btn text-gray-500 hover:text-white p-1" data-value="${field.value}">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                `
+                financialFieldsList.appendChild(fieldDiv)
+            }
+        })
+        
+        // Listeners for financial field buttons
+        financialFieldsList.querySelectorAll('.toggle-fin-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const span = document.getElementById(btn.dataset.id)
+                if (span.textContent === "•••") {
+                    span.textContent = btn.dataset.value
+                    span.classList.remove('tracking-widest')
+                } else {
+                    span.textContent = "•••"
+                    span.classList.add('tracking-widest')
+                }
+            })
+        })
+        
+        financialFieldsList.querySelectorAll('.copy-fin-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                navigator.clipboard.writeText(btn.dataset.value)
+                const originalHTML = btn.innerHTML
+                btn.innerHTML = `<svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`
+                setTimeout(() => { if (btn) btn.innerHTML = originalHTML }, 1500)
+            })
+        })
+    } else {
+        financialFieldsContainer.classList.add('hidden')
     }
 }
 

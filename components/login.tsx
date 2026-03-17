@@ -189,16 +189,25 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true)
+      setError(null)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
           redirectTo: typeof window !== 'undefined' ? window.location.origin : '',
         },
       })
       if (error) throw error
     } catch (err: any) {
       console.error("Google login failed:", err)
-      setError(err.message || "Google authentication failed")
+      let msg = err.message || "Google authentication failed"
+      if (msg.includes("Unsupported provider")) {
+        msg = "Google Authentication is not yet enabled for this project. Please go to your Supabase Dashboard -> Authentication -> Providers and enable Google."
+      }
+      setError(msg)
     } finally {
       setLoading(false)
     }
