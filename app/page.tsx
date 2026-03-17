@@ -207,13 +207,15 @@ function HomeContent() {
 
     const pageParam = searchParams.get("page")
     const savedStartup = localStorage.getItem("hub_startup_page") || "dashboard"
+    const isRecovery = (typeof window !== 'undefined' && window.location.hash.includes('type=recovery')) || searchParams.get('type') === 'recovery'
     
     // Sync local state for Settings UI
     if (savedStartup !== startupPage) setStartupPage(savedStartup)
 
     // A. Handle Startup Redirection
     // If authenticated, unlocked, at the root URL, and haven't navigated yet
-    if (user && !isLocked && !pageParam && navHistory.length === 0) {
+    const isSpecialPath = pageParam || isRecovery || navHistory.length > 0
+    if (user && !isLocked && !isSpecialPath) {
       if (savedStartup !== activePage) {
         console.log(`🚀 Applying Startup Preference: ${savedStartup}`)
         setActivePage(savedStartup)
@@ -239,7 +241,6 @@ function HomeContent() {
     }
 
     // D. Clean URL tokens while preserving page (SKIP if recovery flow is active)
-    const isRecovery = window.location.hash.includes('type=recovery') || searchParams.get('type') === 'recovery'
     if (!isRecovery && typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
       const cleanParams = new URLSearchParams(window.location.search)
       cleanParams.delete('access_token')
@@ -265,11 +266,18 @@ function HomeContent() {
     }
 
     const handleTimeoutSync = (e: any) => {
+      let timeoutVal: number | null = null;
       if (e.detail?.timeout !== undefined) {
-        setAutoLockTimeout(parseFloat(e.detail.timeout))
+        timeoutVal = parseFloat(e.detail.timeout);
       } else {
-        const saved = localStorage.getItem("auto_lock_timeout")
-        if (saved) setAutoLockTimeout(parseFloat(saved))
+        const saved = localStorage.getItem("auto_lock_timeout");
+        if (saved && saved !== "disabled") {
+          timeoutVal = parseFloat(saved);
+        }
+      }
+      
+      if (timeoutVal !== null && !isNaN(timeoutVal)) {
+        setAutoLockTimeout(timeoutVal);
       }
     }
 

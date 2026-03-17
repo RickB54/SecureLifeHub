@@ -188,6 +188,8 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     try {
       setLoading(true)
       setError(null)
+      // Set timestamp BEFORE starting OAuth flow so it's ready when redirected back
+      localStorage.setItem('full_login_timestamp', Date.now().toString())
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -238,6 +240,8 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       }
 
       if (existingSession && !isRecovery) {
+        // Mark session as fresh for biometric purposes
+        localStorage.setItem('full_login_timestamp', Date.now().toString())
         const page = searchParams.get('page')
         if (page) router.push(`/?page=${page}`)
         else router.push('/')
@@ -269,6 +273,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             setIsResetMode(true)
             if (data.session?.user?.email) setEmail(data.session.user.email)
           } else {
+            localStorage.setItem('full_login_timestamp', Date.now().toString())
             const targetPage = params.get('page') || hashParams.get('page')
             window.history.replaceState({}, '', window.location.pathname)
             if (targetPage) router.push(`/?page=${targetPage}`)
