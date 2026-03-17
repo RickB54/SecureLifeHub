@@ -5,6 +5,7 @@ import { Plus, Target, Trash2, CheckCircle2, Circle, Trophy, History, LayoutDash
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts"
 import AddGoalModal from "./modals/add-goal-modal"
 import Lightbox from "./media/lightbox"
+import { toast } from "sonner"
 
 interface GoalsProps {
     records: any[]
@@ -15,7 +16,7 @@ interface GoalsProps {
 }
 
 export default function Goals({ records = [], addItem, updateItem, deleteItem, theme }: GoalsProps) {
-    const [activeTab, setActiveTab] = useState("active") // 'dashboard', 'active', 'history'
+    const [activeTab, setActiveTab] = useState("active") // 'dashboard', 'active', 'history', 'habits'
     const [showAddModal, setShowAddModal] = useState(false)
     const [editingGoal, setEditingGoal] = useState<any>(null)
 
@@ -110,6 +111,7 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                         {[
                             { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
                             { id: 'active', label: 'Active Goals', icon: Target },
+                            { id: 'habits', label: 'Habit Stacks', icon: TrendingUp },
                             { id: 'history', label: 'History', icon: History }
                         ].map((tab) => (
                             <button
@@ -314,6 +316,139 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                     </div>
                 )}
 
+                {/* === HABIT STACKS TAB === */}
+                {activeTab === 'habits' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex justify-between items-center bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md">
+                            <div>
+                                <h2 className="text-2xl font-black italic tracking-tighter text-pink-500 uppercase">Habit Architecture</h2>
+                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Stack your routines for compound growth</p>
+                            </div>
+                            <button 
+                                onClick={async () => {
+                                    const name = prompt("Enter Stack Name (e.g. Morning Ritual):")
+                                    if (!name) return
+                                    await addItem({
+                                        type: "habit-stack",
+                                        title: name,
+                                        category: "Goals",
+                                        item_metadata: {
+                                            is_habit_stack: true,
+                                            habits: [
+                                                { trigger: "Waking up", action: "Drink water", icon: "💧" }
+                                            ],
+                                            color: "#ec4899",
+                                            streak: 0,
+                                            lastCompleted: null
+                                        }
+                                    })
+                                }}
+                                className="bg-pink-600 hover:bg-pink-500 text-white p-4 rounded-2xl shadow-xl shadow-pink-500/20 transition-all active:scale-95"
+                            >
+                                <Plus className="h-6 w-6" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {records.filter(r => r.type === "habit-stack" || r.item_metadata?.is_habit_stack).map(stack => (
+                                <div key={stack.id} className={`p-8 rounded-[2.5rem] border ${glassCardStyle} relative overflow-hidden group`}>
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                                        <TrendingUp className="h-32 w-32 -mr-10 -mt-10 rotate-12" />
+                                    </div>
+
+                                    <div className="relative z-10">
+                                        <div className="flex justify-between items-start mb-8">
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="text-[10px] font-black uppercase bg-pink-500/10 text-pink-500 px-3 py-1 rounded-full">Active Stack</span>
+                                                    <span className="text-[10px] font-black uppercase bg-green-500/10 text-green-500 px-3 py-1 rounded-full">{stack.item_metadata?.streak || 0} Day Streak</span>
+                                                </div>
+                                                <h3 className="text-3xl font-black italic tracking-tighter text-white uppercase">{stack.title}</h3>
+                                            </div>
+                                            <button onClick={() => deleteItem(stack.id)} className="p-2 text-gray-700 hover:text-red-500 transition-colors">
+                                                <Trash2 className="h-5 w-5" />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-6">
+                                            {(stack.item_metadata?.habits || []).map((h: any, idx: number) => (
+                                                <div key={idx} className="relative flex items-center gap-6 group/item">
+                                                    {/* Connector */}
+                                                    {idx < (stack.item_metadata.habits.length - 1) && (
+                                                        <div className="absolute left-7 top-14 w-0.5 h-12 bg-gradient-to-b from-pink-500 to-transparent opacity-20" />
+                                                    )}
+                                                    
+                                                    <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/item:border-pink-500/50 transition-all shadow-lg">
+                                                        {h.icon || '✨'}
+                                                    </div>
+                                                    
+                                                    <div className="flex-1">
+                                                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider">After {h.trigger}</p>
+                                                        <p className="text-lg font-bold text-white uppercase group-hover/item:text-pink-400 transition-colors line-clamp-1">I will {h.action}</p>
+                                                    </div>
+
+                                                    <button 
+                                                        onClick={async () => {
+                                                            const newAction = prompt("Update Action:", h.action)
+                                                            if (!newAction) return
+                                                            const newHabits = [...stack.item_metadata.habits]
+                                                            newHabits[idx].action = newAction
+                                                            await updateItem(stack.id, { item_metadata: { ...stack.item_metadata, habits: newHabits } })
+                                                        }}
+                                                        className="p-2 opacity-0 group-hover/item:opacity-100 transition-opacity text-gray-500 hover:text-white"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+
+                                            <button 
+                                                onClick={async () => {
+                                                    const trigger = prompt("After what event?")
+                                                    const action = prompt("What action will you take?")
+                                                    if (!trigger || !action) return
+                                                    const newHabits = [...(stack.item_metadata.habits || []), { trigger, action, icon: "🔥" }]
+                                                    await updateItem(stack.id, { item_metadata: { ...stack.item_metadata, habits: newHabits } })
+                                                }}
+                                                className="w-full py-4 border border-dashed border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white hover:border-pink-500/50 transition-all mt-4"
+                                            >
+                                                + Add Link to Chain
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-10 pt-8 border-t border-white/5 grid grid-cols-2 gap-4">
+                                            <button 
+                                                onClick={async () => {
+                                                    const today = new Date().toDateString()
+                                                    if (stack.item_metadata.lastCompleted === today) {
+                                                        toast.error("Already completed today!")
+                                                        return
+                                                    }
+                                                    await updateItem(stack.id, { 
+                                                        item_metadata: { 
+                                                            ...stack.item_metadata, 
+                                                            lastCompleted: today,
+                                                            streak: (stack.item_metadata.streak || 0) + 1
+                                                        } 
+                                                    })
+                                                    toast.success("Chain secured for today! 🔥")
+                                                }}
+                                                className="col-span-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-black uppercase italic tracking-tighter shadow-xl shadow-green-900/20 active:scale-95 transition-all text-xs"
+                                            >
+                                                Completed Today
+                                            </button>
+                                            <div className="col-span-1 p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center justify-center">
+                                                <span className="text-[8px] font-black uppercase text-gray-500">Stability Index</span>
+                                                <span className="text-sm font-black text-white">{Math.min(100, (stack.item_metadata.streak || 0) * 10)}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* === HISTORY TAB === */}
                 {activeTab === 'history' && (
                     <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
@@ -376,6 +511,7 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                     onClose={() => setLightboxOpen(false)}
                     onNext={() => setLightboxIndex((prev) => (prev + 1) % lightboxItems.length)}
                     onPrev={() => setLightboxIndex((prev) => (prev - 1 + lightboxItems.length) % lightboxItems.length)}
+                    onSelect={() => {}}
                 />
             )}
         </div>

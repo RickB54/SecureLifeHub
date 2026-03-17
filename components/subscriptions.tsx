@@ -1,7 +1,14 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { CreditCard, Plus, Search, Calendar, DollarSign, Trash2, Edit2, X, Check, RefreshCw, Tag, AlertTriangle, HelpCircle } from "lucide-react"
+import { 
+    CreditCard, Plus, Search, Calendar, DollarSign, Trash2, Edit2, X, Check, 
+    RefreshCw, Tag, AlertTriangle, HelpCircle, BarChart3, Bell, Wallet, 
+    ArrowUpRight, TrendingUp, List
+} from "lucide-react"
+import { 
+    PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip
+} from 'recharts'
 import { toast } from "sonner"
 
 interface SubscriptionsProps {
@@ -29,8 +36,9 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
     const [searchTerm, setSearchTerm] = useState("")
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<any>(null)
+    const [activeView, setActiveView] = useState<"list" | "insights">("list")
     const [formData, setFormData] = useState({
-        name: "", cost: "", cycle: "Monthly", date: "", category: "Other", notes: "", color: "#3B82F6"
+        name: "", cost: "", cycle: "Monthly", date: "", category: "Other", notes: "", color: "#3B82F6", paymentMethodId: ""
     })
 
     const isDark = theme !== "light"
@@ -60,13 +68,35 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
         subscriptions
             .filter(s => s.item_metadata?.renewal_date)
             .map(s => ({ ...s, daysUntil: getDaysUntil(s.item_metadata.renewal_date) }))
-            .filter(s => s.daysUntil !== null && s.daysUntil >= 0 && s.daysUntil <= 30)
+            .filter(s => s.daysUntil !== null && s.daysUntil >= 0 && s.daysUntil <= 14)
             .sort((a, b) => (a.daysUntil ?? 99) - (b.daysUntil ?? 99)),
         [subscriptions]
     )
 
+    const paymentCards = useMemo(() => 
+        records.filter(r => r.type === "financial-card"),
+        [records]
+    )
+
+    const categoryData = useMemo(() => {
+        const data: Record<string, number> = {}
+        subscriptions.forEach(sub => {
+            const cat = sub.item_metadata?.sub_category || "Other"
+            const cost = parseFloat(sub.item_metadata?.cost || "0")
+            const freq = (sub.item_metadata?.billing_cycle || "monthly").toLowerCase()
+            let mCost = cost
+            if (freq === "yearly") mCost = cost / 12
+            if (freq === "weekly") mCost = cost * 4.33
+            if (freq === "quarterly") mCost = cost / 3
+            data[cat] = (data[cat] || 0) + mCost
+        })
+        return Object.entries(data).map(([name, value]) => ({ name, value }))
+    }, [subscriptions])
+
+    const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4']
+
     const openAdd = () => {
-        setFormData({ name: "", cost: "", cycle: "Monthly", date: "", category: "Other", notes: "", color: "#3B82F6" })
+        setFormData({ name: "", cost: "", cycle: "Monthly", date: "", category: "Other", notes: "", color: "#3B82F6", paymentMethodId: "" })
         setEditingItem(null)
         setIsAddModalOpen(true)
     }
@@ -79,7 +109,8 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
             date: sub.item_metadata?.renewal_date || "",
             category: sub.item_metadata?.sub_category || "Other",
             notes: sub.item_metadata?.notes || "",
-            color: sub.item_metadata?.color || "#3B82F6"
+            color: sub.item_metadata?.color || "#3B82F6",
+            paymentMethodId: sub.item_metadata?.paymentMethodId || ""
         })
         setEditingItem(sub)
         setIsAddModalOpen(true)
@@ -97,7 +128,8 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                 renewal_date: formData.date,
                 sub_category: formData.category,
                 notes: formData.notes,
-                color: formData.color
+                color: formData.color,
+                paymentMethodId: formData.paymentMethodId
             }
         }
         if (editingItem && updateItem) {
@@ -138,7 +170,23 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                         </button>
                     </div>
                 </div>
-                <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>Track recurring expenses and renewal dates</p>
+                <p className={`text-sm ${isDark ? "text-gray-400" : "text-gray-500"}`}>Intelligent recurring expense & cash-flow management</p>
+            </div>
+
+            {/* View Tabs */}
+            <div className="flex gap-4 mb-6 border-b border-white/5 pb-4">
+                <button 
+                    onClick={() => setActiveView("list")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeView === "list" ? "bg-green-600 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
+                >
+                    <List className="h-4 w-4" /> Active Services
+                </button>
+                <button 
+                    onClick={() => setActiveView("insights")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeView === "insights" ? "bg-emerald-600 text-white shadow-lg" : "text-gray-500 hover:text-white"}`}
+                >
+                    <BarChart3 className="h-4 w-4" /> Smart Insights
+                </button>
             </div>
 
             {/* Stats */}
@@ -192,90 +240,174 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                 </div>
             )}
 
-            {/* Search */}
-            <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input type="text" placeholder="Search subscriptions..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-sm outline-none ${isDark ? "bg-white/5 border-white/10 focus:border-green-500/50 text-white" : "bg-white border-gray-200 focus:border-green-400 text-gray-900"}`} />
-            </div>
-
-            {/* Subscriptions List */}
-            {subscriptions.length === 0 ? (
-                <div className="text-center py-24 opacity-40">
-                    <CreditCard className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p className="font-bold text-lg">No subscriptions tracked yet</p>
-                    <p className="text-sm mt-1">Add your first subscription to start tracking</p>
+            {activeView === "list" ? (
+                <>
+                {/* Search */}
+                <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <input type="text" placeholder="Search subscriptions..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                        className={`w-full pl-10 pr-4 py-2.5 rounded-2xl border text-sm outline-none ${isDark ? "bg-white/5 border-white/10 focus:border-green-500/50 text-white" : "bg-white border-gray-200 focus:border-green-400 text-gray-900"}`} />
                 </div>
-            ) : (
-                <div className="space-y-3">
-                    {subscriptions.map(sub => {
-                        const cost = parseFloat(sub.item_metadata?.cost || "0")
-                        const cycle = sub.item_metadata?.billing_cycle || "Monthly"
-                        const days = getDaysUntil(sub.item_metadata?.renewal_date)
-                        const color = sub.item_metadata?.color || "#3B82F6"
-                        const initials = (sub.title || "?").slice(0, 2).toUpperCase()
-                        const isDueSoon = days !== null && days >= 0 && days <= 7
 
-                        return (
-                            <div key={sub.id}
-                                className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isDark ? "bg-[#1e1e1e] border-white/5 hover:border-white/10" : "bg-white border-gray-100 shadow hover:shadow-md"}`}>
-                                {/* Icon */}
-                                <div className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white text-sm flex-shrink-0"
-                                    style={{ backgroundColor: color + "33", border: `2px solid ${color}66` }}>
-                                    <span style={{ color }}>{initials}</span>
-                                </div>
+                {/* Subscriptions List */}
+                {subscriptions.length === 0 ? (
+                    <div className="text-center py-24 opacity-40">
+                        <CreditCard className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                        <p className="font-bold text-lg">No subscriptions tracked yet</p>
+                        <p className="text-sm mt-1">Add your first subscription to start tracking</p>
+                    </div>
+                ) : (
+                    <div className="space-y-3">
+                        {subscriptions.map(sub => {
+                            const cost = parseFloat(sub.item_metadata?.cost || "0")
+                            const cycle = sub.item_metadata?.billing_cycle || "Monthly"
+                            const days = getDaysUntil(sub.item_metadata?.renewal_date)
+                            const color = sub.item_metadata?.color || "#3B82F6"
+                            const initials = (sub.title || "?").slice(0, 2).toUpperCase()
+                            const isDueSoon = days !== null && days >= 0 && days <= 7
+                            const cardId = sub.item_metadata?.paymentMethodId
+                            const card = paymentCards.find(c => c.id === cardId)
 
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h3 className="font-bold truncate">{sub.title}</h3>
-                                        {sub.item_metadata?.sub_category && (
-                                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 text-gray-400">
-                                                {sub.item_metadata.sub_category}
-                                            </span>
-                                        )}
-                                        {isDueSoon && (
-                                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-                                                {days === 0 ? "Today" : `${days}d`}
-                                            </span>
-                                        )}
+                            return (
+                                <div key={sub.id}
+                                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${isDark ? "bg-[#1e1e1e] border-white/5 hover:border-white/10" : "bg-white border-gray-100 shadow hover:shadow-md"}`}>
+                                    {/* Icon */}
+                                    <div className="h-12 w-12 rounded-2xl flex items-center justify-center font-black text-white text-sm flex-shrink-0"
+                                        style={{ backgroundColor: color + "33", border: `2px solid ${color}66` }}>
+                                        <span style={{ color }}>{initials}</span>
                                     </div>
-                                    <div className={`flex items-center gap-3 mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                                        <span className="flex items-center gap-1">
-                                            <RefreshCw className="h-3 w-3" /> {cycle}
-                                        </span>
-                                        {sub.item_metadata?.renewal_date && (
+
+                                    {/* Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="font-bold truncate">{sub.title}</h3>
+                                            {sub.item_metadata?.sub_category && (
+                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 text-gray-400">
+                                                    {sub.item_metadata.sub_category}
+                                                </span>
+                                            )}
+                                            {isDueSoon && (
+                                                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 flex items-center gap-1 animate-pulse">
+                                                    <Bell className="h-2 w-2" /> {days === 0 ? "Today" : `${days}d`}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className={`flex items-center gap-3 mt-1 text-xs ${isDark ? "text-gray-400" : "text-gray-500"}`}>
                                             <span className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" /> {sub.item_metadata.renewal_date}
+                                                <RefreshCw className="h-3 w-3" /> {cycle}
                                             </span>
+                                            {sub.item_metadata?.renewal_date && (
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" /> {sub.item_metadata.renewal_date}
+                                                </span>
+                                            )}
+                                            {card && (
+                                                <span className="flex items-center gap-1 text-green-400 font-bold">
+                                                    <Wallet className="h-3 w-3" /> {card.title}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Cost */}
+                                    <div className="text-right flex-shrink-0">
+                                        <p className="font-black text-lg">${cost.toFixed(2)}</p>
+                                        <p className="text-[10px] uppercase tracking-wider opacity-40">{cycle}</p>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                        {updateItem && (
+                                            <button onClick={() => openEdit(sub)}
+                                                className="p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all">
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                        {deleteItem && (
+                                            <button onClick={() => handleDelete(sub)}
+                                                className="p-2 rounded-xl hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all">
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
                                         )}
                                     </div>
                                 </div>
+                            )
+                        })}
+                    </div>
+                )}
+                </>
+            ) : (
+                <div className="space-y-6 animate-in fade-in duration-500">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Distribution Chart */}
+                        <div className={`p-6 rounded-3xl border ${isDark ? "bg-[#1e1e1e] border-white/5" : "bg-white border-gray-200"}`}>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                                <TrendingUp className="h-4 w-4 text-emerald-400" /> Spending Distribution
+                            </h3>
+                            <div className="h-[250px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={categoryData}
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {categoryData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <RechartsTooltip 
+                                            contentStyle={{ backgroundColor: '#121212', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}
+                                            itemStyle={{ fontSize: '12px' }}
+                                        />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-2">
+                                {categoryData.map((err, idx) => (
+                                    <div key={idx} className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
+                                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
+                                        {err.name} (${err.value.toFixed(0)})
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
 
-                                {/* Cost */}
-                                <div className="text-right flex-shrink-0">
-                                    <p className="font-black text-lg">${cost.toFixed(2)}</p>
-                                    <p className="text-[10px] uppercase tracking-wider opacity-40">{cycle}</p>
+                        {/* Subscription Creep */}
+                        <div className={`p-6 rounded-3xl border ${isDark ? "bg-[#1e1e1e] border-white/5" : "bg-white border-gray-200"}`}>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-6 flex items-center gap-2">
+                                <ArrowUpRight className="h-4 w-4 text-orange-400" /> Subscription Creep
+                            </h3>
+                            <div className="space-y-6">
+                                <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
+                                    <p className="text-xs text-orange-200 opacity-60 mb-1">Annual Prototypical Cost</p>
+                                    <p className="text-3xl font-black text-orange-500">${totalYearly.toFixed(2)}</p>
+                                    <p className="text-[10px] text-gray-500 mt-2 italic">Based on currently tracked active services.</p>
                                 </div>
-
-                                {/* Actions */}
-                                <div className="flex items-center gap-1 flex-shrink-0">
-                                    {updateItem && (
-                                        <button onClick={() => openEdit(sub)}
-                                            className="p-2 rounded-xl hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all">
-                                            <Edit2 className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                    {deleteItem && (
-                                        <button onClick={() => handleDelete(sub)}
-                                            className="p-2 rounded-xl hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all">
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    )}
+                                
+                                <div>
+                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-3 underline">Potential Savings</h4>
+                                    <div className="space-y-2">
+                                        {subscriptions.filter(s => parseFloat(s.item_metadata?.cost) > 20).slice(0, 2).map(sub => (
+                                            <div key={sub.id} className="flex items-center justify-between text-xs p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                                                <span className="text-gray-300 font-medium">Re-evaluate {sub.title}</span>
+                                                <span className="text-red-400 font-bold">-${sub.item_metadata.cost}</span>
+                                            </div>
+                                        ))}
+                                        {subscriptions.length > 5 && (
+                                            <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-xl">
+                                                <p className="text-[10px] text-red-200 leading-relaxed font-bold">
+                                                    You have 5+ active subscriptions. Statistical indicators suggest 15% of these may be underutilized.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                        )
-                    })}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -291,14 +423,23 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-3">
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Service Name *</label>
                                 <input required value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
                                     className={`w-full px-4 py-2.5 rounded-xl border text-sm outline-none ${isDark ? "bg-black/30 border-white/10 focus:border-green-500/50 text-white" : "bg-gray-50 border-gray-200 focus:border-green-400"}`}
                                     placeholder="Netflix, Spotify, Adobe..." />
                             </div>
+
                             <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Funding Source</label>
+                                    <select value={formData.paymentMethodId} onChange={e => setFormData(p => ({ ...p, paymentMethodId: e.target.value }))}
+                                        className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${isDark ? "bg-black/30 border-white/10 text-white" : "bg-gray-50 border-gray-200"}`}>
+                                        <option value="">Unlinked</option>
+                                        {paymentCards.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                    </select>
+                                </div>
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Cost *</label>
                                     <div className="relative">
@@ -309,6 +450,9 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                                             placeholder="0.00" />
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Billing Cycle</label>
                                     <select value={formData.cycle} onChange={e => setFormData(p => ({ ...p, cycle: e.target.value }))}
@@ -316,8 +460,6 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                                         {BILLING_CYCLES.map(c => <option key={c}>{c}</option>)}
                                     </select>
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
                                 <div>
                                     <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Category</label>
                                     <select value={formData.category} onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
@@ -325,20 +467,23 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
                                         {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Next Renewal</label>
-                                    <input type="date" value={formData.date} onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
-                                        className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${isDark ? "bg-black/30 border-white/10 text-white" : "bg-gray-50 border-gray-200"}`} />
-                                </div>
                             </div>
+
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Next Renewal</label>
+                                <input type="date" value={formData.date} onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
+                                    className={`w-full px-3 py-2.5 rounded-xl border text-sm outline-none ${isDark ? "bg-black/30 border-white/10 text-white" : "bg-gray-50 border-gray-200"}`} />
+                            </div>
+
                             <div>
                                 <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5">Color Tag</label>
                                 <div className="flex items-center gap-3">
                                     <input type="color" value={formData.color} onChange={e => setFormData(p => ({ ...p, color: e.target.value }))}
                                         className="h-9 w-16 rounded-lg border-0 bg-transparent cursor-pointer" />
-                                    <span className="text-xs text-gray-500">Used for the service icon</span>
+                                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Icon Color</span>
                                 </div>
                             </div>
+
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => setIsAddModalOpen(false)}
                                     className={`flex-1 py-3 rounded-2xl font-bold text-sm ${isDark ? "bg-white/5 hover:bg-white/10" : "bg-gray-100 hover:bg-gray-200"}`}>

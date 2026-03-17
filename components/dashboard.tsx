@@ -4,8 +4,10 @@ import { useState, useEffect } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
   Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
-  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign, Database
+  Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign, Database,
+  LayoutGrid, PieChart as WheelIcon, TrendingUp, Sparkles
 } from "lucide-react"
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
 import {
@@ -32,6 +34,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
   const [showPersonalizer, setShowPersonalizer] = useState(false)
   const [enabledPulseIds, setEnabledPulseIds] = useState<string[]>(['security', 'assets', 'goals'])
   const [dbCount, setDbCount] = useState(0)
+  const [viewMode, setViewMode] = useState<'grid' | 'wheel'>('grid')
 
   useEffect(() => {
     const saved = localStorage.getItem('dashboard_pulses')
@@ -143,6 +146,18 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
     .filter((item: any) => new Date(item.updatedAt || 0).getTime() > clearedAt)
     .sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
     .slice(0, 25)
+
+  // -- Life Wheel Scoring --
+  const lifeWheelData = [
+    { subject: 'Health', A: Math.min(100, (healthCount * 10)), fullMark: 100 },
+    { subject: 'Wealth', A: Math.min(100, (totalAssetValue / 1000)), fullMark: 100 },
+    { subject: 'Social', A: Math.min(100, (digitalCount * 10)), fullMark: 100 },
+    { subject: 'Growth', A: Math.min(100, (goalsCount * 20)), fullMark: 100 },
+    { subject: 'Logic', A: Math.min(100, (knowledgeCount * 15)), fullMark: 100 },
+    { subject: 'Spirit', A: Math.min(100, (diaryCount * 10)), fullMark: 100 },
+  ];
+
+  const averageLifeScore = Math.round(lifeWheelData.reduce((acc, curr) => acc + curr.A, 0) / lifeWheelData.length);
 
   // Styles
   const glassPanel = theme === 'light'
@@ -365,13 +380,104 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
 
 
 
-      <div className="flex items-center gap-3 pl-1">
-        <h2 className="text-xl font-bold opacity-80">Your Hubs</h2>
-        <button onClick={() => onOpenHelp?.("intro")} className="p-1 hover:bg-white/5 rounded-full text-gray-500 hover:text-blue-400 transition-colors">
-          <HelpCircle className="h-4 w-4" />
-        </button>
+      <div className="flex items-center justify-between pl-1">
+        <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold opacity-80 italic tracking-tight">Your Hubs</h2>
+            <button onClick={() => onOpenHelp?.("intro")} className="p-1 hover:bg-white/5 rounded-full text-gray-500 hover:text-blue-400 transition-colors">
+            <HelpCircle className="h-4 w-4" />
+            </button>
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center bg-black/20 p-1 rounded-xl border border-white/5">
+            <button 
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                <LayoutGrid className="h-3 w-3" /> List
+            </button>
+            <button 
+                onClick={() => setViewMode('wheel')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${viewMode === 'wheel' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+                <WheelIcon className="h-3 w-3" /> Life Wheel
+            </button>
+        </div>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+
+      {viewMode === 'wheel' ? (
+        <div className={`${glassPanel} p-8 rounded-[2.5rem] relative overflow-hidden animate-in zoom-in-95 duration-500`}>
+            {/* Background Glows */}
+            <div className="absolute -top-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px]" />
+            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px]" />
+
+            <div className="relative z-10 flex flex-col items-center">
+                <div className="text-center mb-8">
+                    <h3 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 italic tracking-tighter">THE LIFE WHEEL</h3>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-2">Personal Equilibrium Overview</p>
+                </div>
+
+                <div className="w-full h-[400px] md:h-[500px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={lifeWheelData}>
+                            <PolarGrid stroke="#ffffff10" />
+                            <PolarAngleAxis 
+                                dataKey="subject" 
+                                tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 800 }} 
+                            />
+                            <PolarRadiusAxis 
+                                angle={30} 
+                                domain={[0, 100]} 
+                                tick={false}
+                                axisLine={false}
+                            />
+                            <Radar
+                                name="Life Balance"
+                                dataKey="value"
+                                stroke="#6366f1"
+                                fill="#6366f1"
+                                fillOpacity={0.4}
+                                strokeWidth={3}
+                            />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mt-8">
+                    {/* Overall Score */}
+                    <div className="lg:col-span-1 p-6 rounded-3xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
+                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 shadow-xl shadow-blue-500/20">
+                            <Zap className="h-8 w-8 text-white" />
+                        </div>
+                        <h4 className="text-3xl font-black text-white">{averageLifeScore}%</h4>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mt-2">Overall Vitality</p>
+                    </div>
+
+                    {/* Insights */}
+                    <div className="lg:col-span-2 p-6 rounded-3xl bg-white/5 border border-white/5">
+                        <h4 className="font-black text-xs uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" /> Hub Insights
+                        </h4>
+                        <div className="space-y-4">
+                            {lifeWheelData.sort((a,b) => a.A - b.A).slice(0, 2).map(area => (
+                                <div key={area.subject} className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                        <span className="text-xs font-bold text-gray-300">Boost {area.subject}</span>
+                                    </div>
+                                    <span className="text-[10px] font-mono text-gray-500">Currently {Math.round(area.A)}%</span>
+                                </div>
+                            ))}
+                            <div className="pt-2 border-t border-white/5">
+                                <p className="text-[10px] leading-relaxed text-gray-400 italic">"Balance is not something you find, it's something you create."</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
         <ModuleCard
           title="Vault"
           count={vaultCount}

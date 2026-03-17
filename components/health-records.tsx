@@ -18,11 +18,11 @@ interface HealthDashboardProps {
     theme: string
     setRecords?: any
     onOpenHelp?: (targetId?: string) => void
-    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai"
+    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin"
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard" }: HealthDashboardProps) {
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai">(initialTab)
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin">(initialTab)
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
     const [editingVital, setEditingVital] = useState<any>(null)
@@ -112,8 +112,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }, [vitalRecords])
 
     const diaryEntries = useMemo(() => {
-        return records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary)
+        return records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary || r.type === "health-checkin")
             .sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
+    }, [records])
+
+    const checkinHistory = useMemo(() => {
+        return records.filter(r => r.type === "health-checkin")
+            .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
     }, [records])
 
     const medRecords = useMemo(() => {
@@ -845,6 +850,167 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         </div>
     )
 
+    const renderCheckin = () => {
+        const [mood, setMood] = useState('😊')
+        const [energy, setEnergy] = useState(5)
+        const [capacity, setCapacity] = useState('Medium')
+        const [notes, setNotes] = useState('')
+
+        const checkinHistory = records.filter(r => r.type === "health-checkin")
+            .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
+
+        const handleSubmitCheckin = async (e: any) => {
+            e.preventDefault()
+            await addItem({
+                type: "health-checkin",
+                title: `Daily Check-in: ${mood}`,
+                category: "Health Diary",
+                item_metadata: {
+                    date: new Date().toISOString(),
+                    mood,
+                    energy,
+                    capacity,
+                    notes,
+                    is_diary: true
+                }
+            })
+            toast.success("Check-in logged!")
+            setActiveTab('dashboard')
+        }
+
+        const chartData = checkinHistory.slice(-14).map(c => ({
+            date: format(new Date(c.item_metadata.date), 'MMM d'),
+            energy: c.item_metadata.energy,
+            moodScore: ['😭', '😔', '😐', '😊', '🤩'].indexOf(c.item_metadata.mood) + 1
+        }))
+
+        return (
+            <div className="space-y-8 animate-in zoom-in-95 duration-500">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Log Form */}
+                    <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl relative overflow-hidden'}`}>
+                        {/* Background Deco */}
+                        <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+                        
+                        <h2 className="text-3xl font-black italic tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">DAILY VITALITY TUNE-IN</h2>
+                        
+                        <form onSubmit={handleSubmitCheckin} className="space-y-8 relative z-10">
+                            {/* Mood Selection */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Current Mood State</label>
+                                <div className="flex justify-between gap-2">
+                                    {['😭', '😔', '😐', '😊', '🤩'].map(m => (
+                                        <button 
+                                            key={m} 
+                                            type="button" 
+                                            onClick={() => setMood(m)}
+                                            className={`flex-1 aspect-square rounded-3xl text-3xl flex items-center justify-center transition-all ${mood === m ? 'bg-blue-600 scale-110 shadow-xl shadow-blue-500/30' : 'bg-white/5 hover:bg-white/10 opacity-40 hover:opacity-100 grayscale hover:grayscale-0'}`}
+                                        >
+                                            {m}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Energy Slider */}
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Energy Level (1-10)</label>
+                                    <span className="text-2xl font-black text-white">{energy}</span>
+                                </div>
+                                <input 
+                                    type="range" min="1" max="10" value={energy} 
+                                    onChange={e => setEnergy(parseInt(e.target.value))}
+                                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600" 
+                                />
+                                <div className="flex justify-between text-[8px] font-black uppercase text-gray-500 opacity-50 px-1">
+                                    <span>Depleted</span>
+                                    <span>Peak Performance</span>
+                                </div>
+                            </div>
+
+                            {/* Capacity Blocks */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Social/Task Capacity</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {['Low', 'Medium', 'High'].map(c => (
+                                        <button 
+                                            key={c} 
+                                            type="button" 
+                                            onClick={() => setCapacity(c)}
+                                            className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${capacity === c ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Observations */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Internal Dialogue / Notes</label>
+                                <textarea 
+                                    value={notes} 
+                                    onChange={e => setNotes(e.target.value)}
+                                    placeholder="Brief summary of mental focus, influences, or environment..."
+                                    className="w-full h-32 p-5 bg-white/5 border border-white/5 rounded-3xl text-sm italic outline-none focus:border-blue-500/30 transition-all custom-scrollbar"
+                                />
+                            </div>
+
+                            <button className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-500/20 active:scale-95 transition-all">
+                                Log Daily Pulse
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Trends */}
+                    <div className="space-y-6">
+                        <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-8">Vitality trends (Last 14 Logs)</h3>
+                            <div className="h-[300px] w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                        <XAxis dataKey="date" hide />
+                                        <YAxis domain={[1, 10]} hide />
+                                        <RechartsTooltip 
+                                            contentStyle={{ backgroundColor: '#121212', borderRadius: '12px', border: '1px solid #333' }}
+                                            itemStyle={{ fontSize: '12px' }}
+                                        />
+                                        <Line type="monotone" dataKey="energy" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6' }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex items-center gap-2 mt-4">
+                                <Activity className="h-4 w-4 text-blue-500" />
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Energy Volatility Tracking</span>
+                            </div>
+                        </div>
+
+                        {/* Recent History */}
+                        <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl overflow-hidden'}`}>
+                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-6">Recent Check-ins</h3>
+                            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                {checkinHistory.slice(-5).reverse().map((log: any) => (
+                                    <div key={log.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
+                                        <div className="text-2xl">{log.item_metadata.mood}</div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-xs font-bold text-white">{format(new Date(log.item_metadata.date), 'MMM d, p')}</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Idx: {log.item_metadata.energy}/10</span>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 italic truncate w-48">{log.item_metadata.notes || 'No notes'}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-[#121212] text-white'} overflow-hidden`}>
             <div className="p-4 md:p-8 pb-4">
@@ -860,7 +1026,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },
                         { id: 'vitals', label: 'Vitals', icon: Activity },
                         { id: 'appointments', label: 'Visits', icon: Clock },
-                        { id: 'calendar', label: 'Timeline', icon: CalendarIcon }
+                        { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
+                        { id: 'checkin', label: 'Check-in', icon: Activity }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -898,6 +1065,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 {activeTab === 'vitals' && <div className="px-4 md:px-8 pb-8">{renderVitals()}</div>}
                 {activeTab === 'calendar' && <div className="px-4 md:px-8 pb-8">{renderCalendarView()}</div>}
                 {activeTab === 'appointments' && <div className="px-4 md:px-8 pb-8">{renderAppointments()}</div>}
+                {activeTab === 'checkin' && <div className="px-4 md:px-8 pb-8">{renderCheckin()}</div>}
                 {activeTab === 'ai' && (
                     <div className="px-4 md:px-8 pb-8">
                         <HealthAI
