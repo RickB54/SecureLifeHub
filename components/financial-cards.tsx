@@ -189,7 +189,21 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
       )
     }
 
-    return filtered
+    return filtered.sort((a, b) => {
+      // 1. Favorites first
+      if (a.is_favorite && !b.is_favorite) return -1;
+      if (!a.is_favorite && b.is_favorite) return 1;
+
+      // 2. Debit cards first within the same favorite status
+      const aIsDebit = a.cardType?.toLowerCase().includes('debit') || a.category?.toLowerCase().includes('debit') || a.title?.toLowerCase().includes('debit');
+      const bIsDebit = b.cardType?.toLowerCase().includes('debit') || b.category?.toLowerCase().includes('debit') || b.title?.toLowerCase().includes('debit');
+
+      if (aIsDebit && !bIsDebit) return -1;
+      if (!aIsDebit && bIsDebit) return 1;
+
+      // 3. Fallback to title
+      return (a.title || "").localeCompare(b.title || "");
+    });
   }
 
   // Handle adding new card

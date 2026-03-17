@@ -651,11 +651,18 @@ export default function Settings({
             {/* Auto-Lock */}
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
               <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-70">Auto-Lock Timer</h4>
-              <div className="flex gap-2">
+              <div>
                 <select
                   value={autoLockTimeout}
-                  onChange={(e) => handleAutoLockChange(parseInt(e.target.value))}
-                  className="flex-1 bg-black/20 border border-white/10 rounded-xl px-4 py-2 outline-none"
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    handleAutoLockChange(val);
+                    // Immediate auto-save
+                    localStorage.setItem("auto_lock_timeout", val.toString());
+                    window.dispatchEvent(new CustomEvent('autoLockTimeoutChanged', { detail: { timeout: val } }));
+                    toast.success(`Auto-lock timeout set to ${val === 0 ? 'Disabled' : val + ' Minutes'}`);
+                  }}
+                  className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 outline-none focus:border-blue-500/50 transition-colors"
                 >
                   <option value={5}>5 Minutes</option>
                   <option value={15}>15 Minutes</option>
@@ -663,9 +670,6 @@ export default function Settings({
                   <option value={60}>1 Hour</option>
                   <option value={0}>Disabled</option>
                 </select>
-                <button onClick={handleSaveAutoLock} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-sm transition-colors">
-                  Save
-                </button>
               </div>
             </div>
 

@@ -1869,8 +1869,74 @@ export default function Passwords({
             )}
           </div>
 
-          {/* Section: Attachments - Keeper Style */}
-          <div className="max-w-4xl pt-8 border-t border-white/5">
+          {/* Section: Notes - Moved up per user request */}
+          {record.notes && (
+            <div className="max-w-4xl pt-8 border-t border-white/5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-4">Note</label>
+              <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-gray-50' : 'bg-white/5'} text-sm whitespace-pre-wrap text-gray-200 leading-relaxed font-medium border border-white/5`}>
+                {record.notes}
+              </div>
+            </div>
+          )}
+
+
+
+          {/* Custom Fields Section */}
+          {record.item_metadata?.customFields && record.item_metadata.customFields.length > 0 && (
+            <div className="max-w-4xl pt-8 border-t border-white/5">
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Custom Fields</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                {record.item_metadata.customFields.map((field: any) => (
+                  <div key={field.id} className="group border-b border-white/5 pb-4">
+                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">{field.label}</label>
+                    <div className="flex items-center gap-2 group/field">
+                      <div
+                        className={`flex-1 text-sm font-medium ${field.type === 'password' || field.type === 'pin' || field.type === 'hidden' ? 'font-mono' : ''} text-gray-200 transition-colors cursor-pointer group-hover/field:text-blue-400`}
+                        onClick={() => {
+                            navigator.clipboard.writeText(field.value || "");
+                            toast.success(`${field.label} copied`);
+                        }}
+                        title="Click to Copy"
+                        style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+                      >
+                        {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden')
+                          ? (activePasswordPopup === `custom-${field.id}` ? (
+                            <span className="text-white">{field.value}</span>
+                          ) : "••••••••")
+                          : field.value || "—"}
+                      </div>
+
+                      {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setActivePasswordPopup(activePasswordPopup === `custom-${field.id}` ? null : `custom-${field.id}`)
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}`}
+                        >
+                          {activePasswordPopup === `custom-${field.id}` ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                            navigator.clipboard.writeText(field.value || "");
+                            toast.success(`${field.label} copied`);
+                        }}
+                        className="p-1.5 opacity-0 group-hover/field:opacity-100 transition-opacity text-blue-500 hover:bg-blue-500/10 rounded-lg"
+                        title="Copy"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Attachments - Moved to bottom per user request */}
+          <div className="max-w-4xl pt-8 border-t border-white/5 mb-20">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Attachments</h3>
                 <button
@@ -1927,70 +1993,6 @@ export default function Passwords({
                 )}
               </div>
           </div>
-
-          {/* Custom Fields Section */}
-          {record.item_metadata?.customFields && record.item_metadata.customFields.length > 0 && (
-            <div className="max-w-4xl pt-8 border-t border-white/5">
-              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Custom Fields</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {record.item_metadata.customFields.map((field: any) => (
-                  <div key={field.id} className="group border-b border-white/5 pb-4">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">{field.label}</label>
-                    <div className="flex items-center gap-2 group/field">
-                      <div
-                        className={`flex-1 text-sm font-medium ${field.type === 'password' || field.type === 'pin' || field.type === 'hidden' ? 'font-mono' : ''} text-gray-200 transition-colors cursor-pointer group-hover/field:text-blue-400`}
-                        onClick={() => {
-                            navigator.clipboard.writeText(field.value || "");
-                            toast.success(`${field.label} copied`);
-                        }}
-                        title="Click to Copy"
-                        style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
-                      >
-                        {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden')
-                          ? (activePasswordPopup === `custom-${field.id}` ? (
-                            <span className="text-white">{field.value}</span>
-                          ) : "••••••••")
-                          : field.value || "—"}
-                      </div>
-
-                      {(field.type === 'password' || field.type === 'pin' || field.type === 'hidden') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setActivePasswordPopup(activePasswordPopup === `custom-${field.id}` ? null : `custom-${field.id}`)
-                          }}
-                          className={`p-1.5 rounded-lg transition-colors ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}`}
-                        >
-                          {activePasswordPopup === `custom-${field.id}` ? <EyeOff className="h-4 w-4 text-gray-400" /> : <Eye className="h-4 w-4 text-gray-400" />}
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => {
-                            navigator.clipboard.writeText(field.value || "");
-                            toast.success(`${field.label} copied`);
-                        }}
-                        className="p-1.5 opacity-0 group-hover/field:opacity-100 transition-opacity text-blue-500 hover:bg-blue-500/10 rounded-lg"
-                        title="Copy"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Section: Notes */}
-          {record.notes && (
-            <div className="max-w-4xl pt-8 border-t border-white/5 mb-20">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-4">Note</label>
-              <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-gray-50' : 'bg-white/5'} text-sm whitespace-pre-wrap text-gray-200 leading-relaxed font-medium border border-white/5`}>
-                {record.notes}
-              </div>
-            </div>
-          )}
         </div>
       </div >
     )
