@@ -67,10 +67,10 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {section.items.map(item => (
-                    <button
+                    <div
                         key={item.id}
                         onClick={() => setActivePage(item.id)}
-                        className={`group relative text-left p-8 rounded-2xl transition-all duration-500 overflow-hidden ${theme === 'dark'
+                        className={`group relative text-left p-8 rounded-2xl transition-all duration-500 overflow-hidden cursor-pointer ${theme === 'dark'
                             ? `bg-white/5 border border-white/10 ${themeColors.hover}`
                             : 'bg-white border border-gray-200 shadow-sm hover:shadow-xl'
                             }`}
@@ -88,7 +88,7 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                                      tabIndex={0}
                                      onClick={(e) => handleExport(e, item, records, 'json')}
                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExport(e as any, item, records, 'json'); }}
-                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-blue-400 transition-all md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
                                      title="Export to JSON"
                                  >
                                      <FileJson className="h-4 w-4" />
@@ -98,7 +98,7 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                                      tabIndex={0}
                                      onClick={(e) => handleExport(e, item, records, 'csv')}
                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExport(e as any, item, records, 'csv'); }}
-                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-green-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-green-400 transition-all md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
                                      title="Export to CSV"
                                  >
                                      <FileSpreadsheet className="h-4 w-4" />
@@ -108,7 +108,7 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                                      tabIndex={0}
                                      onClick={(e) => handleExport(e, item, records, 'pdf')}
                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleExport(e as any, item, records, 'pdf'); }}
-                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-red-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-red-400 transition-all md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
                                      title="Export to PDF"
                                  >
                                      <FileText className="h-4 w-4" />
@@ -118,7 +118,7 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                                      tabIndex={0}
                                      onClick={(e) => { e.stopPropagation(); onOpenHelp?.(item.id); }}
                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onOpenHelp?.(item.id); }}}
-                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-purple-400 transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                     className="p-2 rounded-xl bg-white/5 text-gray-500 hover:text-purple-400 transition-all md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
                                      title="Help"
                                  >
                                      <HelpCircle className="h-4 w-4" />
@@ -138,7 +138,7 @@ export default function SubDashboard({ section, records, setActivePage, theme, o
                             <span className={`w-1 h-1 rounded-full ${theme === 'dark' ? themeColors.bg.replace('/20', '') : themeColors.lightBg.replace('100', '500')}`}></span>
                             Open Module
                         </div>
-                    </button>
+                    </div>
                 ))}
             </div>
         </div>

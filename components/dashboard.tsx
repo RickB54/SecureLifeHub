@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect } from "react"
 import {
@@ -624,9 +624,9 @@ interface ModuleCardProps {
 
 function ModuleCard({ title, description, icon, colorClass, buttonColorClass, shadowColor, onClick, count, isLocked, onHelp }: ModuleCardProps) {
   return (
-    <button
+    <div
       onClick={onClick}
-      className={`bg-[#1e1e1e] border-2 rounded-3xl flex flex-col overflow-hidden transition-all duration-300 group ${colorClass} relative w-full text-left active:scale-95`}
+      className={`bg-[#1e1e1e] border-2 rounded-3xl flex flex-col overflow-hidden transition-all duration-300 group ${colorClass} relative w-full text-left active:scale-[0.98] cursor-pointer`}
       style={{
         boxShadow: shadowColor
           ? `0 0 30px ${shadowColor}, 0 0 60px ${shadowColor.replace('0.35', '0.15')}, 0 8px 32px rgba(0,0,0,0.7)`
@@ -645,19 +645,18 @@ function ModuleCard({ title, description, icon, colorClass, buttonColorClass, sh
               {count > 0 && <span className="text-[10px] font-mono bg-white/5 px-2 py-0.5 rounded text-gray-500">{count} Items</span>}
             </div>
           </div>
-          <span
-            role="button"
-            tabIndex={0}
+          <button
             onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onHelp?.(); }}}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-gray-600 hover:text-blue-400 transition-all cursor-pointer"
+            className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all cursor-pointer bg-white/5"
+            title="Help"
           >
             <HelpCircle className="h-4 w-4" />
-          </span>
+          </button>
         </div>
         <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed line-clamp-2 md:line-clamp-none">{description}</p>
       </div>
-    </button>
+    </div>
   )
 }
 
