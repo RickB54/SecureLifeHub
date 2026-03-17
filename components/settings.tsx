@@ -1049,6 +1049,14 @@ export default function Settings({
               </div>
               <h3 className="text-2xl font-black mb-4 uppercase tracking-tighter">Restricted Security Area</h3>
               <p className="text-gray-500 mb-8 max-w-md mx-auto">This area contains destructive actions that cannot be undone. Please proceed with extreme caution.</p>
+              
+              {/* Initial PIN Hint */}
+              <div className="mb-6 animate-pulse">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500/60 bg-red-500/5 py-2 px-4 rounded-full border border-red-500/10 inline-block">
+                  Initial PIN Unlock: <span className="text-white">1234</span>
+                </p>
+              </div>
+
               <div className="flex justify-center gap-4 mb-8">
                 <button
                   onClick={() => setShowPinScreen(true)}

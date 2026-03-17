@@ -632,7 +632,7 @@ function HomeContent() {
             isOpen={sidebarOpen}
             setIsOpen={setSidebarOpen}
             theme={theme}
-            onOpenHelp={() => commonProps.onOpenHelp()}
+            onOpenHelp={commonProps.onOpenHelp}
           />
           <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
             {renderActivePage()}
