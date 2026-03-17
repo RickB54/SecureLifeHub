@@ -2471,24 +2471,23 @@ export default function Passwords({
               <div className="flex-1">
                 {viewMode === 'folder' ? (
                    <div className="space-y-4">
-                     <div className="flex items-center justify-between px-4">
-                       <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Folders</h3>
-                       
-                       {/* Move Expand/Collapse All here */}
-                       {!forceListView && (
-                        <button
-                          onClick={handleToggleAllFolders}
-                          className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} p-1.5 rounded-lg transition-all shadow-sm`}
-                          title="Expand/Collapse All Folders"
-                        >
-                          {folders.some(f => !expandedFolders[f.id]) ? (
-                            <ChevronsDown className="h-3.5 w-3.5 text-blue-400" />
-                          ) : (
-                            <ChevronsUp className="h-3.5 w-3.5 text-blue-400" />
-                          )}
-                        </button>
-                      )}
-                     </div>
+                      <div className="flex items-center gap-2 px-4">
+                        <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">My Folders</h3>
+                        
+                        {!forceListView && (
+                          <button
+                            onClick={handleToggleAllFolders}
+                            className={`flex items-center justify-center ${theme === 'light' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'} p-1 rounded-lg transition-all shadow-sm`}
+                            title="Expand/Collapse All Folders"
+                          >
+                            {folders.some(f => !expandedFolders[f.id]) ? (
+                              <ChevronsDown className="h-3 w-3 text-blue-400" />
+                            ) : (
+                              <ChevronsUp className="h-3 w-3 text-blue-400" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                      
                      {/* Root Folder Entry - only shown when unorganised passwords exist */}
                      {passwords.filter((p: any) => !p.folder_id).length > 0 && (

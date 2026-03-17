@@ -100,20 +100,28 @@ export const handleExport = (e: React.MouseEvent, item: any, records: any[], for
                 // For passwords, use a more structured layout with boxes
                 let currentY = 45;
                 const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
                 const margin = 14;
                 const innerWidth = pageWidth - (margin * 2);
 
-                itemRecords.forEach((r, index) => {
-                    // Check if we need a new page
-                    if (currentY > 250) {
+                itemRecords.forEach((r) => {
+                    const notes = r.notes || "---";
+                    const splitNotes = doc.splitTextToSize(notes, innerWidth - 35);
+                    const notesHeight = splitNotes.length * 4.5; // Approximate height for wrapped text
+                    
+                    // Fixed header/field heights (Title + 4 rows) = approx 38
+                    const boxHeight = 42 + notesHeight;
+
+                    // Check if we need a new page for this box
+                    if (currentY + boxHeight > pageHeight - 15) {
                         doc.addPage();
                         currentY = 20;
                     }
 
                     // Draw a box
-                    doc.setDrawColor(200, 200, 200);
+                    doc.setDrawColor(220, 220, 220);
                     doc.setFillColor(249, 250, 251);
-                    doc.rect(margin, currentY, innerWidth, 50, 'FD');
+                    doc.rect(margin, currentY, innerWidth, boxHeight, 'FD');
 
                     // Title Header
                     doc.setFontSize(11);
@@ -126,35 +134,31 @@ export const handleExport = (e: React.MouseEvent, item: any, records: any[], for
                     doc.setTextColor(107, 114, 128); // Gray-500
                     doc.setFont("helvetica", "normal");
                     
-                    doc.text("Folder:", margin + 5, currentY + 16);
-                    doc.setTextColor(31, 41, 55);
-                    doc.text(getFolderTitle(r.folder_id), margin + 30, currentY + 16);
+                    const drawField = (label: string, value: string, y: number, isMono = false) => {
+                        doc.setTextColor(107, 114, 128);
+                        doc.setFont("helvetica", "normal");
+                        doc.text(label, margin + 5, y);
+                        
+                        doc.setTextColor(31, 41, 55);
+                        if (isMono) doc.setFont("courier", "bold");
+                        else doc.setFont("helvetica", "normal");
+                        doc.text(value || "---", margin + 30, y);
+                    };
 
+                    drawField("Folder:", getFolderTitle(r.folder_id), currentY + 16);
+                    drawField("User ID:", r.username || r.email || "---", currentY + 22);
+                    drawField("Password:", r.password || "---", currentY + 28, true);
+                    drawField("Website:", r.website || "---", currentY + 34);
+                    
+                    // Notes (Special handling for wrapping)
                     doc.setTextColor(107, 114, 128);
-                    doc.text("User ID:", margin + 5, currentY + 22);
-                    doc.setTextColor(31, 41, 55);
-                    doc.text(r.username || r.email || "---", margin + 30, currentY + 22);
-
-                    doc.setTextColor(107, 114, 128);
-                    doc.text("Password:", margin + 5, currentY + 28);
-                    doc.setTextColor(31, 41, 55);
-                    doc.setFont("courier", "bold");
-                    doc.text(r.password || "---", margin + 30, currentY + 28);
                     doc.setFont("helvetica", "normal");
-
-                    doc.setTextColor(107, 114, 128);
-                    doc.text("Website:", margin + 5, currentY + 34);
-                    doc.setTextColor(37, 99, 235);
-                    doc.text(r.website || "---", margin + 30, currentY + 34);
-
-                    doc.setTextColor(107, 114, 128);
                     doc.text("Notes:", margin + 5, currentY + 40);
+                    
                     doc.setTextColor(31, 41, 55);
-                    const notes = r.notes || "---";
-                    const splitNotes = doc.splitTextToSize(notes, innerWidth - 35);
                     doc.text(splitNotes, margin + 30, currentY + 40);
 
-                    currentY += 60; // Space for next box
+                    currentY += boxHeight + 10; // Space for next box
                 });
             } else {
                 const tableData = itemRecords.map(r => [

@@ -335,11 +335,11 @@ function renderSections() {
         { id: "favorites", label: "Favorites", icon: "⭐", page: "favorites", color: "text-yellow-400" },
         { id: "payment-cards", label: "Financial Cards", icon: "💳", page: "financial-cards", color: "text-emerald-400" },
         { id: "personal-info", label: "Personal Info", icon: "👤", page: "personal-info", color: "text-indigo-400" },
-        { id: "private-notes", label: "Private Notes", icon: "📝", page: "private-notes", color: "text-amber-400" },
-        { id: "healthHub", label: "Health Hub", icon: "🏥", page: "section-healthFitness", color: "text-red-400" },
-        { id: "vehicles", label: "Vehicles", icon: "🚗", page: "section-vehicles", color: "text-orange-400" },
-        { id: "business", label: "Business", icon: "💼", page: "section-business", color: "text-blue-500" },
-        { id: "digitalLife", label: "Digital Life", icon: "🌐", page: "section-digitalLife", color: "text-cyan-400" },
+        { id: "private-notes", label: "Private Notes", icon: "📝", page: "type-secure-notes", color: "text-amber-400" },
+        { id: "healthHub", label: "Health Hub", icon: "🏥", page: "type-health-records", color: "text-red-400" },
+        { id: "vehicles", label: "Vehicles", icon: "🚗", page: "type-vehicles", color: "text-orange-400" },
+        { id: "business", label: "Business", icon: "💼", page: "type-business", color: "text-blue-500" },
+        { id: "digitalLife", label: "Digital Life", icon: "🌐", page: "type-digital-life", color: "text-cyan-400" },
         { id: "settings", label: "Settings", icon: "⚙️", page: "settings", color: "text-gray-400" }
     ]
 

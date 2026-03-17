@@ -254,8 +254,9 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             const { data: { session: currentSession } } = await supabase.auth.getSession()
             if (currentSession) {
               console.log("SecureLifeHub: URL sync failed but existing session found, continuing.")
+              const targetPage = params.get('page') || hashParams.get('page') || 'dashboard'
               window.history.replaceState({}, '', window.location.pathname)
-              router.push('/?page=dashboard')
+              router.push(`/?page=${targetPage}`)
               return
             }
             throw error
@@ -265,8 +266,9 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             setIsResetMode(true)
             if (data.session?.user?.email) setEmail(data.session.user.email)
           } else {
+            const targetPage = params.get('page') || hashParams.get('page') || 'dashboard'
             window.history.replaceState({}, '', window.location.pathname)
-            router.push('/?page=dashboard')
+            router.push(`/?page=${targetPage}`)
           }
         } catch (e: any) { 
           console.error("Session sync failed:", e)
