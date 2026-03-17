@@ -70,7 +70,12 @@ function HomeContent() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [helpInitialPage, setHelpInitialPage] = useState<string | undefined>(undefined)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [startupPage, setStartupPage] = useState("dashboard")
+  const [startupPage, setStartupPage] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("hub_startup_page") || "dashboard"
+    }
+    return "dashboard"
+  })
 
   // Swipe-to-open sidebar gesture
   const touchStartX = useRef<number | null>(null)
@@ -220,13 +225,20 @@ function HomeContent() {
     }
 
     // B. Handle URL -> State Synchronization (Browser Back/Forward)
-    if (pageParam && pageParam !== activePage) {
+    const effectivePage = pageParam || "dashboard"
+    if (effectivePage !== activePage) {
       const mainEl = document.getElementById("main-scroll-container")
       if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
-      setActivePage(pageParam)
+      console.log(`🔄 Syncing state to URL: ${effectivePage}`)
+      setActivePage(effectivePage)
     }
 
-    // C. Clean URL tokens while preserving page (SKIP if recovery flow is active)
+    // C. Reset history on lock to ensure startup preference applies on next unlock
+    if (isLocked && navHistory.length > 0) {
+      setNavHistory([])
+    }
+
+    // D. Clean URL tokens while preserving page (SKIP if recovery flow is active)
     const isRecovery = window.location.hash.includes('type=recovery') || searchParams.get('type') === 'recovery'
     if (!isRecovery && typeof window !== 'undefined' && (searchParams.get('access_token') || searchParams.get('refresh_token'))) {
       const cleanParams = new URLSearchParams(window.location.search)
