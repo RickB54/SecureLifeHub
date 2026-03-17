@@ -226,6 +226,12 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         setIsResetMode(true)
       }
 
+      const errorMsg = params.get('error_description') || hashParams.get('error_description') || params.get('error') || hashParams.get('error')
+      if (errorMsg) {
+        setError(errorMsg.replace(/\+/g, ' '))
+        return
+      }
+
       const { data: { session: existingSession } } = await supabase.auth.getSession()
       
       // PRE-FILL EMAIL IF IN RECOVERY
