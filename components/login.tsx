@@ -163,10 +163,8 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           
           if (targetPage) {
             router.push(`/?page=${targetPage}`)
-          } else if (savedStartup && savedStartup !== "dashboard") {
-            router.push(`/?page=${savedStartup}`)
           } else {
-            router.push('/?page=dashboard')
+            router.push('/')
           }
         } else {
           console.warn("No active Supabase session found after biometric success.")
@@ -241,10 +239,8 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
 
       if (existingSession && !isRecovery) {
         const page = searchParams.get('page')
-        const savedStartup = localStorage.getItem("hub_startup_page")
         if (page) router.push(`/?page=${page}`)
-        else if (savedStartup && savedStartup !== "dashboard") router.push(`/?page=${savedStartup}`)
-        else router.push('/?page=dashboard')
+        else router.push('/')
         return
       }
 
@@ -260,9 +256,10 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             const { data: { session: currentSession } } = await supabase.auth.getSession()
             if (currentSession) {
               console.log("SecureLifeHub: URL sync failed but existing session found, continuing.")
-              const targetPage = params.get('page') || hashParams.get('page') || 'dashboard'
+              const targetPage = params.get('page') || hashParams.get('page')
               window.history.replaceState({}, '', window.location.pathname)
-              router.push(`/?page=${targetPage}`)
+              if (targetPage) router.push(`/?page=${targetPage}`)
+              else router.push('/')
               return
             }
             throw error
@@ -272,9 +269,10 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             setIsResetMode(true)
             if (data.session?.user?.email) setEmail(data.session.user.email)
           } else {
-            const targetPage = params.get('page') || hashParams.get('page') || 'dashboard'
+            const targetPage = params.get('page') || hashParams.get('page')
             window.history.replaceState({}, '', window.location.pathname)
-            router.push(`/?page=${targetPage}`)
+            if (targetPage) router.push(`/?page=${targetPage}`)
+            else router.push('/')
           }
         } catch (e: any) { 
           console.error("Session sync failed:", e)
@@ -316,7 +314,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         // Stamp the time of full master-password login so biometric session duration can be enforced
         localStorage.setItem('full_login_timestamp', Date.now().toString())
         setIsLocked(false)
-        router.push('/?page=dashboard')
+        router.push('/')
       }
     } catch (err: any) { 
       let msg = err.message
@@ -388,10 +386,9 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
       toast.success("Password updated successfully!")
-      setIsResetMode(false)
       setIsLocked(false)
-      // Redirect to dashboard to force refresh with new session
-      router.push('/?page=dashboard')
+      // Redirect to root to allow startup preference to take effect
+      router.push('/')
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -405,7 +402,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       localStorage.setItem('lastLoginEmail', email.trim().toLowerCase())
       localStorage.setItem('full_login_timestamp', Date.now().toString())
       setIsLocked(false)
-      router.push('/?page=dashboard')
+      router.push('/')
     } else {
       setError("Invalid 2FA code. Please try again.")
     }

@@ -208,11 +208,15 @@ function HomeContent() {
 
     // A. Handle Startup Redirection
     // If authenticated, unlocked, at the root URL, and haven't navigated yet
-    if (user && !isLocked && !pageParam && navHistory.length === 0 && savedStartup !== "dashboard") {
-      console.log(`🚀 Applying Startup Preference: ${savedStartup}`)
-      setActivePage(savedStartup)
-      router.push(`/?page=${savedStartup}`)
-      return
+    if (user && !isLocked && !pageParam && navHistory.length === 0) {
+      if (savedStartup !== activePage) {
+        console.log(`🚀 Applying Startup Preference: ${savedStartup}`)
+        setActivePage(savedStartup)
+        if (savedStartup !== "dashboard") {
+          router.push(`/?page=${savedStartup}`)
+        }
+        return
+      }
     }
 
     // B. Handle URL -> State Synchronization (Browser Back/Forward)
@@ -322,6 +326,7 @@ function HomeContent() {
   // Handle logout
   const handleLogout = async () => {
     setNavHistory([])
+    setActivePage("dashboard")
     scrollPositions.current = {} // Reset scroll memory on logout
     if (typeof window !== 'undefined' && localStorage.getItem('biometric_enabled') === 'true') {
       setIsLocked(true)
