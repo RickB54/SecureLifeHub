@@ -280,12 +280,16 @@ function filterItems(query = "") {
     if (currentView === 'cards') {
         passwordItems.sort((a, b) => {
             // 1. Favorites first
-            if (a.is_favorite && !b.is_favorite) return -1
-            if (!a.is_favorite && b.is_favorite) return 1
+            const aFav = a.is_favorite || a.favorite || a.item_metadata?.is_favorite || a.item_metadata?.favorite
+            const bFav = b.is_favorite || b.favorite || b.item_metadata?.is_favorite || b.item_metadata?.favorite
+            
+            if (aFav && !bFav) return -1
+            if (!aFav && bFav) return 1
             
             // 2. Debit first within same favorite status
-            const aIsDebit = a.item_metadata?.cardType?.toLowerCase() === 'debit' || a.category?.toLowerCase() === 'debit' || a.title?.toLowerCase().includes('debit')
-            const bIsDebit = b.item_metadata?.cardType?.toLowerCase() === 'debit' || b.category?.toLowerCase() === 'debit' || b.title?.toLowerCase().includes('debit')
+            const aIsDebit = (a.item_metadata?.cardType?.toLowerCase().includes('debit')) || (a.category?.toLowerCase().includes('debit')) || (a.title?.toLowerCase().includes('debit'))
+            const bIsDebit = (b.item_metadata?.cardType?.toLowerCase().includes('debit')) || (b.category?.toLowerCase().includes('debit')) || (b.title?.toLowerCase().includes('debit'))
+            
             if (aIsDebit && !bIsDebit) return -1
             if (!aIsDebit && bIsDebit) return 1
 

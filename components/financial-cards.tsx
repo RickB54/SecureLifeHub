@@ -190,9 +190,12 @@ export default function FinancialCards({ records, addItem, updateItem, deleteIte
     }
 
     return filtered.sort((a, b) => {
-      // 1. Favorites first
-      if (a.is_favorite && !b.is_favorite) return -1;
-      if (!a.is_favorite && b.is_favorite) return 1;
+      // 1. Favorites first (checking both is_favorite and favorite for robustness)
+      const aFav = a.is_favorite || a.favorite || a.item_metadata?.is_favorite || a.item_metadata?.favorite;
+      const bFav = b.is_favorite || b.favorite || b.item_metadata?.is_favorite || b.item_metadata?.favorite;
+      
+      if (aFav && !bFav) return -1;
+      if (!aFav && bFav) return 1;
 
       // 2. Debit cards first within the same favorite status
       const aIsDebit = a.cardType?.toLowerCase().includes('debit') || a.category?.toLowerCase().includes('debit') || a.title?.toLowerCase().includes('debit');

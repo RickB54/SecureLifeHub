@@ -89,6 +89,35 @@ const isItemMock = (r: any) => {
   return false;
 };
 
+const SettingsCard = ({ title, icon: Icon, children, color = "blue", theme, onOpenHelp, className = "", helpId, hideHeaderHelp = false }: any) => (
+  <div className={`p-6 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200 shadow-xl shadow-gray-200/50" : "bg-[#1a1a1a] border-white/5"} ${className}`}>
+    <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none`}>
+      <Icon className="h-32 w-32" />
+    </div>
+    <div className="relative z-10">
+      <div className="flex items-center gap-3 mb-6">
+        <div className={`p-3 rounded-2xl ${theme === "light" ? `bg-${color}-100 text-${color}-600` : `bg-${color}-500/20 text-${color}-400`}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xl font-bold">{title}</h3>
+          {!hideHeaderHelp && (
+            <button 
+              type="button"
+              onClick={() => onOpenHelp?.(helpId || "settings")}
+              className="p-1 rounded-lg hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all focus:outline-none opacity-100"
+              title={`Explain ${title}`}
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+      {children}
+    </div>
+  </div>
+)
+
 export default function Settings({
   records,
   items,
@@ -167,6 +196,9 @@ export default function Settings({
   const [selectedWipeIds, setSelectedWipeIds] = useState<string[]>([])
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
   const [show2FA, setShow2FA] = useState(false)
+  const [isCustomTimer, setIsCustomTimer] = useState(false)
+  const [customTimerValue, setCustomTimerValue] = useState("")
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({})
 
 
   // Load Biometric State + Session Duration
@@ -403,34 +435,6 @@ export default function Settings({
     e.target.value = "" // Reset the file input
   }
 
-  const SettingsCard = ({ title, icon: Icon, children, color = "blue", className = "", helpId, hideHeaderHelp = false }: any) => (
-    <div className={`p-6 rounded-3xl border relative overflow-hidden ${theme === "light" ? "bg-white border-gray-200 shadow-xl shadow-gray-200/50" : "bg-[#1a1a1a] border-white/5"} ${className}`}>
-      <div className={`absolute top-0 right-0 p-4 opacity-5 pointer-events-none`}>
-        <Icon className="h-32 w-32" />
-      </div>
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-6">
-          <div className={`p-3 rounded-2xl ${theme === "light" ? `bg-${color}-100 text-${color}-600` : `bg-${color}-500/20 text-${color}-400`}`}>
-            <Icon className="h-6 w-6" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold">{title}</h3>
-            {!hideHeaderHelp && (
-              <button 
-                type="button"
-                onClick={() => onOpenHelp?.(helpId || "settings")}
-                className="p-1 rounded-lg hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all focus:outline-none opacity-100"
-                title={`Explain ${title}`}
-              >
-                <HelpCircle className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-        {children}
-      </div>
-    </div>
-  )
 
   return (
     <div className="space-y-8 pb-20">
@@ -455,11 +459,11 @@ export default function Settings({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Account Section */}
-        <SettingsCard title="Account" icon={User} color="blue" helpId="settings-account">
+        <SettingsCard title="Account" icon={User} color="blue" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-account">
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
               <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <User className="h-6 w-6" />
                 </div>
                 <div>
@@ -483,7 +487,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Security Section */}
-        <SettingsCard title="Security" icon={Shield} color="purple" helpId="settings-security">
+        <SettingsCard title="Security" icon={Shield} color="purple" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-security">
           <div className="space-y-6">
             {/* Master Password */}
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
@@ -646,30 +650,64 @@ export default function Settings({
         </SettingsCard>
 
         {/* Automation Section */}
-        <SettingsCard title="Automation" icon={Clock} color="blue" helpId="settings-automation">
+        <SettingsCard title="Automation" icon={Clock} color="blue" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-automation">
           <div className="space-y-6">
             {/* Auto-Lock */}
             <div className="p-4 rounded-xl bg-black/20 border border-white/5">
               <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-70">Auto-Lock Timer</h4>
-              <div>
+              <div className="space-y-3">
                 <select
-                  value={autoLockTimeout}
+                  value={isCustomTimer ? "custom" : autoLockTimeout}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value);
+                    const valStr = e.target.value;
+                    if (valStr === "custom") {
+                      setIsCustomTimer(true);
+                      return;
+                    }
+                    setIsCustomTimer(false);
+                    const val = parseFloat(valStr);
                     handleAutoLockChange(val);
                     // Immediate auto-save
                     localStorage.setItem("auto_lock_timeout", val.toString());
                     window.dispatchEvent(new CustomEvent('autoLockTimeoutChanged', { detail: { timeout: val } }));
-                    toast.success(`Auto-lock timeout set to ${val === 0 ? 'Disabled' : val + ' Minutes'}`);
+                    toast.success(`Auto-lock timeout set to ${val === 0 ? 'Disabled' : (val < 1 ? Math.round(val * 60) + ' Seconds' : val + ' Minutes')}`);
                   }}
                   className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 outline-none focus:border-blue-500/50 transition-colors"
                 >
+                  <option value={0.0833}>Test (5 Seconds)</option>
                   <option value={5}>5 Minutes</option>
                   <option value={15}>15 Minutes</option>
                   <option value={30}>30 Minutes</option>
                   <option value={60}>1 Hour</option>
                   <option value={0}>Disabled</option>
+                  <option value="custom">Custom Timer...</option>
                 </select>
+
+                {isCustomTimer && (
+                  <div className="flex gap-2 animate-in fade-in slide-in-from-top-2">
+                    <input 
+                      type="number"
+                      placeholder="Minutes (e.g. 120)"
+                      value={customTimerValue}
+                      onChange={(e) => setCustomTimerValue(e.target.value)}
+                      className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 outline-none focus:border-blue-500/50 transition-colors text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        const val = parseFloat(customTimerValue);
+                        if (isNaN(val) || val < 0) return toast.error("Please enter a valid number");
+                        handleAutoLockChange(val);
+                        localStorage.setItem("auto_lock_timeout", val.toString());
+                        window.dispatchEvent(new CustomEvent('autoLockTimeoutChanged', { detail: { timeout: val } }));
+                        toast.success(`Custom auto-lock set to ${val} Minutes`);
+                        setIsCustomTimer(false);
+                      }}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                    >
+                      Set
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -710,22 +748,10 @@ export default function Settings({
                     >
                       <button
                         onClick={() => {
-                          const element = document.getElementById(`content-${section.id}`);
-                          const chevron = document.getElementById(`chevron-${section.id}`);
-                          if (element) {
-                            const isHidden = element.classList.contains('hidden');
-                            // Close all others first? (Accordion behavior) - optional
-                            // Toggle this one
-                            if (isHidden) {
-                              element.classList.remove('hidden');
-                              element.classList.add('block', 'animate-in', 'fade-in', 'slide-in-from-top-1');
-                              chevron?.classList.add('rotate-180');
-                            } else {
-                              element.classList.add('hidden');
-                              element.classList.remove('block');
-                              chevron?.classList.remove('rotate-180');
-                            }
-                          }
+                          setExpandedSections(prev => ({
+                            ...prev,
+                            [section.id]: !prev[section.id]
+                          }))
                         }}
                         className="w-full flex flex-col p-3 text-left transition-colors hover:bg-white/5 group"
                       >
@@ -738,7 +764,7 @@ export default function Settings({
                               {section.title}
                             </span>
                           </div>
-                          <ChevronDown id={`chevron-${section.id}`} className="h-3 w-3 text-gray-600 transition-transform duration-300" />
+                          <ChevronDown className={`h-3 w-3 text-gray-600 transition-transform duration-300 ${expandedSections[section.id] ? 'rotate-180' : ''}`} />
                         </div>
                         
                         {isSectionActive && (
@@ -749,7 +775,8 @@ export default function Settings({
                         )}
                       </button>
 
-                      <div id={`content-${section.id}`} className="hidden p-2 pt-0 space-y-1 bg-black/20 border-t border-white/5">
+                      {expandedSections[section.id] && (
+                        <div className="p-2 pt-0 space-y-1 bg-black/20 border-t border-white/5 animate-in fade-in slide-in-from-top-1 duration-200">
                         {section.items.map(item => {
                           const isActive = (startupPage || "dashboard") === item.id;
                           return (
@@ -775,7 +802,8 @@ export default function Settings({
                             </button>
                           );
                         })}
-                      </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -838,7 +866,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Appearance Section */}
-        <SettingsCard title="Appearance" icon={Sun} color="amber" helpId="settings-appearance">
+        <SettingsCard title="Appearance" icon={Sun} color="amber" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-appearance">
           <div className="space-y-6">
             <div className="flex items-center justify-between p-4 rounded-xl bg-black/20 border border-white/5">
               <div>
@@ -948,7 +976,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Access Control */}
-        <SettingsCard title="Module Access" icon={Lock} color="emerald" className="lg:col-span-2" helpId="settings-access">
+        <SettingsCard title="Module Access" icon={Lock} color="emerald" className="lg:col-span-2" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-access">
           <div className="flex items-center gap-2 mb-4">
             <p className="text-sm opacity-60">Control PIN restriction and mock data demonstration for each module.</p>
           </div>
@@ -960,7 +988,7 @@ export default function Settings({
         </SettingsCard>
 
         {/* Combined Data Management Section */}
-        <SettingsCard title="Data Management" icon={Database} color="blue" helpId="settings-data" className="lg:col-span-2">
+        <SettingsCard title="Data Management" icon={Database} color="blue" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-data" className="lg:col-span-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-2 p-1.5 rounded-lg bg-blue-500/10 w-fit">
@@ -1013,7 +1041,7 @@ export default function Settings({
 
       {/* Advanced & Danger Zone */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20 lg:col-span-2" helpId="settings-danger-zone">
+        <SettingsCard title="Danger Zone" icon={AlertCircle} color="red" className="border-red-500/20 lg:col-span-2" theme={theme} onOpenHelp={onOpenHelp} helpId="settings-danger-zone">
           {!isDangerZoneUnlocked ? (
             <div className="text-center py-12">
               <div className="h-20 w-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">

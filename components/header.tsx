@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Lock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize, HelpCircle, Shield } from "lucide-react"
+import { Lock, Clock, Moon, Sun, User, Menu, ChevronDown, ArrowLeft, Settings, Maximize, Minimize, HelpCircle, Shield } from "lucide-react"
 
 import { useAuth } from "./auth-provider"
 import Logo from "./logo"
@@ -35,7 +35,13 @@ export default function Header({
 }: HeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
-  const { user } = useAuth()
+  const { user, timeLeft } = useAuth()
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
 
   const toggleFullscreen = () => {
     const newState = !isFullscreen;
@@ -97,7 +103,26 @@ export default function Header({
               onClick={() => onNavigate("dashboard")}
               showText={false}
             />
-            <h1 className={`text-lg md:text-xl font-bold ${theme === "light" ? "text-gray-800" : "text-white"}`}>Secure Life Hub</h1>
+            <h1 className={`text-lg md:text-xl font-bold ${theme === "light" ? "text-gray-800" : "text-white"} transition-all duration-300 ${timeLeft !== null && timeLeft > 0 ? 'hidden md:block' : 'block'}`}>
+              Secure Life Hub
+            </h1>
+
+            {/* Auto-lock countdown timer - Now in center-left for better visibility */}
+            {timeLeft !== null && timeLeft > 0 && (
+              <div 
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${timeLeft < 60 ? 'bg-red-500/10 border-red-500/20 text-red-500 animate-pulse' : 'bg-blue-500/10 border-blue-500/20 text-blue-400'} ml-3 sm:ml-4 transition-all duration-300 cursor-pointer hover:bg-opacity-20`}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('mousedown')); // Reset timer on click
+                }}
+                title="Auto-lock Timer (Click to extend)"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <div className="flex flex-col items-start leading-none pr-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-70">Lock</span>
+                  <span className="text-xs font-mono font-bold">{formatTime(timeLeft)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center space-x-2 md:space-x-4">
@@ -139,6 +164,8 @@ export default function Header({
               </div>
               <ChevronDown className="h-4 w-4" />
             </button>
+            
+            
             {userMenuOpen && (
               <div
                 className={`absolute right-0 mt-2 w-48 ${theme === "light" ? "bg-white shadow-xl border border-gray-100" : "bg-[#1a1a1a] shadow-2xl border border-white/5"} rounded-xl py-2 z-50`}

@@ -10,6 +10,7 @@ interface AuthContextType {
     session: Session | null
     loading: boolean
     isLocked: boolean
+    timeLeft: number | null
     setIsLocked: (locked: boolean) => void
     signOut: () => Promise<void>
 }
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
     session: null,
     loading: true,
     isLocked: false,
+    timeLeft: null,
     setIsLocked: () => { },
     signOut: async () => { },
 })
@@ -32,6 +34,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const [session, setSession] = useState<Session | null>(null)
     const [loading, setLoading] = useState(true)
     const [isLocked, setIsLocked] = useState(false)
+    const [timeLeft, setTimeLeft] = useState<number | null>(null)
     const router = useRouter()
 
     // Handle initial lock state and persistence
@@ -46,50 +49,108 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             localStorage.setItem('vault_locked', 'true')
         } else {
             localStorage.removeItem('vault_locked')
+            // If we are unlocking and the current timeout is the test (5s), 
+            // set it back to 5 minutes so the user has time to work.
+            const saved = typeof window !== 'undefined' ? localStorage.getItem("auto_lock_timeout") : null
+            if (saved === "0.0833") { // 5 seconds test value
+                localStorage.setItem("auto_lock_timeout", "5")
+                // Notify the rest of the app about the change
+                window.dispatchEvent(new CustomEvent('autoLockTimeoutChanged', { detail: { timeout: 5 } }))
+            }
         }
     }
 
     // Separate effect for Auto-lock Activity Listeners
     useEffect(() => {
-        if (loading || isLocked) return
+        if (loading || isLocked) {
+            setTimeLeft(null)
+            return
+        }
 
         let inactivityTimer: NodeJS.Timeout
+        let countdownInterval: NodeJS.Timeout
 
         const getTimeoutDuration = () => {
             const saved = typeof window !== 'undefined' ? localStorage.getItem("auto_lock_timeout") : null
             if (saved === "0" || saved === "disabled") return null
-            return (saved ? parseInt(saved) : 15) * 60 * 1000
+            // Support fractional minutes (like 0.083 for 5 seconds)
+            return (saved ? parseFloat(saved) : 15) * 60 * 1000
         }
 
         let currentLimit = getTimeoutDuration()
+        let expiryTime = currentLimit ? Date.now() + currentLimit : null
 
         const resetTimer = () => {
             if (inactivityTimer) clearTimeout(inactivityTimer)
-            if (currentLimit === null) return
+            if (countdownInterval) clearInterval(countdownInterval)
+            
+            if (currentLimit === null) {
+                setTimeLeft(null)
+                return
+            }
 
+            const playBeep = () => {
+                try {
+                    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+                    oscillator.start(audioCtx.currentTime);
+                    oscillator.stop(audioCtx.currentTime + 0.5);
+                } catch (e) {
+                    console.warn("Audio beep failed", e);
+                }
+            };
+
+            expiryTime = Date.now() + currentLimit
+            
+            // Start the auto-lock timer
             inactivityTimer = setTimeout(async () => {
                 console.log("Vault auto-locked due to inactivity")
+                playBeep();
                 setLockedWithPersistence(true)
             }, currentLimit)
+
+            // Start the visual countdown interval
+            countdownInterval = setInterval(() => {
+                if (expiryTime) {
+                    const remaining = Math.max(0, Math.ceil((expiryTime - Date.now()) / 1000))
+                    setTimeLeft(remaining)
+                }
+            }, 1000)
+            
+            // Initial set
+            if (expiryTime) {
+                setTimeLeft(Math.max(0, Math.ceil((expiryTime - Date.now()) / 1000)))
+            }
         }
 
-        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'mousemove']
+        const events = ['mousedown', 'keydown', 'touchstart', 'click']
         
         // Throttled activity handler for mousemove
         let lastActivity = Date.now()
         const handleActivity = () => {
             const now = Date.now()
-            if (now - lastActivity < 2000) return // Throttled to 2s
+            if (now - lastActivity < 1000) return // Throttled to 1s
             lastActivity = now
             resetTimer()
         }
 
         const handleTimeoutChange = (e: CustomEvent) => {
             if (e.detail?.timeout !== undefined) {
-                if (e.detail.timeout === 0 || e.detail.timeout === "disabled") {
+                const timeoutVal = e.detail.timeout
+                if (timeoutVal === 0 || timeoutVal === "disabled") {
                     currentLimit = null
                 } else {
-                    currentLimit = e.detail.timeout * 60 * 1000
+                    currentLimit = parseFloat(timeoutVal) * 60 * 1000
                 }
                 resetTimer()
             }
@@ -103,6 +164,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         return () => {
             if (inactivityTimer) clearTimeout(inactivityTimer)
+            if (countdownInterval) clearInterval(countdownInterval)
             events.forEach(event => window.removeEventListener(event, handleActivity))
             window.removeEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
         }
@@ -173,6 +235,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
         user,
         loading,
         isLocked,
+        timeLeft,
         setIsLocked: setLockedWithPersistence,
         signOut,
     }

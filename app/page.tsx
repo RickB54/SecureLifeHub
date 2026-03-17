@@ -237,7 +237,7 @@ function HomeContent() {
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
 
-  // Load security settings on mount, when activePage changes, and listen for live updates from settings.tsx
+  // Load security settings on mount, update on activePage change, and listen for live updates
   useEffect(() => {
     const handleStorage = () => {
       try {
@@ -247,11 +247,26 @@ function HomeContent() {
         console.error("Failed to load security settings", e)
       }
     }
-    handleStorage() // Initial load
+
+    const handleTimeoutSync = (e: any) => {
+      if (e.detail?.timeout !== undefined) {
+        setAutoLockTimeout(parseFloat(e.detail.timeout))
+      } else {
+        const saved = localStorage.getItem("auto_lock_timeout")
+        if (saved) setAutoLockTimeout(parseFloat(saved))
+      }
+    }
+
+    handleStorage()
+    handleTimeoutSync({ detail: {} }) // Initial load for timeout
     
-    // Listen for custom event triggered by Settings component
     window.addEventListener("hub_security_settings_changed", handleStorage)
-    return () => window.removeEventListener("hub_security_settings_changed", handleStorage)
+    window.addEventListener("autoLockTimeoutChanged", handleTimeoutSync as EventListener)
+    
+    return () => {
+      window.removeEventListener("hub_security_settings_changed", handleStorage)
+      window.removeEventListener("autoLockTimeoutChanged", handleTimeoutSync as EventListener)
+    }
   }, [activePage])
 
 
