@@ -27,6 +27,7 @@ const menuBtn = document.getElementById('menu-btn')
 const vaultView = document.getElementById('vault-view')
 const sectionsView = document.getElementById('sections-view')
 const tabVault = document.getElementById('tab-vault')
+const tabCards = document.getElementById('tab-cards')
 const tabSections = document.getElementById('tab-sections')
 
 // Main Panel (Views)
@@ -108,15 +109,23 @@ async function init() {
         user = localSession.user
     }
 
+    // Load Preferences & State from local storage
+    const storage = await chrome.storage.local.get(['recentItemsIds', 'lastActiveTab', 'lastSelectedItemId'])
+    recentItemsIds = storage.recentItemsIds || []
+    
+    // Restore Last View
+    if (storage.lastActiveTab) {
+        currentView = storage.lastActiveTab
+    }
+
     if (user) {
-        showVault()
+        showVault() // This triggers fetchItems()
+        
+        // Items will be fetched shortly. We can't select the item immediately 
+        // because allItems is empty. fetchItems handles the final restore.
     } else {
         showLogin()
     }
-
-    // Load Recents from local storage
-    const storage = await chrome.storage.local.get(['recentItemsIds'])
-    recentItemsIds = storage.recentItemsIds || []
 
     // Listen for storage changes while popup is open to handle real-time logout/login
     chrome.storage.onChanged.addListener((changes, namespace) => {
@@ -171,10 +180,17 @@ async function fetchItems() {
         cacheData(allItems)
 
         // Initial Filter
-        filterItems(searchInput.value)
+        switchSidebarTab(currentView) // Ensure tab styles are correct
 
         // Check for current tab match to auto-select or highlight
         checkForMatches()
+
+        // Restore Selected Item if it exists in the newly fetched list
+        const { lastSelectedItemId } = await chrome.storage.local.get(['lastSelectedItemId'])
+        if (lastSelectedItemId) {
+            const lastItem = allItems.find(i => i.id === lastSelectedItemId)
+            if (lastItem) selectItem(lastItem, false) // false = don't re-save to trigger loop
+        }
     }
 
     if (itemError) {
@@ -226,22 +242,42 @@ function filterItems(query = "") {
     itemsList.innerHTML = ""
     query = query.toLowerCase().trim()
 
-    // 1. Get filtered items (Passwords and Financial Cards)
-    const passwordItems = allItems.filter(item =>
-        (item.type === 'password' || item.type === 'financial-card') &&
-        item.category !== 'Medications' &&
-        item.category !== 'Health Records' && // STRICT EXCLUSION
-        !item.title?.startsWith("[SYSTEM]") &&
-        (
+    if (currentView === 'cards') {
+        const header = document.createElement('div')
+        header.className = "px-3 py-1.5 bg-[#2d2d2d] border-b border-[#3e3e42]"
+        header.innerHTML = `
+            <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Financial Cards</span>
+        `
+        itemsList.appendChild(header)
+    }
+
+    // 1. Get filtered items
+    const passwordItems = allItems.filter(item => {
+        // Strict Tab Filtering
+        if (currentView === 'cards' && item.type !== 'financial-card') return false
+        if (currentView === 'vault' && (item.type !== 'password' || item.category === 'Secure Notes')) return false
+        
+        // General type filtering
+        const isAllowedType = item.type === 'password' || item.type === 'financial-card'
+        if (!isAllowedType) return false
+
+        // Exclusion filtering (Shared across views)
+        if (item.category === 'Medications' || item.category === 'Health Records') return false
+        if (item.title?.startsWith("[SYSTEM]")) return false
+
+        // Query filtering
+        if (query === "") return true
+        
+        return (
             item.title?.toLowerCase().includes(query) ||
             item.username?.toLowerCase().includes(query) ||
             item.website?.toLowerCase().includes(query) ||
             (item.item_metadata?.cardNumber && item.item_metadata.cardNumber.includes(query))
         )
-    )
+    })
 
-    // 2. If no query, show Recents at the top
-    if (query === "" && recentItemsIds.length > 0) {
+    // 2. If no query and in vault mode, show Recents at the top
+    if (query === "" && currentView === 'vault' && recentItemsIds.length > 0) {
         const recents = recentItemsIds
             .map(id => allItems.find(i => i.id === id))
             .filter(item =>
@@ -327,7 +363,13 @@ function renderSections() {
             </svg>
         `
         div.addEventListener('click', () => {
-            openInWebVault(sec.page)
+            if (sec.id === 'payment-cards') {
+                switchSidebarTab('cards')
+                searchInput.value = ""
+                searchInput.placeholder = "Search Cards..."
+            } else {
+                openInWebVault(sec.page)
+            }
         })
         sectionsView.appendChild(div)
     })
@@ -360,16 +402,28 @@ async function openInWebVault(page = "dashboard") {
 
 function switchSidebarTab(tab) {
     currentView = tab
+    chrome.storage.local.set({ lastActiveTab: tab })
+
+    // Reset styles
+    tabVault.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+    tabCards.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+    tabSections.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
+    
+    vaultView.classList.add('hidden')
+    sectionsView.classList.add('hidden')
+
     if (tab === 'vault') {
         tabVault.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-500 border-b-2 border-blue-500 transition-colors"
-        tabSections.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
         vaultView.classList.remove('hidden')
-        sectionsView.classList.add('hidden')
+        searchInput.placeholder = "Search Vault..."
+        filterItems(searchInput.value)
+    } else if (tab === 'cards') {
+        tabCards.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-emerald-500 border-b-2 border-emerald-500 transition-colors"
+        vaultView.classList.remove('hidden')
+        searchInput.placeholder = "Search Cards..."
         filterItems(searchInput.value)
     } else {
-        tabVault.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 hover:text-gray-300 transition-colors"
         tabSections.className = "flex-1 py-2 text-[10px] font-bold uppercase tracking-wider text-blue-500 border-b-2 border-blue-500 transition-colors"
-        vaultView.classList.add('hidden')
         sectionsView.classList.remove('hidden')
         renderSections()
     }
@@ -386,7 +440,8 @@ function createListItem(item, isRecent = false) {
     // Icon
     let iconHTML = `<div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-300 shrink-0">${(item.title || "?")[0].toUpperCase()}</div>`
     if (item.type === 'financial-card') {
-        iconHTML = `<div class="w-8 h-8 rounded-lg bg-emerald-900/40 border border-emerald-500/30 flex items-center justify-center text-xs text-emerald-400 shrink-0">💳</div>`
+        const cardColor = item.item_metadata?.cardColor || '#10b981' // default emerald
+        iconHTML = `<div class="w-8 h-8 rounded-lg flex items-center justify-center text-lg text-white shrink-0 shadow-sm" style="background-color: ${cardColor}; border: 1px solid rgba(255,255,255,0.1)">💳</div>`
     }
 
     div.innerHTML = `
@@ -432,8 +487,11 @@ function createListItem(item, isRecent = false) {
 }
 
 // -- Selection & Views --
-function selectItem(item) {
+function selectItem(item, shouldSave = true) {
     selectedItem = item
+    if (shouldSave) {
+        chrome.storage.local.set({ lastSelectedItemId: item.id })
+    }
 
     // Re-render list to update selection highlight
     filterItems(searchInput.value)
@@ -449,7 +507,14 @@ function renderDetailView(item) {
 
     // Populate Fields
     viewTitle.textContent = item.title || "Untitled"
-    viewIcon.textContent = (item.title || "?")[0].toUpperCase()
+    if (item.type === 'financial-card') {
+        const cardColor = item.item_metadata?.cardColor || '#10b981'
+        viewIcon.innerHTML = `<div class="w-full h-full flex items-center justify-center text-2xl" style="background-color: ${cardColor}; color: white; border-radius: inherit;">💳</div>`
+        viewIcon.style.backgroundColor = 'transparent'
+    } else {
+        viewIcon.textContent = (item.title || "?")[0].toUpperCase()
+        viewIcon.style.backgroundColor = '' // CSS default
+    }
 
     viewUsername.textContent = item.username || "---"
     viewPassword.textContent = item.password // Will be blurred via CSS
@@ -890,6 +955,7 @@ searchInput.addEventListener('input', (e) => {
 
 // Tabs
 tabVault.addEventListener('click', () => switchSidebarTab('vault'))
+tabCards.addEventListener('click', () => switchSidebarTab('cards'))
 tabSections.addEventListener('click', () => switchSidebarTab('sections'))
 
 // Matches

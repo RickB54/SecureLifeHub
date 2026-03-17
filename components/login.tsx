@@ -248,7 +248,18 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         setLoading(true)
         try {
           const { data, error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-          if (error) throw error
+          
+          if (error) {
+            // If sync fails (e.g. refresh token consumed by another tab), check if we have a valid session already
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            if (currentSession) {
+              console.log("SecureLifeHub: URL sync failed but existing session found, continuing.")
+              window.history.replaceState({}, '', window.location.pathname)
+              router.push('/?page=dashboard')
+              return
+            }
+            throw error
+          }
           
           if (isRecovery || type === 'recovery') {
             setIsResetMode(true)
@@ -257,7 +268,16 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             window.history.replaceState({}, '', window.location.pathname)
             router.push('/?page=dashboard')
           }
-        } catch (e) { setError("Session sync failed.") } finally { setLoading(false) }
+        } catch (e: any) { 
+          console.error("Session sync failed:", e)
+          if (e.message?.includes("Already Used") || e.message?.includes("refresh_token_not_found")) {
+            // These errors happen if the token was consumed by a concurrent refresh/sync.
+            // If we've reached here, getSession didn't find a fallback.
+            setError("Your session link has expired. Please log in manually.")
+          } else {
+            setError("Session sync failed.")
+          }
+        } finally { setLoading(false) }
       }
     }
     handleSSO()
