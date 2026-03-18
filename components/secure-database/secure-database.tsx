@@ -31,6 +31,8 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     databases, 
     updateDatabase, 
     addDatabase, 
+    addRecord,
+    updateRecord,
     duplicateRecord, 
     deleteDatabases, 
     recoverDatabases, 
@@ -39,6 +41,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     saveReport,
     getReportsForDatabase,
     deleteReport,
+    handleReorder,
     initialized 
   } = useSecureDatabase()
 
@@ -84,36 +87,28 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     setShowAddRecord(true)
   }
 
-  const handleRecordSubmit = (values: { [key: string]: any }, images?: string[]) => {
-    if (!currentDatabase) return
+  const handleRecordSubmit = async (values: { [key: string]: any }, images?: string[]) => {
+    if (!currentDatabase || !currentDatabase.id) return
 
-    const updatedRecords = [...currentDatabase.records]
     if (editingRecord) {
-      const index = updatedRecords.findIndex((r) => r.id === editingRecord.id)
-      if (index !== -1) {
-        updatedRecords[index] = {
-          ...editingRecord,
-          values,
-          images: images || editingRecord.images,
-          lastUpdated: new Date().toISOString(),
-        }
-      }
+        await updateRecord(currentDatabase.id, editingRecord.id, {
+            values,
+            images: images || editingRecord.images,
+            isFavorite: editingRecord.isFavorite,
+            isArchived: editingRecord.isArchived
+        })
     } else {
-      const newRecord: DbRecord = {
-        id: crypto.randomUUID(),
-        values,
-        images: images || [],
-        isFavorite: false,
-        created: new Date().toISOString(),
-        lastUpdated: new Date().toISOString(),
-      }
-      updatedRecords.push(newRecord)
+        await addRecord(currentDatabase.id, {
+            values,
+            images: images || [],
+            isFavorite: false,
+            isArchived: false
+        })
     }
 
-    updateDatabase({ ...currentDatabase, records: updatedRecords })
     setShowAddRecord(false)
     setEditingRecord(null)
-    toast.success(editingRecord ? "Entry updated" : "Entry added to kolektion")
+    toast.success(editingRecord ? "Entry updated in Kolektion" : "Entry added to Kolektion")
   }
 
   if (!initialized) {
@@ -150,6 +145,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                    handleSelectDatabase(title)
                    setMobileSheetOpen(false)
                }} 
+               onReorder={handleReorder}
                onNewDatabase={() => {
                    setEditingSchemaDatabase(null)
                    setShowFormBuilder(true)
@@ -213,6 +209,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
           <DatabaseSidebar 
             databases={databases} 
             currentDb={currentDb}             onDatabaseSelect={handleSelectDatabase} 
+             onReorder={handleReorder}
              onNewDatabase={() => {
                 setEditingSchemaDatabase(null)
                 setShowFormBuilder(true)

@@ -1,53 +1,98 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { TodoItem, TodoFilter, TodoSort, TodoStatus, TodoPriority } from "@/types/secure-database"
+import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/components/auth-provider"
+import { toast } from "sonner"
 
 export function useTodo() {
+  const { user } = useAuth()
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [initialized, setInitialized] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<TodoFilter>({})
   const [sort, setSort] = useState<TodoSort>({ field: "dueDate", direction: "asc" })
   const [categories, setCategories] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
 
-  // Load todos from localStorage on mount
-  useEffect(() => {
-    const loadTodos = () => {
-      try {
-        const stored = localStorage.getItem("slh_custom_todos")
-        let parsedTodos: TodoItem[] = []
+  const fetchData = useCallback(async () => {
+    if (!user) return
 
-        if (!stored) {
-          setTodos([])
-          localStorage.setItem("slh_custom_todos", JSON.stringify([]))
-        } else {
-          const parsed = JSON.parse(stored)
-          if (!Array.isArray(parsed)) {
-            setTodos([])
-            localStorage.setItem("slh_custom_todos", JSON.stringify([]))
-            return
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from("secure_todos")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (error && error.code !== "42P01") throw error
+
+      if (!data || data.length === 0) {
+          const stored = typeof window !== 'undefined' ? localStorage.getItem("slh_custom_todos") : null
+          if (stored) {
+              const localTodos: TodoItem[] = JSON.parse(stored)
+              if (localTodos.length > 0) {
+                  console.log(`Migrating ${localTodos.length} tasks to Cloud...`)
+                  const payloads = localTodos.map(t => ({
+                      user_id: user.id,
+                      title: t.title,
+                      notes: t.notes || "",
+                      priority: t.priority || "medium",
+                      status: t.status || "active",
+                      due_date: t.dueDate,
+                      source_database: t.sourceDatabase,
+                      source_record_id: t.sourceRecordId,
+                      source_field_name: t.sourceFieldName,
+                      category: t.category,
+                      tags: t.tags || [],
+                      subtasks: t.subtasks || [],
+                      created_at: t.created || new Date().toISOString()
+                  }))
+                  
+                  await supabase.from("secure_todos").insert(payloads)
+                  localStorage.removeItem("slh_custom_todos")
+                  // Re-fetch now that they are in DB
+                  fetchData()
+                  return
+              }
           }
-          parsedTodos = parsed
-          setTodos(parsedTodos)
-        }
-        updateCategoriesAndTags(parsedTodos)
-      } catch (error) {
-        console.error("Error loading todos:", error)
-        setTodos([])
+          setTodos([])
+      } else {
+          // Map DB snake_case to UI camelCase
+          const mapped = data.map(t => ({
+              ...t,
+              id: t.id,
+              dueDate: t.due_date,
+              lastUpdated: t.updated_at,
+              sourceDatabase: t.source_database,
+              sourceRecordId: t.source_record_id,
+              sourceFieldName: t.source_field_name,
+              created: t.created_at
+          })) as unknown as TodoItem[]
+          
+          setTodos(mapped)
+          updateCategoriesAndTags(mapped)
       }
+    } catch (error: any) {
+      console.error("Critical Task Engine Fault:", error)
+      const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error))
+      toast.error(`Task Sync Fault: ${errorMsg}`)
+      
+      // Safety fallback
+      const stored = typeof window !== 'undefined' ? localStorage.getItem("slh_custom_todos") : null
+      if (stored) {
+          try { setTodos(JSON.parse(stored)) } catch(e) {}
+      }
+    } finally {
+      setLoading(false)
       setInitialized(true)
     }
+  }, [user])
 
-    loadTodos()
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "slh_custom_todos") {
-        loadTodos()
-      }
-    }
-    window.addEventListener("storage", handleStorageChange)
-    return () => window.removeEventListener("storage", handleStorageChange)
-  }, [])
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const updateCategoriesAndTags = (todoItems: TodoItem[]) => {
     const uniqueCategories = new Set<string>()
@@ -62,83 +107,90 @@ export function useTodo() {
     setTags(Array.from(uniqueTags))
   }
 
-  const generateId = () => {
-    return Math.random().toString(36).substring(2, 11) + Date.now().toString(36)
-  }
-
-  const addTodo = (
+  const addTodo = async (
     todo: Omit<TodoItem, "id" | "created" | "lastUpdated" | "status" | "tags"> & { tags?: string[] },
   ) => {
-    const now = new Date().toISOString()
-    const newTodo: TodoItem = {
-      id: generateId(),
-      title: todo.title,
-      notes: todo.notes || "",
-      priority: todo.priority || "medium",
-      status: "active",
-      dueDate: todo.dueDate,
-      created: now,
-      lastUpdated: now,
-      sourceDatabase: todo.sourceDatabase,
-      sourceRecordId: todo.sourceRecordId,
-      sourceFieldName: todo.sourceFieldName,
-      category: todo.category,
-      tags: todo.tags || [],
-      subtasks: todo.subtasks || [],
+    if (!user) return
+    
+    try {
+        const payload = {
+            user_id: user.id,
+            title: todo.title,
+            notes: todo.notes || "",
+            priority: todo.priority || "medium",
+            status: "active",
+            due_date: todo.dueDate,
+            source_database: todo.sourceDatabase,
+            source_record_id: todo.sourceRecordId,
+            source_field_name: todo.sourceFieldName,
+            category: todo.category,
+            tags: todo.tags || [],
+            subtasks: todo.subtasks || []
+        }
+
+        const { data, error } = await supabase
+            .from("secure_todos")
+            .insert(payload)
+            .select()
+            .single()
+
+        if (error) throw error
+        
+        toast.success("Todo synced across devices")
+        fetchData()
+        return data as unknown as TodoItem
+    } catch (error: any) {
+        toast.error("Failed to add todo: " + error.message)
     }
-
-    setTodos((current) => {
-      const updated = [...current, newTodo]
-      localStorage.setItem("slh_custom_todos", JSON.stringify(updated))
-      updateCategoriesAndTags(updated)
-      return updated
-    })
-    return newTodo
   }
 
-  const updateTodo = (updatedTodo: TodoItem) => {
-    setTodos((current) => {
-      const updated = current.map((todo) =>
-        todo.id === updatedTodo.id ? { ...updatedTodo, lastUpdated: new Date().toISOString() } : todo,
-      )
-      localStorage.setItem("slh_custom_todos", JSON.stringify(updated))
-      updateCategoriesAndTags(updated)
-      return updated
-    })
+  const updateTodo = async (updatedTodo: TodoItem) => {
+    if (!user) return
+    try {
+        const { error } = await supabase
+            .from("secure_todos")
+            .update({
+                title: updatedTodo.title,
+                notes: updatedTodo.notes,
+                priority: updatedTodo.priority,
+                status: updatedTodo.status,
+                due_date: updatedTodo.dueDate,
+                category: updatedTodo.category,
+                tags: updatedTodo.tags,
+                subtasks: updatedTodo.subtasks,
+                updated_at: new Date().toISOString()
+            })
+            .eq("id", updatedTodo.id)
+
+        if (error) throw error
+        fetchData()
+    } catch (error: any) {
+        toast.error("Failed to update todo")
+    }
   }
 
-  const deleteTodo = (id: string) => {
-    setTodos((current) => {
-      const updated = current.filter((todo) => todo.id !== id)
-      localStorage.setItem("slh_custom_todos", JSON.stringify(updated))
-      updateCategoriesAndTags(updated)
-      return updated
-    })
+  const deleteTodo = async (id: string) => {
+    try {
+        await supabase.from("secure_todos").delete().eq("id", id)
+        fetchData()
+    } catch (error) {
+        toast.error("Failed to delete todo")
+    }
   }
 
   const updateTodoStatus = (id: string, status: TodoStatus) => {
-    setTodos((current) => {
-      const updated = current.map((todo) =>
-        todo.id === id ? { ...todo, status, lastUpdated: new Date().toISOString() } : todo,
-      )
-      localStorage.setItem("slh_custom_todos", JSON.stringify(updated))
-      return updated
-    })
+      const todo = todos.find(t => t.id === id)
+      if (todo) updateTodo({ ...todo, status })
   }
 
   const updateTodoPriority = (id: string, priority: TodoPriority) => {
-    setTodos((current) => {
-      const updated = current.map((todo) =>
-        todo.id === id ? { ...todo, priority, lastUpdated: new Date().toISOString() } : todo,
-      )
-      localStorage.setItem("slh_custom_todos", JSON.stringify(updated))
-      return updated
-    })
+    const todo = todos.find(t => t.id === id)
+    if (todo) updateTodo({ ...todo, priority })
   }
 
   const getFilteredAndSortedTodos = () => {
+    // Current filtering/sorting logic remains (it works on local state)
     let result = [...todos]
-    // Filter logic... (same as original but with sli_ prefix for storage key check)
     if (filter.status && filter.status.length > 0) {
       result = result.filter((todo) => filter.status?.includes(todo.status))
     }
@@ -210,10 +262,12 @@ export function useTodo() {
     categories,
     tags,
     initialized,
+    loading,
     addTodo,
     updateTodo,
     deleteTodo,
     updateTodoStatus,
     updateTodoPriority,
+    refresh: fetchData
   }
 }

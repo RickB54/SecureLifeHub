@@ -1,19 +1,58 @@
 "use client"
 
-import { Database as DatabaseIcon, Plus, ChevronRight } from "lucide-react"
+import { Database as DatabaseIcon, Plus, ChevronRight, GripVertical } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import type { Database } from "@/types/secure-database"
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface DatabaseSidebarProps {
   databases: Database[]
   currentDb: string
   onDatabaseSelect: (title: string) => void
   onNewDatabase: () => void
+  onReorder?: (databases: Database[]) => void
 }
 
-export function DatabaseSidebar({ databases, currentDb, onDatabaseSelect, onNewDatabase }: DatabaseSidebarProps) {
+export function DatabaseSidebar({ databases, currentDb, onDatabaseSelect, onNewDatabase, onReorder }: DatabaseSidebarProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = databases.findIndex((db) => (db.id || db.title) === active.id);
+      const newIndex = databases.findIndex((db) => (db.id || db.title) === over?.id);
+
+      if (onReorder) {
+        onReorder(arrayMove(databases, oldIndex, newIndex));
+      }
+    }
+  };
+
   if (!databases || databases.length === 0) {
+    // ... same as before
     return (
       <div className="p-8 text-center bg-[#0a0a0a] h-full flex flex-col justify-center border-r border-white/5">
         <DatabaseIcon className="h-10 w-10 text-gray-700 mx-auto mb-4" />
@@ -28,20 +67,6 @@ export function DatabaseSidebar({ databases, currentDb, onDatabaseSelect, onNewD
         </Button>
       </div>
     )
-  }
-
-  const colorDotMap: { [key: string]: string } = {
-    emerald: "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]",
-    green: "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]",
-    teal: "bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.3)]",
-    cyan: "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.3)]",
-    indigo: "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]",
-    rose: "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]",
-    red: "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]",
-    amber: "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]",
-    blue: "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]",
-    pink: "bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)]",
-    purple: "bg-purple-500 shadow-[0_0_10px_rgba(168, 85, 247, 0.3)]",
   }
 
   return (
@@ -62,47 +87,27 @@ export function DatabaseSidebar({ databases, currentDb, onDatabaseSelect, onNewD
       </div>
 
       <ScrollArea className="flex-1 px-1 py-4">
-        <div className="space-y-0.5">
-          {databases.map((db) => {
-            const isSelected = currentDb === db.title
-            const dotClass = colorDotMap[db.color || 'indigo']
-            
-            return (
-              <button
-                key={db.title}
-                onClick={() => onDatabaseSelect(db.title)}
-                className={`w-full group relative flex items-center gap-3 px-5 py-3.5 transition-all duration-300
-                  ${
-                    isSelected
-                      ? `bg-emerald-600 shadow-[0_4px_20px_rgba(16,185,129,0.2)] text-white`
-                      : `text-gray-500 hover:text-gray-200 hover:bg-white/2`
-                  }`}
-              >
-                {/* Active Indicator Bar */}
-                {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/40" />
-                )}
-
-                <div className={`w-2 h-2 rounded-full shrink-0 transition-transform duration-300 ${isSelected ? 'bg-white' : dotClass} ${isSelected ? 'scale-110' : 'group-hover:scale-125 opacity-70 group-hover:opacity-100'}`} />
-                
-                <span className={`flex-1 text-left truncate text-xs font-bold tracking-tight ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
-                  {db.title}
-                </span>
-
-                <div className={`flex items-center gap-1.5`}>
-                    <span className={`text-[11px] font-black font-mono transition-all duration-300
-                        ${isSelected 
-                            ? 'text-white' 
-                            : 'text-gray-600 group-hover:text-gray-400'
-                        }`}
-                    >
-                        {db.records.length}
-                    </span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={databases.map(db => db.id || db.title)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-0.5">
+              {databases.map((db) => (
+                <SortableDatabaseItem 
+                  key={db.id || db.title}
+                  db={db}
+                  isSelected={currentDb === db.title}
+                  onDatabaseSelect={onDatabaseSelect}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       </ScrollArea>
 
       <div className="p-6 border-t border-white/5">
@@ -121,4 +126,79 @@ export function DatabaseSidebar({ databases, currentDb, onDatabaseSelect, onNewD
       </div>
     </div>
   )
+}
+
+const colorDotMap: { [key: string]: string } = {
+  emerald: "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]",
+  green: "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.3)]",
+  teal: "bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.3)]",
+  cyan: "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.3)]",
+  indigo: "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.3)]",
+  rose: "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]",
+  red: "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]",
+  amber: "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]",
+  blue: "bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.3)]",
+  pink: "bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.3)]",
+  purple: "bg-purple-500 shadow-[0_0_10px_rgba(168, 85, 247, 0.3)]",
+}
+
+function SortableDatabaseItem({ db, isSelected, onDatabaseSelect }: { db: Database, isSelected: boolean, onDatabaseSelect: (title: string) => void }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: db.id || db.title });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.5 : undefined,
+  };
+
+  const dotClass = colorDotMap[db.color || 'indigo']
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <button
+        onClick={() => onDatabaseSelect(db.title)}
+        className={`w-full group relative flex items-center gap-3 px-5 py-3.5 transition-all duration-300
+          ${
+            isSelected
+              ? `bg-emerald-600 shadow-[0_4px_20px_rgba(16,185,129,0.2)] text-white`
+              : `text-gray-500 hover:text-gray-200 hover:bg-white/2`
+          }`}
+      >
+        {/* Drag Handle */}
+        <div {...listeners} className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-40 transition-opacity">
+            <GripVertical className="h-3 w-3" />
+        </div>
+
+        {/* Active Indicator Bar */}
+        {isSelected && (
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/40" />
+        )}
+
+        <div className={`w-2 h-2 rounded-full shrink-0 transition-transform duration-300 ${isSelected ? 'bg-white' : dotClass} ${isSelected ? 'scale-110' : 'group-hover:scale-125 opacity-70 group-hover:opacity-100'}`} />
+        
+        <span className={`flex-1 text-left truncate text-xs font-bold tracking-tight ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
+          {db.title}
+        </span>
+
+        <div className={`flex items-center gap-1.5`}>
+          <span className={`text-[11px] font-black font-mono transition-all duration-300
+            ${isSelected 
+              ? 'text-white' 
+              : 'text-gray-600 group-hover:text-gray-400'
+            }`}
+          >
+            {db.records.length}
+          </span>
+        </div>
+      </button>
+    </div>
+  );
 }

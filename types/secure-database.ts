@@ -23,12 +23,14 @@ export interface DisplayFieldSettings {
 }
 
 export interface Database {
+  id?: string // Supabase ID
   title: string
   fields: Field[]
   records: DbRecord[]
   color?: string // Optional color name
   displaySettings?: DisplayFieldSettings
   todoSettings?: TodoSettings
+  orderIndex?: number
 }
 
 export interface TodoSettings {

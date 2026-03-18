@@ -466,12 +466,26 @@ export function DatabaseView({
                                 
                                 <div className="relative">
                                     {isEditingThisField && (field.type === 'checkbox' || field.type === 'dropdown') ? (
-                                        <div className="p-8 rounded-[2.5rem] bg-black/40 border border-indigo-500/30 space-y-6 shadow-3xl animate-in zoom-in-95 duration-300">
-                                            <div className="flex flex-wrap gap-3">
+                                        <div className="p-8 rounded-[2.5rem] bg-black/40 border border-indigo-500/30 space-y-6 shadow-3xl animate-in zoom-in-95 duration-300 relative">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h5 className="text-sm font-black text-white italic uppercase tracking-widest">{field.name}</h5>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-lg p-0"
+                                                    onClick={() => {
+                                                        setEditingField(null);
+                                                        toast.success("Sector optimized and saved");
+                                                    }}
+                                                >
+                                                    <Save className="h-5 w-5" />
+                                                </Button>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                                                 {(field.options || []).map((opt) => (
                                                     <div 
                                                         key={opt} 
-                                                        className={`flex items-center gap-3 p-4 rounded-2xl bg-white/5 border transition-all cursor-pointer ${ (record.values[field.name] || []).includes(opt) ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-white/5 hover:bg-white/10'}`}
+                                                        className={`flex items-center gap-4 p-4 rounded-xl bg-white/2 border transition-all cursor-pointer ${ (record.values[field.name] || []).includes(opt) ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-white/5 hover:bg-white/5'}`}
                                                         onClick={() => {
                                                             const currentValues = Array.isArray(record.values[field.name]) ? record.values[field.name] : [];
                                                             const isChecked = currentValues.includes(opt);
@@ -493,18 +507,18 @@ export function DatabaseView({
                                                         <Checkbox 
                                                             id={`opt-${record.id}-${field.name}-${opt}`}
                                                             checked={(record.values[field.name] || []).includes(opt)}
-                                                            className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-5 w-5 rounded-md"
+                                                            className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20"
                                                         />
-                                                        <label className="text-sm font-bold text-gray-300 cursor-pointer">{opt}</label>
+                                                        <label className="text-sm font-bold text-gray-300 cursor-pointer flex-1">{opt}</label>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="flex gap-3">
+                                            <div className="flex gap-2.5 mt-4">
                                                 <Input 
-                                                    placeholder="Inject new high-fidelity option..." 
+                                                    placeholder="Add new option..." 
                                                     value={newOptionInput}
                                                     onChange={(e) => setNewOptionInput(e.target.value)}
-                                                    className="h-14 bg-black/60 border-white/10 rounded-[1.25rem] focus:border-indigo-500/50 transition-all font-bold text-sm px-6"
+                                                    className="h-12 bg-black/40 border-white/10 rounded-xl focus:border-indigo-500/50 transition-all font-bold text-sm px-5"
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
                                                             e.preventDefault();
@@ -534,9 +548,9 @@ export function DatabaseView({
                                                         setNewOptionInput("");
                                                         toast.success(`Option '${newOptionInput}' injected`);
                                                     }}
-                                                    className="h-14 px-8 bg-indigo-500 hover:bg-indigo-600 rounded-[1.25rem] shadow-lg shadow-indigo-500/20 active:scale-95 transition-all font-black uppercase text-xs tracking-widest"
+                                                    className="h-12 w-12 p-0 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg active:scale-95 transition-all shrink-0"
                                                 >
-                                                    Add Option
+                                                    <Plus className="h-5 w-5" />
                                                 </Button>
                                             </div>
                                         </div>
