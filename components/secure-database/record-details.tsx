@@ -122,11 +122,26 @@ export function RecordDetails({
                       ))}
                     </div>
                   ) : field.type === "gallery" ? (
-                    <div className="aspect-video rounded-[2.5rem] bg-gradient-to-br from-white/5 to-white/2 border border-white/5 border-dashed flex flex-col items-center justify-center text-center gap-3">
-                      <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center text-gray-600">
-                        <Layers className="h-6 w-6" />
-                      </div>
-                      <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Digital Asset Vault<br/>Module Connectivity Active</p>
+                    <div className="space-y-4">
+                      {record.images && record.images.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-4">
+                          {record.images.map((img, i) => (
+                            <div key={i} className="aspect-square rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative group shadow-2xl">
+                              <img src={img} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={`Asset ${i}`} />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                <p className="text-[10px] text-white font-black uppercase tracking-widest">View Asset</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="aspect-video rounded-[2.5rem] bg-gradient-to-br from-white/5 to-white/2 border border-white/5 border-dashed flex flex-col items-center justify-center text-center gap-3">
+                          <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center text-gray-600">
+                            <Layers className="h-6 w-6" />
+                          </div>
+                          <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Digital Asset Vault<br/>Module Connectivity Active</p>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-xl font-bold text-white pl-1">

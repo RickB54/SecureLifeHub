@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Database, Field, FieldType } from "@/types/secure-database"
 
@@ -110,60 +109,119 @@ export function FormBuilder({
 
                     <div className="space-y-3">
                         {fields.map((field, index) => (
-                            <div key={index} className="group flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all animate-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex-1 space-y-2">
-                                     <Input
-                                        placeholder="Field Label"
-                                        value={field.name}
-                                        onChange={(e) => handleFieldChange(index, { name: e.target.value })}
-                                        className="bg-transparent border-none p-0 h-auto text-sm font-bold focus-visible:ring-0 placeholder:text-gray-700"
-                                        required
-                                    />
-                                    <p className="text-[9px] text-gray-600 font-black uppercase tracking-tighter">Attribute Name</p>
+                            <div key={index} className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all animate-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <div className="flex-1 space-y-2">
+                                        <Input
+                                            placeholder="Field Label"
+                                            value={field.name}
+                                            onChange={(e) => handleFieldChange(index, { name: e.target.value })}
+                                            className="bg-transparent border-none p-0 h-auto text-sm font-bold focus-visible:ring-0 placeholder:text-gray-700"
+                                            required
+                                        />
+                                        <p className="text-[9px] text-gray-600 font-black uppercase tracking-tighter">Attribute Name</p>
+                                    </div>
+                                    <div className="flex-1">
+                                        <Select
+                                            value={field.type}
+                                            onValueChange={(value: FieldType) => handleFieldChange(index, { type: value })}
+                                        >
+                                            <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
+                                                {fieldTypes.map(type => (
+                                                    <SelectItem key={type.value} value={type.value} className="focus:bg-white/10">
+                                                        <div className="flex items-center gap-2">
+                                                            <type.icon className={`h-3.5 w-3.5 ${type.color}`} />
+                                                            <span className="text-[11px] font-bold uppercase tracking-tight">{type.label}</span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="flex items-center gap-2 px-1 shrink-0">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                handleFieldChange(index, { showOnCard: !field.showOnCard })
+                                            }}
+                                            className={`p-2.5 rounded-xl transition-all ${field.showOnCard ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-700 hover:text-gray-500'}`}
+                                            title={field.showOnCard ? "Visible on Card Front" : "Hidden in Card View"}
+                                        >
+                                            {field.showOnCard ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        </button>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => handleRemoveField(index)}
+                                            className="h-10 w-10 text-gray-700 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl"
+                                            disabled={fields.length === 1}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <Select
-                                        value={field.type}
-                                        onValueChange={(value: FieldType) => handleFieldChange(index, { type: value })}
-                                    >
-                                        <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
-                                            {fieldTypes.map(type => (
-                                                <SelectItem key={type.value} value={type.value} className="focus:bg-white/10">
-                                                    <div className="flex items-center gap-2">
-                                                        <type.icon className={`h-3.5 w-3.5 ${type.color}`} />
-                                                        <span className="text-[11px] font-bold uppercase tracking-tight">{type.label}</span>
-                                                    </div>
-                                                </SelectItem>
+
+                                {/* Additional Options for Dropdown/Checkbox */}
+                                {(field.type === "dropdown" || field.type === "checkbox") && (
+                                    <div className="mt-2 p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
+                                        <div className="flex items-center justify-between px-1">
+                                            <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Option Matrix</label>
+                                            <Badge variant="outline" className="text-[8px] border-white/10 text-gray-500">{(field.options || []).length} Options</Badge>
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap gap-2">
+                                            {(field.options || []).map((opt, i) => (
+                                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold group/opt">
+                                                    {opt}
+                                                    <X 
+                                                        className="h-3 w-3 text-gray-600 hover:text-rose-400 cursor-pointer" 
+                                                        onClick={() => {
+                                                            const newOpts = [...(field.options || [])]
+                                                            newOpts.splice(i, 1)
+                                                            handleFieldChange(index, { options: newOpts })
+                                                        }}
+                                                    />
+                                                </div>
                                             ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="flex items-center gap-2 px-1 shrink-0">
-                                     <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            handleFieldChange(index, { showOnCard: !field.showOnCard })
-                                        }}
-                                        className={`p-2.5 rounded-xl transition-all ${field.showOnCard ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-700 hover:text-gray-500'}`}
-                                        title={field.showOnCard ? "Visible on Card Front" : "Hidden in Card View"}
-                                     >
-                                        {field.showOnCard ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                                     </button>
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleRemoveField(index)}
-                                    className="h-10 w-10 text-gray-700 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl"
-                                    disabled={fields.length === 1}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <Input
+                                                placeholder="Enter option..."
+                                                className="h-9 bg-white/5 border-white/5 rounded-lg text-[11px] font-bold placeholder:text-gray-700"
+                                                value={newOption}
+                                                onChange={(e) => setNewOption(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault()
+                                                        if (!newOption) return
+                                                        const newOpts = [...(field.options || []), newOption]
+                                                        handleFieldChange(index, { options: newOpts })
+                                                        setNewOption("")
+                                                    }
+                                                }}
+                                            />
+                                            <Button 
+                                                type="button"
+                                                size="sm"
+                                                className="h-9 px-4 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest"
+                                                onClick={() => {
+                                                    if (!newOption) return
+                                                    const newOpts = [...(field.options || []), newOption]
+                                                    handleFieldChange(index, { options: newOpts })
+                                                    setNewOption("")
+                                                }}
+                                            >
+                                                Add
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

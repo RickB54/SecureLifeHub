@@ -1,10 +1,13 @@
-import React, { useState } from "react"
+"use client"
+
+import React, { useState, useRef } from "react"
 import { 
   X, Save, Trash2, Edit3, 
   MapPin, User, Tag, FileText, 
   Layers, Package, Info, CheckCircle2,
   Calendar, Clock, DollarSign, Users,
-  Minus, Plus, Type, Hash, Image as ImageIcon
+  Minus, Plus, Type, Hash, Image as ImageIcon,
+  Upload, Sparkles
 } from "lucide-react"
 import type { Database, DbRecord, Field, FieldType } from "@/types/secure-database"
 import { Button } from "@/components/ui/button"
@@ -14,19 +17,24 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
 interface RecordFormProps {
   database: Database
   record?: DbRecord
-  onSubmit: (values: { [key: string]: any }) => void
+  onSubmit: (values: { [key: string]: any }, images?: string[]) => void
   onCancel: () => void
   onUpdateDatabase?: (updatedDatabase: Database) => void
 }
 
 export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatabase }: RecordFormProps) {
-  const [addingOption, setAddingOption] = useState<string | null>(null)
   const [newOption, setNewOption] = useState("")
+  const [showAddField, setShowAddField] = useState(false)
+  const [newFieldName, setNewFieldName] = useState("")
+  const [newFieldType, setNewFieldType] = useState<FieldType>("text")
+  const [localImages, setLocalImages] = useState<string[]>(record?.images || [])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -42,7 +50,46 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
       }
     })
 
-    onSubmit(values)
+    onSubmit(values, localImages)
+  }
+
+  const handleAddField = () => {
+    if (!newFieldName || !onUpdateDatabase) return
+    
+    const newField: Field = {
+        name: newFieldName,
+        type: newFieldType,
+        showOnCard: false
+    }
+    
+    const updatedDb = {
+        ...database,
+        fields: [...database.fields, newField]
+    }
+    
+    onUpdateDatabase(updatedDb)
+    setNewFieldName("")
+    setShowAddField(false)
+    toast.success(`Matrix evolved: ${newFieldName} field neutralized`)
+  }
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    Array.from(files).forEach(file => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            const base64 = reader.result as string
+            setLocalImages(prev => [...prev, base64])
+            toast.success("Image acquisition successful")
+        }
+        reader.readAsDataURL(file)
+    })
+  }
+
+  const removeImage = (index: number) => {
+    setLocalImages(prev => prev.filter((_, i) => i !== index))
   }
 
   const getFieldIcon = (type: FieldType) => {
@@ -85,16 +132,6 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
             </div>
             {field.name}
         </label>
-        { (field.type === "dropdown" || field.type === "checkbox") && (
-            <button 
-                type="button" 
-                onClick={() => setAddingOption(field.name)}
-                className="text-gray-700 hover:text-white transition-colors"
-                title="Customize Environment Options"
-            >
-                <Edit3 className="h-3 w-3" />
-            </button>
-        )}
       </div>
     )
 
@@ -173,12 +210,15 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
         return (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 md:col-span-2">
             {fieldLabel}
-            <div className="p-12 border-2 border-dashed border-white/5 rounded-[4rem] flex flex-col items-center justify-center gap-4 text-center group hover:border-white/10 transition-colors">
-                <div className="h-16 w-16 rounded-3xl bg-white/5 flex items-center justify-center text-gray-700 transition-all group-hover:scale-110 group-hover:bg-white/8">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="p-12 border-2 border-dashed border-white/5 rounded-[4rem] flex flex-col items-center justify-center gap-4 text-center group hover:border-indigo-500/40 hover:bg-white/2 transition-all cursor-pointer"
+            >
+                <div className="h-16 w-16 rounded-3xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 transition-all group-hover:scale-110 group-hover:bg-indigo-500/20">
                     <ImageIcon className="h-8 w-8" />
                 </div>
                 <div>
-                   <p className="text-xs font-black uppercase text-white mb-1">Upload Digital Assets</p>
+                   <p className="text-xs font-black uppercase text-white mb-1">Click to Inject Assets</p>
                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">Secure Object Storage Node Active</p>
                 </div>
             </div>
@@ -192,7 +232,6 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
-      {/* Dynamic Themed Sub-header */}
       <div className={`h-1.5 w-full bg-gradient-to-r from-${themeColor}/0 via-${themeColor} to-${themeColor}/0`} />
 
       <ScrollArea className="flex-1">
@@ -231,28 +270,144 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                     {renderFieldInput(field)}
                 </React.Fragment>
             ))}
+
+            {/* Image Upload Matrix */}
+            <div className="md:col-span-2 space-y-4">
+                <div className="flex items-center justify-between mb-3 px-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
+                        <div className={`h-6 w-6 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400`}>
+                            <ImageIcon className="h-3 w-3" />
+                        </div>
+                        Digital Asset Gallery
+                    </label>
+                    <Badge variant="outline" className="text-[9px] bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-2">
+                        {localImages.length} ASSETS READY
+                    </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                    {localImages.map((img, idx) => (
+                        <div key={idx} className="aspect-square rounded-3xl overflow-hidden border border-white/10 bg-white/5 relative group shadow-2xl">
+                            <img src={img} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Asset" />
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    onClick={() => removeImage(idx)}
+                                    className="h-10 w-10 text-rose-400 hover:text-white hover:bg-rose-500/20 rounded-full"
+                                >
+                                    <Trash2 className="h-5 w-5" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                    <button 
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl"
+                    >
+                        <div className="p-3 bg-indigo-500/10 rounded-2xl group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all">
+                            <Upload className="h-5 w-5 text-indigo-400" />
+                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Inject Asset</p>
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleImageUpload} 
+                        multiple 
+                        accept="image/*" 
+                        className="hidden" 
+                    />
+                </div>
+            </div>
+
+            {/* Dynamic Schema Evolution */}
+            <div className="md:col-span-2 mt-12 p-10 border-2 border-dashed border-white/5 rounded-[3.5rem] bg-white/2 hover:border-indigo-500/40 transition-all group overflow-hidden relative">
+                <div className="absolute -right-12 -top-12 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl" />
+                
+                {!showAddField ? (
+                    <Button 
+                        type="button" 
+                        variant="ghost" 
+                        onClick={() => setShowAddField(true)}
+                        className="w-full h-20 rounded-2xl text-indigo-400 hover:bg-indigo-500/10 hover:text-white font-black uppercase text-[11px] tracking-[0.2em] gap-4 transition-all"
+                    >
+                        <Sparkles className="h-5 w-5 animate-pulse" />
+                        Evolve Database Architecture (Add Vector)
+                    </Button>
+                ) : (
+                    <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="p-3 bg-indigo-500/20 rounded-2xl">
+                                <Plus className="h-6 w-6 text-indigo-400" />
+                            </div>
+                            <div>
+                                <h4 className="text-lg font-black uppercase italic text-white leading-none">Initialize New Node</h4>
+                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mt-1">Expanding intelligence parameters</p>
+                            </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                           <div className="space-y-2">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-gray-600 pl-1">Vector Identifier</Label>
+                                <Input 
+                                    placeholder="e.g., Tactical Notes, Mission Cost..." 
+                                    value={newFieldName}
+                                    onChange={(e) => setNewFieldName(e.target.value)}
+                                    className="h-14 bg-black border-white/10 rounded-2xl font-bold focus:border-indigo-500"
+                                />
+                           </div>
+                           <div className="space-y-2">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-gray-600 pl-1">Data Type Protocol</Label>
+                                <Select value={newFieldType} onValueChange={(v: any) => setNewFieldType(v)}>
+                                    <SelectTrigger className="h-14 bg-black border-white/10 rounded-2xl font-bold">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl rounded-2xl">
+                                        <SelectItem value="text" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Text Node</SelectItem>
+                                        <SelectItem value="number" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Numeric Vector</SelectItem>
+                                        <SelectItem value="date" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Temporal Marker</SelectItem>
+                                        <SelectItem value="dropdown" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Option Matrix</SelectItem>
+                                        <SelectItem value="textarea" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Large Text Area</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                           </div>
+                        </div>
+                        <div className="flex gap-3 pt-4">
+                            <Button type="button" onClick={handleAddField} className="flex-1 bg-indigo-500 hover:bg-indigo-600 h-16 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-indigo-500/20 active:scale-95">
+                                Finalize Vector Construction
+                            </Button>
+                            <Button type="button" variant="ghost" onClick={() => setShowAddField(false)} className="px-8 h-16 rounded-2xl text-gray-500 hover:text-white hover:bg-white/5 font-black uppercase text-[11px] tracking-widest">
+                                Discard
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
           </div>
           
-          <div className="h-24" />
+          <div className="h-32" />
         </form>
       </ScrollArea>
 
-      <div className="p-10 border-t border-white/5 bg-[#0d0d0d]/80 backdrop-blur-3xl flex items-center justify-between">
+      <div className="p-10 border-t border-white/5 bg-[#0d0d0d]/80 backdrop-blur-3xl flex items-center justify-between shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
         <Button 
           type="button" 
           variant="ghost" 
           onClick={onCancel}
-          className="px-10 h-16 rounded-2xl text-gray-500 hover:text-white hover:bg-white/5 font-black uppercase text-xs tracking-widest transition-all"
+          className="px-12 h-16 rounded-2xl text-gray-500 hover:text-white hover:bg-white/5 font-black uppercase text-xs tracking-widest transition-all"
         >
-          Discard Changes
+          Purge Changes
         </Button>
         <Button 
           type="submit" 
           form="record-form"
-          className={`px-12 h-16 rounded-2xl bg-gradient-to-br from-${themeColor} to-indigo-600 hover:scale-105 active:scale-95 text-white font-black uppercase text-xs tracking-widest shadow-2xl shadow-${themeColor}/20 transition-all`}
+          className={`px-16 h-16 rounded-2xl bg-gradient-to-br from-${themeColor} to-indigo-600 hover:scale-105 active:scale-95 text-white font-black uppercase text-xs tracking-widest shadow-2xl shadow-${themeColor}/20 transition-all`}
         >
           <Save className="h-5 w-5 mr-3" />
-          {record ? 'Synchronize Record' : 'Inject Data Entry'}
+          {record ? 'Commit Revision' : 'Initialize Data Node'}
         </Button>
       </div>
     </div>

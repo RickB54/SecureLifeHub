@@ -85,7 +85,10 @@ export function BottomNav({
                 {activeView === "favorites" && (
                     <FavoritesView
                     favorites={favorites}
-                    onSelectFavorite={onSelectFavorite}
+                    onSelectFavorite={(id) => {
+                        onSelectFavorite(id)
+                        setActiveView(null)
+                    }}
                     databases={allDatabases}
                     />
                 )}

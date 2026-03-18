@@ -11,6 +11,7 @@ export interface DbRecord {
   id: string
   values: { [key: string]: any }
   isFavorite: boolean
+  images?: string[]
   created: string
   lastUpdated: string
 }

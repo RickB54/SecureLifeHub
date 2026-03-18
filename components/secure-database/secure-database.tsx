@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
+import { useState, useCallback, useMemo, useEffect } from "react"
 import { Database as DatabaseIcon, Search, Plus, HelpCircle, Menu } from "lucide-react"
 import { useSecureDatabase } from "@/hooks/use-secure-database"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,6 @@ import { ReportsView } from "./reports-view"
 import { DatabaseActions } from "./database-actions"
 import { FormBuilder } from "./form-builder"
 import { RecordForm } from "./record-form"
-import { RecordDetails } from "./record-details"
 
 import { toast } from "sonner"
 import { BottomNav } from "./bottom-nav"
@@ -42,13 +41,15 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     deleteReport,
     initialized 
   } = useSecureDatabase()
+
+  const { addTodo } = useTodo()
   
   const [currentDb, setCurrentDb] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [showFormBuilder, setShowFormBuilder] = useState(false)
   const [showAddRecord, setShowAddRecord] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DbRecord | null>(null)
-  const [selectedRecord, setSelectedRecord] = useState<DbRecord | null>(null)
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [collapseAll, setCollapseAll] = useState(false)
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
 
@@ -59,9 +60,20 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     setShowFormBuilder(false)
     setShowAddRecord(false)
     setEditingRecord(null)
+    setSelectedRecordId(null)
   }, [])
 
+  // Auto-sync missing blueprints on mount
+  useEffect(() => {
+    if (initialized && databases.length < 15) {
+        synchronizeBlueprints()
+    }
+  }, [initialized, databases.length, synchronizeBlueprints])
+
   const handleAddRecord = () => {
+    if (!currentDatabase && databases.length > 0) {
+        setCurrentDb(databases[0].title)
+    }
     setEditingRecord(null)
     setShowAddRecord(true)
   }
@@ -71,7 +83,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     setShowAddRecord(true)
   }
 
-  const handleRecordSubmit = (values: { [key: string]: any }) => {
+  const handleRecordSubmit = (values: { [key: string]: any }, images?: string[]) => {
     if (!currentDatabase) return
 
     const updatedRecords = [...currentDatabase.records]
@@ -81,6 +93,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         updatedRecords[index] = {
           ...editingRecord,
           values,
+          images: images || editingRecord.images,
           lastUpdated: new Date().toISOString(),
         }
       }
@@ -88,6 +101,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
       const newRecord: DbRecord = {
         id: crypto.randomUUID(),
         values,
+        images: images || [],
         isFavorite: false,
         created: new Date().toISOString(),
         lastUpdated: new Date().toISOString(),
@@ -148,7 +162,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
           className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
           onClick={() => {
             setCurrentDb("")
-            setSelectedRecord(null)
+            setSelectedRecordId(null)
           }}
         >
           <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-all">
@@ -174,12 +188,12 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             <Button 
                 variant="outline" 
                 size="sm" 
-                className="hidden sm:flex bg-indigo-500 hover:bg-indigo-600 text-white border-none h-10 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-500/20 active:scale-95"
+                className="hidden sm:flex bg-white hover:bg-gray-200 text-black border-none h-10 px-6 rounded-xl font-bold uppercase text-[10px] tracking-widest shadow-lg active:scale-95"
                 onClick={handleAddRecord}
-                disabled={!currentDatabase || showFormBuilder || showAddRecord}
+                disabled={showFormBuilder || showAddRecord}
             >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Entry
+                Add Record
             </Button>
             <Button 
                 variant="ghost" 
@@ -227,23 +241,6 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         }}
                         onUpdateDatabase={updateDatabase}
                     />
-                ) : selectedRecord && currentDatabase ? (
-                    <RecordDetails 
-                        database={currentDatabase}
-                        record={selectedRecord}
-                        onClose={() => setSelectedRecord(null)}
-                        onEdit={() => {
-                            setEditingRecord(selectedRecord)
-                            setSelectedRecord(null)
-                            setShowAddRecord(true)
-                        }}
-                        onToggleFavorite={(recordId) => {
-                            const updatedRecords = currentDatabase.records.map(r => 
-                                r.id === recordId ? { ...r, isFavorite: !r.isFavorite } : r
-                            )
-                            updateDatabase({ ...currentDatabase, records: updatedRecords })
-                        }}
-                    />
                 ) : (
                     <DatabaseView 
                         database={currentDatabase}
@@ -251,10 +248,15 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         onDatabaseUpdate={updateDatabase}
                         onDuplicateRecord={duplicateRecord}
                         onEditRecord={handleEditRecord}
-                        onSelectRecord={setSelectedRecord}
+                        onSelectRecord={(record) => {
+                            setSelectedRecordId(record.id)
+                        }}
+                        initialExpandedRecordId={selectedRecordId || undefined}
                         collapseAll={collapseAll}
                         allDatabases={databases}
                         onSelectDatabase={handleSelectDatabase}
+                        onAddTodo={addTodo}
+                        onAddRecord={handleAddRecord}
                     />
                 )}
             </div>
@@ -269,8 +271,9 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             const db = databases.find(d => d.records.some(r => r.id === recordId))
             if (db) {
                 setCurrentDb(db.title)
-                const record = db.records.find(r => r.id === recordId)
-                if (record) handleEditRecord(record)
+                setSelectedRecordId(recordId)
+                setShowAddRecord(false) // Just view, don't edit
+                toast.success("Navigated to Pinned Intel")
             }
         }}
         onToggleCollapseAll={() => setCollapseAll(!collapseAll)}
@@ -291,7 +294,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         onUpdateDatabase={updateDatabase}
         onHomeClick={() => {
             setCurrentDb("")
-            setSelectedRecord(null)
+            setSelectedRecordId(null)
         }}
       />
     </div>

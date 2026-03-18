@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { 
   Search, 
   Filter, 
@@ -10,15 +10,22 @@ import {
   Edit2, 
   Copy, 
   Trash2, 
-  Eye,
   ChevronDown,
+  ChevronUp,
   ChevronRight,
   Plus,
   LayoutGrid,
   List,
   Calendar,
   Clock,
-  Database
+  Database,
+  Printer,
+  FileDown,
+  Image as ImageIcon,
+  MoreHorizontal,
+  ListTodo,
+  CheckCircle2,
+  Share2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,10 +37,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
-import { Card } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Database as DatabaseType, DbRecord } from "@/types/secure-database"
 import { format } from "date-fns"
+import { toast } from "sonner"
 
 interface DatabaseViewProps {
   database?: DatabaseType
@@ -45,6 +52,9 @@ interface DatabaseViewProps {
   collapseAll: boolean
   allDatabases: DatabaseType[]
   onSelectDatabase: (title: string) => void
+  onAddTodo: (todo: any) => void
+  onAddRecord: () => void
+  initialExpandedRecordId?: string
 }
 
 export function DatabaseView({ 
@@ -56,10 +66,28 @@ export function DatabaseView({
   onSelectRecord,
   collapseAll,
   allDatabases,
-  onSelectDatabase
+  onSelectDatabase,
+  onAddTodo,
+  onAddRecord,
+  initialExpandedRecordId 
 }: DatabaseViewProps) {
-  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [expandedRecords, setExpandedRecords] = useState<{ [key: string]: boolean }>({})
+  const recordRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+
+  useEffect(() => {
+    if (initialExpandedRecordId) {
+      setExpandedRecords(prev => ({ ...prev, [initialExpandedRecordId]: true }))
+      setTimeout(() => {
+          recordRefs.current[initialExpandedRecordId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 300)
+    }
+  }, [initialExpandedRecordId])
+
+  useEffect(() => {
+    if (collapseAll) {
+        setExpandedRecords({})
+    }
+  }, [collapseAll])
 
   const filteredRecords = useMemo(() => {
     if (!database) return []
@@ -83,9 +111,87 @@ export function DatabaseView({
 
   const deleteRecord = (recordId: string) => {
     if (!database) return
+    if (!window.confirm("Are you sure you want to purge this record from memory?")) return
     const updatedRecords = database.records.filter((r: DbRecord) => r.id !== recordId)
     onDatabaseUpdate({ ...database, records: updatedRecords })
+    toast.success("Record purged from architecture")
   }
+
+  const toggleExpand = (recordId: string) => {
+    const willExpand = !expandedRecords[recordId]
+    setExpandedRecords(prev => ({ ...prev, [recordId]: willExpand }))
+    
+    if (willExpand) {
+        // Delay slightly for render then scroll into view
+        setTimeout(() => {
+            recordRefs.current[recordId]?.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            })
+        }, 100)
+    }
+  }
+
+  const handleSendToTodo = (record: DbRecord, fieldName: string) => {
+    const value = record.values[fieldName]
+    if (!value) return
+
+    onAddTodo({
+      title: `${database?.title}: ${record.values[database?.fields[0].name || ""] || "Untitled"} - ${fieldName}`,
+      notes: String(value),
+      sourceDatabase: database?.title,
+      sourceRecordId: record.id,
+      sourceFieldName: fieldName,
+      priority: "medium",
+    })
+    toast.success("Linked to Task Architect Matrix")
+  }
+
+  const vibrantColors = [
+    { bg: "bg-purple-700", border: "border-purple-500/30", text: "text-purple-100" },
+    { bg: "bg-rose-700", border: "border-rose-500/30", text: "text-rose-100" },
+    { bg: "bg-indigo-700", border: "border-indigo-500/30", text: "text-indigo-100" },
+    { bg: "bg-emerald-700", border: "border-emerald-500/30", text: "text-emerald-100" },
+    { bg: "bg-amber-600", border: "border-amber-400/30", text: "text-amber-100" },
+    { bg: "bg-blue-700", border: "border-blue-500/30", text: "text-blue-100" },
+    { bg: "bg-teal-700", border: "border-teal-500/30", text: "text-teal-100" },
+    { bg: "bg-cyan-700", border: "border-cyan-500/30", text: "text-cyan-100" },
+  ]
+
+  const getRecordTheme = (index: number) => {
+    return vibrantColors[index % vibrantColors.length]
+  }
+
+  const colorMap: { [key: string]: string } = {
+    emerald: "bg-emerald-600",
+    green: "bg-green-600",
+    teal: "bg-teal-600",
+    cyan: "bg-cyan-600",
+    indigo: "bg-indigo-600",
+    rose: "bg-rose-600",
+    red: "bg-red-600",
+    amber: "bg-amber-600",
+    blue: "bg-blue-600",
+    pink: "bg-pink-600",
+    purple: "bg-purple-600",
+  }
+
+  const borderMap: { [key: string]: string } = {
+    emerald: "border-emerald-500/30",
+    green: "border-green-500/30",
+    teal: "border-teal-500/30",
+    cyan: "border-cyan-500/30",
+    indigo: "border-indigo-500/30",
+    rose: "border-rose-500/30",
+    red: "border-red-500/30",
+    amber: "border-amber-500/30",
+    blue: "border-blue-500/30",
+    pink: "border-pink-500/30",
+    purple: "border-purple-500/30",
+  }
+
+  const themeColor = colorMap[database?.color || "indigo"] || "bg-indigo-600"
+  const themeBorder = borderMap[database?.color || "indigo"] || "border-indigo-500/30"
 
   if (!database) {
     return (
@@ -105,19 +211,6 @@ export function DatabaseView({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {allDatabases.map((db) => {
-                const colorMap: {[key: string]: string} = {
-                    emerald: "bg-emerald-500",
-                    green: "bg-green-500",
-                    teal: "bg-teal-500",
-                    cyan: "bg-cyan-500",
-                    indigo: "bg-indigo-500",
-                    rose: "bg-rose-500",
-                    red: "bg-red-500",
-                    amber: "bg-amber-500",
-                    blue: "bg-blue-500",
-                    pink: "bg-pink-500",
-                    purple: "bg-purple-500"
-                }
                 const dotColor = colorMap[db.color || 'indigo'] || "bg-indigo-500"
 
                 return (
@@ -153,190 +246,190 @@ export function DatabaseView({
 
   return (
     <div className="space-y-6">
-      {/* View Controls */}
-      <div className="flex items-center justify-between mb-2 px-2">
-        <div className="flex items-center gap-2">
-           <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20 px-3 py-1 font-black text-[10px] uppercase tracking-widest">
-             {filteredRecords.length} Records
-           </Badge>
-           {searchQuery && (
-             <Badge variant="outline" className="bg-rose-500/10 text-rose-400 border-rose-500/20 px-3 py-1 font-black text-[10px] uppercase tracking-widest">
-                Filtered Results
-             </Badge>
-           )}
-        </div>
-
-        <div className="flex items-center gap-1.5 p-1 bg-white/5 rounded-xl border border-white/5">
-             <Button 
-                variant="ghost" 
-                size="icon" 
-                className={`h-8 w-8 rounded-lg ${viewMode === 'list' ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-200'}`}
-                onClick={() => setViewMode('list')}
-             >
-                <List className="h-4 w-4" />
-             </Button>
-             <Button 
-                variant="ghost" 
-                size="icon" 
-                className={`h-8 w-8 rounded-lg ${viewMode === 'grid' ? 'bg-indigo-500 text-white shadow-lg' : 'text-gray-500 hover:text-gray-200'}`}
-                onClick={() => setViewMode('grid')}
-             >
-                <LayoutGrid className="h-4 w-4" />
-             </Button>
-        </div>
+      {/* Header Info Area */}
+      <div className={`p-8 rounded-3xl ${themeColor} border ${themeBorder} flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group`}>
+          <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent pointer-events-none" />
+          <div className="relative z-10">
+              <h3 className="text-2xl font-black tracking-tight text-white leading-none mb-2">{database.title}</h3>
+              <p className="text-[11px] text-white/70 font-medium">
+                {filteredRecords.length} {filteredRecords.length === 1 ? 'record' : 'records'} • {searchQuery ? 'Showing filtered records' : 'Showing all records'}
+              </p>
+          </div>
+          <div className="flex items-center gap-2 relative z-10 w-full md:w-auto">
+              <Button 
+                onClick={onAddRecord}
+                className="bg-white hover:bg-white/90 text-black rounded-xl text-[11px] font-bold h-10 px-4 shadow-lg"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Record
+              </Button>
+              <Button variant="ghost" className="bg-black/20 hover:bg-black/40 text-white rounded-xl text-[11px] font-bold h-10 px-4 ml-1">
+                <Printer className="h-4 w-4 mr-2" />
+                Print Database
+              </Button>
+          </div>
       </div>
 
-      {viewMode === "list" ? (
-        <div className="space-y-3">
-          {filteredRecords.map((record: DbRecord) => (
+      <div className="space-y-4">
+        {filteredRecords.map((record, index) => {
+          const isExpanded = expandedRecords[record.id]
+          const titleField = database.fields[0].name
+          const recordTheme = getRecordTheme(index)
+          
+          return (
             <div 
               key={record.id}
-              className="group relative bg-[#111] border border-white/5 rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300"
+              ref={el => { recordRefs.current[record.id] = el }}
+              className={`rounded-[2rem] overflow-hidden border transition-all duration-500 shadow-xl
+                ${isExpanded ? `${recordTheme.bg} ${recordTheme.border}` : 'bg-white/5 border-white/5 hover:border-white/10'}`}
             >
-                <div className="flex items-center p-4 gap-4">
-                     <button 
-                        onClick={() => toggleFavorite(record.id)}
-                        className={`transition-colors ${record.isFavorite ? 'text-amber-400' : 'text-gray-600 hover:text-amber-400/50'}`}
-                     >
-                        <Star className={`h-5 w-5 ${record.isFavorite ? 'fill-current' : ''}`} />
-                     </button>
+              {/* Record Header Bar */}
+              <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                      <h4 className={`text-lg font-bold tracking-tight truncate ${isExpanded ? 'text-white' : 'text-gray-100'}`}>
+                        {record.values[titleField] || "Untitled Record"}
+                      </h4>
+                      <div className={`h-1.5 w-1.5 rounded-full hidden md:block ${isExpanded ? 'bg-white/40' : 'bg-white/10'}`} />
+                      <p className={`text-[11px] font-mono font-medium ${isExpanded ? 'text-white/40' : 'text-gray-500'}`}>
+                        {format(new Date(record.created), "MMM d, yyyy h:mm a")}
+                      </p>
+                  </div>
 
-                     <div 
-                        className="flex-1 min-w-0 cursor-pointer"
-                        onClick={() => onSelectRecord(record)}
-                     >
-                        <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-bold text-gray-200 truncate">
-                                {record.values[database.fields[0].name] || "Untitled Record"}
-                            </h4>
-                        </div>
-                        <div className="flex items-center gap-3 text-[10px] text-gray-500 font-mono">
-                             <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                {format(new Date(record.created), "MMM d, yyyy")}
-                             </div>
-                             {(() => {
-                                 const cardFields = database.fields.filter((f: any) => f.showOnCard).slice(0, 3)
-                                 const displayFields = cardFields.length > 0 
-                                     ? cardFields.map((f: any) => [f.name, record.values[f.name]])
-                                     : Object.entries(record.values).slice(1, 3)
+                  <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => onEditRecord(record)} className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onDuplicateRecord(record)} className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <div className="relative group">
+                        <Button variant="ghost" size="icon" className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                            <ImageIcon className="h-4 w-4" />
+                            <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-black text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-indigo-500">
+                                {record.images?.length || 0}
+                            </span>
+                        </Button>
+                      </div>
+                      <Button variant="ghost" size="icon" onClick={() => toggleFavorite(record.id)} className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'} ${record.isFavorite ? 'text-amber-400' : ''}`}>
+                        <Star className={`h-4 w-4 ${record.isFavorite ? 'fill-current' : ''}`} />
+                      </Button>
+                      
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => toggleExpand(record.id)} 
+                        className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                      >
+                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
 
-                                 return displayFields.map(([key, value]) => (
-                                     <div key={key as string} className="hidden sm:block truncate">
-                                        <span className="text-indigo-400/50 uppercase font-black tracking-tighter mr-1">{key as string}:</span>
-                                        {String(value)}
-                                     </div>
-                                 ))
-                             })()}
-                        </div>
-                     </div>
+                      <div className="w-px h-6 bg-white/10 mx-1" />
 
-                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => onEditRecord(record)}
-                            className="h-9 w-9 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl"
-                         >
-                            <Edit2 className="h-4 w-4" />
-                         </Button>
-                         <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl">
-                                    <MoreVertical className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
-                                <DropdownMenuItem onClick={() => onDuplicateRecord(record)} className="gap-2 focus:bg-white/10 cursor-pointer">
-                                    <Copy className="h-4 w-4 text-blue-400" />
-                                    <span>Duplicate Record</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-white/5" />
-                                <DropdownMenuItem onClick={() => deleteRecord(record.id)} className="gap-2 focus:bg-rose-500/20 text-rose-400 cursor-pointer">
-                                    <Trash2 className="h-4 w-4" />
-                                    <span>Delete Record</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                         </DropdownMenu>
-                     </div>
-                </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-           {filteredRecords.map((record: DbRecord) => (
-             <div 
-                key={record.id}
-                className="group bg-[#111] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden"
-             >
-                {/* Background Glow */}
-                <div className="absolute -right-8 -top-8 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl group-hover:bg-indigo-500/20 transition-all duration-700" />
-
-                <div className="flex items-start justify-between relative z-10">
-                    <div className="p-3 bg-indigo-500/10 rounded-2xl group-hover:scale-110 transition-transform">
-                        <Database className="h-6 w-6 text-indigo-400" />
-                    </div>
-                    <button 
-                        onClick={() => toggleFavorite(record.id)}
-                        className={`p-2 rounded-xl transition-all ${record.isFavorite ? 'text-amber-400 bg-amber-400/10' : 'text-gray-600 hover:text-amber-400/50 hover:bg-white/5'}`}
-                     >
-                        <Star className={`h-5 w-5 ${record.isFavorite ? 'fill-current' : ''}`} />
-                     </button>
-                </div>
-
-                <div 
-                    className="flex-1 relative z-10 cursor-pointer"
-                    onClick={() => onSelectRecord(record)}
-                >
-                    <h4 className="text-lg font-bold text-gray-100 mb-1 line-clamp-1">
-                         {record.values[database.fields[0].name] || "Untitled Record"}
-                    </h4>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black mb-4">
-                        Ref: {record.id.split('-')[0]}
-                    </p>
-
-                    <div className="space-y-2">
-                        {(() => {
-                            const cardFields = database.fields.filter((f: any) => f.showOnCard).slice(0, 4)
-                            const displayFields = cardFields.length > 0 
-                                ? cardFields.map((f: any) => [f.name, record.values[f.name]])
-                                : Object.entries(record.values).slice(1, 4)
-
-                            return displayFields.map(([key, value]) => (
-                                <div key={key as string} className="flex items-center justify-between py-1.5 border-b border-white/5">
-                                    <span className="text-[10px] text-gray-500 uppercase font-black">{key as string}</span>
-                                    <span className="text-[11px] text-gray-300 font-medium truncate ml-4 max-w-[120px]">{String(value)}</span>
-                                </div>
-                            ))
-                        })()}
-                    </div>
-                </div>
-
-                <div className="flex gap-2 relative z-10 mt-2">
-                    <Button 
-                        variant="outline" 
-                        onClick={() => onEditRecord(record)}
-                        className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-xs h-9 rounded-xl"
-                    >
-                        View & Edit
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className="h-9 w-9 text-gray-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl">
+                      <Button variant="ghost" size="icon" className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <FileDown className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-rose-400 hover:text-rose-300 hover:bg-rose-500/20'}`}>
                         <Trash2 className="h-4 w-4" />
-                    </Button>
-                </div>
-             </div>
-           ))}
-        </div>
-      )}
+                      </Button>
+                  </div>
+              </div>
+
+              {/* Collapsed Preview Line */}
+              {!isExpanded && (
+                  <div className="px-6 pb-6 pt-0 border-t border-white/5 mt-[-8px]">
+                      <div className="flex flex-wrap gap-4 mt-4">
+                          {database.fields.filter(f => f.showOnCard).slice(1, 4).map(field => (
+                              <div key={field.name} className="flex items-center gap-2">
+                                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-600">{field.name}:</span>
+                                  <span className="text-xs font-bold text-gray-400 truncate max-w-[150px]">
+                                    {String(record.values[field.name] || "—")}
+                                  </span>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              )}
+
+              {/* Full Expanded Content */}
+              {isExpanded && (
+                  <div className="bg-black/20 backdrop-blur-md p-8 pt-4 border-t border-white/10 animate-in slide-in-from-top-4 duration-500">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                        {database.fields.map((field) => (
+                           <div key={field.name} className="space-y-1.5 group">
+                               <label className="text-[10px] font-black uppercase tracking-widest text-white/50 pl-1">{field.name}</label>
+                               <div className="relative">
+                                   <div className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 flex items-center justify-between group/field hover:border-white/20 transition-all">
+                                       <span className="text-sm font-bold text-white truncate pr-8">
+                                            {String(record.values[field.name] || "") || <span className="text-white/20 italic">Empty Field</span>}
+                                       </span>
+                                       <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <button className="absolute right-3 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors opacity-0 group-hover/field:opacity-100">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-56 bg-[#0a0a0a] border-white/10 text-white shadow-2xl rounded-2xl p-1">
+                                                <DropdownMenuItem className="gap-2 rounded-xl focus:bg-white/10 cursor-pointer" onClick={() => onEditRecord(record)}>
+                                                    <Edit2 className="h-4 w-4 text-indigo-400" />
+                                                    <span className="font-bold text-xs uppercase tracking-tight">Edit Field</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="gap-2 rounded-xl focus:bg-white/10 cursor-pointer" onClick={() => handleSendToTodo(record, field.name)}>
+                                                    <ListTodo className="h-4 w-4 text-emerald-400" />
+                                                    <span className="font-bold text-xs uppercase tracking-tight">Send to To-Do List</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="bg-white/5" />
+                                                <DropdownMenuItem className="gap-2 rounded-xl focus:bg-white/10 cursor-pointer">
+                                                    <Share2 className="h-4 w-4 text-sky-400" />
+                                                    <span className="font-bold text-xs uppercase tracking-tight">Share Intelligence</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                       </DropdownMenu>
+                                   </div>
+                               </div>
+                           </div>
+                        ))}
+                      </div>
+
+                      <div className="mt-8 pt-8 border-t border-white/10">
+                          <h5 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-4">Product Images</h5>
+                          <div className="flex flex-wrap gap-4">
+                                {record.images && record.images.length > 0 ? (
+                                    record.images.map((img, i) => (
+                                        <div key={i} className="h-24 w-24 rounded-3xl overflow-hidden border border-white/10 bg-white/5 group relative">
+                                            <img src={img} alt="Resource" className="h-full w-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                <Trash2 className="h-4 w-4 text-rose-400 cursor-pointer" />
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="w-full aspect-video md:aspect-auto md:h-32 rounded-[2.5rem] border-2 border-dashed border-white/10 bg-white/2 flex items-center justify-center group/add cursor-pointer hover:bg-white/5 transition-all">
+                                        <div className="text-center">
+                                            <Plus className="h-6 w-6 text-white/20 mx-auto mb-2 group-hover/add:scale-110 group-hover/add:text-white/40 transition-all font-light" />
+                                            <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em] group-hover/add:text-white/40">Initialize Gallery</p>
+                                        </div>
+                                    </div>
+                                )}
+                          </div>
+                      </div>
+                  </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
 
       {filteredRecords.length === 0 && (
-         <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-white/5 rounded-3xl bg-white/2">
-            <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4">
-                <Search className="h-5 w-5 text-gray-600" />
+         <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-white/5 rounded-[3rem] bg-white/2">
+            <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mb-6">
+                <Search className="h-6 w-6 text-gray-600" />
             </div>
-            <p className="text-gray-500 font-bold tracking-tight">No records match your search criteria</p>
-            <Button variant="link" onClick={() => {}} className="text-indigo-400 text-xs mt-2">Clear filters</Button>
+            <p className="text-gray-500 font-bold tracking-tight text-lg">No records match your search parameters</p>
+            <p className="text-gray-600 text-xs mt-2 font-mono">ADAPTIVE_SEARCH_RESULT: 0_ENTRIES</p>
+            <Button variant="link" onClick={() => {}} className="text-indigo-400 text-xs mt-6 uppercase font-black tracking-widest">Clear active filters</Button>
          </div>
       )}
     </div>
