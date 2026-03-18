@@ -43,6 +43,8 @@ interface DatabaseViewProps {
   onEditRecord: (record: DbRecord) => void
   onSelectRecord: (record: DbRecord) => void
   collapseAll: boolean
+  allDatabases: DatabaseType[]
+  onSelectDatabase: (title: string) => void
 }
 
 export function DatabaseView({ 
@@ -52,7 +54,9 @@ export function DatabaseView({
   onDuplicateRecord,
   onEditRecord,
   onSelectRecord,
-  collapseAll 
+  collapseAll,
+  allDatabases,
+  onSelectDatabase
 }: DatabaseViewProps) {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [expandedRecords, setExpandedRecords] = useState<{ [key: string]: boolean }>({})
@@ -62,7 +66,7 @@ export function DatabaseView({
     if (!searchQuery) return database.records
 
     const query = searchQuery.toLowerCase()
-    return database.records.filter(record => 
+    return database.records.filter((record: DbRecord) => 
       Object.values(record.values).some(val => 
         String(val).toLowerCase().includes(query)
       )
@@ -71,7 +75,7 @@ export function DatabaseView({
 
   const toggleFavorite = (recordId: string) => {
     if (!database) return
-    const updatedRecords = database.records.map(r => 
+    const updatedRecords = database.records.map((r: DbRecord) => 
       r.id === recordId ? { ...r, isFavorite: !r.isFavorite } : r
     )
     onDatabaseUpdate({ ...database, records: updatedRecords })
@@ -79,18 +83,70 @@ export function DatabaseView({
 
   const deleteRecord = (recordId: string) => {
     if (!database) return
-    const updatedRecords = database.records.filter(r => r.id !== recordId)
+    const updatedRecords = database.records.filter((r: DbRecord) => r.id !== recordId)
     onDatabaseUpdate({ ...database, records: updatedRecords })
   }
 
   if (!database) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center p-8">
-        <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center mb-6 animate-pulse">
-            <Database className="w-8 h-8 text-indigo-400 opacity-50" />
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h3 className="text-3xl font-black italic uppercase tracking-tighter text-white">Your Databases ({allDatabases.length})</h3>
+                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.3em] mt-1">Central Intelligence Library</p>
+            </div>
+            <div className="flex items-center gap-3">
+                <div className="px-4 py-2 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-2">
+                    <Database className="h-4 w-4 text-indigo-400" />
+                    <span className="text-xs font-bold text-gray-400">{allDatabases.reduce((acc, db) => acc + db.records.length, 0)} Total Records</span>
+                </div>
+            </div>
         </div>
-        <h3 className="text-xl font-bold mb-2 text-gray-300">No Database Selected</h3>
-        <p className="text-gray-500 max-w-xs">Select a database from the sidebar or bottom menu to view and manage your records.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allDatabases.map((db) => {
+                const colorMap: {[key: string]: string} = {
+                    emerald: "bg-emerald-500",
+                    green: "bg-green-500",
+                    teal: "bg-teal-500",
+                    cyan: "bg-cyan-500",
+                    indigo: "bg-indigo-500",
+                    rose: "bg-rose-500",
+                    red: "bg-red-500",
+                    amber: "bg-amber-500",
+                    blue: "bg-blue-500",
+                    pink: "bg-pink-500",
+                    purple: "bg-purple-500"
+                }
+                const dotColor = colorMap[db.color || 'indigo'] || "bg-indigo-500"
+
+                return (
+                    <button
+                        key={db.title}
+                        onClick={() => onSelectDatabase(db.title)}
+                        className="group flex items-center justify-between p-5 rounded-[2rem] bg-white/2 border border-white/5 hover:bg-white/5 hover:border-indigo-500/30 transition-all duration-300 text-left"
+                    >
+                        <div className="flex items-center gap-4">
+                            <div className={`w-3 h-3 rounded-full ${dotColor} shadow-[0_0_10px_rgba(0,0,0,0.5)] group-hover:scale-125 transition-transform`} />
+                            <div>
+                                <h4 className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{db.title}</h4>
+                                <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest mt-0.5">{db.fields.length} Data Vectors</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                             <span className="text-sm font-black text-indigo-400/50 group-hover:text-indigo-400 transition-colors uppercase font-mono">{db.records.length}</span>
+                             <ChevronRight className="h-4 w-4 text-gray-700 opacity-0 group-hover:opacity-100 transition-all translate-x-[-4px] group-hover:translate-x-0" />
+                        </div>
+                    </button>
+                )
+            })}
+        </div>
+
+        <div className="p-10 rounded-[3rem] border-2 border-dashed border-white/5 bg-white/1 flex flex-col items-center justify-center text-center opacity-40 hover:opacity-100 transition-opacity">
+            <Plus className="h-10 w-10 text-gray-500 mb-4" />
+            <h4 className="text-lg font-black uppercase italic tracking-tighter text-gray-400">Architect New Matrix</h4>
+            <p className="text-xs text-gray-600 font-bold max-w-xs mt-2">Create a custom collection with localized parameters and high-fidelity schemas.</p>
+        </div>
       </div>
     )
   }
@@ -132,7 +188,7 @@ export function DatabaseView({
 
       {viewMode === "list" ? (
         <div className="space-y-3">
-          {filteredRecords.map((record) => (
+          {filteredRecords.map((record: DbRecord) => (
             <div 
               key={record.id}
               className="group relative bg-[#111] border border-white/5 rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all duration-300"
@@ -160,9 +216,9 @@ export function DatabaseView({
                                 {format(new Date(record.created), "MMM d, yyyy")}
                              </div>
                              {(() => {
-                                 const cardFields = database.fields.filter(f => f.showOnCard).slice(0, 3)
+                                 const cardFields = database.fields.filter((f: any) => f.showOnCard).slice(0, 3)
                                  const displayFields = cardFields.length > 0 
-                                     ? cardFields.map(f => [f.name, record.values[f.name]])
+                                     ? cardFields.map((f: any) => [f.name, record.values[f.name]])
                                      : Object.entries(record.values).slice(1, 3)
 
                                  return displayFields.map(([key, value]) => (
@@ -209,7 +265,7 @@ export function DatabaseView({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-           {filteredRecords.map((record) => (
+           {filteredRecords.map((record: DbRecord) => (
              <div 
                 key={record.id}
                 className="group bg-[#111] border border-white/5 rounded-3xl p-5 flex flex-col gap-4 hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden"
@@ -242,9 +298,9 @@ export function DatabaseView({
 
                     <div className="space-y-2">
                         {(() => {
-                            const cardFields = database.fields.filter(f => f.showOnCard).slice(0, 4)
+                            const cardFields = database.fields.filter((f: any) => f.showOnCard).slice(0, 4)
                             const displayFields = cardFields.length > 0 
-                                ? cardFields.map(f => [f.name, record.values[f.name]])
+                                ? cardFields.map((f: any) => [f.name, record.values[f.name]])
                                 : Object.entries(record.values).slice(1, 4)
 
                             return displayFields.map(([key, value]) => (

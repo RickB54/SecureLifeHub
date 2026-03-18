@@ -84,9 +84,16 @@ export function DatabaseSidebar({ databases, currentDb, onDatabaseSelect, onNewD
                   {db.title}
                 </span>
 
-                <div className={`flex items-center gap-1.5 ${isSelected ? 'text-white/80' : 'text-gray-600'}`}>
-                    <span className="text-[10px] font-mono font-black">{db.records.length}</span>
-                    <ChevronRight className={`h-3 w-3 transition-transform duration-300 ${isSelected ? 'translate-x-0.5' : 'opacity-0 group-hover:opacity-100'}`} />
+                <div className={`flex items-center gap-1.5`}>
+                    <div className={`px-2 py-0.5 rounded-lg text-[9px] font-black font-mono transition-all duration-300
+                        ${isSelected 
+                            ? 'bg-white/20 text-white shadow-lg' 
+                            : 'bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20 group-hover:text-indigo-300'
+                        }`}
+                    >
+                        {db.records.length}
+                    </div>
+                    <ChevronRight className={`h-3 w-3 transition-transform duration-300 ${isSelected ? 'translate-x-0.5 text-white/80' : 'opacity-0 group-hover:opacity-100 text-gray-500'}`} />
                 </div>
               </button>
             )

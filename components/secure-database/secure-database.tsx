@@ -36,6 +36,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     deleteDatabases, 
     recoverDatabases, 
     resetToFactory, 
+    synchronizeBlueprints,
     saveReport,
     getReportsForDatabase,
     deleteReport,
@@ -143,12 +144,18 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
           </SheetContent>
         </Sheet>
 
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
+        <div 
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
+          onClick={() => {
+            setCurrentDb("")
+            setSelectedRecord(null)
+          }}
+        >
+          <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0 group-hover:bg-indigo-500 group-hover:text-white transition-all">
             <DatabaseIcon className="h-5 w-5" />
           </div>
           <div className="truncate">
-            <h2 className="text-lg font-bold tracking-tight truncate">{currentDb || "Central Database"}</h2>
+            <h2 className="text-lg font-bold tracking-tight truncate group-hover:text-indigo-400 transition-colors">{currentDb || "Central Database"}</h2>
             <p className="text-[10px] text-gray-500 uppercase tracking-widest font-black leading-none">High Fidelity Data Environment</p>
           </div>
         </div>
@@ -246,6 +253,8 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         onEditRecord={handleEditRecord}
                         onSelectRecord={setSelectedRecord}
                         collapseAll={collapseAll}
+                        allDatabases={databases}
+                        onSelectDatabase={handleSelectDatabase}
                     />
                 )}
             </div>
@@ -269,7 +278,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         onNewDatabase={() => setShowFormBuilder(true)}
         onDeleteDatabases={deleteDatabases}
         onRecoverDatabases={recoverDatabases}
-        onResetToFactory={resetToFactory}
+        onResetToFactory={synchronizeBlueprints}
         onSaveReport={saveReport}
         onGetReports={getReportsForDatabase}
         onDeleteReport={deleteReport}
@@ -280,6 +289,10 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         allDatabases={databases}
         currentDb={currentDb}
         onUpdateDatabase={updateDatabase}
+        onHomeClick={() => {
+            setCurrentDb("")
+            setSelectedRecord(null)
+        }}
       />
     </div>
   )

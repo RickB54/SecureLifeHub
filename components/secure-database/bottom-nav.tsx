@@ -4,11 +4,11 @@ import { useState } from "react"
 import { Home, Star, Database, ListTodo, BarChart, FileText, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Database as DatabaseType, DbRecord } from "@/types/secure-database"
-import { FavoritesView } from "./favorites-view"
-import { DatabaseActions } from "./database-actions"
-import { TodoView } from "./todo-view"
-import { ReportsView } from "./reports-view"
-import { InsightsView } from "./insights-view"
+import { FavoritesView } from "@/components/secure-database/favorites-view"
+import { DatabaseActions } from "@/components/secure-database/database-actions"
+import { TodoView } from "@/components/secure-database/todo-view"
+import { ReportsView } from "@/components/secure-database/reports-view"
+import { InsightsView } from "@/components/secure-database/insights-view"
 
 interface BottomMenuProps {
   currentDatabase?: DatabaseType
@@ -24,6 +24,7 @@ interface BottomMenuProps {
   currentDb?: string
   onUpdateDatabase?: (database: DatabaseType) => void
   onResetToFactory: () => void
+  onHomeClick?: () => void
   onSaveReport: (dbTitle: string, report: any) => void
   onGetReports: (dbTitle: string) => any[]
   onDeleteReport: (dbTitle: string, reportId: string) => void
@@ -46,6 +47,7 @@ export function BottomNav({
   onSaveReport,
   onGetReports,
   onDeleteReport,
+  onHomeClick,
 }: BottomMenuProps) {
   const [activeView, setActiveView] = useState<string | null>(null)
 
@@ -130,7 +132,12 @@ export function BottomNav({
             <button
               key={item.id}
               disabled={item.disabled}
-              onClick={() => setActiveView(item.view)}
+              onClick={() => {
+                if (item.id === 'home' && onHomeClick) {
+                  onHomeClick()
+                }
+                setActiveView(item.view)
+              }}
               className={`flex flex-col items-center justify-center gap-1 h-12 rounded-xl transition-all duration-300 ${
                 activeView === item.view 
                   ? `bg-white/10 ${item.color} scale-110 shadow-[0_0_20px_rgba(255,255,255,0.05)]` 

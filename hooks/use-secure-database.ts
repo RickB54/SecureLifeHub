@@ -175,7 +175,26 @@ export function useSecureDatabase() {
   const resetToFactory = () => {
     setDatabases(defaultTemplates)
     localStorage.setItem("slh_custom_databases", JSON.stringify(defaultTemplates))
-    toast.success("Engine blueprints synchronized to factory defaults")
+    toast.success("Engine blueprints reset to factory defaults")
+  }
+
+  const synchronizeBlueprints = () => {
+    setDatabases((current) => {
+      // Find templates that are not currently in the databases list
+      const missingTemplates = defaultTemplates.filter(
+        (template) => !current.some((db) => db.title === template.title)
+      )
+      
+      if (missingTemplates.length === 0) {
+        toast.info("All modular blueprints are already synchronized")
+        return current
+      }
+      
+      const updatedDatabases = [...current, ...missingTemplates]
+      localStorage.setItem("slh_custom_databases", JSON.stringify(updatedDatabases))
+      toast.success(`Synchronized ${missingTemplates.length} new professional blueprints`)
+      return updatedDatabases
+    })
   }
 
   return {
@@ -186,6 +205,7 @@ export function useSecureDatabase() {
     deleteDatabases,
     recoverDatabases,
     resetToFactory,
+    synchronizeBlueprints,
     initialized,
     saveReport,
     getReportsForDatabase,
