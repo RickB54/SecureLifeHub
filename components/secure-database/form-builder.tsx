@@ -14,6 +14,8 @@ interface FormBuilderProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onDatabaseCreate: (database: Database) => void
+  onDatabaseUpdate?: (database: Database) => void
+  editingDatabase?: Database
   templateDatabase?: Database
 }
 
@@ -21,27 +23,40 @@ export function FormBuilder({
   open,
   onOpenChange,
   onDatabaseCreate,
+  onDatabaseUpdate,
+  editingDatabase,
   templateDatabase,
 }: FormBuilderProps) {
   const [title, setTitle] = useState("")
   const [fields, setFields] = useState<Field[]>([{ name: "Title", type: "text" }])
-  const [newOption, setNewOption] = useState("")
+  const [color, setColor] = useState("indigo")
+  const [newOptionStates, setNewOptionStates] = useState<{ [key: number]: string }>({})
 
   useEffect(() => {
-    if (open && templateDatabase) {
-      setFields(JSON.parse(JSON.stringify(templateDatabase.fields)))
-      setTitle(`${templateDatabase.title} (Clone)`)
-    } else if (open) {
-      setTitle("")
-      setFields([{ name: "Title", type: "text" }])
+    if (open) {
+      if (editingDatabase) {
+        setFields(JSON.parse(JSON.stringify(editingDatabase.fields)))
+        setTitle(editingDatabase.title)
+        setColor(editingDatabase.color || "indigo")
+      } else if (templateDatabase) {
+        setFields(JSON.parse(JSON.stringify(templateDatabase.fields)))
+        setTitle(`${templateDatabase.title} (Clone)`)
+        setColor(templateDatabase.color || "indigo")
+      } else {
+        setTitle("")
+        setFields([{ name: "Title", type: "text" }])
+        setColor("indigo")
+      }
+      setNewOptionStates({})
     }
-  }, [open, templateDatabase])
+  }, [open, editingDatabase, templateDatabase])
 
   const handleAddField = () => {
     setFields([...fields, { name: "", type: "text" }])
   }
 
   const handleRemoveField = (index: number) => {
+    if (fields.length <= 1) return
     setFields(fields.filter((_, i) => i !== index))
   }
 
@@ -51,17 +66,38 @@ export function FormBuilder({
     setFields(newFields)
   }
 
+  const handleAddOption = (fieldIndex: number) => {
+    const optionText = newOptionStates[fieldIndex]
+    if (!optionText) return
+
+    const field = fields[fieldIndex]
+    const newOpts = [...(field.options || []), optionText]
+    handleFieldChange(fieldIndex, { options: newOpts })
+    setNewOptionStates(prev => ({ ...prev, [fieldIndex]: "" }))
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || fields.some((f) => !f.name)) return
 
-    onDatabaseCreate({
+    const dbData: Database = {
       title,
       fields,
-      records: [],
-    })
+      records: editingDatabase ? editingDatabase.records : [],
+      color,
+    }
+
+    if (editingDatabase && onDatabaseUpdate) {
+      onDatabaseUpdate(dbData)
+    } else {
+      onDatabaseCreate(dbData)
+    }
     onOpenChange(false)
   }
+
+  const colors = [
+    "indigo", "blue", "cyan", "teal", "emerald", "green", "amber", "rose", "red", "pink", "purple"
+  ]
 
   const fieldTypes: { value: FieldType; label: string; icon: any; color: string }[] = [
     { value: "text", label: "Short Text", icon: Type, color: "text-blue-400" },
@@ -82,23 +118,56 @@ export function FormBuilder({
                     <Layout className="h-6 w-6" />
                 </div>
                 <div>
-                   <DialogTitle className="text-2xl font-black uppercase tracking-tight">Architect Blueprint</DialogTitle>
-                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Define new data schema</p>
+                   <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+                     {editingDatabase ? "Configure Architecture" : "Architect Blueprint"}
+                   </DialogTitle>
+                   <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">
+                     {editingDatabase ? `Modifying ${editingDatabase.title}` : "Define new data schema"}
+                   </p>
                 </div>
             </div>
         </DialogHeader>
 
         <ScrollArea className="flex-1 p-8">
             <form id="builder-form" onSubmit={handleSubmit} className="space-y-8">
-                <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Database Identity</label>
-                    <Input
-                        placeholder="e.g. Bio-Metrics Vault"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        className="h-14 bg-white/5 border-white/10 rounded-2xl text-lg font-bold focus:ring-indigo-500"
-                        required
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Database Identity</label>
+                        <Input
+                            placeholder="e.g. Bio-Metrics Vault"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="h-14 bg-white/5 border-white/10 rounded-2xl text-lg font-bold focus:ring-indigo-500"
+                            required
+                        />
+                    </div>
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Visual Signature</label>
+                        <div className="flex flex-wrap gap-2 p-2 bg-white/5 border border-white/10 rounded-2xl h-14 items-center px-4">
+                            {colors.map(c => (
+                                <button
+                                    key={c}
+                                    type="button"
+                                    onClick={() => setColor(c)}
+                                    className={`w-6 h-6 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-offset-black ring-white scale-110' : 'opacity-40 hover:opacity-100 hover:scale-110'}`}
+                                    style={{ backgroundColor: `var(--${c}-500, ${c})` }}
+                                    className={`${
+                                        c === 'indigo' ? 'bg-indigo-500' : 
+                                        c === 'blue' ? 'bg-blue-500' : 
+                                        c === 'cyan' ? 'bg-cyan-500' : 
+                                        c === 'teal' ? 'bg-teal-500' : 
+                                        c === 'emerald' ? 'bg-emerald-500' : 
+                                        c === 'green' ? 'bg-green-500' : 
+                                        c === 'amber' ? 'bg-amber-500' : 
+                                        c === 'rose' ? 'bg-rose-500' : 
+                                        c === 'red' ? 'bg-red-500' : 
+                                        c === 'pink' ? 'bg-pink-500' : 
+                                        'bg-purple-500'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </div>
 
                 <div className="space-y-6">
@@ -126,7 +195,7 @@ export function FormBuilder({
                                             value={field.type}
                                             onValueChange={(value: FieldType) => handleFieldChange(index, { type: value })}
                                         >
-                                            <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs">
+                                            <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs text-white">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
@@ -194,15 +263,12 @@ export function FormBuilder({
                                             <Input
                                                 placeholder="Enter option..."
                                                 className="h-9 bg-white/5 border-white/5 rounded-lg text-[11px] font-bold placeholder:text-gray-700"
-                                                value={newOption}
-                                                onChange={(e) => setNewOption(e.target.value)}
+                                                value={newOptionStates[index] || ""}
+                                                onChange={(e) => setNewOptionStates(prev => ({ ...prev, [index]: e.target.value }))}
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') {
                                                         e.preventDefault()
-                                                        if (!newOption) return
-                                                        const newOpts = [...(field.options || []), newOption]
-                                                        handleFieldChange(index, { options: newOpts })
-                                                        setNewOption("")
+                                                        handleAddOption(index)
                                                     }
                                                 }}
                                             />
@@ -210,12 +276,7 @@ export function FormBuilder({
                                                 type="button"
                                                 size="sm"
                                                 className="h-9 px-4 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest"
-                                                onClick={() => {
-                                                    if (!newOption) return
-                                                    const newOpts = [...(field.options || []), newOption]
-                                                    handleFieldChange(index, { options: newOpts })
-                                                    setNewOption("")
-                                                }}
+                                                onClick={() => handleAddOption(index)}
                                             >
                                                 Add
                                             </Button>
@@ -253,7 +314,7 @@ export function FormBuilder({
                 form="builder-form"
                 className="px-10 h-12 bg-indigo-500 hover:bg-indigo-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20"
             >
-                Initialize Database
+                {editingDatabase ? "Commit Architecture" : "Initialize Database"}
             </Button>
         </div>
       </DialogContent>

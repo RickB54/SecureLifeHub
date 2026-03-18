@@ -152,25 +152,31 @@ export function DatabaseView({
     toast.success("Linked to Task Architect Matrix")
   }
 
-  const handleImageAdd = (recordId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageAdd = async (recordId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (!files || !database) return
+    if (!files || !database || files.length === 0) return
 
-    Array.from(files).forEach(file => {
+    const filePromises = Array.from(files).map(file => {
+      return new Promise<string>((resolve) => {
         const reader = new FileReader()
-        reader.onloadend = () => {
-            const base64 = reader.result as string
-            const updatedRecords = database.records.map((r: DbRecord) => {
-                if (r.id === recordId) {
-                    return { ...r, images: [...(r.images || []), base64] }
-                }
-                return r
-            })
-            onDatabaseUpdate({ ...database, records: updatedRecords })
-            toast.success("Asset acquisition successful")
-        }
+        reader.onloadend = () => resolve(reader.result as string)
         reader.readAsDataURL(file)
+      })
     })
+
+    try {
+      const base64Images = await Promise.all(filePromises)
+      const updatedRecords = database.records.map((r: DbRecord) => {
+        if (r.id === recordId) {
+          return { ...r, images: [...(r.images || []), ...base64Images] }
+        }
+        return r
+      })
+      onDatabaseUpdate({ ...database, records: updatedRecords })
+      toast.success(`${base64Images.length} assets successfully acquired`)
+    } catch (error) {
+      toast.error("Failed to process assets")
+    }
   }
 
   const handleDeleteImage = (recordId: string, imageIndex: number) => {

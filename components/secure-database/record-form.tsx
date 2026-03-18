@@ -73,19 +73,25 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
     toast.success(`Matrix evolved: ${newFieldName} field neutralized`)
   }
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    Array.from(files).forEach(file => {
+    const filePromises = Array.from(files).map(file => {
+      return new Promise<string>((resolve) => {
         const reader = new FileReader()
-        reader.onloadend = () => {
-            const base64 = reader.result as string
-            setLocalImages(prev => [...prev, base64])
-            toast.success("Image acquisition successful")
-        }
+        reader.onloadend = () => resolve(reader.result as string)
         reader.readAsDataURL(file)
+      })
     })
+
+    try {
+      const base64Images = await Promise.all(filePromises)
+      setLocalImages(prev => [...prev, ...base64Images])
+      toast.success(`${base64Images.length} assets successfully injected`)
+    } catch (error) {
+      toast.error("Failed to inject assets")
+    }
   }
 
   const removeImage = (index: number) => {
