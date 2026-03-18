@@ -79,10 +79,10 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
 
   // Auto-sync missing blueprints on mount
   useEffect(() => {
-    if (initialized && databases.length < 15) {
+    if (initialized) {
         synchronizeBlueprints()
     }
-  }, [initialized, databases.length, synchronizeBlueprints])
+  }, [initialized, synchronizeBlueprints])
 
   const handleAddRecord = () => {
     if (!currentDatabase && databases.length > 0) {

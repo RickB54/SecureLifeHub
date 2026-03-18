@@ -172,31 +172,30 @@ function SortableDatabaseItem({ db, isSelected, onDatabaseSelect }: { db: Databa
               : `text-gray-500 hover:text-gray-200 hover:bg-white/[0.03]`
           }`}
       >
-        {/* Drag Handle - Always visible on touch devices/mobile */}
-        <div {...listeners} className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity p-1 -ml-1">
-            <GripVertical className="h-3.5 w-3.5" />
+        {/* Drag Handle - Always visible for tactile feedback */}
+        <div {...listeners} className="cursor-grab active:cursor-grabbing opacity-60 hover:opacity-100 transition-opacity p-2 -ml-2 shrink-0">
+            <GripVertical className="h-4 w-4" />
         </div>
 
         <div className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-300 ${isSelected ? 'bg-white shadow-[0_0_10px_rgba(255,255,10.5)]' : dotClass} ${isSelected ? 'scale-110' : 'group-hover:scale-125 opacity-60 group-hover:opacity-100'}`} />
         
-        <div className="flex-1 flex flex-col items-start min-w-0">
-            <span className={`text-[11px] font-black tracking-tight leading-tight text-left whitespace-normal break-words w-full ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
-                {db.title}
-            </span>
+        <div className="flex-1 flex flex-col items-start min-w-0 pr-2">
+            <div className="flex items-start justify-between w-full gap-2">
+                <span className={`text-[11px] font-black tracking-tight leading-[1.3] text-left whitespace-normal break-words flex-1 ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
+                    {db.title}
+                </span>
+                <span className={`text-[10px] font-black tabular-nums transition-all duration-300 mt-0.5 shrink-0
+                    ${isSelected 
+                    ? 'text-white' 
+                    : 'text-indigo-400/80 group-hover:text-indigo-400'
+                    }`}
+                >
+                    [{db.records?.length || 0}]
+                </span>
+            </div>
             <span className={`text-[8px] font-black uppercase tracking-[0.15em] mt-1 ${isSelected ? 'text-white/40' : 'text-gray-600'}`}>
                 {db.fields?.length || 0} Data Vectors
             </span>
-        </div>
-
-        <div className="shrink-0 ml-2">
-          <span className={`text-sm font-black transition-all duration-300
-            ${isSelected 
-              ? 'text-white' 
-              : 'text-indigo-400/60 group-hover:text-indigo-400'
-            }`}
-          >
-            {db.records?.length || 0}
-          </span>
         </div>
       </button>
     </div>

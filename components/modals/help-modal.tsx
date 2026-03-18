@@ -95,6 +95,9 @@ export const HELP_MAP: Record<string, string> = {
     "user-settings": "settings",
     "dr-ai": "dr-ai",
     "secure-database": "secure-database",
+    "database-actions": "secure-database",
+    "data-insights": "secure-database",
+    "reporting-engine": "secure-database",
     "type-tasks": "task-architect",
     "task-architect": "task-architect",
 }
@@ -817,7 +820,7 @@ const HELP_PAGES: HelpPage[] = [
                     </div>
 
                     {/* Actions Menu */}
-                    <div className="p-6 rounded-[2rem] bg-white/5 border border-white/10">
+                    <div id="help-database-actions" className="p-6 rounded-[2rem] bg-white/5 border border-white/10 scroll-mt-6">
                         <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                             <Settings className="h-4 w-4 text-blue-400" /> Engine Controls (Actions)
                         </h4>
@@ -839,14 +842,14 @@ const HELP_PAGES: HelpPage[] = [
 
                     {/* Insights & Reports */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="p-5 rounded-2xl bg-blue-500/5 border border-white/5">
+                        <div id="help-data-insights" className="p-5 rounded-2xl bg-blue-500/5 border border-white/5 scroll-mt-6">
                             <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2 flex items-center gap-2">
                                 <TrendingUp className="h-4 w-4" /> Intelligence Insights
                             </h5>
                             <p className="text-[11px] text-gray-500 italic mb-2">"Real-time Data Visualization"</p>
                             <p className="text-[10px] text-gray-400">Visualizes your records through interactive charts. Track record growth, field distribution, and metadata shifts automatically.</p>
                         </div>
-                        <div className="p-5 rounded-2xl bg-emerald-500/5 border border-white/5">
+                        <div id="help-reporting-engine" className="p-5 rounded-2xl bg-emerald-500/5 border border-white/5 scroll-mt-6">
                             <h5 className="text-[10px] font-black text-emerald-400 uppercase mb-2 flex items-center gap-2">
                                 <BookOpen className="h-4 w-4" /> Professional Reports
                             </h5>
@@ -1017,16 +1020,25 @@ export default function HelpModal({ isOpen, onClose, theme, initialPageId }: { i
     // Handle initial page jump on open
     useEffect(() => {
         if (isOpen) {
-            if (initialPageId) {
-                const helpId = HELP_MAP[initialPageId] || initialPageId
-                const idx = HELP_PAGES.findIndex(p => p.id === helpId)
-                if (idx !== -1) {
-                    setCurrentPageIndex(idx)
-                    return
+            const currentId = initialPageId || "intro"
+            const helpId = HELP_MAP[currentId] || currentId
+            const idx = HELP_PAGES.findIndex(p => p.id === helpId)
+            
+            if (idx !== -1) {
+                setCurrentPageIndex(idx)
+                
+                // If the ID represents a sub-section (like database-actions), scroll to it
+                if (currentId !== helpId) {
+                    setTimeout(() => {
+                        const element = document.getElementById(`help-${currentId}`)
+                        if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                        }
+                    }, 500)
                 }
+            } else {
+                setCurrentPageIndex(0)
             }
-            // Fallback to page 0 if no valid initial ID is provided for the CURRENT open action
-            setCurrentPageIndex(0)
         }
     }, [isOpen, initialPageId])
 

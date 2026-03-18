@@ -45,9 +45,16 @@ export function InsightsView({ database, onOpenHelp }: InsightsViewProps) {
     return {
       count: database.records.length,
       fields: database.fields.length,
-      lastUpdated: database.records.length > 0 
-        ? new Date(Math.max(...database.records.map(r => new Date(r.created || 0).getTime()))).toLocaleDateString()
-        : "N/A"
+      lastUpdated: (() => {
+          if (!database.records || database.records.length === 0) return "N/A"
+          try {
+              const times = database.records.map(r => new Date(r.created || 0).getTime()).filter(t => !isNaN(t))
+              if (times.length === 0) return "Initialization Pending"
+              return new Date(Math.max(...times)).toLocaleDateString()
+          } catch (e) {
+              return "Temporal Drift"
+          }
+      })()
     }
   }, [database])
 
@@ -81,10 +88,10 @@ export function InsightsView({ database, onOpenHelp }: InsightsViewProps) {
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => onOpenHelp?.("secure-database")}
-                        className="h-10 w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
+                        onClick={() => onOpenHelp?.("data-insights")}
+                        className="h-10 w-10 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 animate-pulse-subtle"
                     >
-                        <HelpCircle className="h-5 w-5 text-gray-500" />
+                        <HelpCircle className="h-5 w-5 text-indigo-400" />
                     </Button>
                     <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-[10px] h-10 rounded-xl font-black uppercase text-gray-400">
                         <Printer className="h-4 w-4 mr-2" />

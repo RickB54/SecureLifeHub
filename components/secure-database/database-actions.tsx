@@ -224,7 +224,7 @@ export function DatabaseActions({
                                     key={item.id}
                                     disabled={item.disabled}
                                     onClick={item.onClick}
-                                    className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 text-left cursor-pointer
+                                    className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 text-left cursor-pointer relative
                                         ${item.variant === 'danger' 
                                             ? 'bg-rose-500/5 border-rose-500/20 hover:bg-rose-500/10 hover:border-rose-500/40' 
                                             : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20'
@@ -236,6 +236,15 @@ export function DatabaseActions({
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-gray-200 truncate">{item.label}</p>
                                         <p className="text-[9px] text-gray-600 uppercase font-black truncate">Execute Command</p>
+                                    </div>
+                                    <div 
+                                        className="p-2 rounded-lg bg-white/5 border border-white/5 opacity-20 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:border-indigo-500/40 cursor-help"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            onOpenHelp?.("database-actions")
+                                        }}
+                                    >
+                                        <HelpCircle className="h-3.5 w-3.5 text-indigo-400" />
                                     </div>
                                 </button>
                             ))}

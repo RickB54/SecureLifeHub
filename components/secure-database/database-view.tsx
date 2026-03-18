@@ -265,7 +265,7 @@ export function DatabaseView({
 
                 return (
                     <button
-                        key={db.title}
+                        key={db.id || db.title}
                         onClick={() => onSelectDatabase(db.title)}
                         className="group flex items-center justify-between p-5 rounded-[2rem] bg-white/2 border border-white/5 hover:bg-white/5 hover:border-indigo-500/30 transition-all duration-300 text-left"
                     >
@@ -363,7 +363,9 @@ export function DatabaseView({
                         {(() => {
                             try {
                                 if (!record.created) return "Initializing Matrix...";
-                                return format(new Date(record.created), "MM.dd.yyyy HH:mm:ss");
+                                const date = new Date(record.created);
+                                if (isNaN(date.getTime())) return "Temporal Drift";
+                                return format(date, "MM.dd.yyyy HH:mm:ss");
                             } catch (e) {
                                 return "Temporal Error";
                             }
@@ -427,7 +429,12 @@ export function DatabaseView({
                               if (field.type === 'checkbox' && Array.isArray(value)) {
                                 displayValue = value.join(' • ') || "No selections";
                               } else if (field.type === 'date' && value) {
-                                try { displayValue = format(new Date(String(value)), "MMM d, yyyy"); } catch(e) {}
+                                try { 
+                                  const date = new Date(String(value));
+                                  if (!isNaN(date.getTime())) {
+                                    displayValue = format(date, "MMM d, yyyy"); 
+                                  }
+                                } catch(e) {}
                               }
 
                               return (

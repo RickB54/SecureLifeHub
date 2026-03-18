@@ -180,7 +180,7 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => onOpenHelp?.("secure-database")}
+                            onClick={() => onOpenHelp?.("reporting-engine")}
                             className="h-10 w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
                         >
                             <HelpCircle className="h-5 w-5 text-gray-400 group-hover:text-white" />

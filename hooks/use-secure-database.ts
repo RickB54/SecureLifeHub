@@ -23,6 +23,7 @@ export function useSecureDatabase() {
       const { data: dbData, error: dbError } = await supabase
         .from("secure_databases")
         .select("*")
+        .eq("user_id", user.id)
         .order("order_index", { ascending: true })
 
       if (dbError) {
@@ -108,6 +109,7 @@ export function useSecureDatabase() {
           const { data: recordData, error: recordError } = await supabase
               .from("database_records")
               .select("*")
+              .eq("user_id", user.id)
 
           if (recordError && recordError.code !== "42P01") throw recordError
 
@@ -115,12 +117,22 @@ export function useSecureDatabase() {
               ...db,
               records: (recordData || []).filter(r => r.database_id === db.id)
           }))
-          
-          setDatabases(fullDatabases as Database[])
+
+          // LOAD: Deduplicate by title to ensure a clean UI matrix
+          const uniqueDatabases = fullDatabases.reduce((acc: Database[], current: Database) => {
+              const x = acc.find(item => item.title === current.title);
+              if (!x) return acc.concat([current]);
+              else return acc;
+          }, [] as Database[]);
+              
+          setDatabases(uniqueDatabases as Database[])
       }
 
       // Fetch Reports
-      const { data: reportData, error: reportError } = await supabase.from("database_reports").select("*")
+      const { data: reportData, error: reportError } = await supabase
+        .from("database_reports")
+        .select("*")
+        .eq("user_id", user.id)
       if (!reportError && reportData) {
           const groupedReports: { [key: string]: any[] } = {}
           reportData.forEach(r => {
@@ -391,32 +403,117 @@ export function useSecureDatabase() {
   }
 
   const synchronizeBlueprints = async () => {
-    // Logic to add missing templates to Supabase
-    const missingTemplates = defaultTemplates.filter(
-        (template) => !databases.some((db) => db.title === template.title)
-    )
+    if (!user) return
+    const toastId = toast.loading("Verifying architectural integrity...")
     
-    if (missingTemplates.length === 0) {
-        toast.info("All modular blueprints are already synchronized")
+    try {
+        // Check cloud directly to avoid state race conditions
+        const { data: cloudDbs } = await supabase
+            .from("secure_databases")
+            .select("title")
+            .eq("user_id", user.id)
+            
+        const cloudTitles = (cloudDbs || []).map(d => d.title.trim().toLowerCase())
+        
+        const missingTemplates = defaultTemplates.filter(
+            (template) => !cloudTitles.includes(template.title.trim().toLowerCase())
+        )
+        
+        if (missingTemplates.length === 0) {
+            toast.dismiss(toastId)
+            toast.info("Security vault blueprints are already synchronized", { id: "sync-info" })
+            return
+        }
+
+        toast.loading(`Restoring ${missingTemplates.length} architectures...`, { id: toastId })
+
+    const payload = missingTemplates.map((db, idx) => {
+        // Remove 'records' from the database payload as it belongs to a separate table
+        const { records: _, ...dbSchema } = db;
+        return {
+            ...dbSchema,
+            user_id: user?.id,
+            order_index: databases.length + idx
+        }
+    })
+
+    const { data: insertedDbs, error: dbError } = await supabase.from("secure_databases").insert(payload).select()
+    
+    if (dbError) {
+        toast.dismiss(toastId)
+        console.error("Architectural Insert Error:", dbError)
+        toast.error("Cloud synchronization engine failed to initialize schemas")
         return
     }
 
-    const payload = missingTemplates.map((db, idx) => ({
-        ...db,
-        user_id: user?.id,
-        order_index: databases.length + idx
-    }))
+    if (insertedDbs) {
+        // Map original records back to their new database IDs
+        const recordPayloads: any[] = []
+        
+        insertedDbs.forEach(newDb => {
+            const template = missingTemplates.find(t => t.title === newDb.title)
+            if (template && template.records && template.records.length > 0) {
+                template.records.forEach(r => {
+                    recordPayloads.push({
+                        user_id: user.id,
+                        database_id: newDb.id,
+                        values: r.values,
+                        images: r.images || [],
+                        is_favorite: r.isFavorite || false,
+                        is_archived: r.isArchived || false,
+                        created_at: r.created || new Date().toISOString()
+                    })
+                })
+            }
+        })
 
-    const { data, error } = await supabase.from("secure_databases").insert(payload).select()
-    if (!error && data) {
-        setDatabases(current => [...current, ...(data as Database[])])
-        toast.success(`Synchronized ${data.length} professional blueprints to Cloud`)
+        if (recordPayloads.length > 0) {
+            const { error: recError } = await supabase.from("database_records").insert(recordPayloads)
+            if (recError) {
+                console.error("Vector Recovery Error:", recError)
+                toast.error("Warning: Schemas restored but records failed to synchronize")
+            }
+        }
+
+        await fetchData()
+        toast.dismiss(toastId)
+        toast.success(`Restored ${insertedDbs.length} high-fidelity architectures with records`)
     }
+  } catch (err) {
+      toast.dismiss(toastId)
+      toast.error("Deep sync engine malfunction")
   }
+}
 
   const recoverDatabases = async (databasesToRecover: Database[]) => {
-    // Sync logic for recovery
-    return true
+    if (!user) {
+        setDatabases(databasesToRecover)
+        localStorage.setItem("slh_custom_databases", JSON.stringify(databasesToRecover))
+        return true
+    }
+    
+    try {
+        setLoading(true)
+        for (const db of databasesToRecover) {
+             const { data: existing } = await supabase
+                .from("secure_databases")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("title", db.title)
+                .maybeSingle()
+             
+             if (!existing) {
+                 await addDatabase(db)
+             }
+        }
+        await fetchData()
+        return true
+    } catch (e) {
+        console.error("Recovery Fault:", e)
+        return false
+    } finally {
+        setLoading(false)
+    }
   }
 
   const resetToFactory = async () => {
