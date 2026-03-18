@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2 } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
