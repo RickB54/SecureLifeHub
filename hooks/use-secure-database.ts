@@ -131,8 +131,14 @@ export function useSecureDatabase() {
       }
 
     } catch (error: any) {
-      console.error("Critical Secure Engine Fault:", error)
-      const errorMsg = error.message || (typeof error === 'object' ? JSON.stringify(error) : String(error))
+      console.error("Critical Secure Engine Fault Detailed:", {
+          message: error.message,
+          stack: error.stack,
+          details: error.details,
+          code: error.code
+      })
+      
+      const errorMsg = error.message || error.details || (typeof error === 'object' ? JSON.stringify(error) : String(error))
       toast.error(`Engine Synchronization Fault: ${errorMsg}`)
       
       // Safety: Load local as last resort if Supabase fails entirely (missing tables/keys)
@@ -304,20 +310,50 @@ export function useSecureDatabase() {
     return await addRecord(db.id, newRecord)
   }
 
-  const deleteDatabases = async (databaseIds: string[]) => {
-    if (!user) return
+  const deleteDatabases = async (idsOrTitles: string[]) => {
+    if (!user) {
+        // Local only deletion
+        setDatabases(current => {
+            const updated = current.filter(db => !idsOrTitles.includes(db.id || db.title))
+            localStorage.setItem("slh_custom_databases", JSON.stringify(updated))
+            return updated
+        })
+        toast.info("Local architectures purged")
+        return true
+    }
+    
     try {
-        const { error } = await supabase
-            .from("secure_databases")
-            .delete()
-            .in("id", databaseIds)
+        // Partition into UUIDs and Titles
+        const ids = idsOrTitles.filter(item => item.includes('-') || item.length > 20) // Simple UUID check
+        const titles = idsOrTitles.filter(item => !ids.includes(item))
 
-        if (error) throw error
+        if (ids.length > 0) {
+            const { error: idError } = await supabase
+                .from("secure_databases")
+                .delete()
+                .in("id", ids)
+            if (idError) throw idError
+        }
+
+        if (titles.length > 0) {
+            const { error: titleError } = await supabase
+                .from("secure_databases")
+                .delete()
+                .in("title", titles)
+                .eq("user_id", user.id)
+            if (titleError) throw titleError
+        }
         
-        setDatabases(current => current.filter(db => !databaseIds.includes(db.id!)))
-        toast.success("Architectures Purged from Cloud")
+        setDatabases(current => {
+            const updated = current.filter(db => !idsOrTitles.includes(db.id || db.title))
+            localStorage.setItem("slh_custom_databases", JSON.stringify(updated))
+            return updated
+        })
+        
+        toast.success("Architectures Purged from Cloud Storage")
         return true
     } catch (error: any) {
+        console.error("Purge Error:", error)
         toast.error("Purge failed: " + error.message)
         return false
     }

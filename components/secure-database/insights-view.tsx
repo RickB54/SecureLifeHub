@@ -13,7 +13,8 @@ import {
   Zap,
   LayoutGrid,
   ChevronRight,
-  Printer
+  Printer,
+  HelpCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -34,9 +35,10 @@ import {
 
 interface InsightsViewProps {
   database: DatabaseType
+  onOpenHelp?: (id: string) => void
 }
 
-export function InsightsView({ database }: InsightsViewProps) {
+export function InsightsView({ database, onOpenHelp }: InsightsViewProps) {
   const stats = useMemo(() => {
     if (!database) return { count: 0, fields: 0, lastUpdated: "N/A" }
     
@@ -44,7 +46,7 @@ export function InsightsView({ database }: InsightsViewProps) {
       count: database.records.length,
       fields: database.fields.length,
       lastUpdated: database.records.length > 0 
-        ? new Date(Math.max(...database.records.map(r => new Date(r.lastUpdated).getTime()))).toLocaleDateString()
+        ? new Date(Math.max(...database.records.map(r => new Date(r.created || 0).getTime()))).toLocaleDateString()
         : "N/A"
     }
   }, [database])
@@ -76,6 +78,14 @@ export function InsightsView({ database }: InsightsViewProps) {
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-black tracking-tight text-white uppercase italic">Data Insights</h2>
                 <div className="flex items-center gap-2">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => onOpenHelp?.("secure-database")}
+                        className="h-10 w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
+                    >
+                        <HelpCircle className="h-5 w-5 text-gray-500" />
+                    </Button>
                     <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-[10px] h-10 rounded-xl font-black uppercase text-gray-400">
                         <Printer className="h-4 w-4 mr-2" />
                         Print Data

@@ -165,37 +165,37 @@ function SortableDatabaseItem({ db, isSelected, onDatabaseSelect }: { db: Databa
     <div ref={setNodeRef} style={style} {...attributes}>
       <button
         onClick={() => onDatabaseSelect(db.title)}
-        className={`w-full group relative flex items-center gap-3 px-5 py-3.5 transition-all duration-300
+        className={`w-full group relative flex items-center gap-3 px-4 py-4 transition-all duration-300 border-b border-white/[0.02]
           ${
             isSelected
-              ? `bg-emerald-600 shadow-[0_4px_20px_rgba(16,185,129,0.2)] text-white`
-              : `text-gray-500 hover:text-gray-200 hover:bg-white/2`
+              ? `bg-indigo-600/90 shadow-[0_4px_20px_rgba(99,102,241,0.2)] text-white`
+              : `text-gray-500 hover:text-gray-200 hover:bg-white/[0.03]`
           }`}
       >
-        {/* Drag Handle */}
-        <div {...listeners} className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-40 transition-opacity">
-            <GripVertical className="h-3 w-3" />
+        {/* Drag Handle - Always visible on touch devices/mobile */}
+        <div {...listeners} className="cursor-grab active:cursor-grabbing opacity-40 hover:opacity-100 transition-opacity p-1 -ml-1">
+            <GripVertical className="h-3.5 w-3.5" />
         </div>
 
-        {/* Active Indicator Bar */}
-        {isSelected && (
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/40" />
-        )}
-
-        <div className={`w-2 h-2 rounded-full shrink-0 transition-transform duration-300 ${isSelected ? 'bg-white' : dotClass} ${isSelected ? 'scale-110' : 'group-hover:scale-125 opacity-70 group-hover:opacity-100'}`} />
+        <div className={`w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-300 ${isSelected ? 'bg-white shadow-[0_0_10px_rgba(255,255,10.5)]' : dotClass} ${isSelected ? 'scale-110' : 'group-hover:scale-125 opacity-60 group-hover:opacity-100'}`} />
         
-        <span className={`flex-1 text-left truncate text-xs font-bold tracking-tight ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
-          {db.title}
-        </span>
+        <div className="flex-1 flex flex-col items-start min-w-0">
+            <span className={`text-[11px] font-black tracking-tight leading-tight text-left whitespace-normal break-words w-full ${isSelected ? 'text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
+                {db.title}
+            </span>
+            <span className={`text-[8px] font-black uppercase tracking-[0.15em] mt-1 ${isSelected ? 'text-white/40' : 'text-gray-600'}`}>
+                {db.fields?.length || 0} Data Vectors
+            </span>
+        </div>
 
-        <div className={`flex items-center gap-1.5`}>
-          <span className={`text-[11px] font-black font-mono transition-all duration-300
+        <div className="shrink-0 ml-2">
+          <span className={`text-sm font-black transition-all duration-300
             ${isSelected 
               ? 'text-white' 
-              : 'text-gray-600 group-hover:text-gray-400'
+              : 'text-indigo-400/60 group-hover:text-indigo-400'
             }`}
           >
-            {db.records.length}
+            {db.records?.length || 0}
           </span>
         </div>
       </button>

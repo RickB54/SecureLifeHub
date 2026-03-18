@@ -28,6 +28,7 @@ interface BottomMenuProps {
   onSaveReport: (dbTitle: string, report: any) => void
   onGetReports: (dbTitle: string) => any[]
   onDeleteReport: (dbTitle: string, reportId: string) => void
+  onOpenHelp?: (id: string) => void
 }
 
 export function BottomNav({
@@ -47,6 +48,7 @@ export function BottomNav({
   onSaveReport,
   onGetReports,
   onDeleteReport,
+  onOpenHelp,
   onHomeClick,
 }: BottomMenuProps) {
   const [activeView, setActiveView] = useState<string | null>(null)
@@ -104,15 +106,22 @@ export function BottomNav({
                     currentDb={currentDb}
                     onUpdateDatabase={onUpdateDatabase}
                     onResetToFactory={onResetToFactory}
+                    onOpenHelp={onOpenHelp}
                     />
                 )}
 
                 {activeView === "todo" && (
-                    <TodoView databases={allDatabases.map((db) => db.title)} />
+                    <TodoView 
+                        databases={allDatabases.map((db) => db.title)} 
+                        onOpenHelp={onOpenHelp}
+                    />
                 )}
 
                 {activeView === "insights" && currentDatabase && (
-                    <InsightsView database={currentDatabase} />
+                    <InsightsView 
+                        database={currentDatabase} 
+                        onOpenHelp={onOpenHelp}
+                    />
                 )}
 
                 {activeView === "reports" && currentDatabase && (
@@ -121,6 +130,7 @@ export function BottomNav({
                         onSaveReport={onSaveReport}
                         onGetReports={onGetReports}
                         onDeleteReport={onDeleteReport}
+                        onOpenHelp={onOpenHelp}
                     />
                 )}
             </div>

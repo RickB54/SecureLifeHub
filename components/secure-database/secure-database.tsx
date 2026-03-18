@@ -17,9 +17,9 @@ import { ReportsView } from "./reports-view"
 import { DatabaseActions } from "./database-actions"
 import { FormBuilder } from "./form-builder"
 import { RecordForm } from "./record-form"
-
 import { toast } from "sonner"
 import { BottomNav } from "./bottom-nav"
+import { TemplateSelector } from "./template-selector"
 import { SheetTitle } from "@/components/ui/sheet"
 
 interface SecureDatabaseProps {
@@ -50,12 +50,14 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
   const [currentDb, setCurrentDb] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [showFormBuilder, setShowFormBuilder] = useState(false)
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [showAddRecord, setShowAddRecord] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DbRecord | null>(null)
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [collapseAll, setCollapseAll] = useState(false)
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const [editingSchemaDatabase, setEditingSchemaDatabase] = useState<Database | null>(null)
+  const [templateDatabase, setTemplateDatabase] = useState<Database | null>(null)
 
   const currentDatabase = useMemo(() => databases.find((db) => db.title === currentDb), [databases, currentDb])
 
@@ -66,6 +68,14 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     setEditingRecord(null)
     setSelectedRecordId(null)
   }, [])
+
+  const handleTemplateSelect = (template: Database) => {
+    setTemplateDatabase(template)
+    setEditingSchemaDatabase(null)
+    setShowFormBuilder(true)
+    setShowTemplateSelector(false)
+    toast.info(`Initializing Architect with ${template.title} profile. Modify fields below.`)
+  }
 
   // Auto-sync missing blueprints on mount
   useEffect(() => {
@@ -148,6 +158,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                onReorder={handleReorder}
                onNewDatabase={() => {
                    setEditingSchemaDatabase(null)
+                   setTemplateDatabase(null)
                    setShowFormBuilder(true)
                    setMobileSheetOpen(false)
                }}
@@ -208,12 +219,14 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         <div className="hidden md:block w-72 shrink-0 border-r border-white/5 bg-[#111]/40">
           <DatabaseSidebar 
             databases={databases} 
-            currentDb={currentDb}             onDatabaseSelect={handleSelectDatabase} 
-             onReorder={handleReorder}
-             onNewDatabase={() => {
+            currentDb={currentDb}
+            onDatabaseSelect={handleSelectDatabase} 
+            onReorder={handleReorder}
+            onNewDatabase={() => {
                 setEditingSchemaDatabase(null)
+                setTemplateDatabase(null)
                 setShowFormBuilder(true)
-             }}
+            }}
           />
         </div>
 
@@ -226,14 +239,19 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                          open={showFormBuilder}
                          onOpenChange={(open) => {
                              setShowFormBuilder(open)
-                             if (!open) setEditingSchemaDatabase(null)
+                             if (!open) {
+                                 setEditingSchemaDatabase(null)
+                                 setTemplateDatabase(null)
+                             }
                          }}
                          onDatabaseCreate={(db) => {
                              addDatabase(db)
                              setCurrentDb(db.title)
                              setShowFormBuilder(false)
+                             setTemplateDatabase(null)
                          }}
                          editingDatabase={editingSchemaDatabase || undefined}
+                         templateDatabase={templateDatabase || undefined}
                          onDatabaseUpdate={(db) => {
                              updateDatabase(db)
                              setShowFormBuilder(false)
@@ -294,6 +312,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
          collapseAll={collapseAll}
          onNewDatabase={() => {
              setEditingSchemaDatabase(null)
+             setTemplateDatabase(null)
              setShowFormBuilder(true)
          }}
         onDeleteDatabases={deleteDatabases}
@@ -302,10 +321,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         onSaveReport={saveReport}
         onGetReports={getReportsForDatabase}
         onDeleteReport={deleteReport}
-        onUseTemplate={(template: Database) => {
-            addDatabase(template)
-            setCurrentDb(template.title)
-        }}
+        onUseTemplate={() => setShowTemplateSelector(true)}
         allDatabases={databases}
         currentDb={currentDb}
         onUpdateDatabase={updateDatabase}
@@ -313,6 +329,14 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             setCurrentDb("")
             setSelectedRecordId(null)
         }}
+        onOpenHelp={onOpenHelp}
+      />
+
+      <TemplateSelector 
+        isOpen={showTemplateSelector}
+        onClose={() => setShowTemplateSelector(false)}
+        onSelect={handleTemplateSelect}
+        existingDatabases={databases}
       />
     </div>
   )

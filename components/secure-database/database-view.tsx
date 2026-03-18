@@ -323,7 +323,11 @@ export function DatabaseView({
                   Edit Schema
                 </Button>
               )}
-              <Button variant="ghost" className="bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-10 px-5 border border-white/10">
+              <Button 
+                variant="ghost" 
+                onClick={() => window.print()}
+                className="bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-10 px-5 border border-white/10"
+              >
                 <Printer className="h-4 w-4 mr-2" />
                 Print Matrix
               </Button>
@@ -356,7 +360,14 @@ export function DatabaseView({
                       </div>
                       <div className={`h-1.5 w-1.5 rounded-full hidden md:block ${isExpanded ? 'bg-white/30' : 'bg-white/10'}`} />
                       <p className={`text-[10px] font-black uppercase tracking-widest ${isExpanded ? 'text-white/40' : 'text-gray-600'}`}>
-                        {format(new Date(record.created), "MM.dd.yyyy HH:mm:ss")}
+                        {(() => {
+                            try {
+                                if (!record.created) return "Initializing Matrix...";
+                                return format(new Date(record.created), "MM.dd.yyyy HH:mm:ss");
+                            } catch (e) {
+                                return "Temporal Error";
+                            }
+                        })()}
                       </p>
                   </div>
 

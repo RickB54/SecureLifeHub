@@ -24,7 +24,8 @@ import {
   X,
   Save,
   Clock,
-  PieChart as PieIcon
+  PieChart as PieIcon,
+  HelpCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -53,9 +54,10 @@ interface ReportsViewProps {
   onSaveReport: (dbTitle: string, report: any) => void
   onGetReports: (dbTitle: string) => any[]
   onDeleteReport: (dbTitle: string, reportId: string) => void
+  onOpenHelp?: (id: string) => void
 }
 
-export function ReportsView({ database, onSaveReport, onGetReports, onDeleteReport }: ReportsViewProps) {
+export function ReportsView({ database, onSaveReport, onGetReports, onDeleteReport, onOpenHelp }: ReportsViewProps) {
   const [activeTab, setActiveTab] = useState("predefined")
   const [selectedFields, setSelectedFields] = useState<string[]>(database.fields.map(f => f.name))
   const [isGenerating, setIsGenerating] = useState(false)
@@ -171,10 +173,18 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
     <div className="flex flex-col h-full bg-[#0a0a0a] animate-in fade-in duration-700">
         <div className="p-10 border-b border-white/5 bg-white/2 backdrop-blur-3xl sticky top-0 z-10 print:hidden">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
-                <div>
+                <div className="flex items-center gap-4">
                      <h2 className="text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-4">
                         <TrendingUp className="h-10 w-10 text-indigo-500" />
                         Reporting Engine
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => onOpenHelp?.("secure-database")}
+                            className="h-10 w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
+                        >
+                            <HelpCircle className="h-5 w-5 text-gray-400 group-hover:text-white" />
+                        </Button>
                      </h2>
                      <div className="flex items-center gap-3">
                         <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.4em]">Active Architecture: {database.title}</p>

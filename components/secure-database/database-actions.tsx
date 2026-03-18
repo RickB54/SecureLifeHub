@@ -15,7 +15,8 @@ import {
   HelpCircle,
   ShieldCheck,
   RefreshCcw,
-  Zap
+  Zap,
+  Printer
 } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ interface DatabaseActionsProps {
   currentDb?: string
   onUpdateDatabase?: (database: Database) => void
   onResetToFactory: () => void
+  onOpenHelp?: (id: string) => void
 }
 
 export function DatabaseActions({
@@ -45,6 +47,7 @@ export function DatabaseActions({
   currentDb,
   onUpdateDatabase,
   onResetToFactory,
+  onOpenHelp,
 }: DatabaseActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -91,13 +94,64 @@ export function DatabaseActions({
     toast.success("CSV export complete")
   }
 
+  const handleBackupAll = () => {
+    setIsProcessing(true)
+    try {
+        const data = JSON.stringify(allDatabases, null, 2)
+        const blob = new Blob([data], { type: "application/json" })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `SLH-Full-Vault-Backup-${new Date().toISOString().split('T')[0]}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        toast.success("Complete vault backup generated")
+    } catch (e) {
+        toast.error("Vault backup failed")
+    } finally {
+        setIsProcessing(false)
+    }
+  }
+
+  const handleRestore = () => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = '.json'
+      input.onchange = async (e: any) => {
+          const file = e.target.files[0]
+          if (!file) return
+          const reader = new FileReader()
+          reader.onload = async (event: any) => {
+              try {
+                  const data = JSON.parse(event.target.result)
+                  if (Array.isArray(data)) {
+                      await onRecoverDatabases?.(data)
+                      toast.success("Vault restored from backup")
+                  } else if (data.title && data.fields) {
+                      await onRecoverDatabases?.([data])
+                      toast.success(`Database '${data.title}' restored`)
+                  }
+              } catch (err) {
+                  toast.error("Invalid backup format")
+              }
+          }
+          reader.readAsText(file)
+      }
+      input.click()
+  }
+
   const actionSections = [
     {
         title: "Configuration",
         items: [
             { id: "new", label: "Create Database", icon: PlusCircle, onClick: onNewDatabase, color: "text-indigo-400", disabled: false, variant: "default" },
-            { id: "template", label: "Use Template", icon: Copy, onClick: () => {}, color: "text-blue-400", disabled: false, variant: "default" },
-            { id: "display", label: "Display Fields", icon: LayoutGrid, onClick: () => {}, color: "text-purple-400", disabled: false, variant: "default" },
+            { id: "template", label: "Use Template", icon: Copy, onClick: () => {
+                if (database) {
+                    onUseTemplate(database)
+                    toast.success(`Matrix Architecture '${database.title}' cloned to builder`)
+                }
+            }, color: "text-blue-400", disabled: !database, variant: "default" },
+            { id: "display", label: "Change System PIN", icon: ShieldCheck, onClick: () => toast.info("Security PIN update environment restricted"), color: "text-purple-400", disabled: false, variant: "default" },
             { id: "todo", label: "Task Integration", icon: ListTodo, onClick: () => {}, color: "text-emerald-400", disabled: false, variant: "default" },
         ]
     },
@@ -105,9 +159,11 @@ export function DatabaseActions({
         title: "Data Management",
         items: [
             { id: "export-csv", label: "Export CSV", icon: FileDown, onClick: handleExportCsv, color: "text-amber-400", disabled: !database, variant: "default" },
-            { id: "backup", label: "Cloud Backup", icon: Download, onClick: handleExport, color: "text-indigo-400", disabled: !database, variant: "default" },
-            { id: "restore", label: "Restore Data", icon: FileUp, onClick: () => {}, color: "text-rose-400", disabled: false, variant: "default" },
-            { id: "recover", label: "Synchronize Blueprints", icon: RefreshCcw, onClick: onResetToFactory, color: "text-indigo-400", disabled: false, variant: "default" },
+            { id: "print-db", label: "Print Database", icon: Printer, onClick: () => window.print(), color: "text-emerald-400", disabled: !database, variant: "default" },
+            { id: "backup-one", label: "Backup Database", icon: Download, onClick: handleExport, color: "text-indigo-400", disabled: !database, variant: "default" },
+            { id: "backup-all", label: "Backup All Databases", icon: FileUp, onClick: handleBackupAll, color: "text-blue-400", disabled: allDatabases.length === 0, variant: "default" },
+            { id: "restore", label: "Restore Database", icon: FileUp, onClick: handleRestore, color: "text-rose-400", disabled: false, variant: "default" },
+            { id: "recover", label: "Recover Original DBs", icon: RefreshCcw, onClick: onResetToFactory, color: "text-indigo-400", disabled: false, variant: "default" },
         ]
     },
     {
@@ -115,16 +171,18 @@ export function DatabaseActions({
         items: [
             { id: "delete", label: "Destroy Database", icon: Trash2, onClick: () => {
                 if (database && onDeleteDatabases) {
-                    onDeleteDatabases([database.title])
-                    toast.success("Database purged from storage")
+                    if (window.confirm(`CRITICAL WARNING: This will permanently purge '${database.title}' and all its records from the cloud. Continue?`)) {
+                        onDeleteDatabases([database.id || database.title])
+                        toast.success("Database architecture neutralized")
+                    }
                 }
             }, color: "text-rose-600", disabled: !database, variant: "danger" },
-            { id: "clear", label: "Wipe All Data", icon: Zap, onClick: () => {
-                if (window.confirm("CRITICAL ACTION: This will erase all localized databases. Continue?")) {
-                    onDeleteDatabases?.(allDatabases.map(db => db.title))
-                    toast.success("All localized data wiped")
+            { id: "clear", label: "Clear All Data", icon: Zap, onClick: () => {
+                if (window.confirm("OMEGA WARNING: This will erase EVERY database in your vault. This action CANNOT be undone. Proceed?")) {
+                    onDeleteDatabases?.(allDatabases.map(db => db.id || db.title))
+                    toast.success("Global vault purge complete")
                 }
-            }, color: "text-amber-600", disabled: false, variant: "danger" },
+            }, color: "text-amber-600", disabled: allDatabases.length === 0, variant: "danger" },
         ]
     }
   ]
@@ -133,12 +191,22 @@ export function DatabaseActions({
     <div className="flex flex-col h-full bg-[#0a0a0a]">
         <div className="p-8 bg-gradient-to-b from-indigo-500/10 to-transparent border-b border-white/5">
             <div className="flex items-center justify-between mb-2">
-                <h2 className="text-2xl font-black tracking-tight text-white uppercase">Engine Controls</h2>
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                    <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                <h2 className="text-2xl font-black tracking-tight text-white uppercase italic">Engine Controls</h2>
+                <div className="flex items-center gap-2">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => onOpenHelp?.("secure-database")} 
+                        className="rounded-xl bg-white/5 border border-white/10 text-indigo-400 hover:text-white"
+                    >
+                        <HelpCircle className="h-5 w-5" />
+                    </Button>
+                    <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                        <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                    </div>
                 </div>
             </div>
-            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed">
+            <p className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-relaxed max-w-sm">
                 Manage your secure data structures, persistence, and system-level operations.
             </p>
         </div>
@@ -179,7 +247,13 @@ export function DatabaseActions({
                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5">
                         <HelpCircle className="h-4 w-4 text-indigo-400" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Need architectural guidance?</span>
-                        <Button variant="link" className="p-0 h-auto text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-300">Open Docs</Button>
+                        <Button 
+                            variant="link" 
+                            onClick={() => onOpenHelp?.("secure-database")}
+                            className="p-0 h-auto text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-300"
+                        >
+                            Open Documentation
+                        </Button>
                    </div>
                 </div>
             </div>
