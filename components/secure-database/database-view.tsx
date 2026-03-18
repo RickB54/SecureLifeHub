@@ -25,7 +25,9 @@ import {
   MoreHorizontal,
   ListTodo,
   CheckCircle2,
-  Share2
+  Share2,
+  Camera,
+  Upload
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -73,6 +75,9 @@ export function DatabaseView({
 }: DatabaseViewProps) {
   const [expandedRecords, setExpandedRecords] = useState<{ [key: string]: boolean }>({})
   const recordRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const [activeRecordId, setActiveRecordId] = useState<string | null>(null)
 
   useEffect(() => {
     if (initialExpandedRecordId) {
@@ -145,6 +150,42 @@ export function DatabaseView({
       priority: "medium",
     })
     toast.success("Linked to Task Architect Matrix")
+  }
+
+  const handleImageAdd = (recordId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || !database) return
+
+    Array.from(files).forEach(file => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+            const base64 = reader.result as string
+            const updatedRecords = database.records.map((r: DbRecord) => {
+                if (r.id === recordId) {
+                    return { ...r, images: [...(r.images || []), base64] }
+                }
+                return r
+            })
+            onDatabaseUpdate({ ...database, records: updatedRecords })
+            toast.success("Asset acquisition successful")
+        }
+        reader.readAsDataURL(file)
+    })
+  }
+
+  const handleDeleteImage = (recordId: string, imageIndex: number) => {
+    if (!database) return
+    if (!window.confirm("Purge this asset from memory?")) return
+
+    const updatedRecords = database.records.map((r: DbRecord) => {
+        if (r.id === recordId) {
+            const newImages = (r.images || []).filter((_, i) => i !== imageIndex)
+            return { ...r, images: newImages }
+        }
+        return r
+    })
+    onDatabaseUpdate({ ...database, records: updatedRecords })
+    toast.success("Asset purged")
   }
 
   const vibrantColors = [
@@ -373,13 +414,30 @@ export function DatabaseView({
                            <div key={field.name} className="space-y-1.5 group">
                                <label className="text-[10px] font-black uppercase tracking-widest text-white/50 pl-1">{field.name}</label>
                                <div className="relative">
-                                   <div className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 flex items-center justify-between group/field hover:border-white/20 transition-all">
-                                       <span className="text-sm font-bold text-white truncate pr-8">
-                                            {String(record.values[field.name] || "") || <span className="text-white/20 italic">Empty Field</span>}
+                                   <div className={`w-full bg-black/30 border border-white/10 rounded-2xl p-4 flex items-center justify-between group/field hover:border-white/20 transition-all ${field.type === 'gallery' ? 'cursor-pointer hover:bg-white/5' : ''}`}
+                                        onClick={() => {
+                                            if (field.type === 'gallery') {
+                                                const gallerySection = document.getElementById(`gallery-${record.id}`)
+                                                gallerySection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                            }
+                                        }}
+                                   >
+                                       <span className="text-sm font-bold text-white truncate pr-8 flex items-center gap-2">
+                                            {field.type === 'gallery' ? (
+                                                <>
+                                                    <ImageIcon className="h-4 w-4 text-indigo-400" />
+                                                    <span>Open Record Gallery ({record.images?.length || 0} Assets)</span>
+                                                </>
+                                            ) : (
+                                                String(record.values[field.name] || "") || <span className="text-white/20 italic">Empty Field</span>
+                                            )}
                                        </span>
                                        <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <button className="absolute right-3 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors opacity-0 group-hover/field:opacity-100">
+                                                <button 
+                                                    className="absolute right-3 p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/10 transition-colors opacity-0 group-hover/field:opacity-100"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     <MoreHorizontal className="h-4 w-4" />
                                                 </button>
                                             </DropdownMenuTrigger>
@@ -392,6 +450,18 @@ export function DatabaseView({
                                                     <ListTodo className="h-4 w-4 text-emerald-400" />
                                                     <span className="font-bold text-xs uppercase tracking-tight">Send to To-Do List</span>
                                                 </DropdownMenuItem>
+                                                {field.type === 'gallery' && (
+                                                    <DropdownMenuItem 
+                                                        className="gap-2 rounded-xl focus:bg-white/10 cursor-pointer" 
+                                                        onClick={() => {
+                                                            setActiveRecordId(record.id)
+                                                            fileInputRef.current?.click()
+                                                        }}
+                                                    >
+                                                        <Upload className="h-4 w-4 text-sky-400" />
+                                                        <span className="font-bold text-xs uppercase tracking-tight">Add Images</span>
+                                                    </DropdownMenuItem>
+                                                )}
                                                 <DropdownMenuSeparator className="bg-white/5" />
                                                 <DropdownMenuItem className="gap-2 rounded-xl focus:bg-white/10 cursor-pointer">
                                                     <Share2 className="h-4 w-4 text-sky-400" />
@@ -406,22 +476,77 @@ export function DatabaseView({
                       </div>
 
                       <div id={`gallery-${record.id}`} className="mt-8 pt-8 border-t border-white/10">
-                          <h5 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-4">Product Images</h5>
+                          <div className="flex items-center justify-between mb-4 px-1">
+                              <h5 className="text-[10px] font-black uppercase tracking-widest text-white/50">Digital Asset Gallery</h5>
+                              <div className="flex items-center gap-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 rounded-xl bg-white/5 text-xs font-bold hover:bg-white/10"
+                                    onClick={() => {
+                                        setActiveRecordId(record.id)
+                                        cameraInputRef.current?.click()
+                                    }}
+                                  >
+                                      <Camera className="h-3 w-3 mr-2 text-indigo-400" />
+                                      Take Pic
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-8 rounded-xl bg-white/5 text-xs font-bold hover:bg-white/10"
+                                    onClick={() => {
+                                        setActiveRecordId(record.id)
+                                        fileInputRef.current?.click()
+                                    }}
+                                  >
+                                      <Upload className="h-3 w-3 mr-2 text-indigo-400" />
+                                      Upload
+                                  </Button>
+                              </div>
+                          </div>
+                          
                           <div className="flex flex-wrap gap-4">
                                 {record.images && record.images.length > 0 ? (
-                                    record.images.map((img, i) => (
-                                        <div key={i} className="h-24 w-24 rounded-3xl overflow-hidden border border-white/10 bg-white/5 group relative">
-                                            <img src={img} alt="Resource" className="h-full w-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                <Trash2 className="h-4 w-4 text-rose-400 cursor-pointer" />
+                                    <>
+                                        {record.images.map((img, i) => (
+                                            <div key={i} className="h-28 w-28 rounded-[1.5rem] overflow-hidden border border-white/10 bg-white/5 group relative shadow-xl hover:scale-105 transition-all">
+                                                <img src={img} alt="Resource" className="h-full w-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        onClick={() => handleDeleteImage(record.id, i)}
+                                                        className="h-10 w-10 text-rose-400 hover:text-white hover:bg-rose-500/20"
+                                                    >
+                                                        <Trash2 className="h-5 w-5" />
+                                                    </Button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        ))}
+                                        {/* Quick Add Button at end of gallery */}
+                                        <button 
+                                            onClick={() => {
+                                                setActiveRecordId(record.id)
+                                                fileInputRef.current?.click()
+                                            }}
+                                            className="h-28 w-28 rounded-[1.5rem] border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group"
+                                        >
+                                            <Plus className="h-6 w-6 text-white/20 group-hover:text-white/40 group-hover:scale-110 transition-all" />
+                                            <span className="text-[8px] font-black uppercase text-gray-600">Add More</span>
+                                        </button>
+                                    </>
                                 ) : (
-                                    <div className="w-full aspect-video md:aspect-auto md:h-32 rounded-[2.5rem] border-2 border-dashed border-white/10 bg-white/2 flex items-center justify-center group/add cursor-pointer hover:bg-white/5 transition-all">
+                                    <div 
+                                        onClick={() => {
+                                            setActiveRecordId(record.id)
+                                            fileInputRef.current?.click()
+                                        }}
+                                        className="w-full aspect-video md:aspect-auto md:h-32 rounded-[2.5rem] border-2 border-dashed border-white/10 bg-white/2 flex items-center justify-center group/add cursor-pointer hover:bg-white/5 transition-all"
+                                    >
                                         <div className="text-center">
-                                            <Plus className="h-6 w-6 text-white/20 mx-auto mb-2 group-hover/add:scale-110 group-hover/add:text-white/40 transition-all font-light" />
-                                            <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em] group-hover/add:text-white/40">Initialize Gallery</p>
+                                            <Plus className="h-8 w-8 text-white/20 mx-auto mb-2 group-hover/add:scale-110 group-hover/add:text-white/40 transition-all" />
+                                            <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.2em] group-hover/add:text-white/40">Initialize Gallery Matrix</p>
                                         </div>
                                     </div>
                                 )}
@@ -432,6 +557,24 @@ export function DatabaseView({
             </div>
           )
         })}
+
+        {/* Hidden Global Inputs */}
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
+            multiple 
+            accept="image/*" 
+            className="hidden" 
+        />
+        <input 
+            type="file" 
+            ref={cameraInputRef} 
+            onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
+            accept="image/*" 
+            capture="environment" 
+            className="hidden" 
+        />
       </div>
 
       {filteredRecords.length === 0 && (

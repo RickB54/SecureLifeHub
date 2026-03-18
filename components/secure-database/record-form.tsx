@@ -7,7 +7,7 @@ import {
   Layers, Package, Info, CheckCircle2,
   Calendar, Clock, DollarSign, Users,
   Minus, Plus, Type, Hash, Image as ImageIcon,
-  Upload, Sparkles
+  Upload, Sparkles, Camera
 } from "lucide-react"
 import type { Database, DbRecord, Field, FieldType } from "@/types/secure-database"
 import { Button } from "@/components/ui/button"
@@ -311,6 +311,23 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                             <Upload className="h-5 w-5 text-indigo-400" />
                         </div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Inject Asset</p>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => {
+                            const cameraInput = document.createElement('input');
+                            cameraInput.type = 'file';
+                            cameraInput.accept = 'image/*';
+                            cameraInput.capture = 'environment';
+                            cameraInput.onchange = (e: any) => handleImageUpload(e);
+                            cameraInput.click();
+                        }}
+                        className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl"
+                    >
+                        <div className="p-3 bg-indigo-500/10 rounded-2xl group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all">
+                            <Camera className="h-5 w-5 text-indigo-400" />
+                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Take Photo</p>
                     </button>
                     <input 
                         type="file" 
