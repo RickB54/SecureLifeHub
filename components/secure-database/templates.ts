@@ -244,4 +244,41 @@ export const defaultTemplates: Database[] = [
     ],
     records: [],
   },
+  {
+    title: "App Development Journal",
+    color: "indigo",
+    fields: [
+      { name: "App Name", type: "text", showOnCard: true },
+      { name: "Platforms", type: "checkbox", options: ["Loveable", "Bolt.diy", "Bolt.new", "CodePen", "Cursor", "Windsurf", "GitHub Codespaces", "v0.dev", "Trae", "Antigravity", "N8N", "Tempo"], showOnCard: true },
+      { name: "User Names", type: "text", showOnCard: true },
+      { name: "Latest Update", type: "text", showOnCard: true },
+      { name: "Preview URL", type: "text", showOnCard: true },
+      { name: "Published URL", type: "text", showOnCard: true },
+      { name: "Initial Request Date", type: "date" },
+      { name: "Current Request Date", type: "date" },
+      { name: "AI Agents", type: "checkbox", options: ["xAI Grok", "ChatGPT", "Claude", "Google Gemini (Bard)"] },
+      { name: "Mission Notes", type: "textarea" },
+      { name: "UI Assets", type: "gallery" },
+    ],
+    records: [
+      {
+        id: "adj-1",
+        values: {
+          "App Name": "SecureLifeHub",
+          "Platforms": ["Cursor", "Antigravity"],
+          "User Names": "RickB54",
+          "Latest Update": "Implemented Reporting Engine",
+          "Preview URL": "https://preview.securelife.hub",
+          "Published URL": "https://securelife.hub",
+          "Initial Request Date": "2026-03-01",
+          "Current Request Date": "2026-03-18",
+          "AI Agents": ["Claude"],
+          "Mission Notes": "Focusing on high-fidelity dashboard and secure database module."
+        },
+        isFavorite: true,
+        created: "2026-03-01T10:00:00Z",
+        lastUpdated: "2026-03-18T16:00:00Z"
+      }
+    ],
+  },
 ]

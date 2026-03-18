@@ -33,6 +33,8 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
   const [showAddField, setShowAddField] = useState(false)
   const [newFieldName, setNewFieldName] = useState("")
   const [newFieldType, setNewFieldType] = useState<FieldType>("text")
+  const [newFieldOptions, setNewFieldOptions] = useState<string[]>([])
+  const [newOptionState, setNewOptionState] = useState("")
   const [localImages, setLocalImages] = useState<string[]>(record?.images || [])
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -59,7 +61,8 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
     const newField: Field = {
         name: newFieldName,
         type: newFieldType,
-        showOnCard: false
+        showOnCard: false,
+        options: (newFieldType === "dropdown" || newFieldType === "checkbox") ? newFieldOptions : undefined
     }
     
     const updatedDb = {
@@ -69,6 +72,8 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
     
     onUpdateDatabase(updatedDb)
     setNewFieldName("")
+    setNewFieldOptions([])
+    setNewFieldType("text")
     setShowAddField(false)
     toast.success(`Matrix evolved: ${newFieldName} field neutralized`)
   }
@@ -372,7 +377,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                             </div>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
                            <div className="space-y-2">
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-gray-600 pl-1">Vector Identifier</Label>
                                 <Input 
@@ -384,7 +389,10 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                            </div>
                            <div className="space-y-2">
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-gray-600 pl-1">Data Type Protocol</Label>
-                                <Select value={newFieldType} onValueChange={(v: any) => setNewFieldType(v)}>
+                                <Select value={newFieldType} onValueChange={(v: any) => {
+                                    setNewFieldType(v)
+                                    setNewFieldOptions([])
+                                }}>
                                     <SelectTrigger className="h-14 bg-black border-white/10 rounded-2xl font-bold">
                                         <SelectValue />
                                     </SelectTrigger>
@@ -392,12 +400,60 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                                         <SelectItem value="text" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Text Node</SelectItem>
                                         <SelectItem value="number" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Numeric Vector</SelectItem>
                                         <SelectItem value="date" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Temporal Marker</SelectItem>
-                                        <SelectItem value="dropdown" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Option Matrix</SelectItem>
+                                        <SelectItem value="dropdown" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Single Select (Dropdown)</SelectItem>
+                                        <SelectItem value="checkbox" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Multi Select (Checkbox)</SelectItem>
                                         <SelectItem value="textarea" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Large Text Area</SelectItem>
+                                        <SelectItem value="gallery" className="rounded-xl py-3 px-4 focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest">Media Assets Gallery</SelectItem>
                                     </SelectContent>
                                 </Select>
                            </div>
                         </div>
+
+                        {(newFieldType === "dropdown" || newFieldType === "checkbox") && (
+                            <div className="space-y-4 p-6 rounded-3xl bg-black/40 border border-white/5 animate-in slide-in-from-top-4 duration-500">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-indigo-400 pl-1">Option Matrix Construction</Label>
+                                <div className="flex flex-wrap gap-2">
+                                    {newFieldOptions.map((opt, i) => (
+                                        <Badge key={i} variant="secondary" className="bg-white/10 text-white px-3 py-1.5 rounded-xl border border-white/5 flex items-center gap-2 group">
+                                            {opt}
+                                            <X 
+                                                className="h-3 w-3 text-gray-500 hover:text-rose-400 cursor-pointer" 
+                                                onClick={() => setNewFieldOptions(newFieldOptions.filter((_, idx) => idx !== i))}
+                                            />
+                                        </Badge>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        placeholder="Add high-fidelity option..." 
+                                        value={newOptionState}
+                                        onChange={(e) => setNewOptionState(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                if (newOptionState) {
+                                                    setNewFieldOptions([...newFieldOptions, newOptionState])
+                                                    setNewOptionState("")
+                                                }
+                                            }
+                                        }}
+                                        className="h-12 bg-black border-white/5 rounded-xl"
+                                    />
+                                    <Button 
+                                        type="button"
+                                        onClick={() => {
+                                            if (newOptionState) {
+                                                setNewFieldOptions([...newFieldOptions, newOptionState])
+                                                setNewOptionState("")
+                                            }
+                                        }}
+                                        className="bg-indigo-500 hover:bg-indigo-600 h-12 px-6 rounded-xl font-black uppercase text-[10px]"
+                                    >
+                                        Inject
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                         <div className="flex gap-3 pt-4">
                             <Button type="button" onClick={handleAddField} className="flex-1 bg-indigo-500 hover:bg-indigo-600 h-16 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-indigo-500/20 active:scale-95">
                                 Finalize Vector Construction

@@ -52,6 +52,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null)
   const [collapseAll, setCollapseAll] = useState(false)
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
+  const [editingSchemaDatabase, setEditingSchemaDatabase] = useState<Database | null>(null)
 
   const currentDatabase = useMemo(() => databases.find((db) => db.title === currentDb), [databases, currentDb])
 
@@ -145,15 +146,15 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             </div>
             <DatabaseSidebar 
               databases={databases} 
-              currentDb={currentDb} 
-              onDatabaseSelect={(title: string) => {
-                  handleSelectDatabase(title)
-                  setMobileSheetOpen(false)
-              }} 
-              onNewDatabase={() => {
-                  setShowFormBuilder(true)
-                  setMobileSheetOpen(false)
-              }}
+              currentDb={currentDb}               onDatabaseSelect={(title: string) => {
+                   handleSelectDatabase(title)
+                   setMobileSheetOpen(false)
+               }} 
+               onNewDatabase={() => {
+                   setEditingSchemaDatabase(null)
+                   setShowFormBuilder(true)
+                   setMobileSheetOpen(false)
+               }}
             />
           </SheetContent>
         </Sheet>
@@ -211,9 +212,11 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         <div className="hidden md:block w-72 shrink-0 border-r border-white/5 bg-[#111]/40">
           <DatabaseSidebar 
             databases={databases} 
-            currentDb={currentDb} 
-            onDatabaseSelect={handleSelectDatabase} 
-            onNewDatabase={() => setShowFormBuilder(true)}
+            currentDb={currentDb}             onDatabaseSelect={handleSelectDatabase} 
+             onNewDatabase={() => {
+                setEditingSchemaDatabase(null)
+                setShowFormBuilder(true)
+             }}
           />
         </div>
 
@@ -222,14 +225,24 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
           <ScrollArea className="flex-1">
             <div className="p-6 md:p-8 max-w-6xl mx-auto pb-32">
                 {showFormBuilder ? (
-                    <FormBuilder 
-                        open={showFormBuilder}
-                        onOpenChange={setShowFormBuilder}
-                        onDatabaseCreate={(db) => {
-                            addDatabase(db)
-                            setCurrentDb(db.title)
-                        }}
-                    />
+                     <FormBuilder 
+                         open={showFormBuilder}
+                         onOpenChange={(open) => {
+                             setShowFormBuilder(open)
+                             if (!open) setEditingSchemaDatabase(null)
+                         }}
+                         onDatabaseCreate={(db) => {
+                             addDatabase(db)
+                             setCurrentDb(db.title)
+                             setShowFormBuilder(false)
+                         }}
+                         editingDatabase={editingSchemaDatabase || undefined}
+                         onDatabaseUpdate={(db) => {
+                             updateDatabase(db)
+                             setShowFormBuilder(false)
+                             setEditingSchemaDatabase(null)
+                         }}
+                     />
                 ) : showAddRecord && currentDatabase ? (
                     <RecordForm 
                         database={currentDatabase}
@@ -255,9 +268,13 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         collapseAll={collapseAll}
                         allDatabases={databases}
                         onSelectDatabase={handleSelectDatabase}
-                        onAddTodo={addTodo}
-                        onAddRecord={handleAddRecord}
-                    />
+                         onAddTodo={addTodo}
+                         onAddRecord={handleAddRecord}
+                         onEditSchema={(db) => {
+                             setEditingSchemaDatabase(db)
+                             setShowFormBuilder(true)
+                         }}
+                     />
                 )}
             </div>
           </ScrollArea>
@@ -276,9 +293,12 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                 toast.success("Navigated to Pinned Intel")
             }
         }}
-        onToggleCollapseAll={() => setCollapseAll(!collapseAll)}
-        collapseAll={collapseAll}
-        onNewDatabase={() => setShowFormBuilder(true)}
+         onToggleCollapseAll={() => setCollapseAll(!collapseAll)}
+         collapseAll={collapseAll}
+         onNewDatabase={() => {
+             setEditingSchemaDatabase(null)
+             setShowFormBuilder(true)
+         }}
         onDeleteDatabases={deleteDatabases}
         onRecoverDatabases={recoverDatabases}
         onResetToFactory={synchronizeBlueprints}
