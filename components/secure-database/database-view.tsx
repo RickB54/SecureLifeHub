@@ -303,7 +303,19 @@ export function DatabaseView({
                         <Copy className="h-4 w-4" />
                       </Button>
                       <div className="relative group">
-                        <Button variant="ghost" size="icon" className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!isExpanded) toggleExpand(record.id)
+                            setTimeout(() => {
+                              const gallerySection = document.getElementById(`gallery-${record.id}`)
+                              gallerySection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                            }, 200)
+                          }}
+                          className={`h-9 w-9 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                        >
                             <ImageIcon className="h-4 w-4" />
                             <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-black text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-indigo-500">
                                 {record.images?.length || 0}
@@ -393,7 +405,7 @@ export function DatabaseView({
                         ))}
                       </div>
 
-                      <div className="mt-8 pt-8 border-t border-white/10">
+                      <div id={`gallery-${record.id}`} className="mt-8 pt-8 border-t border-white/10">
                           <h5 className="text-[10px] font-black uppercase tracking-widest text-white/50 mb-4">Product Images</h5>
                           <div className="flex flex-wrap gap-4">
                                 {record.images && record.images.length > 0 ? (
