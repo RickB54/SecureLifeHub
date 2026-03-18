@@ -1521,7 +1521,9 @@ function ModuleAccessSettings({
     { id: "type-media", label: "Secure Media" },
     { id: "type-goals", label: "Goals" },
     { id: "type-knowledge", label: "Education & Knowledge" },
-    { id: "type-travel", label: "Travel & Plans" }
+    { id: "type-travel", label: "Travel & Plans" },
+    { id: "secure-database", label: "Secure Database Architect" },
+    { id: "type-tasks", label: "Task Architect" }
   ]
 
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>(() => {
@@ -1583,6 +1585,8 @@ function ModuleAccessSettings({
           if (moduleId === "type-health-records" && (r.type === "health-record" || r.category === "Health Records")) return true;
           if (moduleId === "type-vehicles" && r.type === "vehicle") return true;
           if (moduleId === "type-secure-notes" && (r.type === "note" || r.type === "secure-note")) return true;
+          if (moduleId === "secure-database" && r.type === "secure-database-record") return true;
+          if (moduleId === "type-tasks" && r.type === "architect-task") return true;
           
           return false;
         });

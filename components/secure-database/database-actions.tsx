@@ -32,6 +32,7 @@ interface DatabaseActionsProps {
   allDatabases: Database[]
   currentDb?: string
   onUpdateDatabase?: (database: Database) => void
+  onResetToFactory: () => void
 }
 
 export function DatabaseActions({
@@ -43,6 +44,7 @@ export function DatabaseActions({
   allDatabases,
   currentDb,
   onUpdateDatabase,
+  onResetToFactory,
 }: DatabaseActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
@@ -105,14 +107,24 @@ export function DatabaseActions({
             { id: "export-csv", label: "Export CSV", icon: FileDown, onClick: handleExportCsv, color: "text-amber-400", disabled: !database, variant: "default" },
             { id: "backup", label: "Cloud Backup", icon: Download, onClick: handleExport, color: "text-indigo-400", disabled: !database, variant: "default" },
             { id: "restore", label: "Restore Data", icon: FileUp, onClick: () => {}, color: "text-rose-400", disabled: false, variant: "default" },
-            { id: "recover", label: "Reset Defaults", icon: RefreshCcw, onClick: () => {}, color: "text-gray-400", disabled: false, variant: "default" },
+            { id: "recover", label: "Synchronize Blueprints", icon: RefreshCcw, onClick: onResetToFactory, color: "text-indigo-400", disabled: false, variant: "default" },
         ]
     },
     {
         title: "Danger Zone",
         items: [
-            { id: "delete", label: "Destroy Database", icon: Trash2, onClick: () => {}, color: "text-rose-600", disabled: !database, variant: "danger" },
-            { id: "clear", label: "Wipe All Data", icon: Zap, onClick: () => {}, color: "text-amber-600", disabled: false, variant: "danger" },
+            { id: "delete", label: "Destroy Database", icon: Trash2, onClick: () => {
+                if (database && onDeleteDatabases) {
+                    onDeleteDatabases([database.title])
+                    toast.success("Database purged from storage")
+                }
+            }, color: "text-rose-600", disabled: !database, variant: "danger" },
+            { id: "clear", label: "Wipe All Data", icon: Zap, onClick: () => {
+                if (window.confirm("CRITICAL ACTION: This will erase all localized databases. Continue?")) {
+                    onDeleteDatabases?.(allDatabases.map(db => db.title))
+                    toast.success("All localized data wiped")
+                }
+            }, color: "text-amber-600", disabled: false, variant: "danger" },
         ]
     }
   ]

@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Home, Star, Database, ListTodo, BarChart, ChevronsUpDown } from "lucide-react"
+import { Home, Star, Database, ListTodo, BarChart, FileText, ChevronsUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { Database as DatabaseType, DbRecord } from "@/types/secure-database"
 import { FavoritesView } from "./favorites-view"
 import { DatabaseActions } from "./database-actions"
 import { TodoView } from "./todo-view"
 import { ReportsView } from "./reports-view"
+import { InsightsView } from "./insights-view"
 
 interface BottomMenuProps {
   currentDatabase?: DatabaseType
@@ -22,6 +23,10 @@ interface BottomMenuProps {
   allDatabases: DatabaseType[]
   currentDb?: string
   onUpdateDatabase?: (database: DatabaseType) => void
+  onResetToFactory: () => void
+  onSaveReport: (dbTitle: string, report: any) => void
+  onGetReports: (dbTitle: string) => any[]
+  onDeleteReport: (dbTitle: string, reportId: string) => void
 }
 
 export function BottomNav({
@@ -37,6 +42,10 @@ export function BottomNav({
   allDatabases,
   currentDb,
   onUpdateDatabase,
+  onResetToFactory,
+  onSaveReport,
+  onGetReports,
+  onDeleteReport,
 }: BottomMenuProps) {
   const [activeView, setActiveView] = useState<string | null>(null)
 
@@ -53,7 +62,8 @@ export function BottomNav({
     { id: "favorites", label: "Starred", icon: Star, view: "favorites", color: "text-amber-400", disabled: favorites.length === 0 },
     { id: "actions", label: "Actions", icon: Database, view: "actions", color: "text-indigo-400" },
     { id: "todo", label: "Tasks", icon: ListTodo, view: "todo", color: "text-emerald-400" },
-    { id: "reports", label: "Insights", icon: BarChart, view: "reports", color: "text-rose-400", disabled: !currentDatabase },
+    { id: "insights", label: "Insights", icon: BarChart, view: "insights", color: "text-rose-400", disabled: !currentDatabase },
+    { id: "reports", label: "Reports", icon: FileText, view: "reports", color: "text-indigo-400", disabled: !currentDatabase },
   ]
 
   return (
@@ -88,6 +98,7 @@ export function BottomNav({
                     allDatabases={allDatabases}
                     currentDb={currentDb}
                     onUpdateDatabase={onUpdateDatabase}
+                    onResetToFactory={onResetToFactory}
                     />
                 )}
 
@@ -95,8 +106,17 @@ export function BottomNav({
                     <TodoView databases={allDatabases.map((db) => db.title)} />
                 )}
 
+                {activeView === "insights" && currentDatabase && (
+                    <InsightsView database={currentDatabase} />
+                )}
+
                 {activeView === "reports" && currentDatabase && (
-                    <ReportsView database={currentDatabase} />
+                    <ReportsView 
+                        database={currentDatabase} 
+                        onSaveReport={onSaveReport}
+                        onGetReports={onGetReports}
+                        onDeleteReport={onDeleteReport}
+                    />
                 )}
             </div>
           </div>
@@ -105,7 +125,7 @@ export function BottomNav({
 
       {/* Bottom menu bar */}
       <div className="fixed bottom-0 left-0 right-0 h-16 border-t border-white/5 bg-[#111]/90 backdrop-blur-xl z-50 px-2">
-        <div className="max-w-xl mx-auto grid grid-cols-6 h-full items-center gap-1">
+        <div className="max-w-xl mx-auto grid grid-cols-7 h-full items-center gap-1">
           {menuItems.map((item) => (
             <button
               key={item.id}

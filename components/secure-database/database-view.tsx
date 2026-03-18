@@ -40,6 +40,8 @@ interface DatabaseViewProps {
   searchQuery: string
   onDatabaseUpdate: (db: DatabaseType) => void
   onDuplicateRecord: (record: DbRecord) => void
+  onEditRecord: (record: DbRecord) => void
+  onSelectRecord: (record: DbRecord) => void
   collapseAll: boolean
 }
 
@@ -48,6 +50,8 @@ export function DatabaseView({
   searchQuery, 
   onDatabaseUpdate, 
   onDuplicateRecord,
+  onEditRecord,
+  onSelectRecord,
   collapseAll 
 }: DatabaseViewProps) {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
@@ -141,7 +145,10 @@ export function DatabaseView({
                         <Star className={`h-5 w-5 ${record.isFavorite ? 'fill-current' : ''}`} />
                      </button>
 
-                     <div className="flex-1 min-w-0">
+                     <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => onSelectRecord(record)}
+                     >
                         <div className="flex items-center gap-2 mb-1">
                             <h4 className="font-bold text-gray-200 truncate">
                                 {record.values[database.fields[0].name] || "Untitled Record"}
@@ -152,17 +159,29 @@ export function DatabaseView({
                                 <Clock className="h-3 w-3" />
                                 {format(new Date(record.created), "MMM d, yyyy")}
                              </div>
-                             {Object.entries(record.values).slice(1, 3).map(([key, value]) => (
-                                 <div key={key} className="hidden sm:block truncate">
-                                    <span className="text-indigo-400/50 uppercase font-black tracking-tighter mr-1">{key}:</span>
-                                    {String(value)}
-                                 </div>
-                             ))}
+                             {(() => {
+                                 const cardFields = database.fields.filter(f => f.showOnCard).slice(0, 3)
+                                 const displayFields = cardFields.length > 0 
+                                     ? cardFields.map(f => [f.name, record.values[f.name]])
+                                     : Object.entries(record.values).slice(1, 3)
+
+                                 return displayFields.map(([key, value]) => (
+                                     <div key={key as string} className="hidden sm:block truncate">
+                                        <span className="text-indigo-400/50 uppercase font-black tracking-tighter mr-1">{key as string}:</span>
+                                        {String(value)}
+                                     </div>
+                                 ))
+                             })()}
                         </div>
                      </div>
 
                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button variant="ghost" size="icon" className="h-9 w-9 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl">
+                         <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => onEditRecord(record)}
+                            className="h-9 w-9 text-gray-400 hover:text-white hover:bg-white/5 rounded-xl"
+                         >
                             <Edit2 className="h-4 w-4" />
                          </Button>
                          <DropdownMenu>
@@ -210,7 +229,10 @@ export function DatabaseView({
                      </button>
                 </div>
 
-                <div className="flex-1 relative z-10">
+                <div 
+                    className="flex-1 relative z-10 cursor-pointer"
+                    onClick={() => onSelectRecord(record)}
+                >
                     <h4 className="text-lg font-bold text-gray-100 mb-1 line-clamp-1">
                          {record.values[database.fields[0].name] || "Untitled Record"}
                     </h4>
@@ -219,17 +241,30 @@ export function DatabaseView({
                     </p>
 
                     <div className="space-y-2">
-                        {Object.entries(record.values).slice(1, 4).map(([key, value]) => (
-                             <div key={key} className="flex items-center justify-between py-1.5 border-b border-white/5">
-                                <span className="text-[10px] text-gray-500 uppercase font-black">{key}</span>
-                                <span className="text-[11px] text-gray-300 font-medium truncate ml-4 max-w-[120px]">{String(value)}</span>
-                             </div>
-                        ))}
+                        {(() => {
+                            const cardFields = database.fields.filter(f => f.showOnCard).slice(0, 4)
+                            const displayFields = cardFields.length > 0 
+                                ? cardFields.map(f => [f.name, record.values[f.name]])
+                                : Object.entries(record.values).slice(1, 4)
+
+                            return displayFields.map(([key, value]) => (
+                                <div key={key as string} className="flex items-center justify-between py-1.5 border-b border-white/5">
+                                    <span className="text-[10px] text-gray-500 uppercase font-black">{key as string}</span>
+                                    <span className="text-[11px] text-gray-300 font-medium truncate ml-4 max-w-[120px]">{String(value)}</span>
+                                </div>
+                            ))
+                        })()}
                     </div>
                 </div>
 
                 <div className="flex gap-2 relative z-10 mt-2">
-                    <Button variant="outline" className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-xs h-9 rounded-xl">View Details</Button>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => onEditRecord(record)}
+                        className="flex-1 bg-white/5 border-white/10 hover:bg-white/10 text-xs h-9 rounded-xl"
+                    >
+                        View & Edit
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className="h-9 w-9 text-gray-500 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl">
                         <Trash2 className="h-4 w-4" />
                     </Button>

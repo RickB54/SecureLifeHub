@@ -27,7 +27,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
     digitalLife: false,
     goals: false,
     media: false,
-    configuration: false,
+    settings: false,
   })
 
   // Quick Shortcuts State
@@ -243,15 +243,6 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                     <span className="ml-3 font-black uppercase tracking-widest text-[10px]">{item.label}</span>
                   </button>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[40]">
-                    {!isActive && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onOpenHelp(item.id); }}
-                        className={`p-2 transition-all rounded-xl hover:bg-white/10 opacity-100 text-blue-400 hover:text-white`}
-                        aria-label="Help"
-                      >
-                        <HelpCircle className="h-4 w-4" />
-                      </button>
-                    )}
                     <button
                       onClick={(e) => togglePin(e, item.id)}
                       className={`p-2 transition-all rounded-xl hover:bg-white/10 opacity-100 ${pinnedItems.includes(item.id) ? 'text-yellow-500' : 'text-gray-500 hover:text-gray-300'}`}
@@ -303,15 +294,6 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                             <span className="ml-3">{item.label}</span>
                           </button>
                           <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[40]">
-                            {!isItemActive && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); onOpenHelp(item.id); }}
-                                className={`p-2 transition-all rounded-xl hover:bg-white/10 opacity-100 text-blue-400 hover:text-white`}
-                                aria-label="Help"
-                              >
-                                <HelpCircle className="h-3.5 w-3.5" />
-                              </button>
-                            )}
                             <button
                               onClick={(e) => togglePin(e, item.id)}
                               className={`p-2 transition-all rounded-xl hover:bg-white/10 opacity-100 ${isPinned ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}

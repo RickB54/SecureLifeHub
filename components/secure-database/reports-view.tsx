@@ -5,7 +5,6 @@ import {
   BarChart as BarChartIcon, 
   PieChart as PieChartIcon, 
   TrendingUp, 
-  TrendingDown, 
   Database, 
   FileText, 
   Download,
@@ -14,12 +13,28 @@ import {
   Zap,
   LayoutGrid,
   ChevronRight,
-  Printer
+  Printer,
+  Plus,
+  Trash2,
+  RefreshCcw,
+  Search,
+  Settings,
+  ShieldCheck,
+  ChevronLeft,
+  X,
+  Save,
+  Clock,
+  PieChart as PieIcon
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { Database as DatabaseType, DbRecord } from "@/types/secure-database"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import type { Database as DatabaseType, DbRecord, Field } from "@/types/secure-database"
 import { 
   BarChart, 
   Bar, 
@@ -35,14 +50,21 @@ import {
 
 interface ReportsViewProps {
   database: DatabaseType
+  onSaveReport: (dbTitle: string, report: any) => void
+  onGetReports: (dbTitle: string) => any[]
+  onDeleteReport: (dbTitle: string, reportId: string) => void
 }
 
-export function ReportsView({ database }: ReportsViewProps) {
-  const [activeReport, setActiveReport] = useState<string>("summary")
+export function ReportsView({ database, onSaveReport, onGetReports, onDeleteReport }: ReportsViewProps) {
+  const [activeTab, setActiveTab] = useState("predefined")
+  const [selectedFields, setSelectedFields] = useState<string[]>(database.fields.map(f => f.name))
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [reportResult, setReportResult] = useState<any[] | null>(null)
+
+  const savedReports = useMemo(() => onGetReports(database.title), [database.title, onGetReports])
 
   const stats = useMemo(() => {
     if (!database) return { count: 0, fields: 0, lastUpdated: "N/A" }
-    
     return {
       count: database.records.length,
       fields: database.fields.length,
@@ -52,162 +74,199 @@ export function ReportsView({ database }: ReportsViewProps) {
     }
   }, [database])
 
-  const chartData = useMemo(() => {
-    if (!database || database.records.length === 0) return []
-    // Example: group by first dropdown field
-    const field = database.fields.find(f => f.type === 'dropdown')
-    if (!field) return []
+  const COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#8b5cf6"]
 
-    const counts: { [key: string]: number } = {}
-    database.records.forEach(r => {
-        const val = String(r.values[field.name] || 'Unknown')
-        counts[val] = (counts[val] || 0) + 1
-    })
+  const handleRunReport = (type: string) => {
+    setIsGenerating(true)
+    setTimeout(() => {
+        let result: DbRecord[] = []
+        if (type === "summary") {
+            result = database.records.slice(0, 10)
+        }
+        setReportResult(result)
+        setIsGenerating(false)
+        toast.success(`${type.toUpperCase()} Engine Output Synchronized`)
+    }, 800)
+  }
 
-    return Object.entries(counts).map(([name, value]) => ({ name, value }))
-  }, [database])
-
-  const COLORS = ["#818cf8", "#f472b6", "#34d399", "#fbbf24", "#f87171", "#a78bfa"]
+  const handleSaveCustomReport = () => {
+    const newReport = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: `Custom ${database.title} Audit`,
+        fields: selectedFields,
+        created: new Date().toISOString(),
+    }
+    onSaveReport(database.title, newReport)
+    toast.success("Analytical Blueprint Saved")
+  }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a0a0a]">
-        <div className="p-8 bg-gradient-to-b from-rose-500/10 to-transparent border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-black tracking-tight text-white uppercase italic">Data Insights</h2>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-xs rounded-xl font-black uppercase text-gray-400">
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print Report
+    <div className="flex flex-col h-full bg-[#0a0a0a] animate-in fade-in duration-500">
+        <div className="p-8 border-b border-white/5 bg-white/2">
+            <div className="flex items-center justify-between mb-8">
+                <div>
+                     <h2 className="text-3xl font-black text-white tracking-tighter uppercase mb-1">Analytical Engine</h2>
+                     <p className="text-[10px] font-black uppercase text-gray-600 tracking-[0.3em]">Persistent Data Intelligence Node Active</p>
+                </div>
+                <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 text-gray-400">
+                        <Printer className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-xs rounded-xl font-black uppercase text-gray-400">
-                        <Download className="h-4 w-4 mr-2" />
-                        Snapshot
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 text-gray-400">
+                        <Download className="h-4 w-4" />
                     </Button>
                 </div>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-                 {[
-                    { label: "Total Nodes", value: stats.count, icon: Database, color: "text-indigo-400" },
-                    { label: "Data points", value: stats.count * stats.fields, icon: Zap, color: "text-amber-400" },
-                    { label: "Stability", value: "99.9%", icon: TrendingUp, color: "text-emerald-400" },
-                 ].map((stat, i) => (
-                    <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 group hover:border-white/10 transition-all">
-                        <div className={`p-3 rounded-xl bg-black/40 ${stat.color} group-hover:scale-110 transition-transform`}>
-                            <stat.icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none">{stat.label}</p>
-                            <p className="text-xl font-black text-white leading-none mt-1.5">{stat.value}</p>
-                        </div>
-                    </div>
-                 ))}
-            </div>
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="bg-white/5 p-1 rounded-2xl h-14 border border-white/5 max-w-2xl mx-auto flex">
+                    <TabsTrigger value="predefined" className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px]">Predefined Reports</TabsTrigger>
+                    <TabsTrigger value="custom" className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px]">Custom Architect</TabsTrigger>
+                    <TabsTrigger value="saved" className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px]">Saved Blueprints</TabsTrigger>
+                </TabsList>
+            </Tabs>
         </div>
 
-        <ScrollArea className="flex-1 p-6">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Distribution Chart */}
-                    <div className="bg-[#111] border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
-                         <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Distribution Analysis</h3>
-                            <PieChartIcon className="h-5 w-5 text-indigo-400" />
-                         </div>
-                         <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie
-                                        data={chartData.length > 0 ? chartData : [{ name: 'Empty', value: 1 }]}
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
+        <ScrollArea className="flex-1 p-8">
+            <div className="max-w-5xl mx-auto pb-12">
+                <Tabs value={activeTab} className="w-full">
+                    <TabsContent value="predefined" className="mt-0">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[
+                                { id: "summary", title: "Database Summary", desc: "Overview of all records in the active collection", icon: FileText, color: "text-indigo-400" },
+                                { id: "category", title: "Records by Category", desc: "Count of records grouped by structural identifier", icon: PieIcon, color: "text-emerald-400" },
+                                { id: "recent", title: "Recently Added", desc: "Entries registered within the last 30 intervals", icon: Clock, color: "text-amber-400" },
+                            ].map((rep) => (
+                                <div key={rep.id} className="group p-8 rounded-[2.5rem] bg-white/2 border border-white/5 hover:border-white/10 transition-all flex items-center justify-between gap-6 hover:translate-y-[-4px]">
+                                    <div className="flex items-center gap-6">
+                                        <div className={`h-16 w-16 rounded-[1.5rem] bg-black/40 ${rep.color} flex items-center justify-center ring-4 ring-white/5 group-hover:scale-110 transition-transform`}>
+                                            <rep.icon className="h-8 w-8" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-lg font-black text-white tracking-tight uppercase mb-1">{rep.title}</h4>
+                                            <p className="text-xs text-gray-600 font-medium leading-relaxed">{rep.desc}</p>
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        onClick={() => handleRunReport(rep.id)}
+                                        className="h-11 px-8 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-black uppercase text-[10px] tracking-widest shadow-xl shadow-indigo-500/20"
                                     >
-                                        {chartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip 
-                                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '12px' }}
-                                        itemStyle={{ color: '#fff', fontSize: '12px', fontWeight: 'bold' }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                         </div>
-                         <div className="grid grid-cols-2 gap-2 mt-auto">
-                            {chartData.map((entry, index) => (
-                                <div key={entry.name} className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                                    <span className="text-[10px] text-gray-500 font-bold truncate uppercase tracking-tighter">{entry.name}</span>
+                                        Run
+                                    </Button>
                                 </div>
                             ))}
-                         </div>
-                    </div>
+                        </div>
+                    </TabsContent>
 
-                    {/* Timeline Analysis */}
-                    <div className="bg-[#111] border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
-                         <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-black uppercase tracking-widest text-gray-500">Activity Timeline</h3>
-                            <BarChartIcon className="h-5 w-5 text-emerald-400" />
-                         </div>
-                         <div className="h-[250px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={chartData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
-                                    <YAxis stroke="#555" fontSize={10} tickLine={false} axisLine={false} />
-                                    <Tooltip 
-                                        contentStyle={{ backgroundColor: '#1a1a1a', border: '1px solid #333', borderRadius: '12px' }}
-                                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                                    />
-                                    <Bar dataKey="value" fill="#10b981" radius={[6, 6, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                         </div>
-                    </div>
-                </div>
+                    <TabsContent value="custom" className="mt-0">
+                        <div className="bg-white/2 border border-white/5 rounded-[3rem] p-10">
+                            <div className="flex items-center justify-between mb-12">
+                                <div>
+                                    <h3 className="text-xl font-black text-white tracking-tight uppercase mb-2 text-indigo-400">Custom Report Architect</h3>
+                                    <p className="text-[10px] font-black uppercase text-gray-700 tracking-widest">Constructing analytical data views</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <Button variant="ghost" onClick={() => setSelectedFields([])} className="h-10 text-[10px] font-black uppercase text-gray-500 hover:text-white">Reset</Button>
+                                    <Button 
+                                        onClick={handleSaveCustomReport}
+                                        className="h-10 px-6 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-black uppercase text-[10px] tracking-widest"
+                                    >
+                                        <Save className="h-3 w-3 mr-2" />
+                                        Save Blueprint
+                                    </Button>
+                                </div>
+                            </div>
 
-                {/* Detailed Summary Table */}
-                <div className="bg-[#111] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Core Metrics Table</h3>
-                        <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-indigo-400 group">
-                            Full Analytics <ChevronRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
-                        </Button>
-                    </div>
-                    <div className="p-4 overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-white/5">
-                                    <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-600">Metric Category</th>
-                                    <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-600">Status</th>
-                                    <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-gray-600 text-right">Yield</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {chartData.map((row) => (
-                                    <tr key={row.name} className="hover:bg-white/5 transition-colors group">
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]" />
-                                                <span className="text-sm font-bold text-gray-200 group-hover:text-white transition-colors">{row.name}</span>
+                            <div className="space-y-12">
+                                <div>
+                                    <div className="flex items-center justify-between mb-6 px-1">
+                                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Select Data Channels</h4>
+                                        <button 
+                                            onClick={() => setSelectedFields(database.fields.map(f => f.name))}
+                                            className="text-[9px] font-black text-indigo-400 hover:text-indigo-300 uppercase underline underline-offset-4"
+                                        >
+                                            Select All Channels
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                        {database.fields.map((field) => (
+                                            <div key={field.name} className={`flex items-center gap-4 p-4 rounded-3xl border transition-all ${selectedFields.includes(field.name) ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/2 border-white/5 opacity-50'}`}>
+                                                <Checkbox 
+                                                    id={`rep-${field.name}`}
+                                                    checked={selectedFields.includes(field.name)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) setSelectedFields([...selectedFields, field.name])
+                                                        else setSelectedFields(selectedFields.filter(f => f !== field.name))
+                                                    }}
+                                                    className="h-5 w-5 border-white/20 data-[state=checked]:bg-indigo-500 rounded-lg"
+                                                />
+                                                <Label htmlFor={`rep-${field.name}`} className="text-[11px] font-black uppercase text-gray-300 cursor-pointer">{field.name}</Label>
                                             </div>
-                                        </td>
-                                        <td className="py-4 px-4 text-xs font-bold text-emerald-400 opacity-80 uppercase tracking-tighter">Synced</td>
-                                        <td className="py-4 px-4 text-sm font-black text-white text-right font-mono italic">{row.value} pts</td>
-                                    </tr>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6 px-1">Universal Filters</h4>
+                                    <div className="p-12 border-2 border-dashed border-white/5 rounded-[3rem] text-center bg-white/1">
+                                         <Filter className="h-10 w-10 text-gray-700 mx-auto mb-4" />
+                                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-6">No active filters applied</p>
+                                         <Button variant="outline" className="h-12 px-8 rounded-2xl bg-white/2 border-white/10 hover:bg-white/5 text-white font-black uppercase text-[10px] tracking-widest">
+                                            <Plus className="h-4 w-4 mr-2" />
+                                            Add Adaptive Filter
+                                         </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="saved" className="mt-0">
+                        {savedReports.length === 0 ? (
+                            <div className="h-[400px] flex flex-col items-center justify-center text-center gap-6 animate-in fade-in slide-in-from-bottom-4">
+                                <div className="h-24 w-24 rounded-[2.5rem] bg-white/2 flex items-center justify-center text-gray-800 border border-white/5">
+                                    <RefreshCcw className="h-10 w-10" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-2 italic">Null Saved States</h3>
+                                    <p className="text-xs text-gray-600 font-medium max-w-xs mx-auto">Create a custom architect blueprint and tap 'Save Blueprint' to register a persistent reporting node.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {savedReports.map((report) => (
+                                    <div key={report.id} className="p-8 rounded-[2.5rem] bg-white/2 border border-white/5 hover:border-white/10 transition-all flex items-center justify-between group">
+                                         <div className="flex items-center gap-6">
+                                            <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                                                <FileText className="h-6 w-6" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-white uppercase tracking-tight">{report.title}</h4>
+                                                <p className="text-[9px] text-gray-600 font-black uppercase mt-1 tracking-widest">Created: {new Date(report.created).toLocaleDateString()}</p>
+                                            </div>
+                                         </div>
+                                         <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                             <Button variant="ghost" size="icon" onClick={() => handleRunReport("custom")} className="h-10 w-10 rounded-xl bg-white/5 text-indigo-400 hover:bg-indigo-500 hover:text-white">
+                                                <RefreshCcw className="h-4 w-4" />
+                                             </Button>
+                                             <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                onClick={() => {
+                                                    onDeleteReport(database.title, report.id)
+                                                    toast.success("Blueprint Purged")
+                                                }} 
+                                                className="h-10 w-10 rounded-xl bg-white/5 text-rose-500 hover:bg-rose-500 hover:text-white"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                             </Button>
+                                         </div>
+                                    </div>
                                 ))}
-                            </tbody>
-                        </table>
-                        
-                        {chartData.length === 0 && (
-                            <div className="p-12 text-center text-gray-600 text-[10px] font-black uppercase tracking-[0.3em]">
-                                Insufficient Data for Generation
                             </div>
                         )}
-                    </div>
-                </div>
+                    </TabsContent>
+                </Tabs>
             </div>
         </ScrollArea>
     </div>

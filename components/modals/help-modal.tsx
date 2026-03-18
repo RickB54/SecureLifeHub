@@ -95,6 +95,8 @@ export const HELP_MAP: Record<string, string> = {
     "user-settings": "settings",
     "dr-ai": "dr-ai",
     "secure-database": "secure-database",
+    "type-tasks": "task-architect",
+    "task-architect": "task-architect",
 }
 
 const HELP_PAGES: HelpPage[] = [
@@ -794,29 +796,101 @@ const HELP_PAGES: HelpPage[] = [
     },
     {
         id: "secure-database",
-        title: "Adaptive Secure Database",
+        title: "Secure Database Architect",
         icon: Database,
         content: (
             <div className="space-y-6">
-                <p className="text-lg text-gray-300 leading-relaxed">
-                    A flexible, high-performance database engine that adapts to your unique data structures. Build your own collections with custom fields, validation, and analytics.
+                <p className="text-lg text-gray-300 leading-relaxed italic">
+                    "High-fidelity collections with custom schemas and professional reporting."
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-5 rounded-3xl bg-indigo-500/5 border border-indigo-500/10">
-                        <h4 className="font-black text-indigo-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><LayoutGrid className="h-4 w-4" /> Custom Schemas</h4>
-                        <p className="text-xs text-gray-400">Define your own fields: Text, Numbers, Dates, Dropdowns, and Multi-select lists. Perfect for tracking everything from antique collections to family health history.</p>
+                <div className="space-y-5 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="p-6 rounded-[2rem] bg-indigo-600/10 border border-indigo-500/20 shadow-xl">
+                        <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                             <Database className="h-5 w-5" /> Professional Schemas
+                        </h4>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Access over 15 pre-built professional blueprints including Project Management, CRM, Inventory, and Health. Each blueprint is pre-configured with the exact fields you need for complex data tracking.
+                        </p>
                     </div>
-                    <div className="p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
-                        <h4 className="font-black text-emerald-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><ListTodo className="h-4 w-4" /> Task Integration</h4>
-                        <p className="text-xs text-gray-400">Link database records directly to your global mission tasks. Never miss a deadline associated with your structured data.</p>
+
+                    <div className="p-6 rounded-[2rem] bg-white/5 border border-white/10">
+                        <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-blue-400" /> Core Architect Features
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="flex gap-4">
+                                <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400 h-fit">
+                                    <LayoutGrid className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h5 className="text-[11px] font-bold text-gray-200 uppercase">Synchronized Blueprints</h5>
+                                    <p className="text-[10px] text-gray-500">Use the 'Synchronize Blueprints' tool in the Actions menu to inject the latest professional collections into your vault instantly.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 h-fit">
+                                    <TrendingUp className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h5 className="text-[11px] font-bold text-gray-200 uppercase">Dual Intelligence Reporting</h5>
+                                    <p className="text-[10px] text-gray-500">Toggle between 'Insights' for real-time visual charts and 'Reports' for a full Custom Architect builder where you can save personalized data blueprints.</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 h-fit">
+                                    <Maximize2 className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <h5 className="text-[11px] font-bold text-gray-200 uppercase">Full Record Immersion</h5>
+                                    <p className="text-[10px] text-gray-500">Click any record to enter 'Deep View' mode. The entire interface themes itself to match the collection's unique color signature for a vibrant experience.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="p-5 rounded-3xl bg-rose-500/5 border border-rose-500/10">
-                        <h4 className="font-black text-rose-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><TrendingUp className="h-4 w-4" /> Power Analytics</h4>
-                        <p className="text-xs text-gray-400">Interactive charts and distribution tables automatically generated from your data. Visualize trends and counts across your collections.</p>
+
+                    <div className="p-5 rounded-[2rem] bg-amber-500/10 border border-amber-500/20">
+                        <h4 className="text-xs font-black text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <Clock className="h-5 w-5" /> Data Persistence
+                        </h4>
+                        <p className="text-[10px] text-amber-300/60 font-medium leading-relaxed">
+                            Reports and Blueprints are saved to your local architecture. You can print reports directly or export snapshots for external use.
+                        </p>
                     </div>
-                    <div className="p-5 rounded-3xl bg-amber-500/5 border border-amber-500/10">
-                        <h4 className="font-black text-amber-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2"><Globe className="h-4 w-4" /> Portability</h4>
-                        <p className="text-xs text-gray-400">Export your data to CSV or JSON snapshots. Your data is never locked in; you have 100% control over your architecture.</p>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "task-architect",
+        title: "Task Architect Engine",
+        icon: ListTodo,
+        content: (
+            <div className="space-y-6">
+                <p className="text-lg text-gray-300 leading-relaxed italic">
+                    "Strategic execution and objective tracking engine for mission-critical tasks."
+                </p>
+                <div className="space-y-4">
+                    <div className="p-6 rounded-[2rem] bg-blue-600/10 border border-blue-500/20 shadow-xl">
+                        <h4 className="text-sm font-black text-blue-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                             <Target className="h-5 w-5" /> Execution Matrix
+                        </h4>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            Track your highest priority objectives through a streamlined execution matrix. Monitor Critical Path (Urgent) tasks and Active Processes (Pending) from a unified dashboard.
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
+                            <h5 className="text-[10px] font-black text-blue-400 uppercase mb-2 flex items-center gap-2">
+                                <CheckCircle2 className="h-4 w-4" /> Sync Status
+                            </h5>
+                            <p className="text-[11px] text-gray-500">Task completion is 'Synchronized' into your permanent achievement log, providing historical data on execution speed.</p>
+                        </div>
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
+                            <h5 className="text-[10px] font-black text-red-400 uppercase mb-2 flex items-center gap-2">
+                                <AlertCircle className="h-4 w-4" /> Critical Path
+                            </h5>
+                            <p className="text-[11px] text-gray-500">Urgent tasks are highlighted with a pulse effect in the center HUD to ensure strategic focus remains on core objectives.</p>
+                        </div>
                     </div>
                 </div>
             </div>

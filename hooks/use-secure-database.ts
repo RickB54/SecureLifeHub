@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import type { Database, DbRecord as Record } from "@/types/secure-database"
 import { defaultTemplates } from "@/components/secure-database/templates"
+import { toast } from "sonner"
 
 export function useSecureDatabase() {
   const [databases, setDatabases] = useState<Database[]>([])
@@ -171,6 +172,12 @@ export function useSecureDatabase() {
     })
   }
 
+  const resetToFactory = () => {
+    setDatabases(defaultTemplates)
+    localStorage.setItem("slh_custom_databases", JSON.stringify(defaultTemplates))
+    toast.success("Engine blueprints synchronized to factory defaults")
+  }
+
   return {
     databases,
     updateDatabase,
@@ -178,6 +185,7 @@ export function useSecureDatabase() {
     duplicateRecord,
     deleteDatabases,
     recoverDatabases,
+    resetToFactory,
     initialized,
     saveReport,
     getReportsForDatabase,

@@ -40,6 +40,9 @@ import MediaVault from "@/components/media-vault"
 import VehicleDocs from "@/components/vehicle-docs"
 import MaintenanceLogs from "@/components/maintenance-logs"
 import Subscriptions from "@/components/subscriptions"
+import EnergyMood from "@/components/energy-mood"
+import SmartBills from "@/components/smart-bills"
+import TaskArchitect from "@/components/task-architect"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
 import SecureNotes from "@/components/secure-notes"
@@ -474,6 +477,8 @@ function HomeContent() {
         return <HealthRecords key="type-health-ai" {...commonProps} initialTab="ai" />
       case "type-health-diary":
         return <HealthDiary {...commonProps} />
+      case "type-energy-mood":
+        return <EnergyMood {...commonProps} />
       case "type-health-portals":
         return <HealthPortals {...commonProps} />
       case "type-doctors":
@@ -526,11 +531,14 @@ function HomeContent() {
         return <Assets {...commonProps} />
       case "type-budget":
         return <BudgetManager {...commonProps} />
+      case "type-bills":
+        return <SmartBills {...commonProps} />
 
       // Digital Life
       case "type-digital-life":
       case "type-social":
-        return <DigitalLife {...commonProps} />
+      case "type-social-audit":
+        return <DigitalLife {...commonProps} initialTab={activePage === "type-social-audit" ? "audit" : "dashboard"} />
       case "type-diary":
         return <Diary {...commonProps} />
 
@@ -557,11 +565,16 @@ function HomeContent() {
       // Let's redirect `type-passports` to `Travel` if we want the hub experience, OR keep it as a password list.
       // The user said "Travel & Mobility... Passport info".
       // I'll leave type-passports mapping to the Passwords list for now as it's consistent with existing behavior, 
+      // For now, I will leave type-passports mapping to the Passwords list for now as it's consistent with existing behavior, 
       // but I'll add `type-travel` for the hub.
 
       // Goals
       case "type-goals":
         return <Goals {...commonProps} />
+      case "type-habits":
+        return <Goals {...commonProps} initialTab="habits" />
+      case "type-tasks":
+        return <TaskArchitect {...commonProps} />
 
       case "type-ssh-keys":
         return <Passwords {...commonProps} initialCategoryFilter="SSH Keys" />

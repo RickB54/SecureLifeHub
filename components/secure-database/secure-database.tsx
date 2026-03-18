@@ -17,23 +17,37 @@ import { ReportsView } from "./reports-view"
 import { DatabaseActions } from "./database-actions"
 import { FormBuilder } from "./form-builder"
 import { RecordForm } from "./record-form"
+import { RecordDetails } from "./record-details"
 
 import { toast } from "sonner"
 import { BottomNav } from "./bottom-nav"
+import { SheetTitle } from "@/components/ui/sheet"
 
 interface SecureDatabaseProps {
   onOpenHelp?: (targetId?: string) => void
 }
 
 export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
-  const { databases, updateDatabase, addDatabase, duplicateRecord, deleteDatabases, recoverDatabases, initialized } =
-    useSecureDatabase()
+  const { 
+    databases, 
+    updateDatabase, 
+    addDatabase, 
+    duplicateRecord, 
+    deleteDatabases, 
+    recoverDatabases, 
+    resetToFactory, 
+    saveReport,
+    getReportsForDatabase,
+    deleteReport,
+    initialized 
+  } = useSecureDatabase()
   
   const [currentDb, setCurrentDb] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [showFormBuilder, setShowFormBuilder] = useState(false)
   const [showAddRecord, setShowAddRecord] = useState(false)
   const [editingRecord, setEditingRecord] = useState<DbRecord | null>(null)
+  const [selectedRecord, setSelectedRecord] = useState<DbRecord | null>(null)
   const [collapseAll, setCollapseAll] = useState(false)
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
 
@@ -111,6 +125,9 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 border-r border-white/10 bg-[#0a0a0a] w-80">
+            <div className="sr-only">
+                <SheetTitle>Database Navigation</SheetTitle>
+            </div>
             <DatabaseSidebar 
               databases={databases} 
               currentDb={currentDb} 
@@ -197,7 +214,28 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         database={currentDatabase}
                         record={editingRecord || undefined}
                         onSubmit={handleRecordSubmit}
+                        onCancel={() => {
+                            setShowAddRecord(false)
+                            setEditingRecord(null)
+                        }}
                         onUpdateDatabase={updateDatabase}
+                    />
+                ) : selectedRecord && currentDatabase ? (
+                    <RecordDetails 
+                        database={currentDatabase}
+                        record={selectedRecord}
+                        onClose={() => setSelectedRecord(null)}
+                        onEdit={() => {
+                            setEditingRecord(selectedRecord)
+                            setSelectedRecord(null)
+                            setShowAddRecord(true)
+                        }}
+                        onToggleFavorite={(recordId) => {
+                            const updatedRecords = currentDatabase.records.map(r => 
+                                r.id === recordId ? { ...r, isFavorite: !r.isFavorite } : r
+                            )
+                            updateDatabase({ ...currentDatabase, records: updatedRecords })
+                        }}
                     />
                 ) : (
                     <DatabaseView 
@@ -205,6 +243,8 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         searchQuery={searchQuery}
                         onDatabaseUpdate={updateDatabase}
                         onDuplicateRecord={duplicateRecord}
+                        onEditRecord={handleEditRecord}
+                        onSelectRecord={setSelectedRecord}
                         collapseAll={collapseAll}
                     />
                 )}
@@ -229,6 +269,10 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
         onNewDatabase={() => setShowFormBuilder(true)}
         onDeleteDatabases={deleteDatabases}
         onRecoverDatabases={recoverDatabases}
+        onResetToFactory={resetToFactory}
+        onSaveReport={saveReport}
+        onGetReports={getReportsForDatabase}
+        onDeleteReport={deleteReport}
         onUseTemplate={(template: Database) => {
             addDatabase(template)
             setCurrentDb(template.title)

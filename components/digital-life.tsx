@@ -10,6 +10,7 @@ interface Props {
     updateItem: (id: string, updates: any) => Promise<any>
     deleteItem: (id: string) => Promise<any>
     theme: string
+    initialTab?: string
 }
 
 // --- API Helpers (RSS to JSON proxies for interactions without Backend Keys) ---
@@ -22,9 +23,9 @@ const FEEDS = {
     finance: "https://feeds.bloomberg.com/markets/news.rss"
 }
 
-export default function DigitalLife({ records, addItem, deleteItem, theme }: Props) {
+export default function DigitalLife({ records, addItem, deleteItem, theme, initialTab = "hub" }: Props) {
     const [items, setItems] = useState<any[]>([])
-    const [activeTab, setActiveTab] = useState("hub") // hub, assets, legacy
+    const [activeTab, setActiveTab] = useState(initialTab) // hub, assets, legacy, audit
     const [showAddModal, setShowAddModal] = useState(false)
     const [selectedNewsFilter, setSelectedNewsFilter] = useState("world")
 
@@ -51,9 +52,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
         setIsLoadingData(true)
         setDataError(false)
         try {
-            // 1. Fetch News based on Filter
-            // Note: In a real prod app, we'd cache this or use a robust backend proxy.
-            // Using RSS2JSON for demo "Live" capabilities.
             const feedUrl = FEEDS[selectedNewsFilter as keyof typeof FEEDS] || FEEDS.world
             const newsRes = await fetch(`${RSS_TO_JSON_API}${encodeURIComponent(feedUrl)}`)
             const newsJson = await newsRes.json()
@@ -69,16 +67,14 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                 })))
             }
 
-            // 2. Fetch Events (Holidays)
-            // Using Nager.Date for real holiday data
             const year = new Date().getFullYear()
-            const countryCode = "US" // Default to US for now
+            const countryCode = "US" 
             const holidaysRes = await fetch(`https://date.nager.at/api/v3/NextPublicHolidays/${countryCode}`)
             const holidaysJson = await holidaysRes.json()
 
             if (Array.isArray(holidaysJson)) {
                 setEventsData(holidaysJson.map((h: any) => ({
-                    id: h.date, // simple unique key
+                    id: h.date,
                     title: h.localName,
                     date: h.date,
                     location: "National",
@@ -97,7 +93,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
         }
     }
 
-    // Filter out 2FA items from view if any exist in DB, but we are effectively "moving them out" by hiding them here
     const assets = items.filter(i => !i.item_metadata?.is_legacy && !i.item_metadata?.is_2fa)
     const legacyContacts = items.filter(i => i.item_metadata?.is_legacy)
 
@@ -110,7 +105,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
         toast.success("Copied to clipboard")
     }
 
-    // Mock Data for Social Hub
     const socialLinks = [
         { name: "YouTube", icon: Youtube, color: "text-red-500", url: "https://youtube.com" },
         { name: "Facebook", icon: Facebook, color: "text-blue-600", url: "https://facebook.com" },
@@ -133,7 +127,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                         </h1>
                         <p className="text-gray-400 mt-1">Social media, live news, and events.</p>
                     </div>
-                    {/* Live Indicator */}
                     {activeTab === 'hub' && (
                         <div className="flex items-center gap-2">
                             <span className={`text-xs ${isLoadingData ? 'text-yellow-500' : 'text-green-500'} flex items-center gap-1`}>
@@ -147,9 +140,8 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                     )}
                 </div>
 
-                {/* Tags / Tabs */}
                 <div className="flex gap-4 border-b border-white/10 pb-4 overflow-x-auto">
-                    {['hub', 'assets', 'legacy'].map((tab) => (
+                    {['hub', 'assets', 'legacy', 'audit'].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -161,19 +153,17 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                             {tab === 'hub' && <TrendingUp className="h-4 w-4" />}
                             {tab === 'assets' && <Globe className="h-4 w-4" />}
                             {tab === 'legacy' && <Users className="h-4 w-4" />}
-                            {tab === 'hub' ? 'Social Hub' : tab === 'assets' ? 'Online Assets' : 'Legacy Contacts'}
+                            {tab === 'audit' && <Shield className="h-4 w-4" />}
+                            {tab === 'hub' ? 'Social Hub' : tab === 'assets' ? 'Online Assets' : tab === 'legacy' ? 'Legacy Contacts' : 'Security Audit'}
                         </button>
                     ))}
                 </div>
             </div>
 
-            {/* Content Area */}
             <div className={`flex-1 overflow-y-auto px-8 pb-8 space-y-6 custom-scrollbar ${isLoadingData ? 'opacity-80' : ''}`}>
 
-                {/* === HUB TAB (LIVE) === */}
                 {activeTab === 'hub' && (
                     <div className="space-y-8 animate-in fade-in duration-500">
-                        {/* Social Quick Links */}
                         <section>
                             <h2 className={`text-lg font-bold mb-4 flex items-center gap-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                                 <ExternalLink className="h-5 w-5 text-pink-500" /> Quick Access
@@ -195,7 +185,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                         </section>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* News Feed */}
                             <div className="lg:col-span-2 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h2 className={`text-lg font-bold flex items-center gap-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
@@ -262,7 +251,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                                 </div>
                             </div>
 
-                            {/* Events & Calendar */}
                             <div className="space-y-4">
                                 <h2 className={`text-lg font-bold flex items-center gap-2 ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>
                                     <Calendar className="h-5 w-5 text-orange-500" /> Holidays & Events
@@ -293,7 +281,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                                     </button>
                                 </div>
 
-                                {/* Trending Topic Mini-Card (Link to Google Trends) */}
                                 <div
                                     onClick={() => window.open("https://trends.google.com", "_blank")}
                                     className={`p-4 rounded-2xl bg-gradient-to-br from-pink-500 to-purple-600 text-white relative overflow-hidden group cursor-pointer hover:shadow-lg transition-all`}
@@ -313,7 +300,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                     </div>
                 )}
 
-                {/* === ASSETS TAB === */}
                 {activeTab === 'assets' && (
                     <div className="space-y-6 animate-in fade-in">
                         <div className="flex justify-end">
@@ -350,7 +336,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                     </div>
                 )}
 
-                {/* === LEGACY TAB === */}
                 {activeTab === 'legacy' && (
                     <div className="space-y-6 animate-in fade-in">
                         <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-blue-50 text-blue-900' : 'bg-blue-500/10 border border-blue-500/20'}`}>
@@ -399,9 +384,54 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                     </div>
                 )}
 
+                {activeTab === 'audit' && (
+                    <div className="space-y-8 animate-in slide-in-from-right-4 duration-500">
+                        <div className={`p-8 rounded-[2.5rem] ${glassCardStyle} bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20`}>
+                            <h2 className="text-3xl font-black italic tracking-tighter text-indigo-400 uppercase mb-2">Platform Privacy Audit</h2>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest leading-relaxed max-w-2xl">
+                                Systematically secure your digital footprint. Perform these checkups quarterly to ensure your data remains your own.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[
+                                { name: "Google Account", icon: Globe, tasks: ["Check 2FA", "Review Third-party Apps", "Location History"], color: "text-blue-500" },
+                                { name: "Facebook / Meta", icon: Facebook, tasks: ["Privacy Checkup", "Ad Preferences", "Face Recognition"], color: "text-blue-600" },
+                                { name: "Instagram", icon: Instagram, tasks: ["Account Privacy", "Story Sharing", "Sensitive Content"], color: "text-pink-500" },
+                                { name: "Twitter / X", icon: Twitter, tasks: ["Protect Posts", "Data Sharing", "Direct Messages"], color: "text-sky-500" },
+                                { name: "LinkedIn", icon: Linkedin, tasks: ["Profile Visibility", "Data Privacy", "Job Seeking Prefs"], color: "text-blue-700" },
+                                { name: "TikTok", icon: Video, tasks: ["Digital Wellbeing", "Ads Data", "Safety Settings"], color: "text-black dark:text-white" }
+                            ].map((platform, pIdx) => (
+                                <div key={pIdx} className={`p-6 rounded-[2rem] border ${glassCardStyle} hover:border-indigo-500/30 transition-all`}>
+                                    <div className="flex justify-between items-start mb-6">
+                                        <div className="flex items-center gap-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center">
+                                                <platform.icon className={`h-6 w-6 ${platform.color}`} />
+                                            </div>
+                                            <h3 className="text-xl font-black uppercase tracking-tight">{platform.name}</h3>
+                                        </div>
+                                        <span className="text-[10px] font-black uppercase px-2 py-1 bg-green-500/10 text-green-500 rounded">Recommended</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {platform.tasks.map((task, tIdx) => (
+                                            <div key={tIdx} className="flex items-center gap-3 p-3 rounded-xl bg-black/20 hover:bg-black/40 cursor-pointer transition-colors group">
+                                                <div className="h-5 w-5 rounded-full border-2 border-indigo-500/30 group-hover:border-indigo-500 transition-colors" />
+                                                <span className="text-sm font-bold text-gray-300">{task}</span>
+                                                <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity text-indigo-400" />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <button className="w-full mt-6 py-3 rounded-xl bg-indigo-600/10 text-indigo-400 text-xs font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
+                                        Launch Full Audit
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
             </div>
 
-            {/* Add Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className={`${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'} w-full max-w-lg rounded-2xl p-6 shadow-2xl`}>
@@ -414,18 +444,15 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                             const fd = new FormData(e.target)
                             const baseItem = {
                                 type: "note",
-                                category: "Digital Life", // Keeping internal category
+                                category: "Digital Life", 
                                 title: fd.get("title"),
                                 item_metadata: {
                                     is_digital: true,
-                                    // Merging all specific fields
                                     is_legacy: activeTab === 'legacy',
                                     is_2fa: false,
                                     digitalType: fd.get("digitalType"),
                                     url: fd.get("url"),
                                     notes: fd.get("notes"),
-
-                                    // Legacy fields
                                     relation: fd.get("relation"),
                                     email: fd.get("email"),
                                     phone: fd.get("phone"),
@@ -435,7 +462,6 @@ export default function DigitalLife({ records, addItem, deleteItem, theme }: Pro
                             setShowAddModal(false)
                         }} className="space-y-4">
 
-                            {/* Dynamic Form Fields */}
                             <div>
                                 <label className="text-xs font-bold opacity-50 uppercase ml-1 block mb-1">
                                     {activeTab === 'assets' ? 'Asset Name' : 'Contact Name'}

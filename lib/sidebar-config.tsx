@@ -1,4 +1,4 @@
-import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database } from "lucide-react"
+import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2 } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -37,6 +37,7 @@ export const sidebarSections = [
             { id: "type-health-ai", label: "Dr. AI", icon: <Sparkles className="h-4 w-4" /> },
             { id: "type-vitals", label: "Vitals", icon: <FileText className="h-4 w-4" /> },
             { id: "type-health-diary", label: "Health Diary", icon: <FileText className="h-4 w-4" /> },
+            { id: "type-energy-mood", label: "Energy & Mood", icon: <Zap className="h-4 w-4" /> },
             { id: "type-health-portals", label: "Health Portals", icon: <Globe className="h-4 w-4" /> },
             { id: "type-doctors", label: "My Doctors", icon: <Users className="h-4 w-4" /> },
             { id: "type-medical", label: "Health Insurance", icon: <FileText className="h-4 w-4" /> },
@@ -68,6 +69,7 @@ export const sidebarSections = [
         items: [
             { id: "type-payment-cards", label: "Payment Cards", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-assets", label: "Asset Ledger", icon: <Box className="h-4 w-4" /> },
+            { id: "type-bills", label: "Smart Bill Tracker", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-budget", label: "Budget Manager", icon: <PieChartIcon className="h-4 w-4" /> },
         ]
     },
@@ -85,6 +87,8 @@ export const sidebarSections = [
         color: "teal",
         items: [
             { id: "type-goals", label: "Goals & Timeline", icon: <Target className="h-4 w-4" /> },
+            { id: "type-habits", label: "Habit Stack Builder", icon: <Activity className="h-4 w-4" /> },
+            { id: "type-tasks", label: "Task Architect", icon: <CheckCircle2 className="h-4 w-4" /> },
         ]
     },
     {
@@ -97,14 +101,14 @@ export const sidebarSections = [
             { id: "type-diary", label: "My Diary", icon: <Book className="h-4 w-4" /> },
             { id: "type-subscriptions", label: "Subscription Manager", icon: <CreditCard className="h-4 w-4" /> },
             { id: "type-social", label: "Social Media", icon: <Smartphone className="h-4 w-4" /> },
+            { id: "type-social-audit", label: "Social Media Security Audit", icon: <Shield className="h-4 w-4" /> },
         ]
     },
     {
-        id: "configuration",
-        title: "Configuration",
+        id: "settings",
+        title: "Settings",
         color: "gray",
-        items: [
-            { id: "settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
-        ],
+        items: [{ id: "settings", label: "Settings", icon: <Settings className="h-5 w-5" /> }],
+        isTopLevel: true,
     },
 ]

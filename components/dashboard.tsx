@@ -3,10 +3,15 @@
 import { useState, useEffect } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
-  Heart, Car, Briefcase, Box, Globe, Book, Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
+  Heart, Car, Briefcase, Box, Smartphone,
+  CheckCircle2,
+  Book,
+  Globe,
+ Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
   Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign, Database,
   LayoutGrid, PieChart as WheelIcon, TrendingUp, Sparkles
 } from "lucide-react"
+import { toast } from "sonner"
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
@@ -23,12 +28,13 @@ interface DashboardProps {
   setActivePage: (page: string) => void
   theme: string
   addItem: (item: any) => Promise<any>
+  updateItem: (id: string, updates: any) => Promise<any>
   addFolder: (name: string, parentId?: string, extra?: any) => Promise<any>
   securitySettings?: Record<string, { isLocked: boolean }>
   onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, addFolder, securitySettings = {}, onOpenHelp }: DashboardProps) {
+export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, updateItem, addFolder, securitySettings = {}, onOpenHelp }: DashboardProps) {
   const [addPasswordModalOpen, setAddPasswordModalOpen] = useState(false)
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
   const [showPersonalizer, setShowPersonalizer] = useState(false)
@@ -433,7 +439,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                             />
                             <Radar
                                 name="Life Balance"
-                                dataKey="value"
+                                dataKey="A"
                                 stroke="#6366f1"
                                 fill="#6366f1"
                                 fillOpacity={0.4}
@@ -459,7 +465,7 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
                             <Sparkles className="h-4 w-4" /> Hub Insights
                         </h4>
                         <div className="space-y-4">
-                            {lifeWheelData.sort((a,b) => a.A - b.A).slice(0, 2).map(area => (
+                            {[...lifeWheelData].sort((a,b) => a.A - b.A).slice(0, 2).map(area => (
                                 <div key={area.subject} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="h-2 w-2 rounded-full bg-blue-500" />
@@ -622,6 +628,17 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           isLocked={securitySettings['type-travel']?.isLocked}
         />
         <ModuleCard
+          title="Task Architect"
+          count={records.filter((r: any) => r.type === "architect-task").length}
+          description="Strategic execution and objective tracking engine."
+          icon={<CheckCircle2 className="h-6 w-6 text-blue-500" />}
+          colorClass="border-blue-500"
+          shadowColor="rgba(59, 130, 246, 0.35)"
+          buttonColorClass="text-blue-400 hover:bg-blue-500"
+          onClick={() => setActivePage('type-tasks')}
+          onHelp={() => onOpenHelp?.("goals")}
+        />
+        <ModuleCard
           title="Goals"
           count={goalsCount}
           description="Life goals and interactive progress tracking."
@@ -632,7 +649,50 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
           onClick={() => setActivePage('type-goals')}
           onHelp={() => onOpenHelp?.("goals")}
           isLocked={securitySettings['goals']?.isLocked}
-        />
+          />
+        </div>
+      )}
+
+      <div className={`p-8 rounded-[2.5rem] ${glassPanel} border border-white/10 shadow-3xl mb-8`}>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
+            <h2 className="text-xl font-black italic uppercase tracking-tighter">Execution Matrix</h2>
+          </div>
+          <button onClick={() => setActivePage('type-tasks')} className="text-[10px] font-black uppercase text-blue-500 hover:text-blue-400 transition-colors tracking-[0.2em]">View Full Hub —&gt;</button>
+        </div>
+        <div className="space-y-4">
+          {records.filter(r => r.type === "architect-task" && !r.item_metadata?.completed)
+            .sort((a,b) => {
+              const priorities: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 }
+              return priorities[a.item_metadata?.priority as keyof typeof priorities] - priorities[b.item_metadata?.priority as keyof typeof priorities]
+            })
+            .slice(0, 3).map((task) => (
+            <div key={task.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between group hover:border-blue-500/30 transition-all">
+              <div className="flex items-center gap-4">
+                <div className={`h-1.5 w-1.5 rounded-full ${task.item_metadata?.priority === 'urgent' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-blue-500'}`} />
+                <div>
+                  <div className="text-sm font-bold text-white uppercase tracking-tight">{task.title}</div>
+                  <div className="text-[8px] font-black uppercase text-gray-600 tracking-widest">{task.item_metadata?.priority} priority</div>
+                </div>
+              </div>
+              <button 
+                onClick={async () => {
+                  await updateItem(task.id, { item_metadata: { ...task.item_metadata, completed: true, completedAt: new Date().toISOString() } })
+                  toast.success("Objective Synchronized")
+                }}
+                className="p-2 rounded-xl text-gray-700 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100"
+              >
+                <CheckCircle2 className="h-5 w-5" />
+              </button>
+            </div>
+          ))}
+          {records.filter(r => r.type === "architect-task" && !r.item_metadata?.completed).length === 0 && (
+            <div className="text-center py-6 opacity-30 italic text-xs uppercase font-black tracking-widest">No active objectives detected</div>
+          )}
+        </div>
       </div>
 
       <div className={`p-0 rounded-3xl ${glassPanel} overflow-hidden shadow-2xl border border-white/10`}>

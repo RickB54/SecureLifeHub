@@ -4,6 +4,7 @@ export interface Field {
   name: string
   type: FieldType
   options?: string[]
+  showOnCard?: boolean
 }
 
 export interface DbRecord {

@@ -1,12 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, X, Layout, Type, Calendar, CheckSquare, List as ListIcon, FileText, Image as ImageIcon, Hash } from "lucide-react"
+import { Plus, X, Layout, Type, Calendar, CheckSquare, List as ListIcon, FileText, Image as ImageIcon, Hash, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { Database, Field, FieldType } from "@/types/secure-database"
 
@@ -139,6 +140,19 @@ export function FormBuilder({
                                             ))}
                                         </SelectContent>
                                     </Select>
+                                </div>
+                                <div className="flex items-center gap-2 px-1 shrink-0">
+                                     <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            handleFieldChange(index, { showOnCard: !field.showOnCard })
+                                        }}
+                                        className={`p-2.5 rounded-xl transition-all ${field.showOnCard ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-700 hover:text-gray-500'}`}
+                                        title={field.showOnCard ? "Visible on Card Front" : "Hidden in Card View"}
+                                     >
+                                        {field.showOnCard ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                     </button>
                                 </div>
                                 <Button
                                     type="button"

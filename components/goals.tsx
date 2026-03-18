@@ -13,10 +13,11 @@ interface GoalsProps {
     updateItem: (id: string, updates: any) => Promise<void>
     deleteItem: (id: string) => Promise<void>
     theme: string
+    initialTab?: string
 }
 
-export default function Goals({ records = [], addItem, updateItem, deleteItem, theme }: GoalsProps) {
-    const [activeTab, setActiveTab] = useState("active") // 'dashboard', 'active', 'history', 'habits'
+export default function Goals({ records = [], addItem, updateItem, deleteItem, theme, initialTab = "active" }: GoalsProps) {
+    const [activeTab, setActiveTab] = useState(initialTab) // 'dashboard', 'active', 'history', 'habits'
     const [showAddModal, setShowAddModal] = useState(false)
     const [editingGoal, setEditingGoal] = useState<any>(null)
 

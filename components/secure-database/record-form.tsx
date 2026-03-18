@@ -1,8 +1,12 @@
-"use client"
-
-import { useState } from "react"
-import { Pencil, Plus, Trash2, Save, AlertTriangle, Type, Hash, Calendar as CalendarIcon, CheckSquare, List as ListIcon, FileText, Image as ImageIcon } from "lucide-react"
-import type { Database, DbRecord, Field } from "@/types/secure-database"
+import React, { useState } from "react"
+import { 
+  X, Save, Trash2, Edit3, 
+  MapPin, User, Tag, FileText, 
+  Layers, Package, Info, CheckCircle2,
+  Calendar, Clock, DollarSign, Users,
+  Minus, Plus, Type, Hash, Image as ImageIcon
+} from "lucide-react"
+import type { Database, DbRecord, Field, FieldType } from "@/types/secure-database"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,18 +14,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 
 interface RecordFormProps {
   database: Database
   record?: DbRecord
   onSubmit: (values: { [key: string]: any }) => void
+  onCancel: () => void
   onUpdateDatabase?: (updatedDatabase: Database) => void
 }
 
-export function RecordForm({ database, record, onSubmit, onUpdateDatabase }: RecordFormProps) {
-  const [editingField, setEditingField] = useState<string | null>(null)
+export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatabase }: RecordFormProps) {
+  const [addingOption, setAddingOption] = useState<string | null>(null)
   const [newOption, setNewOption] = useState("")
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,83 +45,142 @@ export function RecordForm({ database, record, onSubmit, onUpdateDatabase }: Rec
     onSubmit(values)
   }
 
-  const renderField = (field: Field) => {
-    const value = record?.values[field.name]
-    
-    const fieldHeader = (
-        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1 block mb-2">{field.name}</label>
-    )
+  const getFieldIcon = (type: FieldType) => {
+    switch (type) {
+      case "text": return <Type className="h-4 w-4" />
+      case "number": return <Hash className="h-4 w-4" />
+      case "date": return <Calendar className="h-4 w-4" />
+      case "checkbox": return <CheckCircle2 className="h-4 w-4" />
+      case "dropdown": return <Tag className="h-4 w-4" />
+      case "textarea": return <FileText className="h-4 w-4" />
+      case "gallery": return <ImageIcon className="h-4 w-4" />
+      default: return <Info className="h-4 w-4" />
+    }
+  }
 
-    const inputClasses = "bg-white/5 border-white/10 rounded-2xl focus:ring-indigo-500 text-white placeholder:text-gray-700 transition-all font-bold"
+  const colorMap: { [key: string]: string } = {
+    emerald: "indigo-500",
+    green: "emerald-400",
+    teal: "teal-400",
+    cyan: "sky-400",
+    indigo: "indigo-400",
+    rose: "rose-400",
+    red: "rose-500",
+    amber: "amber-400",
+    blue: "blue-400",
+    pink: "pink-400",
+  }
+
+  const themeColor = colorMap[database.color || "emerald"] || "indigo-500"
+
+  const renderFieldInput = (field: Field) => {
+    const value = record?.values[field.name]
+    const baseClasses = "bg-white/5 border-white/5 h-12 rounded-2xl focus:ring-2 focus:ring-indigo-500/20 text-white font-bold transition-all hover:bg-white/8"
+
+    const fieldLabel = (
+      <div className="flex items-center justify-between mb-3 px-1">
+        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
+            <div className={`h-6 w-6 rounded-lg bg-${themeColor}/20 flex items-center justify-center text-${themeColor}`}>
+                {getFieldIcon(field.type)}
+            </div>
+            {field.name}
+        </label>
+        { (field.type === "dropdown" || field.type === "checkbox") && (
+            <button 
+                type="button" 
+                onClick={() => setAddingOption(field.name)}
+                className="text-gray-700 hover:text-white transition-colors"
+                title="Customize Environment Options"
+            >
+                <Edit3 className="h-3 w-3" />
+            </button>
+        )}
+      </div>
+    )
 
     switch (field.type) {
       case "text":
       case "number":
       case "date":
         return (
-          <div className="space-y-1">
-            {fieldHeader}
-            <Input type={field.type} name={field.name} defaultValue={value || ""} className={`h-12 ${inputClasses}`} />
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {fieldLabel}
+            <Input 
+                type={field.type} 
+                name={field.name} 
+                defaultValue={value || ""} 
+                className={baseClasses} 
+                required={field.name.toLowerCase().includes("name") || field.name.toLowerCase().includes("title")}
+            />
           </div>
         )
 
       case "textarea":
         return (
-          <div className="space-y-1">
-            {fieldHeader}
-            <Textarea name={field.name} defaultValue={value || ""} className={`min-h-[120px] ${inputClasses}`} />
-          </div>
-        )
-
-      case "checkbox":
-        return (
-          <div className="space-y-1">
-            {fieldHeader}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-2 bg-white/2 rounded-3xl border border-white/5">
-                {field.options?.map((option) => (
-                  <div key={option} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
-                    <Checkbox
-                      id={`${field.name}-${option}`}
-                      name={field.name}
-                      value={option}
-                      defaultChecked={(value || []).includes(option)}
-                      className="border-white/20 data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500"
-                    />
-                    <Label htmlFor={`${field.name}-${option}`} className="text-sm font-bold text-gray-300 cursor-pointer flex-1">
-                      {option}
-                    </Label>
-                  </div>
-                ))}
-            </div>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 md:col-span-2">
+            {fieldLabel}
+            <Textarea 
+                name={field.name} 
+                defaultValue={value || ""} 
+                className={`${baseClasses} min-h-[140px] pt-4 leading-relaxed`} 
+            />
           </div>
         )
 
       case "dropdown":
         return (
-          <div className="space-y-1">
-            {fieldHeader}
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            {fieldLabel}
             <Select name={field.name} defaultValue={value}>
-                <SelectTrigger className={`h-12 ${inputClasses}`}>
-                  <SelectValue placeholder="Selection Required..." />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
-                  {field.options?.map((option) => (
-                    <SelectItem key={option} value={option} className="focus:bg-white/10 font-bold">
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <SelectTrigger className={baseClasses}>
+                <SelectValue placeholder="Select high-fidelity option..." />
+              </SelectTrigger>
+              <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl backdrop-blur-2xl">
+                {field.options?.map((opt) => (
+                  <SelectItem key={opt} value={opt} className="focus:bg-white/10 font-bold uppercase text-[10px] tracking-widest py-3">
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
+          </div>
+        )
+
+      case "checkbox":
+        return (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 md:col-span-2 space-y-4">
+            {fieldLabel}
+            <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-4 rounded-[3rem] bg-white/2 border border-white/5`}>
+              {field.options?.map((opt) => (
+                <div key={opt} className="flex items-center gap-4 p-4 rounded-2xl bg-white/2 border border-white/5 hover:bg-white/5 transition-colors group">
+                  <Checkbox 
+                    id={`${field.name}-${opt}`} 
+                    name={field.name} 
+                    value={opt} 
+                    defaultChecked={(value || []).includes(opt)}
+                    className={`h-6 w-6 border-white/10 data-[state=checked]:bg-${themeColor} data-[state=checked]:border-${themeColor} rounded-xl`}
+                  />
+                  <Label htmlFor={`${field.name}-${opt}`} className="text-xs font-black uppercase text-gray-500 group-hover:text-white transition-colors cursor-pointer flex-1">
+                    {opt}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
         )
 
       case "gallery":
         return (
-          <div className="space-y-1 opacity-50">
-            {fieldHeader}
-            <div className="p-8 rounded-3xl border-2 border-dashed border-white/5 flex flex-col items-center justify-center text-center gap-3">
-                <ImageIcon className="h-8 w-8 text-gray-700" />
-                <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Media module available post-init</p>
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 md:col-span-2">
+            {fieldLabel}
+            <div className="p-12 border-2 border-dashed border-white/5 rounded-[4rem] flex flex-col items-center justify-center gap-4 text-center group hover:border-white/10 transition-colors">
+                <div className="h-16 w-16 rounded-3xl bg-white/5 flex items-center justify-center text-gray-700 transition-all group-hover:scale-110 group-hover:bg-white/8">
+                    <ImageIcon className="h-8 w-8" />
+                </div>
+                <div>
+                   <p className="text-xs font-black uppercase text-white mb-1">Upload Digital Assets</p>
+                   <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600">Secure Object Storage Node Active</p>
+                </div>
             </div>
           </div>
         )
@@ -129,24 +192,69 @@ export function RecordForm({ database, record, onSubmit, onUpdateDatabase }: Rec
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a]">
-        <ScrollArea className="flex-1 p-8">
-            <form id="record-form" onSubmit={handleSubmit} className="max-w-xl mx-auto space-y-8 pb-12">
-                {database.fields.map((field) => (
-                    <div key={field.name} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                        {renderField(field)}
-                    </div>
-                ))}
-            </form>
-        </ScrollArea>
-        <div className="p-8 border-t border-white/5 bg-[#111] flex items-center justify-end">
-            <Button 
-                type="submit" 
-                form="record-form"
-                className="px-12 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-emerald-500/20"
-            >
-                {record ? "Commit Changes" : "Create Node"}
-            </Button>
-        </div>
+      {/* Dynamic Themed Sub-header */}
+      <div className={`h-1.5 w-full bg-gradient-to-r from-${themeColor}/0 via-${themeColor} to-${themeColor}/0`} />
+
+      <ScrollArea className="flex-1">
+        <form id="record-form" onSubmit={handleSubmit} className="p-12 max-w-5xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+             <div className="space-y-4">
+                <div className={`h-24 w-24 rounded-[2.5rem] bg-gradient-to-br from-${themeColor} to-indigo-600 shadow-2xl shadow-${themeColor}/20 flex items-center justify-center text-white ring-8 ring-white/5`}>
+                  <Package className="h-10 w-10" />
+                </div>
+                <div>
+                    <h2 className="text-4xl font-black text-white tracking-tighter uppercase mb-1">
+                        {record ? 'Edit Record' : 'Create Entry'}
+                    </h2>
+                    <p className="text-[10px] font-black uppercase text-gray-500 tracking-[0.3em] flex items-center gap-2">
+                        <Layers className={`h-3 w-3 text-${themeColor}`} />
+                        {database.title}
+                    </p>
+                </div>
+             </div>
+             
+             <div className="hidden lg:flex gap-4">
+                <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-center min-w-[120px]">
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">State</p>
+                    <p className="text-xs font-bold text-gray-400">{record ? 'Revision' : 'Evolution'}</p>
+                </div>
+                <div className="px-6 py-4 rounded-2xl bg-white/5 border border-white/5 text-center min-w-[120px]">
+                    <p className="text-[8px] font-black text-gray-600 uppercase tracking-widest mb-1">Identity</p>
+                    <p className="text-xs font-bold text-gray-400">#{Math.random().toString(36).substr(2, 6).toUpperCase()}</p>
+                </div>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12">
+            {database.fields.map((field) => (
+                <React.Fragment key={field.name}>
+                    {renderFieldInput(field)}
+                </React.Fragment>
+            ))}
+          </div>
+          
+          <div className="h-24" />
+        </form>
+      </ScrollArea>
+
+      <div className="p-10 border-t border-white/5 bg-[#0d0d0d]/80 backdrop-blur-3xl flex items-center justify-between">
+        <Button 
+          type="button" 
+          variant="ghost" 
+          onClick={onCancel}
+          className="px-10 h-16 rounded-2xl text-gray-500 hover:text-white hover:bg-white/5 font-black uppercase text-xs tracking-widest transition-all"
+        >
+          Discard Changes
+        </Button>
+        <Button 
+          type="submit" 
+          form="record-form"
+          className={`px-12 h-16 rounded-2xl bg-gradient-to-br from-${themeColor} to-indigo-600 hover:scale-105 active:scale-95 text-white font-black uppercase text-xs tracking-widest shadow-2xl shadow-${themeColor}/20 transition-all`}
+        >
+          <Save className="h-5 w-5 mr-3" />
+          {record ? 'Synchronize Record' : 'Inject Data Entry'}
+        </Button>
+      </div>
     </div>
   )
 }
