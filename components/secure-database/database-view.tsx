@@ -466,7 +466,19 @@ export function DatabaseView({
                       </div>
                       <div className="h-6 w-px bg-white/10 hidden md:block mx-2" />
                       <div className="flex flex-col items-start gap-1">
-                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 italic">Initializing Matrix...</p>
+                        {record.images && record.images.length > 0 ? (
+                            <div className="h-10 w-16 mb-2 rounded-lg overflow-hidden border border-white/10 group-hover:border-indigo-500/50 transition-all bg-black/40 relative">
+                                <img 
+                                    src={record.images[0]} 
+                                    alt="Sector Asset" 
+                                    className="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/50">{record.images.length}</span>
+                            </div>
+                        ) : (
+                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 italic">No Asset Synchronized</p>
+                        )}
                         <p className="text-[9px] font-bold text-white/50 tracking-widest font-mono">
                             {(() => {
                                 try {
@@ -738,7 +750,7 @@ export function DatabaseView({
                                                         <Checkbox 
                                                             id={`opt-${record.id}-${field.name}-${opt}`}
                                                             checked={(record.values[field.name] || []).includes(opt)}
-                                                            className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20"
+                                                            className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20 ring-offset-black"
                                                         />
                                                         <label className="text-sm font-bold text-gray-300 cursor-pointer flex-1">{opt}</label>
                                                         <Button 
@@ -763,45 +775,58 @@ export function DatabaseView({
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div className="flex gap-2.5 mt-4">
-                                                <Input 
-                                                    placeholder="Add new option..." 
-                                                    value={newOptionInput}
-                                                    onChange={(e) => setNewOptionInput(e.target.value)}
-                                                    className="h-12 bg-black/40 border-white/10 rounded-xl focus:border-indigo-500/50 transition-all font-bold text-sm px-5"
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            e.preventDefault();
-                                                            if (!newOptionInput.trim()) return;
+                                            <div className="flex flex-col gap-4 mt-6">
+                                                <div className="flex items-center gap-2 group/add cursor-pointer" onClick={() => {
+                                                    const input = document.getElementById(`add-opt-${record.id}-${field.name}`)
+                                                    input?.focus()
+                                                }}>
+                                                    <Plus className="h-3 w-3 text-indigo-400" />
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400/80 group-hover:text-indigo-400">+ Add Custom</span>
+                                                </div>
+                                                <div className="flex gap-2.5 relative">
+                                                    <Input 
+                                                        id={`add-opt-${record.id}-${field.name}`}
+                                                        placeholder="Type and press Enter" 
+                                                        value={newOptionInput}
+                                                        onChange={(e) => setNewOptionInput(e.target.value)}
+                                                        className="h-12 bg-black/40 border-white/5 rounded-xl focus:border-indigo-500/50 transition-all font-bold text-sm px-5 placeholder:text-white/10"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                const opt = newOptionInput.trim()
+                                                                if (!opt || !database) return;
+                                                                const updatedFields = database.fields.map(f => {
+                                                                    if (f.name === field.name) {
+                                                                        return { ...f, options: [...(f.options || []), opt] };
+                                                                    }
+                                                                    return f;
+                                                                });
+                                                                onDatabaseUpdate({ ...database, fields: updatedFields });
+                                                                setNewOptionInput("");
+                                                                toast.success(`Broadcasting new parameter: ${opt}`);
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Button 
+                                                        disabled={!newOptionInput.trim()}
+                                                        onClick={() => {
+                                                            const opt = newOptionInput.trim()
+                                                            if (!opt || !database) return;
                                                             const updatedFields = database.fields.map(f => {
                                                                 if (f.name === field.name) {
-                                                                    return { ...f, options: [...(f.options || []), newOptionInput.trim()] };
+                                                                    return { ...f, options: [...(f.options || []), opt] };
                                                                 }
                                                                 return f;
                                                             });
                                                             onDatabaseUpdate({ ...database, fields: updatedFields });
                                                             setNewOptionInput("");
-                                                            toast.success(`Option '${newOptionInput}' injected`);
-                                                        }
-                                                    }}
-                                                />
-                                                <Button 
-                                                    onClick={() => {
-                                                        if (!newOptionInput.trim()) return;
-                                                        const updatedFields = database.fields.map(f => {
-                                                            if (f.name === field.name) {
-                                                                return { ...f, options: [...(f.options || []), newOptionInput.trim()] };
-                                                            }
-                                                            return f;
-                                                        });
-                                                        onDatabaseUpdate({ ...database, fields: updatedFields });
-                                                        setNewOptionInput("");
-                                                        toast.success(`Option '${newOptionInput}' injected`);
-                                                    }}
-                                                    className="h-12 w-12 p-0 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg active:scale-95 transition-all shrink-0"
-                                                >
-                                                    <Plus className="h-5 w-5" />
-                                                </Button>
+                                                            toast.success(`Broadcasting new parameter: ${opt}`);
+                                                        }}
+                                                        className="h-12 w-12 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:opacity-20"
+                                                    >
+                                                        <Plus className="h-5 w-5" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
                                     ) : (
