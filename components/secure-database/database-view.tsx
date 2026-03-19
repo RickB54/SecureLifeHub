@@ -69,6 +69,7 @@ interface DatabaseViewProps {
   onAddRecord: () => void;
   onEditSchema?: (database: DatabaseType) => void;
   onRecordUpdate?: (recordId: string, values: { [key: string]: any }) => void;
+  onUpdateRecord?: (dbId: string, recordId: string, updates: any) => Promise<void>;
   initialExpandedRecordId?: string;
   collapseAll: boolean;
   sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
@@ -88,6 +89,7 @@ export function DatabaseView({
   onAddRecord,
   onEditSchema,
   onRecordUpdate,
+  onUpdateRecord,
   initialExpandedRecordId,
   collapseAll,
   sortConfig,
@@ -131,7 +133,19 @@ export function DatabaseView({
           recordRefs.current[initialExpandedRecordId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 300)
     }
+
+    // Restore activeRecordId from storage to survive reloads during camera use
+    const stored = localStorage.getItem("slh_active_record_id")
+    if (stored) setActiveRecordId(stored)
   }, [initialExpandedRecordId])
+
+  useEffect(() => {
+      if (activeRecordId) {
+          localStorage.setItem("slh_active_record_id", activeRecordId)
+      } else {
+          localStorage.removeItem("slh_active_record_id")
+      }
+  }, [activeRecordId])
  
   const prevCollapseAll = useRef(collapseAll)
   useEffect(() => {
@@ -223,40 +237,55 @@ export function DatabaseView({
     const files = e.target.files
     if (!files || !database || files.length === 0) return
 
+    toast.info("Processing visual assets...")
+    
+    // Add a small delay to let browser stabilize after camera closes
+    await new Promise(resolve => setTimeout(resolve, 500))
+
     try {
       const options = {
         maxSizeMB: 1,
         maxWidthOrHeight: 1920,
-        useWebWorker: true
+        useWebWorker: false 
       }
 
-      const compressedFiles = await Promise.all(
-        Array.from(files).map(async (file) => {
-          try {
-            return await imageCompression(file, options)
-          } catch (error) {
-            console.error("Compression Error:", error)
-            return file // Fallback to original
-          }
-        })
-      )
+      const compressedFiles: File[] = []
+      for (const file of Array.from(files)) {
+        try {
+          const compressed = await imageCompression(file, options)
+          compressedFiles.push(compressed)
+        } catch (error) {
+          console.error("Compression Error:", error)
+          compressedFiles.push(file)
+        }
+      }
 
-      const filePromises = compressedFiles.map(file => {
-        return new Promise<string>((resolve) => {
+      const base64Images: string[] = []
+      for (const file of compressedFiles) {
+        const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
           reader.readAsDataURL(file)
         })
-      })
+        base64Images.push(base64)
+      }
 
-      const base64Images = await Promise.all(filePromises)
+      const targetRecord = database.records.find(r => r.id === recordId)
+      const allImages = [...(targetRecord?.images || []), ...base64Images]
+
       const updatedRecords = database.records.map((r: DbRecord) => {
         if (r.id === recordId) {
-          return { ...r, images: [...(r.images || []), ...base64Images] }
+          return { ...r, images: allImages }
         }
         return r
       })
+
       onDatabaseUpdate({ ...database, records: updatedRecords })
+
+      if (onUpdateRecord && database.id) {
+          await onUpdateRecord(database.id, recordId, { images: allImages })
+      }
+
       toast.success(`${base64Images.length} assets successfully acquired and optimized`)
       
       if (e.target) e.target.value = ""
@@ -1078,14 +1107,14 @@ export function DatabaseView({
             accept="image/*" 
             className="hidden" 
         />
-        <input 
-            type="file" 
-            ref={cameraInputRef} 
-            onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
-            accept="image/*" 
-            capture="environment" 
-            className="hidden" 
-        />
+                    <input 
+                        type="file" 
+                        ref={cameraInputRef} 
+                        onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
+                        accept="image/*" 
+                        capture="environment" 
+                        className="hidden" 
+                    />
       </div>
 
       {filteredRecords.length === 0 && (

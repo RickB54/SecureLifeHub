@@ -27,9 +27,10 @@ interface RecordFormProps {
   onSubmit: (values: { [key: string]: any }, images?: string[]) => void
   onCancel: () => void
   onUpdateDatabase?: (updatedDatabase: Database) => void
+  onUpdateRecord?: (dbId: string, recordId: string, updates: any) => Promise<void>
 }
 
-export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatabase }: RecordFormProps) {
+export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatabase, onUpdateRecord }: RecordFormProps) {
   const [newOption, setNewOption] = useState("")
   const [showAddField, setShowAddField] = useState(false)
   const [newFieldName, setNewFieldName] = useState("")
@@ -38,6 +39,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
   const [newOptionState, setNewOptionState] = useState("")
   const [localImages, setLocalImages] = useState<string[]>(record?.images || [])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef = useRef<HTMLInputElement>(null)
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -85,34 +87,45 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
     toast.info("Compressing high-fidelity assets...")
 
+    // Add a small delay to let the browser stabilize after the camera app closes
+    await new Promise(resolve => setTimeout(resolve, 500))
+
     try {
       const options = {
         maxSizeMB: 1,
         maxWidthOrHeight: 1920,
-        useWebWorker: true
+        useWebWorker: false
       }
 
-      const compressedFiles = await Promise.all(
-        Array.from(files).map(async (file) => {
-          try {
-            return await imageCompression(file, options)
-          } catch (error) {
-            console.error("Compression Error:", error)
-            return file // Fallback to original
-          }
-        })
-      )
+      const compressedFiles: File[] = []
+      for (const file of Array.from(files)) {
+        try {
+          const compressed = await imageCompression(file, options)
+          compressedFiles.push(compressed)
+        } catch (error) {
+          console.error("Compression Error:", error)
+          compressedFiles.push(file)
+        }
+      }
 
-      const filePromises = compressedFiles.map(file => {
-        return new Promise<string>((resolve) => {
+      const base64Images: string[] = []
+      for (const file of compressedFiles) {
+        const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
           reader.readAsDataURL(file)
         })
-      })
+        base64Images.push(base64)
+      }
 
-      const base64Images = await Promise.all(filePromises)
-      setLocalImages(prev => [...prev, ...base64Images])
+      const allImages = [...localImages, ...base64Images]
+      setLocalImages(allImages)
+      
+      // If we are editing an existing record, save immediately to prevent data loss on browser swap/reload
+      if (record && record.id && onUpdateRecord && database.id) {
+          await onUpdateRecord(database.id, record.id, { images: allImages })
+      }
+      
       toast.success(`${base64Images.length} assets successfully acquired and optimized`)
     } catch (error) {
       toast.error("Failed to inject assets")
@@ -345,14 +358,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                     </button>
                     <button 
                         type="button"
-                        onClick={() => {
-                            const cameraInput = document.createElement('input');
-                            cameraInput.type = 'file';
-                            cameraInput.accept = 'image/*';
-                            cameraInput.capture = 'environment';
-                            cameraInput.onchange = (e: any) => handleImageUpload(e);
-                            cameraInput.click();
-                        }}
+                        onClick={() => cameraInputRef.current?.click()}
                         className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl"
                     >
                         <div className="p-3 bg-indigo-500/10 rounded-2xl group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all">
@@ -366,6 +372,14 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                         onChange={handleImageUpload} 
                         multiple 
                         accept="image/*" 
+                        className="hidden" 
+                    />
+                    <input 
+                        type="file" 
+                        ref={cameraInputRef} 
+                        onChange={handleImageUpload} 
+                        accept="image/*" 
+                        capture="environment"
                         className="hidden" 
                     />
                 </div>

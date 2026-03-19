@@ -78,6 +78,47 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     toast.info(`Initializing Architect with ${template.title} profile. Modify fields below.`)
   }
 
+  // Persistence: Save and restore UI state to survive mobile browser reloads
+  useEffect(() => {
+    if (!initialized) {
+        const stored = localStorage.getItem("slh_ui_state")
+        if (stored) {
+            try {
+                const state = JSON.parse(stored)
+                if (state.currentDb) setCurrentDb(state.currentDb)
+                if (state.showAddRecord) setShowAddRecord(state.showAddRecord)
+                if (state.selectedRecordId) setSelectedRecordId(state.selectedRecordId)
+                // We'll restore editingRecord after databases are loaded
+            } catch(e) {}
+        }
+    }
+  }, [initialized])
+
+  useEffect(() => {
+    if (initialized) {
+      localStorage.setItem("slh_ui_state", JSON.stringify({
+        currentDb,
+        showAddRecord,
+        selectedRecordId,
+        editingRecordId: editingRecord?.id
+      }))
+    }
+  }, [currentDb, showAddRecord, selectedRecordId, editingRecord, initialized])
+
+  // Restore editingRecord once databases are loaded
+  useEffect(() => {
+      if (initialized && !editingRecord) {
+          const stored = localStorage.getItem("slh_ui_state")
+          if (stored) {
+              const state = JSON.parse(stored)
+              if (state.editingRecordId && currentDatabase) {
+                  const rec = currentDatabase.records.find(r => r.id === state.editingRecordId)
+                  if (rec) setEditingRecord(rec)
+              }
+          }
+      }
+  }, [initialized, currentDatabase, editingRecord])
+
   // Auto-sync missing blueprints on mount
   useEffect(() => {
     if (initialized) {
@@ -280,12 +321,14 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                             setEditingRecord(null)
                         }}
                         onUpdateDatabase={updateDatabase}
+                        onUpdateRecord={updateRecord}
                     />
                 ) : (
                       <DatabaseView 
                          database={currentDatabase}
                          searchQuery={searchQuery}
                          onDatabaseUpdate={updateDatabase}
+                         onUpdateRecord={updateRecord}
                          onDuplicateRecord={duplicateRecord}
                          onEditRecord={handleEditRecord}
                          onSelectRecord={(record) => {
