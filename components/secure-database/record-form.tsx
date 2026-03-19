@@ -365,16 +365,15 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                         </div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Inject Asset</p>
                     </button>
-                    <button 
-                        type="button"
-                        onClick={() => cameraInputRef.current?.click()}
-                        className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl"
+                    <label 
+                        htmlFor="camera-input-primary"
+                        className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl cursor-pointer"
                     >
                         <div className="p-3 bg-indigo-500/10 rounded-2xl group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all">
                             <Camera className="h-5 w-5 text-indigo-400" />
                         </div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Take Photo</p>
-                    </button>
+                    </label>
                     <input 
                         type="file" 
                         ref={fileInputRef} 
@@ -384,10 +383,12 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                         className="hidden" 
                     />
                     <input 
+                        id="camera-input-primary"
                         type="file" 
                         ref={cameraInputRef} 
                         onChange={handleImageUpload} 
                         accept="image/*" 
+                        capture="environment"
                         className="hidden" 
                     />
                 </div>

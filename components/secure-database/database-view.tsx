@@ -1026,18 +1026,14 @@ export function DatabaseView({
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-11 rounded-2xl bg-white/5 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 border border-white/5 px-6 shadow-xl"
-                                    onClick={() => {
-                                        setActiveRecordId(record.id)
-                                        cameraInputRef.current?.click()
-                                    }}
-                                  >
-                                      <Camera className="h-4 w-4 mr-2 text-indigo-400" />
-                                      Capture Visual
-                                  </Button>
+                                  <label 
+                                    htmlFor="camera-input-view"
+                                    className="h-11 rounded-2xl bg-white/5 text-[10px] font-black uppercase tracking-widest hover:bg-white/10 border border-white/5 px-6 shadow-xl flex items-center justify-center cursor-pointer"
+                                    onClick={() => setActiveRecordId(record.id)}
+                                   >
+                                       <Camera className="h-4 w-4 mr-2 text-indigo-400" />
+                                       Capture Visual
+                                   </label>
                                   <Button 
                                     variant="ghost" 
                                     size="sm" 
@@ -1113,10 +1109,12 @@ export function DatabaseView({
             className="hidden" 
         />
                     <input 
+                        id="camera-input-view"
                         type="file" 
                         ref={cameraInputRef} 
                         onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
                         accept="image/*" 
+                        capture="environment" 
                         className="hidden" 
                     />
       </div>
