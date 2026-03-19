@@ -81,6 +81,7 @@ export function FormBuilder({
     if (!title || fields.some((f) => !f.name)) return
 
     const dbData: Database = {
+      id: editingDatabase?.id,
       title,
       fields,
       records: editingDatabase ? editingDatabase.records : [],
@@ -149,9 +150,7 @@ export function FormBuilder({
                                     key={c}
                                     type="button"
                                     onClick={() => setColor(c)}
-                                    className={`w-6 h-6 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-offset-black ring-white scale-110' : 'opacity-40 hover:opacity-100 hover:scale-110'}`}
-                                    style={{ backgroundColor: `var(--${c}-500, ${c})` }}
-                                    className={`${
+                                    className={`w-6 h-6 rounded-full transition-all ${color === c ? 'ring-2 ring-offset-2 ring-offset-black ring-white scale-110' : 'opacity-40 hover:opacity-100 hover:scale-110'} ${
                                         c === 'indigo' ? 'bg-indigo-500' : 
                                         c === 'blue' ? 'bg-blue-500' : 
                                         c === 'cyan' ? 'bg-cyan-500' : 
@@ -164,6 +163,7 @@ export function FormBuilder({
                                         c === 'pink' ? 'bg-pink-500' : 
                                         'bg-purple-500'
                                     }`}
+                                    style={{ backgroundColor: `var(--${c}-500, ${c})` }}
                                 />
                             ))}
                         </div>
@@ -176,113 +176,131 @@ export function FormBuilder({
                         <Badge variant="outline" className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">{fields.length} Fields Defined</Badge>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                         {fields.map((field, index) => (
-                            <div key={index} className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all animate-in slide-in-from-bottom-2 duration-300">
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <div className="flex-1 space-y-2">
-                                        <Input
-                                            placeholder="Field Label"
-                                            value={field.name}
-                                            onChange={(e) => handleFieldChange(index, { name: e.target.value })}
-                                            className="bg-transparent border-none p-0 h-auto text-sm font-bold focus-visible:ring-0 placeholder:text-gray-700"
-                                            required
-                                        />
-                                        <p className="text-[9px] text-gray-600 font-black uppercase tracking-tighter">Attribute Name</p>
-                                    </div>
-                                    <div className="flex-1">
-                                        <Select
-                                            value={field.type}
-                                            onValueChange={(value: FieldType) => handleFieldChange(index, { type: value })}
-                                        >
-                                            <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs text-white">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
-                                                {fieldTypes.map(type => (
-                                                    <SelectItem key={type.value} value={type.value} className="focus:bg-white/10">
-                                                        <div className="flex items-center gap-2">
-                                                            <type.icon className={`h-3.5 w-3.5 ${type.color}`} />
-                                                            <span className="text-[11px] font-bold uppercase tracking-tight">{type.label}</span>
-                                                        </div>
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="flex items-center gap-2 px-1 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                handleFieldChange(index, { showOnCard: !field.showOnCard })
-                                            }}
-                                            className={`p-2.5 rounded-xl transition-all ${field.showOnCard ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-700 hover:text-gray-500'}`}
-                                            title={field.showOnCard ? "Visible on Card Front" : "Hidden in Card View"}
-                                        >
-                                            {field.showOnCard ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                                        </button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => handleRemoveField(index)}
-                                            className="h-10 w-10 text-gray-700 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl"
-                                            disabled={fields.length === 1}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                {/* Additional Options for Dropdown/Checkbox */}
-                                {(field.type === "dropdown" || field.type === "checkbox") && (
-                                    <div className="mt-2 p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
-                                        <div className="flex items-center justify-between px-1">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Option Matrix</label>
-                                            <Badge variant="outline" className="text-[8px] border-white/10 text-gray-500">{(field.options || []).length} Options</Badge>
-                                        </div>
-                                        
-                                        <div className="flex flex-wrap gap-2">
-                                            {(field.options || []).map((opt, i) => (
-                                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold group/opt">
-                                                    {opt}
-                                                    <X 
-                                                        className="h-3 w-3 text-gray-600 hover:text-rose-400 cursor-pointer" 
-                                                        onClick={() => {
-                                                            const newOpts = [...(field.options || [])]
-                                                            newOpts.splice(i, 1)
-                                                            handleFieldChange(index, { options: newOpts })
-                                                        }}
-                                                    />
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        <div className="flex gap-2">
+                            <div key={index} className="space-y-4">
+                                <div className="flex flex-col gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-all animate-in slide-in-from-bottom-2 duration-300">
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <div className="flex-1 space-y-2">
                                             <Input
-                                                placeholder="Enter option..."
-                                                className="h-9 bg-white/5 border-white/5 rounded-lg text-[11px] font-bold placeholder:text-gray-700"
-                                                value={newOptionStates[index] || ""}
-                                                onChange={(e) => setNewOptionStates(prev => ({ ...prev, [index]: e.target.value }))}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter') {
-                                                        e.preventDefault()
-                                                        handleAddOption(index)
-                                                    }
-                                                }}
+                                                placeholder="Field Label"
+                                                value={field.name}
+                                                onChange={(e) => handleFieldChange(index, { name: e.target.value })}
+                                                className="bg-transparent border-none p-0 h-auto text-sm font-bold focus-visible:ring-0 placeholder:text-gray-700"
+                                                required
                                             />
-                                            <Button 
-                                                type="button"
-                                                size="sm"
-                                                className="h-9 px-4 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest"
-                                                onClick={() => handleAddOption(index)}
+                                            <p className="text-[9px] text-gray-600 font-black uppercase tracking-tighter">Attribute Name</p>
+                                        </div>
+                                        <div className="flex-1">
+                                            <Select
+                                                value={field.type}
+                                                onValueChange={(value: FieldType) => handleFieldChange(index, { type: value })}
                                             >
-                                                Add
+                                                <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-10 text-xs text-white">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-[#1a1a1a] border-white/10 text-white shadow-2xl">
+                                                    {fieldTypes.map(type => (
+                                                        <SelectItem key={type.value} value={type.value} className="focus:bg-white/10">
+                                                            <div className="flex items-center gap-2">
+                                                                <type.icon className={`h-3.5 w-3.5 ${type.color}`} />
+                                                                <span className="text-[11px] font-bold uppercase tracking-tight">{type.label}</span>
+                                                            </div>
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="flex items-center gap-2 px-1 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    handleFieldChange(index, { showOnCard: !field.showOnCard })
+                                                }}
+                                                className={`p-2.5 rounded-xl transition-all ${field.showOnCard ? 'bg-indigo-500/20 text-indigo-400' : 'text-gray-700 hover:text-gray-500'}`}
+                                                title={field.showOnCard ? "Visible on Card Front" : "Hidden in Card View"}
+                                            >
+                                                {field.showOnCard ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                            </button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                onClick={() => handleRemoveField(index)}
+                                                className="h-10 w-10 text-gray-700 hover:text-rose-400 hover:bg-rose-400/10 rounded-xl"
+                                                disabled={fields.length === 1}
+                                            >
+                                                <X className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>
-                                )}
+
+                                    {/* Additional Options for Dropdown/Checkbox */}
+                                    {(field.type === "dropdown" || field.type === "checkbox") && (
+                                        <div className="mt-2 p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
+                                            <div className="flex items-center justify-between px-1">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Option Matrix</label>
+                                                <label className="text-[8px] border-none text-gray-500 font-black uppercase tracking-widest">{(field.options || []).length} Options</label>
+                                            </div>
+                                            
+                                            <div className="flex flex-wrap gap-2">
+                                                {(field.options || []).map((opt, i) => (
+                                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold group/opt">
+                                                        {opt}
+                                                        <X 
+                                                            className="h-3 w-3 text-gray-600 hover:text-rose-400 cursor-pointer" 
+                                                            onClick={() => {
+                                                                const newOpts = [...(field.options || [])]
+                                                                newOpts.splice(i, 1)
+                                                                handleFieldChange(index, { options: newOpts })
+                                                            }}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <Input
+                                                    placeholder="Enter option..."
+                                                    className="h-9 bg-black/40 border-white/10 rounded-lg text-[11px] font-bold placeholder:text-gray-700"
+                                                    value={newOptionStates[index] || ""}
+                                                    onChange={(e) => setNewOptionStates(prev => ({ ...prev, [index]: e.target.value }))}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault()
+                                                            handleAddOption(index)
+                                                        }
+                                                    }}
+                                                />
+                                                <Button 
+                                                    type="button"
+                                                    size="sm"
+                                                    className="h-9 px-4 bg-indigo-500 hover:bg-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest"
+                                                    onClick={() => handleAddOption(index)}
+                                                >
+                                                    Add
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Tactical Inclusion: Add Section Here */}
+                                <div className="flex justify-center -my-2 relative z-10">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newFields = [...fields]
+                                            newFields.splice(index + 1, 0, { name: "", type: "text" })
+                                            setFields(newFields)
+                                        }}
+                                        className="px-3 py-1 rounded-full bg-black border border-white/10 hover:border-indigo-500/40 text-[8px] font-black uppercase tracking-[0.2em] text-gray-500 hover:text-indigo-400 transition-all flex items-center gap-2 group/add"
+                                    >
+                                        <Plus className="h-2.5 w-2.5 text-indigo-500 transition-transform group-hover/add:rotate-90" />
+                                        Add Section Here
+                                    </button>
+                                </div>
                             </div>
                         ))}
                     </div>

@@ -156,7 +156,7 @@ export function DatabaseView({
     let records = [...database.records]
 
     // Apply Sorting
-    if (sortConfig && database.title.toLowerCase().includes("journal")) {
+    if (sortConfig) {
         const { key, direction } = sortConfig
         records.sort((a, b) => {
             let valA: any = a.values[key] || ""

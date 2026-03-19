@@ -75,9 +75,9 @@ export function BottomNav({
     { id: "reports", label: "Reports", icon: FileText, view: "reports", color: "text-indigo-400", disabled: !currentDatabase },
   ]
 
-  const sortOptions = [
-    "Platforms", "User Names", "Last Updated", "Creation Date", "AI Agents", "Cloud Services"
-  ]
+  const sortOptions = currentDatabase 
+    ? Array.from(new Set([...currentDatabase.fields.map(f => f.name), "Last Updated", "Creation Date"]))
+    : ["Last Updated", "Creation Date"]
 
   return (
     <>
