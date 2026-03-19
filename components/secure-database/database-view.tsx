@@ -443,8 +443,8 @@ export function DatabaseView({
               key={record.id}
               ref={el => { recordRefs.current[record.id] = el }}
               className={`rounded-[2.5rem] overflow-hidden border transition-all duration-500 shadow-2xl relative
-                ${(isExpanded || record.isFavorite) ? 'bg-black/60 scale-[1.01]' : 'bg-black/40 hover:bg-black/50 hover:scale-[1.005] cursor-pointer'} 
-                ${recordTheme.border} ${recordTheme.bg.replace('bg-', 'hover:bg-opacity-20 ')}`}
+                ${(isExpanded || record.isFavorite) ? `${recordTheme.bg} bg-opacity-20 scale-[1.01]` : 'bg-black/40 hover:bg-black/50 hover:scale-[1.005] cursor-pointer'} 
+                ${recordTheme.border}`}
                onClick={(e) => {
                  if (!isExpanded) toggleExpand(record.id)
                }}

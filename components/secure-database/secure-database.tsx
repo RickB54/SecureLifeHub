@@ -85,17 +85,28 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
     }
   }, [initialized, synchronizeBlueprints])
 
-  const handleAddRecord = () => {
-    if (!currentDatabase && databases.length > 0) {
-        setCurrentDb(databases[0].title)
+  const handleAddRecord = async () => {
+    if (!currentDatabase || !currentDatabase.id) return
+    const result = await addRecord(currentDatabase.id, {
+        values: {},
+        images: [],
+        isFavorite: false,
+        isArchived: false
+    })
+    if (result && result.id) {
+        setSelectedRecordId(result.id)
+        toast.success("New Data Sector Injected")
     }
-    setEditingRecord(null)
-    setShowAddRecord(true)
   }
 
   const handleEditRecord = (record: DbRecord) => {
     setEditingRecord(record)
     setShowAddRecord(true)
+  }
+
+  const handleEditSchema = (db: Database) => {
+    setEditingSchemaDatabase(db)
+    setShowFormBuilder(true)
   }
 
   const handleRecordSubmit = async (values: { [key: string]: any }, images?: string[]) => {
@@ -271,28 +282,25 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         onUpdateDatabase={updateDatabase}
                     />
                 ) : (
-                     <DatabaseView 
-                        database={currentDatabase}
-                        searchQuery={searchQuery}
-                        onDatabaseUpdate={updateDatabase}
-                        onDuplicateRecord={duplicateRecord}
-                        onEditRecord={handleEditRecord}
-                        onSelectRecord={(record) => {
-                            setSelectedRecordId(record.id)
-                        }}
-                        initialExpandedRecordId={selectedRecordId || undefined}
-                        collapseAll={collapseAll}
-                        allDatabases={databases}
-                        onSelectDatabase={handleSelectDatabase}
+                      <DatabaseView 
+                         database={currentDatabase}
+                         searchQuery={searchQuery}
+                         onDatabaseUpdate={updateDatabase}
+                         onDuplicateRecord={duplicateRecord}
+                         onEditRecord={handleEditRecord}
+                         onSelectRecord={(record) => {
+                             setSelectedRecordId(record.id)
+                         }}
+                         initialExpandedRecordId={selectedRecordId || undefined}
+                         collapseAll={collapseAll}
+                         allDatabases={databases}
+                         onSelectDatabase={handleSelectDatabase}
                          onAddTodo={addTodo}
                          onAddRecord={handleAddRecord}
-                         onEditSchema={(db) => {
-                             setEditingSchemaDatabase(db)
-                             setShowFormBuilder(true)
-                         }}
+                         onEditSchema={handleEditSchema}
                          sortConfig={sortConfig}
                          onSortChange={setSortConfig}
-                      />
+                       />
                 )}
             </div>
           </ScrollArea>
