@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useRef } from "react"
+import imageCompression from 'browser-image-compression'
 import { 
   X, Save, Trash2, Edit3, 
   MapPin, User, Tag, FileText, 
@@ -82,18 +83,37 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    const filePromises = Array.from(files).map(file => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.readAsDataURL(file)
-      })
-    })
+    toast.info("Compressing high-fidelity assets...")
 
     try {
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      }
+
+      const compressedFiles = await Promise.all(
+        Array.from(files).map(async (file) => {
+          try {
+            return await imageCompression(file, options)
+          } catch (error) {
+            console.error("Compression Error:", error)
+            return file // Fallback to original
+          }
+        })
+      )
+
+      const filePromises = compressedFiles.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(file)
+        })
+      })
+
       const base64Images = await Promise.all(filePromises)
       setLocalImages(prev => [...prev, ...base64Images])
-      toast.success(`${base64Images.length} assets successfully injected`)
+      toast.success(`${base64Images.length} assets successfully acquired and optimized`)
     } catch (error) {
       toast.error("Failed to inject assets")
     }
@@ -246,8 +266,8 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
       <div className={`h-1.5 w-full bg-gradient-to-r from-${themeColor}/0 via-${themeColor} to-${themeColor}/0`} />
 
       <ScrollArea className="flex-1">
-        <form id="record-form" onSubmit={handleSubmit} className="p-12 max-w-5xl mx-auto">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16">
+        <form id="record-form" onSubmit={handleSubmit} className="p-4 sm:p-8 md:p-12 max-w-5xl mx-auto">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8 mb-8 sm:mb-16">
              <div className="space-y-4">
                 <div className={`h-24 w-24 rounded-[2.5rem] bg-gradient-to-br from-${themeColor} to-indigo-600 shadow-2xl shadow-${themeColor}/20 flex items-center justify-center text-white ring-8 ring-white/5`}>
                   <Package className="h-10 w-10" />
@@ -275,7 +295,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
              </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-12 gap-y-8 sm:gap-y-12">
             {database.fields.map((field) => (
                 <React.Fragment key={field.name}>
                     {renderFieldInput(field)}
@@ -352,7 +372,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
             </div>
 
             {/* Dynamic Schema Evolution */}
-            <div className="md:col-span-2 mt-12 p-10 border-2 border-dashed border-white/5 rounded-[3.5rem] bg-white/2 hover:border-indigo-500/40 transition-all group overflow-hidden relative">
+            <div className="md:col-span-2 mt-8 sm:mt-12 p-5 sm:p-10 border-2 border-dashed border-white/5 rounded-[2rem] sm:rounded-[3.5rem] bg-white/2 hover:border-indigo-500/40 transition-all group overflow-hidden relative">
                 <div className="absolute -right-12 -top-12 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl" />
                 
                 {!showAddField ? (
@@ -467,11 +487,11 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
             </div>
           </div>
           
-          <div className="h-32" />
+          <div className="h-20 sm:h-32" />
         </form>
       </ScrollArea>
 
-      <div className="p-10 border-t border-white/5 bg-[#0d0d0d]/80 backdrop-blur-3xl flex items-center justify-between shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
+      <div className="p-5 sm:p-10 border-t border-white/5 bg-[#0d0d0d]/80 backdrop-blur-3xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
         <Button 
           type="button" 
           variant="ghost" 

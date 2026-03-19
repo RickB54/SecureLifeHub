@@ -82,57 +82,57 @@ export function InsightsView({ database, onOpenHelp }: InsightsViewProps) {
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] animate-in fade-in duration-500">
         <div className="p-8 bg-gradient-to-b from-rose-500/10 to-transparent border-b border-white/5">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-black tracking-tight text-white uppercase italic">Data Insights</h2>
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white uppercase italic leading-none">Data Insights</h2>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
                     <Button 
                         variant="ghost" 
                         size="icon" 
                         onClick={() => onOpenHelp?.("data-insights")}
-                        className="h-10 w-10 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 animate-pulse-subtle"
+                        className="h-9 w-9 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 shrink-0"
                     >
-                        <HelpCircle className="h-5 w-5 text-indigo-400" />
+                        <HelpCircle className="h-4 w-4 text-indigo-400" />
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-[10px] h-10 rounded-xl font-black uppercase text-gray-400">
-                        <Printer className="h-4 w-4 mr-2" />
-                        Print Data
+                    <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-[9px] h-9 rounded-xl font-black uppercase text-gray-400 shrink-0">
+                        <Printer className="h-3.5 w-3.5 mr-1.5" />
+                        Print
                     </Button>
-                    <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-[10px] h-10 rounded-xl font-black uppercase text-gray-400">
-                        <Download className="h-4 w-4 mr-2" />
+                    <Button variant="outline" size="sm" className="bg-white/5 border-white/10 text-[9px] h-9 rounded-xl font-black uppercase text-gray-400 shrink-0">
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
                         Snapshot
                     </Button>
                 </div>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6">
                  {[
-                    { label: "Total Nodes", value: stats.count, icon: Database, color: "text-indigo-400" },
-                    { label: "Data points", value: stats.count * stats.fields, icon: Zap, color: "text-amber-400" },
-                    { label: "Stability", value: "99.9%", icon: TrendingUp, color: "text-emerald-400" },
+                    { label: "Nodes", value: stats.count, icon: Database, color: "text-indigo-400" },
+                    { label: "Points", value: stats.count * stats.fields, icon: Zap, color: "text-amber-400" },
+                    { label: "Stability", value: "99%", icon: TrendingUp, color: "text-emerald-400" },
                  ].map((stat, i) => (
-                    <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-4 flex items-center gap-4 group hover:border-white/10 transition-all">
-                        <div className={`p-3 rounded-xl bg-black/40 ${stat.color} group-hover:scale-110 transition-transform`}>
-                            <stat.icon className="h-5 w-5" />
+                    <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-2 sm:p-4 flex flex-col sm:flex-row items-center sm:items-center text-center sm:text-left gap-1 sm:gap-4 group hover:border-white/10 transition-all">
+                        <div className={`p-1.5 sm:p-3 rounded-lg sm:rounded-xl bg-black/40 ${stat.color} group-hover:scale-110 transition-transform`}>
+                            <stat.icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                         </div>
-                        <div>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none">{stat.label}</p>
-                            <p className="text-xl font-black text-white leading-none mt-1.5">{stat.value}</p>
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                            <p className="text-[7px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none truncate">{stat.label}</p>
+                            <p className="text-[11px] sm:text-xl font-black text-white leading-none mt-0.5 sm:mt-1.5 truncate">{stat.value}</p>
                         </div>
                     </div>
                  ))}
             </div>
         </div>
 
-        <ScrollArea className="flex-1 p-6">
-            <div className="max-w-5xl mx-auto space-y-6">
+        <ScrollArea className="flex-1 p-3 sm:p-6">
+            <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Distribution Chart */}
-                    <div className="bg-[#111] border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
+                    <div className="bg-[#111] border border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-6">
                          <div className="flex items-center justify-between">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Distribution Analysis</h3>
                             <PieChartIcon className="h-5 w-5 text-indigo-400" />
                          </div>
-                         <div className="h-[250px] w-full">
+                         <div className="h-[200px] sm:h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -164,12 +164,12 @@ export function InsightsView({ database, onOpenHelp }: InsightsViewProps) {
                     </div>
 
                     {/* Timeline Analysis */}
-                    <div className="bg-[#111] border border-white/5 rounded-3xl p-6 flex flex-col gap-6">
+                    <div className="bg-[#111] border border-white/5 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4 sm:gap-6">
                          <div className="flex items-center justify-between">
                             <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500">Metric Density</h3>
                             <BarChartIcon className="h-5 w-5 text-emerald-400" />
                          </div>
-                         <div className="h-[250px] w-full">
+                         <div className="h-[200px] sm:h-[250px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
@@ -187,9 +187,9 @@ export function InsightsView({ database, onOpenHelp }: InsightsViewProps) {
                 </div>
 
                 {/* Detailed Summary Table */}
-                <div className="bg-[#111] border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Node Metrics Hierarchy</h3>
+                <div className="bg-[#111] border border-white/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl">
+                    <div className="p-4 sm:p-6 border-b border-white/5 flex items-center justify-between bg-white/2">
+                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Hierarchy Metrics</h3>
                         <Button variant="ghost" size="sm" className="h-8 text-[10px] font-black uppercase text-indigo-400 group">
                             Advanced Analytics <ChevronRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
                         </Button>

@@ -199,15 +199,19 @@ export function BottomNav({
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 touch-pan-y">
                     {sortOptions.map((opt) => (
                         <Button 
                             key={opt}
                             variant="ghost"
                             onClick={() => {
                                 onSortClick?.(opt)
+                                // Close the sort menu after choice
+                                setTimeout(() => {
+                                    setShowSortOptions(false)
+                                }, 100)
                             }}
-                            className={`w-full justify-start h-12 rounded-xl bg-white/2 hover:bg-white/5 text-gray-400 hover:text-white font-bold transition-all border border-transparent ${sortConfig?.key === opt ? 'border-indigo-500/50 bg-indigo-500/5 text-indigo-400' : ''}`}
+                            className={`w-full justify-start h-10 px-3 rounded-xl bg-white/2 hover:bg-white/5 text-[10px] font-bold transition-all border border-transparent whitespace-normal text-left leading-tight active:scale-95 ${sortConfig?.key === opt ? 'border-indigo-500/50 bg-indigo-500/5 text-indigo-400' : 'text-gray-400 hover:text-white'}`}
                         >
                             {opt}
                         </Button>

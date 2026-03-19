@@ -139,14 +139,14 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
     ].join('\n')
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    link.setAttribute('download', `${database.title}_report_${new Date().getTime()}.csv`)
-    link.style.visibility = 'hidden'
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${database.title}_report_${new Date().getTime()}.csv`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+    URL.revokeObjectURL(url)
     toast.success("Intelligence Data Exported to CSV")
   }
 
@@ -171,19 +171,19 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
 
   return (
     <div className="flex flex-col h-full bg-[#0a0a0a] animate-in fade-in duration-700">
-        <div className="p-10 border-b border-white/5 bg-white/2 backdrop-blur-3xl sticky top-0 z-10 print:hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-10">
+        <div className="p-4 sm:p-10 border-b border-white/5 bg-white/2 backdrop-blur-3xl sticky top-0 z-10 print:hidden">
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-10">
                 <div className="flex items-center gap-4">
-                     <h2 className="text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-4">
-                        <TrendingUp className="h-10 w-10 text-indigo-500" />
+                     <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-2 sm:gap-4">
+                        <TrendingUp className="h-6 w-6 sm:h-10 sm:h-10 text-indigo-500" />
                         Reporting Engine
                         <Button 
                             variant="ghost" 
                             size="icon" 
                             onClick={() => onOpenHelp?.("reporting-engine")}
-                            className="h-10 w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
+                            className="h-8 w-8 sm:h-10 sm:w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
                         >
-                            <HelpCircle className="h-5 w-5 text-gray-400 group-hover:text-white" />
+                            <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-white" />
                         </Button>
                      </h2>
                      <div className="flex items-center gap-3">
@@ -395,14 +395,14 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
 
                 {reportResult && !isGenerating && (
                     <div className="space-y-12 animate-in slide-in-from-bottom-12 duration-1000">
-                        <div className="flex items-center justify-between border-b-2 border-indigo-500/20 pb-8">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b-2 border-indigo-500/20 pb-8">
                             <div>
-                                <h3 className="text-4xl font-black text-white tracking-tighter uppercase mb-2">
+                                <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase mb-2 break-words">
                                     Analytical Results
-                                    <span className="text-indigo-500 ml-4 italic">[{reportType || 'CUSTOM'}]</span>
+                                    <span className="text-indigo-500 block sm:inline sm:ml-4 italic">[{reportType || 'CUSTOM'}]</span>
                                 </h3>
-                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center gap-3">
-                                    <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                <p className="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-widest flex items-center gap-2 sm:gap-3">
+                                    <ShieldCheck className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
                                     Data Integrity Verified • {reportResult.length} Units Found
                                 </p>
                             </div>
@@ -425,14 +425,15 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
                         </div>
 
                         {viewMode === "table" ? (
-                            <div className="bg-white/2 border border-white/5 rounded-[3.5rem] overflow-hidden shadow-2xl backdrop-blur-3xl print:bg-white print:text-black print:rounded-none pr-4">
+                            <div className="bg-white/2 border border-white/5 rounded-2xl sm:rounded-[3.5rem] overflow-hidden shadow-2xl backdrop-blur-3xl print:bg-white print:text-black print:rounded-none">
                                 {reportResult.length > 0 ? (
-                                    <ScrollArea className="max-h-[70vh]">
+                                    <ScrollArea className="max-h-[70vh] w-full">
+                                        <div className="min-w-[800px] w-full overflow-x-auto">
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="bg-black/40 border-b border-white/5">
                                                     {Object.keys(reportResult[0]).filter(k => k !== 'id').map(header => (
-                                                        <th key={header} className="p-8 text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em]">{header}</th>
+                                                        <th key={header} className="p-4 sm:p-8 text-[9px] sm:text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em] whitespace-nowrap">{header}</th>
                                                     ))}
                                                 </tr>
                                             </thead>
@@ -440,8 +441,8 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
                                                 {reportResult.map((row, i) => (
                                                     <tr key={row.id || i} className="hover:bg-indigo-500/5 transition-colors group">
                                                         {Object.keys(row).filter(k => k !== 'id').map(key => (
-                                                            <td key={key} className="p-8">
-                                                                <span className="text-sm font-bold text-gray-300 group-hover:text-white transition-colors">
+                                                            <td key={key} className="p-4 sm:p-8 whitespace-nowrap">
+                                                                <span className="text-xs sm:text-sm font-bold text-gray-300 group-hover:text-white transition-colors">
                                                                     {Array.isArray(row[key]) ? row[key].join(', ') : String(row[key] || '—')}
                                                                 </span>
                                                             </td>
@@ -450,6 +451,7 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
                                                 ))}
                                             </tbody>
                                         </table>
+                                        </div>
                                     </ScrollArea>
                                 ) : (
                                     <div className="p-20 text-center">

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useRef } from "react"
+import imageCompression from 'browser-image-compression'
 import { 
   Search, 
   Filter, 
@@ -222,15 +223,32 @@ export function DatabaseView({
     const files = e.target.files
     if (!files || !database || files.length === 0) return
 
-    const filePromises = Array.from(files).map(file => {
-      return new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.readAsDataURL(file)
-      })
-    })
-
     try {
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      }
+
+      const compressedFiles = await Promise.all(
+        Array.from(files).map(async (file) => {
+          try {
+            return await imageCompression(file, options)
+          } catch (error) {
+            console.error("Compression Error:", error)
+            return file // Fallback to original
+          }
+        })
+      )
+
+      const filePromises = compressedFiles.map(file => {
+        return new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.readAsDataURL(file)
+        })
+      })
+
       const base64Images = await Promise.all(filePromises)
       const updatedRecords = database.records.map((r: DbRecord) => {
         if (r.id === recordId) {
@@ -239,9 +257,8 @@ export function DatabaseView({
         return r
       })
       onDatabaseUpdate({ ...database, records: updatedRecords })
-      toast.success(`${base64Images.length} assets successfully acquired`)
+      toast.success(`${base64Images.length} assets successfully acquired and optimized`)
       
-      // Clear inputs for subsequent uploads
       if (e.target) e.target.value = ""
     } catch (error) {
       toast.error("Failed to process assets")
@@ -458,39 +475,39 @@ export function DatabaseView({
                     <GripVertical className="h-6 w-6 text-white/10" />
                 </div>
               {/* Record Header Bar */}
-              <div className={`p-7 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b ${isExpanded ? 'border-white/10' : 'border-transparent'}`}>
-                  <div className="flex items-center gap-5">
-                      <div className="flex flex-col">
-                        <h4 className="text-2xl font-black tracking-tighter italic uppercase truncate max-w-[400px] text-white">
+              <div className={`p-4 sm:p-7 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b ${isExpanded ? 'border-white/10' : 'border-transparent'}`}>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                      <div className="flex flex-col min-w-0">
+                        <h4 className="text-lg sm:text-2xl font-black tracking-tighter italic uppercase truncate max-w-full text-white">
                             {record.values[titleField] || "Untitled Sector"}
                         </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                            <div className="h-2 w-2 bg-indigo-500 rounded-full animate-pulse" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Record Active</p>
+                        <div className="flex items-center gap-2 mt-0.5 sm:mt-1">
+                            <div className="h-1.5 w-1.5 sm:h-2 sm:w-2 bg-indigo-500 rounded-full animate-pulse" />
+                            <p className="text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Record Active</p>
                         </div>
                       </div>
-                      <div className="h-6 w-px bg-white/10 hidden md:block mx-2" />
-                      <div className="flex flex-col items-start gap-1">
+                      <div className="h-6 w-px bg-white/10 hidden lg:block mx-1" />
+                      <div className="flex flex-row sm:flex-col items-center sm:items-start gap-3 sm:gap-1">
                         {record.images && record.images.length > 0 ? (
-                            <div className="h-10 w-16 mb-2 rounded-lg overflow-hidden border border-white/10 group-hover:border-indigo-500/50 transition-all bg-black/40 relative">
+                            <div className="h-8 w-12 sm:h-10 sm:w-16 rounded-lg overflow-hidden border border-white/10 bg-black/40 relative">
                                 <img 
                                     src={record.images[0]} 
                                     alt="Sector Asset" 
-                                    className="h-full w-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                                    className="h-full w-full object-cover opacity-60"
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                                <span className="absolute bottom-1 right-1 text-[8px] font-black text-white/50">{record.images.length}</span>
+                                <span className="absolute bottom-1 right-1 text-[7px] font-black text-white/50">{record.images.length}</span>
                             </div>
                         ) : (
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 italic">No Asset Synchronized</p>
+                            <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-[0.2em] text-white/30 italic whitespace-nowrap">No Asset</p>
                         )}
-                        <p className="text-[9px] font-bold text-white/50 tracking-widest font-mono">
+                        <p className="text-[8px] sm:text-[9px] font-bold text-white/50 tracking-tight sm:tracking-widest font-mono whitespace-nowrap">
                             {(() => {
                                 try {
                                     if (!record.created) return "BUFFER_EMPTY";
                                     const date = new Date(record.created);
                                     if (isNaN(date.getTime())) return "DATE_INVALID";
-                                    return format(date, "MM.dd.yyyy / HH:mm:ss");
+                                    return format(date, "MM.dd.yy / HH:mm");
                                 } catch (e) {
                                     return "DATE_ERR";
                                 }
@@ -499,10 +516,10 @@ export function DatabaseView({
                       </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                      <div className="flex items-center bg-black/20 rounded-2xl p-1 gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => onDuplicateRecord(record)} className="h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all">
-                            <Copy className="h-5 w-5" />
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                      <div className="flex items-center bg-black/30 rounded-2xl p-1 gap-0.5 sm:gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => onDuplicateRecord(record)} className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl text-white hover:bg-white/10 transition-all">
+                            <Copy className="h-4 w-4 sm:h-5 sm:w-5" />
                           </Button>
                           <Button 
                             variant="ghost" 
@@ -515,18 +532,18 @@ export function DatabaseView({
                                     gallerySection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
                                 }, 300)
                             }}
-                            className="h-11 w-11 rounded-xl relative text-white hover:bg-white/10 transition-all"
+                            className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl relative text-white hover:bg-white/10 transition-all"
                           >
-                              <ImageIcon className="h-5 w-5" />
-                              <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-white text-black text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-indigo-500">
+                              <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                              <span className="absolute -top-1 -right-1 h-4 min-w-[16px] sm:h-5 sm:min-w-[20px] px-1 bg-white text-black text-[8px] sm:text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-indigo-500">
                                   {record.images?.length || 0}
                               </span>
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => toggleFavorite(record.id)} className={`h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all ${record.isFavorite ? 'text-amber-400' : ''}`}>
-                            <Star className={`h-5 w-5 ${record.isFavorite ? 'fill-current' : ''}`} />
+                          <Button variant="ghost" size="icon" onClick={() => toggleFavorite(record.id)} className={`h-9 w-9 sm:h-11 sm:w-11 rounded-xl text-white hover:bg-white/10 transition-all ${record.isFavorite ? 'text-amber-400' : ''}`}>
+                            <Star className={`h-4 w-4 sm:h-5 sm:w-5 ${record.isFavorite ? 'fill-current' : ''}`} />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className="h-11 w-11 rounded-xl text-white hover:bg-rose-500 transition-all">
-                            <Trash2 className="h-5 w-5" />
+                          <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl text-white hover:bg-rose-500 transition-all">
+                            <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
                           </Button>
                       </div>
                                            <div className="w-px h-8 bg-white/10 mx-2" />
@@ -576,18 +593,18 @@ export function DatabaseView({
 
                       <Button 
                         variant="ghost" 
-                        className="px-6 rounded-2xl flex items-center gap-3 group/expand h-12 bg-white text-black hover:bg-white/90 shadow-xl transition-all"
+                        className="px-3 sm:px-6 rounded-2xl flex items-center gap-2 sm:gap-3 group/expand h-10 sm:h-12 bg-white text-black hover:bg-white/90 shadow-xl transition-all"
                         onClick={() => toggleExpand(record.id)} 
                       >
-                        <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isExpanded ? 'Collapse Sector' : 'Access Data'}</span>
-                        {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5 group-hover/expand:translate-y-0.5 transition-transform" />}
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest block">{isExpanded ? 'Collapse' : 'Access'}</span>
+                        {isExpanded ? <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5" /> : <ChevronDown className="h-4 w-4 sm:h-5 sm:w-5 group-hover/expand:translate-y-0.5 transition-transform" />}
                       </Button>
                   </div>
               </div>
 
               {/* Collapsed Top Fields Layout */}
               {!isExpanded && (
-                  <div className="px-8 pb-8 pt-6 mt-0 min-h-[100px] flex items-center flex-wrap gap-x-12 gap-y-6">
+                  <div className="px-5 sm:px-8 pb-6 sm:pb-8 pt-4 sm:pt-6 mt-0 min-h-[80px] sm:min-h-[100px] flex items-center flex-wrap gap-x-6 sm:gap-x-12 gap-y-4 sm:gap-y-6">
                           {database && database.fields.filter(f => f.showOnCard).slice(1).map(field => {
                               const value = record.values[field.name];
                               let displayValue = String(value || "—");
@@ -1269,14 +1286,21 @@ export function DatabaseView({
   
                  <div className="absolute bottom-12 flex flex-col items-center gap-6">
                      <div className="flex gap-3">
-                          {(Array.isArray(database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images) ? database!.records.find(r => r.id === (fullscreenGallery?.recordId || ''))!.images : []).map((_, i) => (
-                             <div 
-                              key={i} 
-                              className={`h-1.5 transition-all rounded-full ${i === (fullscreenGallery?.imageIndex || 0) ? 'w-12 bg-indigo-500' : 'w-3 bg-white/10 hover:bg-white/20 cursor-pointer'}`}
-                              onClick={() => fullscreenGallery && setFullscreenGallery({ ...fullscreenGallery, imageIndex: i })}
-                             />
-                         ))}
-                     </div>
+                          {(() => {
+                              const record = database?.records.find(r => r.id === fullscreenGallery?.recordId);
+                              const images = record?.images && Array.isArray(record.images) ? record.images : [];
+                              return images.map((_, i) => (
+                                  <div 
+                                      key={i} 
+                                      onClick={(e) => {
+                                          e.stopPropagation();
+                                          setFullscreenGallery(prev => prev ? { ...prev, imageIndex: i } : null);
+                                      }}
+                                      className={`h-1.5 transition-all rounded-full ${i === (fullscreenGallery?.imageIndex || 0) ? 'w-12 bg-indigo-500' : 'w-3 bg-white/10 hover:bg-white/20 cursor-pointer'}`}
+                                  />
+                              ));
+                          })()}
+                      </div>
                      <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em]">
                          ASSET_INDEX: {(fullscreenGallery?.imageIndex || 0) + 1} / {database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images?.length || 0}
                      </p>
