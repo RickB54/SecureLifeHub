@@ -734,7 +734,8 @@ export function DatabaseView({
                                                         key={opt} 
                                                         className={`flex items-center gap-4 p-4 rounded-xl bg-white/2 border transition-all cursor-pointer ${ (record.values[field.name] || []).includes(opt) ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-white/5 hover:bg-white/5'}`}
                                                         onClick={() => {
-                                                            const currentValues = Array.isArray(record.values[field.name]) ? record.values[field.name] : [];
+                                                            const rawValue = record.values[field.name];
+                                                            const currentValues = Array.isArray(rawValue) ? rawValue : (rawValue ? [String(rawValue)] : []);
                                                             const isChecked = currentValues.includes(opt);
                                                             const newValues = isChecked 
                                                                 ? currentValues.filter((v: string) => v !== opt)
@@ -753,7 +754,7 @@ export function DatabaseView({
                                                     >
                                                         <Checkbox 
                                                             id={`opt-${record.id}-${field.name}-${opt}`}
-                                                            checked={(record.values[field.name] || []).includes(opt)}
+                                                            checked={(Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : [])).includes(opt)}
                                                             className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20 ring-offset-black"
                                                         />
                                                         <label className="text-sm font-bold text-gray-300 cursor-pointer flex-1">{opt}</label>
@@ -878,12 +879,15 @@ export function DatabaseView({
                                                      </>
                                                  ) : field.type === 'checkbox' ? (
                                                     <div className="flex flex-wrap gap-2.5 py-1">
-                                                        {(record.values[field.name] || []).map((v: string) => (
+                                                        {(Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : [])).map((v: string) => (
                                                             <Badge key={v} variant="outline" className="text-[10px] bg-indigo-500/10 border-indigo-500/20 text-indigo-300 font-black px-3 py-1 rounded-xl uppercase tracking-tighter">
                                                                 {v}
                                                             </Badge>
                                                         ))}
-                                                        {(!record.values[field.name] || record.values[field.name].length === 0) && <span className="text-white/10 italic text-xs">Sector initialization pending</span>}
+                                                        {(() => {
+                                                            const values = Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : []);
+                                                            return values.length === 0 && <span className="text-white/10 italic text-xs">Sector initialization pending</span>;
+                                                        })()}
                                                     </div>
                                                   ) : (
                                                       <div className="flex-1 flex items-center justify-between group/val">
