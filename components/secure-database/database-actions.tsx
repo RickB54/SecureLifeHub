@@ -242,7 +242,13 @@ export function DatabaseActions({
     <div className="flex flex-col h-full bg-[#0a0a0a]">
         <div className="p-8 bg-gradient-to-b from-indigo-500/10 to-transparent border-b border-white/5">
             <div className="flex items-center justify-between mb-2">
-                <h2 className="text-2xl font-black tracking-tight text-white uppercase italic">Engine Controls</h2>
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20">Current Database</span>
+                        <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{database?.title || "SYSTEM_BASE"}</span>
+                    </div>
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase italic leading-none mt-1">Engine Controls</h2>
+                </div>
                 <div className="flex items-center gap-2">
                     <Button 
                         variant="ghost" 
@@ -307,7 +313,6 @@ export function DatabaseActions({
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-bold text-gray-200 truncate">{item.label}</p>
-                                        <p className="text-[9px] text-gray-600 uppercase font-black truncate">Execute Command</p>
                                     </div>
                                     <div 
                                         className="p-2 rounded-lg bg-white/5 border border-white/5 opacity-20 group-hover:opacity-100 transition-opacity hover:bg-indigo-500/20 hover:border-indigo-500/40 cursor-help"
@@ -348,9 +353,12 @@ export function DatabaseActions({
             <DialogContent className="max-w-md bg-[#0d0d0d] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-3xl">
                 <div className="p-8 bg-gradient-to-br from-indigo-500/10 to-transparent border-b border-white/5">
                     <DialogHeader>
-                        <DialogTitle className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
-                            <LayoutGrid className="h-6 w-6 text-indigo-400" />
-                            Card Face Architect
+                        <DialogTitle className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <LayoutGrid className="h-6 w-6 text-indigo-400" />
+                                Card Face Architect
+                            </div>
+                            <span className="text-[10px] font-black tracking-[0.2em] text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">{database?.title}</span>
                         </DialogTitle>
                         <DialogDescription className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2 leading-relaxed">
                             Pick any fields to prioritize on the front of the database record card. Limit: 9 sectors for optimal visibility.
