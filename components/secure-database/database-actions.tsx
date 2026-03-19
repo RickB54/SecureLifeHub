@@ -22,7 +22,9 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toast } from "sonner"
-import type { Database } from "@/types/secure-database"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import type { Database, Field } from "@/types/secure-database"
 
 interface DatabaseActionsProps {
   database?: Database
@@ -51,6 +53,7 @@ export function DatabaseActions({
 }: DatabaseActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [pinInput, setPinInput] = useState("")
+  const [showCardConfig, setShowCardConfig] = useState(false)
   const DEFAULT_PIN = "1234"
 
   const handleDangerAction = (action: () => void) => {
@@ -151,6 +154,27 @@ export function DatabaseActions({
       input.click()
   }
 
+  const handleToggleFieldOnCard = (fieldName: string) => {
+    if (!database || !onUpdateDatabase) return
+    
+    const currentOnCardCount = database.fields.filter(f => f.showOnCard).length
+    const isCurrentlyOnCard = database.fields.find(f => f.name === fieldName)?.showOnCard
+
+    if (!isCurrentlyOnCard && currentOnCardCount >= 9) {
+      toast.error("DATA SATURATION: Max limit of 9 sectors reached for card face")
+      return
+    }
+
+    const updatedFields = database.fields.map(f => {
+      if (f.name === fieldName) {
+        return { ...f, showOnCard: !f.showOnCard }
+      }
+      return f
+    })
+    onUpdateDatabase({ ...database, fields: updatedFields })
+    toast.success(`${fieldName} visibility toggled on record card`)
+  }
+
   const actionSections = [
     {
         title: "Configuration",
@@ -166,6 +190,7 @@ export function DatabaseActions({
                 }
             }, color: "text-blue-400", disabled: !database, variant: "default" },
             { id: "display", label: "Change System PIN", icon: ShieldCheck, onClick: () => toast.info("Security PIN update environment restricted"), color: "text-purple-400", disabled: false, variant: "default" },
+            { id: "card-face", label: "Show on front of Card", icon: LayoutGrid, onClick: () => setShowCardConfig(true), color: "text-amber-400", disabled: !database, variant: "default" },
             { id: "todo", label: "Task Integration", icon: ListTodo, onClick: () => {
                 toast.info("Task synchronization node active")
             }, color: "text-emerald-400", disabled: false, variant: "default" },
@@ -318,6 +343,54 @@ export function DatabaseActions({
                 </div>
             </div>
         </ScrollArea>
+
+        <Dialog open={showCardConfig} onOpenChange={setShowCardConfig}>
+            <DialogContent className="max-w-md bg-[#0d0d0d] border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-3xl">
+                <div className="p-8 bg-gradient-to-br from-indigo-500/10 to-transparent border-b border-white/5">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
+                            <LayoutGrid className="h-6 w-6 text-indigo-400" />
+                            Card Face Architect
+                        </DialogTitle>
+                        <DialogDescription className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2 leading-relaxed">
+                            Pick any fields to prioritize on the front of the database record card. Limit: 9 sectors for optimal visibility.
+                        </DialogDescription>
+                    </DialogHeader>
+                </div>
+                
+                <ScrollArea className="max-h-[50vh] p-8">
+                    <div className="space-y-4">
+                        {database?.fields.map((field) => (
+                            <div 
+                                key={field.name}
+                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer shadow-sm
+                                    ${field.showOnCard ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-white/2 border-white/5 hover:bg-white/5'}
+                                `}
+                                onClick={() => handleToggleFieldOnCard(field.name)}
+                            >
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-xs font-bold text-gray-200">{field.name}</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-indigo-400/60">{field.type} MATRIX</span>
+                                </div>
+                                <Checkbox 
+                                    checked={field.showOnCard}
+                                    className="h-6 w-6 rounded-md data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 border-white/20"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </ScrollArea>
+                
+                <div className="p-6 bg-white/2 border-t border-white/5 flex justify-end">
+                    <Button 
+                        onClick={() => setShowCardConfig(false)}
+                        className="bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase text-[10px] tracking-widest px-8 rounded-xl h-10 shadow-lg shadow-indigo-500/40"
+                    >
+                        Save Configuration
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     </div>
   )
 }

@@ -97,7 +97,7 @@ export const HELP_MAP: Record<string, string> = {
     "secure-database": "secure-database",
     "database-actions": "secure-database",
     "data-insights": "secure-database",
-    "reporting-engine": "secure-database",
+    "reporting-engine": "reporting-engine-details",
     "type-tasks": "task-architect",
     "task-architect": "task-architect",
 }
@@ -792,6 +792,55 @@ const HELP_PAGES: HelpPage[] = [
                     <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
                         <h5 className="font-bold text-yellow-400 text-sm mb-1 uppercase tracking-tighter">Safe Cleanup</h5>
                         <p className="text-xs text-gray-400">Use the "Sanitize Vault" tool to remove all injected mock data in one click. Our cleanup tools are specifically designed to PROTECT your real passwords and manual entries.</p>
+                    </div>
+                </div>
+            </div>
+        )
+    },
+    {
+        id: "reporting-engine-details",
+        title: "Reporting Engine Intelligence",
+        icon: FileText,
+        content: (
+            <div className="space-y-6">
+                <p className="text-lg text-gray-300 leading-relaxed italic">
+                    "Deep analytical synthesis and architectural data mapping."
+                </p>
+                <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                    <div className="p-6 rounded-[2rem] bg-indigo-500/10 border border-indigo-500/20 shadow-xl">
+                        <h4 className="text-sm font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                             <TrendingUp className="h-5 w-5" /> Reporting Architecture
+                        </h4>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            The Reporting Engine transforms raw database records into high-level analytical documents. Every blueprint you save preserves your specific field selections and sorting logic for future audits.
+                        </p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
+                            <h5 className="font-bold text-blue-400 text-sm mb-2 uppercase tracking-tighter">Global Summary</h5>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                A comprehensive, calculated overview of your entire collection. It aggregates quantitative data, detects the most frequent parameters, and identifies the total "Data Mass" within the selected environment. Use this for a bird's-eye view of your architecture.
+                            </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
+                            <h5 className="font-bold text-purple-400 text-sm mb-2 uppercase tracking-tighter">Logic Grouping</h5>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                Automatically categorizes metrics based on their logical relationships and shared attributes. This module identifies clusters of related records and summarizes them into "Intelligence Nodes," making it easier to see structural patterns in complex databases.
+                            </p>
+                        </div>
+
+                        <div className="p-5 rounded-2xl bg-white/5 border border-white/5">
+                            <h5 className="font-bold text-emerald-400 text-sm mb-2 uppercase tracking-tighter">Temporal Scan</h5>
+                            <p className="text-xs text-gray-400 leading-relaxed">
+                                Analyzes data shifts over a time-series matrix. It monitors when records were injected or optimized and detects shifts in field values over time. Essential for tracking project timelines, inventory depletion, or historical health trends.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-5 rounded-[2rem] bg-black/40 border border-white/5 text-[10px] text-gray-500 italic">
+                        Tip: Save your custom Architect configurations as "Blueprints" to recall these specific analytical filters with a single tap.
                     </div>
                 </div>
             </div>

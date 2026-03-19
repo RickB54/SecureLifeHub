@@ -174,14 +174,17 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
         <div className="p-4 sm:p-10 border-b border-white/5 bg-white/2 backdrop-blur-3xl sticky top-0 z-10 print:hidden">
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 sm:gap-8 mb-6 sm:mb-10">
                 <div className="flex items-center gap-4">
-                     <h2 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase mb-2 flex items-center gap-2 sm:gap-4">
-                        <TrendingUp className="h-6 w-6 sm:h-10 sm:h-10 text-indigo-500" />
+                     <h2 className="text-xl sm:text-2xl lg:text-4xl font-black text-white tracking-tighter uppercase mb-1 flex items-center gap-2 sm:gap-4 shrink-0">
+                        <TrendingUp className="h-5 w-5 sm:h-8 sm:w-8 lg:h-10 lg:w-10 text-indigo-500" />
                         Reporting Engine
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            onClick={() => onOpenHelp?.("reporting-engine")}
-                            className="h-8 w-8 sm:h-10 sm:w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenHelp?.("reporting-engine")
+                            }}
+                            className="h-8 w-8 sm:h-10 sm:w-10 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 active:scale-90"
                         >
                             <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 group-hover:text-white" />
                         </Button>
@@ -194,21 +197,27 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
                 <div className="flex gap-3">
                     <Button 
                         variant="outline" 
-                        onClick={handlePrint}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handlePrint();
+                        }}
                         disabled={!reportResult}
-                        className="h-12 px-6 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 font-black uppercase text-[10px] tracking-widest gap-3"
+                        className="h-12 px-6 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 font-black uppercase text-[10px] tracking-widest gap-3 active:scale-95"
                     >
                         <Printer className="h-4 w-4" />
-                        Print Report
+                        <span className="sm:inline">Print Report</span>
                     </Button>
                     <Button 
-                        variant="outline" 
-                        onClick={handleExportCSV}
+                        variant="default" 
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleExportCSV();
+                        }}
                         disabled={!reportResult}
-                        className="h-12 px-6 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 font-black uppercase text-[10px] tracking-widest gap-3"
+                        className="h-12 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-[10px] tracking-widest gap-3 shadow-xl active:scale-95 translate-y-0"
                     >
-                        <Download className="h-4 w-4 text-emerald-400" />
-                        Export Data
+                        <Download className="h-4 w-4" />
+                        <span className="sm:inline">Export Data</span>
                     </Button>
                 </div>
             </div>
@@ -255,23 +264,23 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
                         </TabsContent>
 
                         <TabsContent value="custom" className="mt-0">
-                            <div className="bg-white/2 border border-white/5 rounded-[4rem] p-12 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-[100px] -z-10" />
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 mb-16">
-                                    <div>
-                                        <h3 className="text-3xl font-black text-white tracking-tighter uppercase mb-2 italic">Architecture Builder</h3>
-                                        <p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.3em] flex items-center gap-2">
-                                            <Zap className="h-3 w-3" />
+                            <div className="bg-white/2 border border-white/5 rounded-[2.5rem] sm:rounded-[4rem] p-6 sm:p-12 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-48 h-48 sm:w-64 sm:h-64 bg-indigo-500/5 rounded-full blur-[80px] sm:blur-[100px] -z-10" />
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 sm:gap-8 mb-10 sm:mb-16">
+                                    <div className="min-w-0">
+                                        <h3 className="text-xl sm:text-3xl font-black text-white tracking-tighter uppercase mb-1 sm:mb-2 italic truncate">Architecture Builder</h3>
+                                        <p className="text-[8px] sm:text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] flex items-center gap-2">
+                                            <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                             Constructing Custom Analytical Matrix
                                         </p>
                                     </div>
-                                    <div className="flex gap-4">
-                                        <Button variant="ghost" onClick={() => setSelectedFields([])} className="h-12 px-8 text-[11px] font-black uppercase text-gray-500 hover:text-white tracking-widest">Reset</Button>
+                                    <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+                                        <Button variant="ghost" onClick={() => setSelectedFields([])} className="h-10 sm:h-12 px-4 sm:px-8 text-[10px] sm:text-[11px] font-black uppercase text-gray-500 hover:text-white tracking-widest active:scale-95">Reset</Button>
                                         <Button 
                                             onClick={handleSaveCustomReport}
-                                            className="h-14 px-8 rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase text-[11px] tracking-widest shadow-2xl shadow-indigo-500/30"
+                                            className="h-12 sm:h-14 px-6 sm:px-8 rounded-xl sm:rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-black uppercase text-[10px] sm:text-[11px] tracking-widest shadow-2xl shadow-indigo-500/30 active:scale-95"
                                         >
-                                            <Save className="h-4 w-4 mr-3" />
+                                            <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-2 sm:mr-3" />
                                             Register Blueprint
                                         </Button>
                                     </div>
