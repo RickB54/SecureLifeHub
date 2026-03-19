@@ -398,40 +398,42 @@ export function DatabaseView({
   return (
     <div className="space-y-6">
       {/* Header Info Area */}
-      <div className={`p-8 rounded-3xl ${themeColor} border ${themeBorder} flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group`}>
+      <div className={`p-6 md:p-8 rounded-[2.5rem] ${themeColor} border ${themeBorder} flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group`}>
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent pointer-events-none" />
-          <div className="relative z-10 font-bold uppercase tracking-tighter">
-              <h3 className="text-2xl font-black text-white leading-none mb-2 italic uppercase">{database?.title}</h3>
-              <p className="text-[10px] text-white/60 font-black tracking-widest uppercase">
-                {filteredRecords.length} records integrated into system • {searchQuery ? 'Active search filter' : 'Full data matrix'}
+          <div className="relative z-10 w-full md:w-auto flex flex-col items-center md:items-start text-center md:text-left">
+              <h3 className="text-xl md:text-2xl font-black text-white leading-none mb-2 italic uppercase">{database?.title}</h3>
+              <p className="text-[9px] md:text-[10px] text-white/60 font-black tracking-[0.2em] uppercase">
+                {filteredRecords.length} records integrated • {searchQuery ? 'Active filter' : 'Full matrix'}
               </p>
           </div>
-          <div className="flex items-center gap-2 relative z-10 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-3 relative z-10 w-full md:w-auto">
               <Button 
                 onClick={onAddRecord}
-                className="bg-white hover:bg-white/90 text-black rounded-xl text-[10px] font-black uppercase tracking-widest h-10 px-5 shadow-lg"
+                className="w-full sm:w-auto bg-white hover:bg-white/90 text-black rounded-xl text-[10px] font-black uppercase tracking-widest h-11 px-6 shadow-lg active:scale-95 transition-all"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Inject Record
               </Button>
-              {onEditSchema && (
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {onEditSchema && (
+                  <Button 
+                    onClick={() => database && onEditSchema && onEditSchema(database!)}
+                    variant="ghost" 
+                    className="flex-1 sm:flex-none bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-11 px-6 border border-white/10"
+                  >
+                    <Settings className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Edit Schema</span>
+                  </Button>
+                )}
                 <Button 
-                  onClick={() => database && onEditSchema && onEditSchema(database!)}
                   variant="ghost" 
-                  className="bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-10 px-5 border border-white/10"
+                  onClick={() => window.print()}
+                  className="flex-1 sm:flex-none bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-11 px-6 border border-white/10"
                 >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Edit Schema
+                  <Printer className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Print</span>
                 </Button>
-              )}
-              <Button 
-                variant="ghost" 
-                onClick={() => window.print()}
-                className="bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-10 px-5 border border-white/10"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print Matrix
-              </Button>
+              </div>
           </div>
       </div>
 
@@ -445,8 +447,8 @@ export function DatabaseView({
              <div 
               key={record.id}
               ref={el => { recordRefs.current[record.id] = el }}
-              className={`rounded-[2.5rem] overflow-hidden border transition-all duration-500 shadow-2xl relative
-                ${(isExpanded || record.isFavorite) ? `${recordTheme.bg} bg-opacity-20 scale-[1.01]` : 'bg-black/40 hover:bg-black/50 hover:scale-[1.005] cursor-pointer'} 
+              className={`rounded-[2rem] md:rounded-[2.5rem] overflow-hidden border transition-all duration-500 shadow-2xl relative w-full
+                ${(isExpanded || record.isFavorite) ? `${recordTheme.bg} bg-opacity-20 scale-[1] md:scale-[1.01]` : 'bg-black/40 hover:bg-black/50 hover:scale-[1.005] cursor-pointer'} 
                 ${recordTheme.border}`}
                onClick={(e) => {
                  if (!isExpanded) toggleExpand(record.id)
@@ -499,9 +501,6 @@ export function DatabaseView({
 
                   <div className="flex items-center gap-2">
                       <div className="flex items-center bg-black/20 rounded-2xl p-1 gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => onEditRecord(record)} className="h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all">
-                            <Edit2 className="h-5 w-5" />
-                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => onDuplicateRecord(record)} className="h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all">
                             <Copy className="h-5 w-5" />
                           </Button>
@@ -624,8 +623,11 @@ export function DatabaseView({
                            const isEditingThisField = editingField?.recordId === record.id && editingField?.fieldName === field.name;
                            const isInsertingHere = insertingFieldAtIndex === index;
                            
+                           // Responsive column logic: large items span 2 columns, others stay in grid
+                           const spanFull = field.type === 'gallery' || (field.type === 'textarea' && field.name.toLowerCase().includes('note'));
+                           
                            return (
-                             <div key={field.name} className={`space-y-4 group ${field.type === 'checkbox' || field.type === 'textarea' || field.type === 'gallery' || field.name.toLowerCase().includes('note') ? 'md:col-span-2' : ''}`}>
+                             <div key={field.name} className={`space-y-4 group ${spanFull ? 'md:col-span-2' : ''}`}>
                                 <div className="flex items-center justify-between pl-1">
                                     <div className="flex items-center gap-2">
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{field.name}</label>
@@ -645,10 +647,9 @@ export function DatabaseView({
                                             }
                                         }}
                                     >
-                                        {isEditingThisField ? <Save className="h-4 w-4" /> : <Edit2 className="h-4 w-4" />}
+                                        {isEditingThisField ? <Save className="h-4 w-4" /> : <Edit2 className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />}
                                     </Button>
                                 </div>
-                                
                                 <div className="relative">
                                     {isEditingThisField && field.type === 'textarea' ? (
                                         <div className="p-8 rounded-[2.5rem] bg-black/40 border border-indigo-500/30 space-y-6 shadow-3xl animate-in zoom-in-95 duration-300 relative">
@@ -712,130 +713,8 @@ export function DatabaseView({
                                                 <Save className="h-6 w-6" />
                                             </Button>
                                         </div>
-                                    ) : isEditingThisField && (field.type === 'checkbox' || field.type === 'dropdown') ? (
-                                        <div className="p-8 rounded-[2.5rem] bg-black/40 border border-indigo-500/30 space-y-6 shadow-3xl animate-in zoom-in-95 duration-300 relative">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <h5 className="text-sm font-black text-white italic uppercase tracking-widest">{field.name}</h5>
-                                                <Button 
-                                                    variant="ghost" 
-                                                    size="icon" 
-                                                    className="h-8 w-8 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-lg p-0"
-                                                    onClick={() => {
-                                                        setEditingField(null);
-                                                        toast.success("Sector optimized and saved");
-                                                    }}
-                                                >
-                                                    <Save className="h-5 w-5" />
-                                                </Button>
-                                            </div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-                                                {(field.options || []).map((opt) => (
-                                                    <div 
-                                                        key={opt} 
-                                                        className={`flex items-center gap-4 p-4 rounded-xl bg-white/2 border transition-all cursor-pointer ${ (record.values[field.name] || []).includes(opt) ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-white/5 hover:bg-white/5'}`}
-                                                        onClick={() => {
-                                                            const rawValue = record.values[field.name];
-                                                            const currentValues = Array.isArray(rawValue) ? rawValue : (rawValue ? [String(rawValue)] : []);
-                                                            const isChecked = currentValues.includes(opt);
-                                                            const newValues = isChecked 
-                                                                ? currentValues.filter((v: string) => v !== opt)
-                                                                : [...currentValues, opt];
-                                                            
-                                                            const updatedRecord = {
-                                                                ...record,
-                                                                values: { ...record.values, [field.name]: newValues },
-                                                                lastUpdated: new Date().toISOString()
-                                                            };
-                                                            onDatabaseUpdate({
-                                                                ...database,
-                                                                records: database.records.map(r => r.id === record.id ? updatedRecord : r)
-                                                            });
-                                                        }}
-                                                    >
-                                                        <Checkbox 
-                                                            id={`opt-${record.id}-${field.name}-${opt}`}
-                                                            checked={(Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : [])).includes(opt)}
-                                                            className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20 ring-offset-black"
-                                                        />
-                                                        <label className="text-sm font-bold text-gray-300 cursor-pointer flex-1">{opt}</label>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-8 w-8 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                if (!database) return
-                                                                const updatedFields = database.fields.map(f => {
-                                                                    if (f.name === field.name) {
-                                                                        return { ...f, options: (f.options || []).filter(o => o !== opt) }
-                                                                    }
-                                                                    return f
-                                                                })
-                                                                onDatabaseUpdate({ ...database, fields: updatedFields })
-                                                                toast.success(`Removed '${opt}' from possible values`)
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="flex flex-col gap-4 mt-6">
-                                                <div className="flex items-center gap-2 group/add cursor-pointer" onClick={() => {
-                                                    const input = document.getElementById(`add-opt-${record.id}-${field.name}`)
-                                                    input?.focus()
-                                                }}>
-                                                    <Plus className="h-3 w-3 text-indigo-400" />
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400/80 group-hover:text-indigo-400">+ Add Custom</span>
-                                                </div>
-                                                <div className="flex gap-2.5 relative">
-                                                    <Input 
-                                                        id={`add-opt-${record.id}-${field.name}`}
-                                                        placeholder="Type and press Enter" 
-                                                        value={newOptionInput}
-                                                        onChange={(e) => setNewOptionInput(e.target.value)}
-                                                        className="h-12 bg-black/40 border-white/5 rounded-xl focus:border-indigo-500/50 transition-all font-bold text-sm px-5 placeholder:text-white/10"
-                                                        onKeyDown={(e) => {
-                                                            if (e.key === 'Enter') {
-                                                                e.preventDefault();
-                                                                const opt = newOptionInput.trim()
-                                                                if (!opt || !database) return;
-                                                                const updatedFields = database.fields.map(f => {
-                                                                    if (f.name === field.name) {
-                                                                        return { ...f, options: [...(f.options || []), opt] };
-                                                                    }
-                                                                    return f;
-                                                                });
-                                                                onDatabaseUpdate({ ...database, fields: updatedFields });
-                                                                setNewOptionInput("");
-                                                                toast.success(`Broadcasting new parameter: ${opt}`);
-                                                            }
-                                                        }}
-                                                    />
-                                                    <Button 
-                                                        disabled={!newOptionInput.trim()}
-                                                        onClick={() => {
-                                                            const opt = newOptionInput.trim()
-                                                            if (!opt || !database) return;
-                                                            const updatedFields = database.fields.map(f => {
-                                                                if (f.name === field.name) {
-                                                                    return { ...f, options: [...(f.options || []), opt] };
-                                                                }
-                                                                return f;
-                                                            });
-                                                            onDatabaseUpdate({ ...database, fields: updatedFields });
-                                                            setNewOptionInput("");
-                                                            toast.success(`Broadcasting new parameter: ${opt}`);
-                                                        }}
-                                                        className="h-12 w-12 rounded-xl bg-indigo-500 hover:bg-indigo-600 disabled:opacity-20"
-                                                    >
-                                                        <Plus className="h-5 w-5" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </div>
                                     ) : (
-                                        <div className={`w-full bg-black/40 border border-white/5 rounded-[1.5rem] p-5 flex items-center justify-between group/field hover:border-white/20 transition-all ${field.type === 'gallery' ? 'cursor-pointer hover:bg-white/5' : ''}`}
+                                        <div className={`w-full bg-black/40 border border-white/5 rounded-[1.8rem] p-6 relative group/field hover:border-white/20 transition-all ${field.type === 'gallery' ? 'cursor-pointer hover:bg-white/5' : ''}`}
                                              onClick={() => {
                                                  if (field.type === 'gallery') {
                                                      const gallerySection = document.getElementById(`gallery-${record.id}`)
@@ -843,112 +722,157 @@ export function DatabaseView({
                                                  }
                                              }}
                                         >
-                                            <div className="text-sm font-bold text-white pr-8 flex items-center gap-3 overflow-hidden w-full group/text">
-                                                  {(field.type === 'textarea' || field.name.toLocaleLowerCase().includes('note')) && (
-                                                     <div className="flex items-center gap-2 mr-2 shrink-0">
-                                                         <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-9 w-9 rounded-xl text-white/20 hover:text-indigo-400 hover:bg-white/10 transition-all active:scale-95"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setFullscreenNote({ recordId: record.id, fieldName: field.name, value: String(record.values[field.name] || "") });
-                                                            }}
-                                                         >
-                                                             <Edit2 className="h-4 w-4" />
-                                                         </Button>
-                                                         <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-9 w-9 rounded-xl text-white/20 hover:text-rose-400 hover:bg-white/10 transition-all active:scale-95"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toast.info("Neural STT engine initializing...");
-                                                            }}
-                                                         >
-                                                             <Mic className="h-4 w-4" />
-                                                         </Button>
-                                                     </div>
-                                                  )}
-                                                  {field.type === 'gallery' ? (
-                                                     <>
-                                                         <div className="p-2 rounded-lg bg-indigo-500/10">
-                                                            <ImageIcon className="h-5 w-5 text-indigo-400" />
-                                                         </div>
-                                                         <span className="uppercase tracking-widest text-xs font-black text-indigo-400/80">Access Records Matrix ({record.images?.length || 0} Assets)</span>
-                                                     </>
-                                                 ) : field.type === 'checkbox' ? (
-                                                    <div className="flex flex-wrap gap-2.5 py-1">
-                                                        {(Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : [])).map((v: string) => (
-                                                            <Badge key={v} variant="outline" className="text-[10px] bg-indigo-500/10 border-indigo-500/20 text-indigo-300 font-black px-3 py-1 rounded-xl uppercase tracking-tighter">
-                                                                {v}
-                                                            </Badge>
+                                            {field.type === 'checkbox' || field.type === 'dropdown' ? (
+                                                <div className="space-y-6">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4">
+                                                        {(Array.isArray(field.options) ? field.options : []).map((opt) => (
+                                                            <div 
+                                                                key={opt} 
+                                                                className="flex items-center gap-4 group/opt cursor-pointer"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const rawValue = record.values[field.name];
+                                                                    const currentValues = Array.isArray(rawValue) ? rawValue : (rawValue ? [String(rawValue)] : []);
+                                                                    const isChecked = currentValues.includes(opt);
+                                                                    const newValues = isChecked 
+                                                                        ? currentValues.filter((v: string) => v !== opt)
+                                                                        : [...currentValues, opt];
+                                                                    
+                                                                    const updatedRecord = {
+                                                                        ...record,
+                                                                        values: { ...record.values, [field.name]: newValues },
+                                                                        lastUpdated: new Date().toISOString()
+                                                                    };
+                                                                    onDatabaseUpdate({
+                                                                        ...database!,
+                                                                        records: database!.records.map(r => r.id === record.id ? updatedRecord : r)
+                                                                    });
+                                                                }}
+                                                            >
+                                                                <Checkbox 
+                                                                    id={`opt-${record.id}-${field.name}-${opt}`}
+                                                                    checked={(Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : [])).includes(opt)}
+                                                                    className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20 ring-offset-black"
+                                                                />
+                                                                <label className="text-sm font-bold text-gray-300 cursor-pointer flex-1 group-hover/opt:text-white transition-colors">{opt}</label>
+                                                            </div>
                                                         ))}
-                                                        {(() => {
-                                                            const values = Array.isArray(record.values[field.name]) ? record.values[field.name] : (record.values[field.name] ? [String(record.values[field.name])] : []);
-                                                            return values.length === 0 && <span className="text-white/10 italic text-xs">Sector initialization pending</span>;
-                                                        })()}
                                                     </div>
-                                                  ) : (
-                                                      <div className="flex-1 flex items-center justify-between group/val">
-                                                        <span className="truncate tracking-tight font-bold">{String(record.values[field.name] || "—")}</span>
-                                                        <Button 
-                                                            variant="ghost" 
-                                                            size="icon" 
-                                                            className="h-8 w-8 opacity-0 group-hover/val:opacity-100 transition-opacity text-gray-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                const updatedRecord = {
-                                                                    ...record,
-                                                                    values: { ...record.values, [field.name]: "" },
-                                                                    lastUpdated: new Date().toISOString()
-                                                                };
-                                                                onDatabaseUpdate({
-                                                                    ...database!,
-                                                                    records: database!.records.map(r => r.id === record.id ? updatedRecord : r)
-                                                                });
-                                                                toast.success(`Broadcasting data purge: ${field.name} cleared`)
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                      </div>
-                                                  )}
-                                            </div>
-                                            {!isEditingThisField && field.type !== 'gallery' && (
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 opacity-0 group-hover/field:opacity-100 transition-opacity rounded-xl hover:bg-white/10">
-                                                            <MoreHorizontal className="h-4 w-4 text-gray-500" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end" className="w-64 bg-[#0a0a0a] border-white/10 text-white shadow-3xl rounded-2xl p-2 backdrop-blur-2xl">
-                                                        <DropdownMenuItem className="gap-3 rounded-xl focus:bg-white/10 cursor-pointer p-3" onClick={() => handleSendToTodo(record, field.name)}>
-                                                            <div className="p-1.5 rounded-lg bg-emerald-500/10">
-                                                                <ListTodo className="h-4 w-4 text-emerald-400" />
+                                                    
+                                                    <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+                                                        <div className="flex items-center gap-2 group/add cursor-pointer" onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingField({ recordId: record.id, fieldName: field.name });
+                                                        }}>
+                                                            <Plus className="h-3.5 w-3.5 text-indigo-400" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400/80 group-hover:text-indigo-400">+ Add Custom</span>
+                                                        </div>
+                                                        
+                                                        {isEditingThisField && (
+                                                            <div className="flex gap-2.5 animate-in slide-in-from-top-2 duration-300">
+                                                                <Input 
+                                                                    autoFocus
+                                                                    placeholder="Specify new parameter..." 
+                                                                    value={newOptionInput}
+                                                                    onChange={(e) => setNewOptionInput(e.target.value)}
+                                                                    className="h-11 bg-white/5 border-white/10 rounded-xl text-xs font-bold px-5"
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.preventDefault();
+                                                                            const opt = newOptionInput.trim()
+                                                                            if (!opt || !database) return;
+                                                                            const updatedFields = database.fields.map(f => {
+                                                                                if (f.name === field.name) {
+                                                                                    return { ...f, options: [...(f.options || []), opt] };
+                                                                                }
+                                                                                return f;
+                                                                            });
+                                                                            onDatabaseUpdate({ ...database, fields: updatedFields });
+                                                                            setNewOptionInput("");
+                                                                            toast.success(`Broadcasting new parameter: ${opt}`);
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <Button 
+                                                                    className="h-11 px-5 rounded-xl bg-indigo-500 hover:bg-indigo-600 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-indigo-500/20"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const opt = newOptionInput.trim()
+                                                                        if (!opt || !database) return;
+                                                                        const updatedFields = database.fields.map(f => {
+                                                                            if (f.name === field.name) {
+                                                                                return { ...f, options: [...(f.options || []), opt] };
+                                                                            }
+                                                                            return f;
+                                                                        });
+                                                                        onDatabaseUpdate({ ...database, fields: updatedFields });
+                                                                        setNewOptionInput("");
+                                                                        toast.success(`Broadcasting new parameter: ${opt}`);
+                                                                    }}
+                                                                >
+                                                                    Add
+                                                                </Button>
                                                             </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-black text-[10px] uppercase tracking-widest">Connect to Flow</span>
-                                                                <span className="text-[9px] text-gray-500 font-bold uppercase">Send sector to action matrix</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center justify-between group/val">
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        {field.type === 'gallery' ? (
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="p-2.5 rounded-xl bg-indigo-500/10">
+                                                                    <ImageIcon className="h-5 w-5 text-indigo-400" />
+                                                                </div>
+                                                                <span className="text-xs font-black uppercase tracking-widest text-indigo-400/80">Access Records Matrix ({record.images?.length || 0} Assets)</span>
                                                             </div>
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuSeparator className="bg-white/5 my-1" />
-                                                        <DropdownMenuItem className="gap-3 rounded-xl focus:bg-white/10 cursor-pointer p-3">
-                                                            <div className="p-1.5 rounded-lg bg-sky-500/10">
-                                                                <Share2 className="h-4 w-4 text-sky-400" />
-                                                            </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="font-black text-[10px] uppercase tracking-widest">Broadcast Segment</span>
-                                                                <span className="text-[9px] text-gray-500 font-bold uppercase">Share secure data packet</span>
-                                                            </div>
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
+                                                        ) : (
+                                                            <span className="truncate tracking-tight font-bold text-white/90">{String(record.values[field.name] || "—")}</span>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center gap-1">
+                                                        {(field.type === 'textarea' || field.name.toLowerCase().includes('note')) && (
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-9 w-9 text-white/20 hover:text-indigo-400 hover:bg-white/5 rounded-xl transition-all"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setFullscreenNote({ recordId: record.id, fieldName: field.name, value: String(record.values[field.name] || "") });
+                                                                }}
+                                                            >
+                                                                <Edit2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                        {!isEditingThisField && field.type !== 'gallery' && (
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="icon" 
+                                                                className="h-9 w-9 opacity-0 group-hover/field:opacity-100 transition-opacity text-white/20 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    const updatedRecord = {
+                                                                        ...record,
+                                                                        values: { ...record.values, [field.name]: "" },
+                                                                        lastUpdated: new Date().toISOString()
+                                                                    };
+                                                                    onDatabaseUpdate({
+                                                                        ...database!,
+                                                                        records: database!.records.map(r => r.id === record.id ? updatedRecord : r)
+                                                                    });
+                                                                    toast.success(`Broadcasting data purge: ${field.name} cleared`)
+                                                                }}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             )}
-                                         </div>
-                                     )}
-                                 </div>
-
+                                        </div>
+                                    )}
+                                </div>
                                  {/* Add Section Here Link */}
                                  <div className="flex flex-col gap-3 pt-2">
                                      {isInsertingHere ? (
@@ -1120,13 +1044,13 @@ export function DatabaseView({
                                         </div>
                                     </div>
                                 )}
+                              </div>
                           </div>
                       </div>
+                    )}
                   </div>
-              )}
-            </div>
-          )
-        })}
+                )
+            })}
 
         {/* Hidden Global Inputs */}
         <input 
@@ -1345,7 +1269,7 @@ export function DatabaseView({
   
                  <div className="absolute bottom-12 flex flex-col items-center gap-6">
                      <div className="flex gap-3">
-                         {database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images?.map((_, i) => (
+                          {(Array.isArray(database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images) ? database!.records.find(r => r.id === (fullscreenGallery?.recordId || ''))!.images : []).map((_, i) => (
                              <div 
                               key={i} 
                               className={`h-1.5 transition-all rounded-full ${i === (fullscreenGallery?.imageIndex || 0) ? 'w-12 bg-indigo-500' : 'w-3 bg-white/10 hover:bg-white/20 cursor-pointer'}`}

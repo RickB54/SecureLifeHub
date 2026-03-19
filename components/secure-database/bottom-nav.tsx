@@ -181,7 +181,7 @@ export function BottomNav({
 
           <button
             onClick={() => setShowSortOptions(!showSortOptions)}
-            disabled={!currentDatabase || !currentDatabase.title.toLowerCase().includes("journal")}
+            disabled={!currentDatabase}
             className={`flex flex-col items-center justify-center gap-1 h-12 rounded-xl transition-all duration-300 ${showSortOptions ? "bg-white/10 text-amber-400" : "text-gray-500 hover:text-gray-300 hover:bg-white/5"} disabled:opacity-0 disabled:cursor-not-allowed`}
           >
             <SortAsc className="h-5 w-5" />
