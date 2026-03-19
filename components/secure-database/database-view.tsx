@@ -36,7 +36,8 @@ import {
   GripVertical,
   HelpCircle,
   Hash,
-  Type
+  Type,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,7 +51,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import type { Database as DatabaseType, DbRecord } from "@/types/secure-database"
+import type { Database as DatabaseType, DbRecord, FieldType } from "@/types/secure-database"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
@@ -95,6 +96,8 @@ export function DatabaseView({
   const [editingField, setEditingField] = useState<{ recordId: string; fieldName: string } | null>(null)
   const [fieldOptionsDraft, setFieldOptionsDraft] = useState<string[]>([])
   const [newOptionInput, setNewOptionInput] = useState("")
+  const [insertingFieldAtIndex, setInsertingFieldAtIndex] = useState<number | null>(null);
+  const [newFieldConfig, setNewFieldConfig] = useState<{ name: string, type: FieldType }>({ name: "", type: "text" });
   const [fullscreenNote, setFullscreenNote] = useState<{ recordId: string; fieldName: string; value: string } | null>(null)
   const [fullscreenGallery, setFullscreenGallery] = useState<{ recordId: string; imageIndex: number } | null>(null)
   const recordRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
@@ -617,11 +620,12 @@ export function DatabaseView({
               {isExpanded && (
                   <div className="bg-black/30 backdrop-blur-xl p-10 pt-4 border-t border-white/10 animate-in slide-in-from-top-4 duration-500">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8">
-                        {database && database.fields.map((field) => {
+                        {database && database.fields.map((field, index) => {
                            const isEditingThisField = editingField?.recordId === record.id && editingField?.fieldName === field.name;
+                           const isInsertingHere = insertingFieldAtIndex === index;
                            
                            return (
-                             <div key={field.name} className={`space-y-2.5 group ${field.type === 'checkbox' || field.type === 'textarea' || field.type === 'gallery' || field.name.toLowerCase().includes('note') ? 'md:col-span-2' : ''}`}>
+                             <div key={field.name} className={`space-y-4 group ${field.type === 'checkbox' || field.type === 'textarea' || field.type === 'gallery' || field.name.toLowerCase().includes('note') ? 'md:col-span-2' : ''}`}>
                                 <div className="flex items-center justify-between pl-1">
                                     <div className="flex items-center gap-2">
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{field.name}</label>
@@ -937,9 +941,84 @@ export function DatabaseView({
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
                                             )}
-                                        </div>
-                                    )}
-                                </div>
+                                         </div>
+                                     )}
+                                 </div>
+
+                                 {/* Add Section Here Link */}
+                                 <div className="flex flex-col gap-3 pt-2">
+                                     {isInsertingHere ? (
+                                         <div className="bg-white/5 border border-indigo-500/30 p-4 rounded-2xl flex flex-col gap-3 animate-in zoom-in-95 duration-300">
+                                             <div className="flex items-center justify-between">
+                                                 <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">Initialize Field Vector</span>
+                                                 <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-6 w-6 text-white/20 hover:text-white"
+                                                    onClick={() => setInsertingFieldAtIndex(null)}
+                                                 >
+                                                     <X className="h-4 w-4" />
+                                                 </Button>
+                                             </div>
+                                             <div className="flex gap-2">
+                                                 <Input 
+                                                    placeholder="Specify Sector Name..." 
+                                                    value={newFieldConfig.name}
+                                                    onChange={(e) => setNewFieldConfig({ ...newFieldConfig, name: e.target.value })}
+                                                    className="h-10 bg-black/40 border-white/10 rounded-xl text-xs font-bold"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            if (!newFieldConfig.name.trim()) return;
+                                                            const newField = { name: newFieldConfig.name.trim(), type: newFieldConfig.type, showOnCard: true, options: [] }
+                                                            const updatedFields = [...database.fields]
+                                                            updatedFields.splice(index + 1, 0, newField)
+                                                            onDatabaseUpdate({ ...database, fields: updatedFields })
+                                                            setInsertingFieldAtIndex(null)
+                                                            setNewFieldConfig({ name: "", type: "text" })
+                                                            toast.success(`Vector ${newField.name} synchronized at rank ${index + 2}`)
+                                                        }
+                                                    }}
+                                                 />
+                                                 <select 
+                                                    value={newFieldConfig.type}
+                                                    onChange={(e) => setNewFieldConfig({ ...newFieldConfig, type: e.target.value as FieldType })}
+                                                    className="h-10 bg-black/40 border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest px-3 outline-none focus:border-indigo-500/50"
+                                                 >
+                                                     <option value="text">TEXT</option>
+                                                     <option value="checkbox">CHECKBOX</option>
+                                                     <option value="number">NUMBER</option>
+                                                     <option value="date">DATE</option>
+                                                     <option value="textarea">TEXTAREA</option>
+                                                     <option value="dropdown">DROPDOWN</option>
+                                                 </select>
+                                                 <Button 
+                                                    disabled={!newFieldConfig.name.trim()}
+                                                    onClick={() => {
+                                                        const newField = { name: newFieldConfig.name.trim(), type: newFieldConfig.type, showOnCard: true, options: [] }
+                                                        const updatedFields = [...database.fields]
+                                                        updatedFields.splice(index + 1, 0, newField)
+                                                        onDatabaseUpdate({ ...database, fields: updatedFields })
+                                                        setInsertingFieldAtIndex(null)
+                                                        setNewFieldConfig({ name: "", type: "text" })
+                                                        toast.success(`Vector ${newField.name} synchronized at rank ${index + 2}`)
+                                                    }}
+                                                    className="h-10 bg-indigo-500 hover:bg-indigo-600 rounded-xl px-4 text-[10px] font-black uppercase tracking-widest"
+                                                 >
+                                                     Synchronize
+                                                 </Button>
+                                             </div>
+                                         </div>
+                                     ) : (
+                                        <button 
+                                            className="text-[10px] font-black uppercase tracking-widest text-indigo-400/20 hover:text-indigo-400 transition-all flex items-center gap-2 self-start opacity-0 group-hover:opacity-100"
+                                            onClick={() => setInsertingFieldAtIndex(index)}
+                                        >
+                                            <Plus className="h-3 w-3" />
+                                            Add Section Here
+                                        </button>
+                                     )}
+                                 </div>
                              </div>
                            );
                         })}
