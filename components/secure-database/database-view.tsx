@@ -244,9 +244,10 @@ export function DatabaseView({
 
     try {
       const options = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
-        useWebWorker: false 
+        maxSizeMB: 0.2, // Drastically reduced for stability
+        maxWidthOrHeight: 1024,
+        useWebWorker: false,
+        initialQuality: 0.6
       }
 
       const compressedFiles: File[] = []
@@ -262,6 +263,7 @@ export function DatabaseView({
 
       const base64Images: string[] = []
       for (const file of compressedFiles) {
+        toast.info(`Acquiring asset index ${base64Images.length + 1}...`, { duration: 1000 })
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
@@ -283,14 +285,17 @@ export function DatabaseView({
       onDatabaseUpdate({ ...database, records: updatedRecords })
 
       if (onUpdateRecord && database.id) {
+          toast.info("Synchronizing assets with cloud architecture...", { duration: 1500 })
           await onUpdateRecord(database.id, recordId, { images: allImages })
+          toast.success("Sector synchronized with primary vault")
+      } else {
+          toast.success(`${base64Images.length} assets successfully processed`)
       }
-
-      toast.success(`${base64Images.length} assets successfully acquired and optimized`)
       
       if (e.target) e.target.value = ""
-    } catch (error) {
-      toast.error("Failed to process assets")
+    } catch (error: any) {
+      console.error("Critical Asset Injection Fault:", error)
+      toast.error(`Fault Detected: ${error.message || 'Unknown Protocol Error'}`)
     }
   }
 
@@ -1112,7 +1117,6 @@ export function DatabaseView({
                         ref={cameraInputRef} 
                         onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
                         accept="image/*" 
-                        capture="environment" 
                         className="hidden" 
                     />
       </div>

@@ -86,7 +86,10 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             try {
                 const state = JSON.parse(stored)
                 if (state.currentDb) setCurrentDb(state.currentDb)
-                if (state.showAddRecord) setShowAddRecord(state.showAddRecord)
+                if (state.showAddRecord) {
+                    setShowAddRecord(state.showAddRecord)
+                    toast.info("Secure Node Resumed: Restoring active session", { duration: 2000 })
+                }
                 if (state.selectedRecordId) setSelectedRecordId(state.selectedRecordId)
                 // We'll restore editingRecord after databases are loaded
             } catch(e) {}

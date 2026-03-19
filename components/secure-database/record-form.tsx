@@ -92,9 +92,10 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
     try {
       const options = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1920,
-        useWebWorker: false
+        maxSizeMB: 0.2, // Drastically reduced from 1MB to 200KB
+        maxWidthOrHeight: 1024, // Reduced from 1920 to 1024
+        useWebWorker: false,
+        initialQuality: 0.6
       }
 
       const compressedFiles: File[] = []
@@ -110,6 +111,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
       const base64Images: string[] = []
       for (const file of compressedFiles) {
+        toast.info(`Acquiring asset index ${base64Images.length + 1}...`, { duration: 1000 })
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
@@ -123,12 +125,15 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
       
       // If we are editing an existing record, save immediately to prevent data loss on browser swap/reload
       if (record && record.id && onUpdateRecord && database.id) {
+          toast.info("Synchronizing assets with cloud architecture...", { duration: 2000 })
           await onUpdateRecord(database.id, record.id, { images: allImages })
+          toast.success("Sector synchronized with primary vault")
+      } else {
+          toast.success(`${base64Images.length} assets successfully staged in local buffer`)
       }
-      
-      toast.success(`${base64Images.length} assets successfully acquired and optimized`)
-    } catch (error) {
-      toast.error("Failed to inject assets")
+    } catch (error: any) {
+      console.error("Critical Asset Injection Fault:", error)
+      toast.error(`Fault Detected: ${error.message || 'Unknown Protocol Error'}`)
     }
   }
 
@@ -379,7 +384,6 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                         ref={cameraInputRef} 
                         onChange={handleImageUpload} 
                         accept="image/*" 
-                        capture="environment"
                         className="hidden" 
                     />
                 </div>
