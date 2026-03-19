@@ -83,14 +83,18 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (!files || files.length === 0) return
+    if (!files || files.length === 0) {
+        toast.error("No Assets Detected: Buffer Empty")
+        return
+    }
 
-    toast.info("Compressing high-fidelity assets...")
+    toast.info(`Asset Protocol Engaged: ${files.length} object(s) detected. Protocol: ${files[0].name.split('.').pop()?.toUpperCase()}`)
 
     // Add a small delay to let the browser stabilize after the camera app closes
     await new Promise(resolve => setTimeout(resolve, 500))
 
     try {
+        toast.info("Initializing Secure Compression Engine...", { duration: 1000 })
       const options = {
         maxSizeMB: 0.2, // Drastically reduced from 1MB to 200KB
         maxWidthOrHeight: 1024, // Reduced from 1920 to 1024
