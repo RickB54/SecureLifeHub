@@ -83,23 +83,19 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
-    if (!files || files.length === 0) {
-        toast.error("No Assets Detected: Buffer Empty")
-        return
-    }
+    if (!files || files.length === 0) return
 
-    toast.info(`Asset Protocol Engaged: ${files.length} object(s) detected. Protocol: ${files[0].name.split('.').pop()?.toUpperCase()}`)
+    toast.info(`Acquiring ${files.length} high-fidelity asset(s)...`)
 
-    // Add a small delay to let the browser stabilize after the camera app closes
+    // Add a small delay for mobile browsers
     await new Promise(resolve => setTimeout(resolve, 500))
 
     try {
-        toast.info("Initializing Secure Compression Engine...", { duration: 1000 })
       const options = {
-        maxSizeMB: 0.2, // Drastically reduced from 1MB to 200KB
-        maxWidthOrHeight: 1024, // Reduced from 1920 to 1024
+        maxSizeMB: 0.8, // Increased from 0.2 to 0.8 for better quality
+        maxWidthOrHeight: 1600, // Increased to 1600
         useWebWorker: false,
-        initialQuality: 0.6
+        initialQuality: 0.7
       }
 
       const compressedFiles: File[] = []
@@ -115,7 +111,6 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
 
       const base64Images: string[] = []
       for (const file of compressedFiles) {
-        toast.info(`Acquiring asset index ${base64Images.length + 1}...`, { duration: 1000 })
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader()
           reader.onloadend = () => resolve(reader.result as string)
@@ -127,13 +122,11 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
       const allImages = [...localImages, ...base64Images]
       setLocalImages(allImages)
       
-      // If we are editing an existing record, save immediately to prevent data loss on browser swap/reload
       if (record && record.id && onUpdateRecord && database.id) {
-          toast.info("Synchronizing assets with cloud architecture...", { duration: 2000 })
           await onUpdateRecord(database.id, record.id, { images: allImages })
           toast.success("Sector synchronized with primary vault")
       } else {
-          toast.success(`${base64Images.length} assets successfully staged in local buffer`)
+          toast.success(`${base64Images.length} asset(s) successfully acquired`)
       }
     } catch (error: any) {
       console.error("Critical Asset Injection Fault:", error)
@@ -355,16 +348,15 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                             </div>
                         </div>
                     ))}
-                    <button 
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl"
+                    <label 
+                        htmlFor="file-input-primary"
+                        className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl cursor-pointer"
                     >
-                        <div className="p-3 bg-indigo-500/10 rounded-2xl group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all">
-                            <Upload className="h-5 w-5 text-indigo-400" />
+                        <div className="p-3 bg-white/5 rounded-2xl group-hover:scale-110 group-hover:bg-white/10 transition-all">
+                            <Upload className="h-5 w-5 text-gray-400" />
                         </div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Inject Asset</p>
-                    </button>
+                    </label>
                     <label 
                         htmlFor="camera-input-primary"
                         className="aspect-square rounded-3xl border-2 border-dashed border-white/5 bg-white/2 hover:bg-white/5 hover:border-indigo-500/30 transition-all flex flex-col items-center justify-center gap-2 group shadow-xl cursor-pointer"
@@ -375,6 +367,7 @@ export function RecordForm({ database, record, onSubmit, onCancel, onUpdateDatab
                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-600">Take Photo</p>
                     </label>
                     <input 
+                        id="file-input-primary"
                         type="file" 
                         ref={fileInputRef} 
                         onChange={handleImageUpload} 

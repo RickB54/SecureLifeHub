@@ -237,17 +237,17 @@ export function DatabaseView({
     const files = e.target.files
     if (!files || !database || files.length === 0) return
 
-    toast.info("Processing visual assets...")
+    toast.info(`Acquiring high-fidelity assets...`)
     
-    // Add a small delay to let browser stabilize after camera closes
+    // Add a small delay for stability
     await new Promise(resolve => setTimeout(resolve, 500))
 
     try {
       const options = {
-        maxSizeMB: 0.2, // Drastically reduced for stability
-        maxWidthOrHeight: 1024,
+        maxSizeMB: 0.8, 
+        maxWidthOrHeight: 1600,
         useWebWorker: false,
-        initialQuality: 0.6
+        initialQuality: 0.7
       }
 
       const compressedFiles: File[] = []
@@ -285,11 +285,10 @@ export function DatabaseView({
       onDatabaseUpdate({ ...database, records: updatedRecords })
 
       if (onUpdateRecord && database.id) {
-          toast.info("Synchronizing assets with cloud architecture...", { duration: 1500 })
           await onUpdateRecord(database.id, recordId, { images: allImages })
           toast.success("Sector synchronized with primary vault")
       } else {
-          toast.success(`${base64Images.length} assets successfully processed`)
+          toast.success(`${base64Images.length} asset(s) successfully processed`)
       }
       
       if (e.target) e.target.value = ""
@@ -1034,18 +1033,14 @@ export function DatabaseView({
                                        <Camera className="h-4 w-4 mr-2 text-indigo-400" />
                                        Capture Visual
                                    </label>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    className="h-11 rounded-2xl bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 border border-indigo-500/20 px-6 shadow-xl"
-                                    onClick={() => {
-                                        setActiveRecordId(record.id)
-                                        fileInputRef.current?.click()
-                                    }}
+                                  <label 
+                                    htmlFor="file-input-view"
+                                    className="h-11 rounded-2xl bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 border border-indigo-500/20 px-6 shadow-xl flex items-center justify-center cursor-pointer"
+                                    onClick={() => setActiveRecordId(record.id)}
                                   >
                                       <Upload className="h-4 w-4 mr-2" />
                                       Inject Assets
-                                  </Button>
+                                  </label>
                               </div>
                           </div>
                           
@@ -1101,6 +1096,7 @@ export function DatabaseView({
 
         {/* Hidden Global Inputs */}
         <input 
+            id="file-input-view"
             type="file" 
             ref={fileInputRef} 
             onChange={(e) => activeRecordId && handleImageAdd(activeRecordId, e)}
