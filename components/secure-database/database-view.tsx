@@ -32,7 +32,11 @@ import {
   Save,
   Sparkles,
   Mic,
-  Maximize2
+  Maximize2,
+  GripVertical,
+  HelpCircle,
+  Hash,
+  Type
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,11 +64,13 @@ interface DatabaseViewProps {
   onSelectRecord: (record: DbRecord) => void
   onSelectDatabase: (title: string) => void
   onAddTodo: (todo: any) => void
-  onAddRecord: () => void
-  onEditSchema?: (database: DatabaseType) => void
-  onRecordUpdate?: (record: DbRecord) => void
-  initialExpandedRecordId?: string
-  collapseAll?: boolean
+  onAddRecord: () => void;
+  onEditSchema?: (database: DatabaseType) => void;
+  onRecordUpdate?: (recordId: string, values: { [key: string]: any }) => void;
+  initialExpandedRecordId?: string;
+  collapseAll: boolean;
+  sortConfig?: { key: string; direction: 'asc' | 'desc' } | null;
+  onSortChange?: (config: { key: string; direction: 'asc' | 'desc' } | null) => void;
 }
 
 export function DatabaseView({ 
@@ -82,6 +88,8 @@ export function DatabaseView({
   onRecordUpdate,
   initialExpandedRecordId,
   collapseAll,
+  sortConfig,
+  onSortChange,
 }: DatabaseViewProps) {
   const [expandedRecords, setExpandedRecords] = useState<{ [key: string]: boolean }>({})
   const [editingField, setEditingField] = useState<{ recordId: string; fieldName: string } | null>(null)
@@ -142,15 +150,39 @@ export function DatabaseView({
 
   const filteredRecords = useMemo(() => {
     if (!database) return []
-    if (!searchQuery) return database.records
+    let records = [...database.records]
+
+    // Apply Sorting
+    if (sortConfig && database.title.toLowerCase().includes("journal")) {
+        const { key, direction } = sortConfig
+        records.sort((a, b) => {
+            let valA: any = a.values[key] || ""
+            let valB: any = b.values[key] || ""
+            
+            // Handle special keys
+            if (key === "Creation Date") {
+                valA = a.created
+                valB = b.created
+            } else if (key === "Last Updated") {
+                valA = a.lastUpdated || a.created
+                valB = b.lastUpdated || b.created
+            }
+
+            if (valA < valB) return direction === 'asc' ? -1 : 1
+            if (valA > valB) return direction === 'asc' ? 1 : -1
+            return 0
+        })
+    }
+
+    if (!searchQuery) return records
 
     const query = searchQuery.toLowerCase()
-    return database.records.filter((record: DbRecord) => 
+    return records.filter((record: DbRecord) => 
       Object.values(record.values).some(val => 
         String(val).toLowerCase().includes(query)
       )
     )
-  }, [database, searchQuery])
+  }, [database, searchQuery, sortConfig])
 
   const toggleFavorite = (recordId: string) => {
     if (!database) return
@@ -410,9 +442,16 @@ export function DatabaseView({
              <div 
               key={record.id}
               ref={el => { recordRefs.current[record.id] = el }}
-              className={`rounded-[2.5rem] overflow-hidden border transition-all duration-500 shadow-2xl
-                ${recordTheme.bg} ${recordTheme.border}`}
+              className={`rounded-[2.5rem] overflow-hidden border transition-all duration-500 shadow-2xl relative
+                ${(isExpanded || record.isFavorite) ? 'bg-black/60 scale-[1.01]' : 'bg-black/40 hover:bg-black/50 hover:scale-[1.005] cursor-pointer'} 
+                ${recordTheme.border} ${recordTheme.bg.replace('bg-', 'hover:bg-opacity-20 ')}`}
+               onClick={(e) => {
+                 if (!isExpanded) toggleExpand(record.id)
+               }}
             >
+                <div className="absolute top-1/2 left-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab rotate-90 active:cursor-grabbing">
+                    <GripVertical className="h-6 w-6 text-white/10" />
+                </div>
               {/* Record Header Bar */}
               <div className={`p-7 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b ${isExpanded ? 'border-white/10' : 'border-transparent'}`}>
                   <div className="flex items-center gap-5">
@@ -476,8 +515,50 @@ export function DatabaseView({
                             <Trash2 className="h-5 w-5" />
                           </Button>
                       </div>
+                                           <div className="w-px h-8 bg-white/10 mx-2" />
                       
-                      <div className="w-px h-8 bg-white/10 mx-2" />
+                      <div className="flex flex-col gap-1 items-center justify-center">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-8 rounded-md bg-white/5 text-white/20 hover:text-indigo-400 hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (!database) return
+                                const idx = database.records.findIndex(r => r.id === record.id)
+                                if (idx > 0) {
+                                    const newRecords = [...database.records]
+                                    const temp = newRecords[idx]
+                                    newRecords[idx] = newRecords[idx - 1]
+                                    newRecords[idx - 1] = temp
+                                    onDatabaseUpdate({ ...database, records: newRecords })
+                                    toast.success("Sector prioritized (moved up)")
+                                }
+                            }}
+                          >
+                              <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-5 w-8 rounded-md bg-white/5 text-white/20 hover:text-indigo-400 hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (!database) return
+                                const idx = database.records.findIndex(r => r.id === record.id)
+                                if (idx < database.records.length - 1) {
+                                    const newRecords = [...database.records]
+                                    const temp = newRecords[idx]
+                                    newRecords[idx] = newRecords[idx + 1]
+                                    newRecords[idx + 1] = temp
+                                    onDatabaseUpdate({ ...database, records: newRecords })
+                                    toast.success("Sector deprioritized (moved down)")
+                                }
+                            }}
+                          >
+                              <ChevronDown className="h-4 w-4" />
+                          </Button>
+                      </div>
 
                       <Button 
                         variant="ghost" 
@@ -553,7 +634,69 @@ export function DatabaseView({
                                 </div>
                                 
                                 <div className="relative">
-                                    {isEditingThisField && (field.type === 'checkbox' || field.type === 'dropdown') ? (
+                                    {isEditingThisField && field.type === 'textarea' ? (
+                                        <div className="p-8 rounded-[2.5rem] bg-black/40 border border-indigo-500/30 space-y-6 shadow-3xl animate-in zoom-in-95 duration-300 relative">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <h5 className="text-sm font-black text-white italic uppercase tracking-widest">{field.name} Editor</h5>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-lg p-0"
+                                                    onClick={() => {
+                                                        setEditingField(null);
+                                                        toast.success("Sector optimized and saved");
+                                                    }}
+                                                >
+                                                    <Save className="h-5 w-5" />
+                                                </Button>
+                                            </div>
+                                            <textarea 
+                                                className="w-full h-48 bg-white/5 border border-white/10 rounded-2xl p-6 text-sm font-bold text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                                value={String(record.values[field.name] || "")}
+                                                onChange={(e) => {
+                                                    const updatedRecord = {
+                                                        ...record,
+                                                        values: { ...record.values, [field.name]: e.target.value },
+                                                        lastUpdated: new Date().toISOString()
+                                                    };
+                                                    onDatabaseUpdate({
+                                                        ...database!,
+                                                        records: database!.records.map(r => r.id === record.id ? updatedRecord : r)
+                                                    });
+                                                }}
+                                            />
+                                        </div>
+                                    ) : isEditingThisField && (field.type === 'text' || field.type === 'number' || field.type === 'date') ? (
+                                        <div className="p-6 rounded-2xl bg-black/40 border border-indigo-500/30 shadow-3xl animate-in zoom-in-95 duration-300 relative flex items-center gap-4">
+                                            <Input 
+                                                className="flex-1 bg-white/5 border border-white/10 rounded-xl h-12 text-sm font-bold text-white pl-5"
+                                                value={String(record.values[field.name] || "")}
+                                                type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                                                onChange={(e) => {
+                                                    const updatedRecord = {
+                                                        ...record,
+                                                        values: { ...record.values, [field.name]: e.target.value },
+                                                        lastUpdated: new Date().toISOString()
+                                                    };
+                                                    onDatabaseUpdate({
+                                                        ...database!,
+                                                        records: database!.records.map(r => r.id === record.id ? updatedRecord : r)
+                                                    });
+                                                }}
+                                            />
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-12 w-12 bg-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-xl active:scale-95 transition-all"
+                                                onClick={() => {
+                                                    setEditingField(null);
+                                                    toast.success("Sector optimized and saved");
+                                                }}
+                                            >
+                                                <Save className="h-6 w-6" />
+                                            </Button>
+                                        </div>
+                                    ) : isEditingThisField && (field.type === 'checkbox' || field.type === 'dropdown') ? (
                                         <div className="p-8 rounded-[2.5rem] bg-black/40 border border-indigo-500/30 space-y-6 shadow-3xl animate-in zoom-in-95 duration-300 relative">
                                             <div className="flex items-center justify-between mb-4">
                                                 <h5 className="text-sm font-black text-white italic uppercase tracking-widest">{field.name}</h5>
@@ -598,6 +741,25 @@ export function DatabaseView({
                                                             className="data-[state=checked]:bg-indigo-500 data-[state=checked]:border-indigo-500 h-6 w-6 rounded-md border-white/20"
                                                         />
                                                         <label className="text-sm font-bold text-gray-300 cursor-pointer flex-1">{opt}</label>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-8 w-8 text-gray-600 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                if (!database) return
+                                                                const updatedFields = database.fields.map(f => {
+                                                                    if (f.name === field.name) {
+                                                                        return { ...f, options: (f.options || []).filter(o => o !== opt) }
+                                                                    }
+                                                                    return f
+                                                                })
+                                                                onDatabaseUpdate({ ...database, fields: updatedFields })
+                                                                toast.success(`Removed '${opt}' from possible values`)
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
                                                     </div>
                                                 ))}
                                             </div>
@@ -694,9 +856,31 @@ export function DatabaseView({
                                                         ))}
                                                         {(!record.values[field.name] || record.values[field.name].length === 0) && <span className="text-white/10 italic text-xs">Sector initialization pending</span>}
                                                     </div>
-                                                 ) : (
-                                                     <span className="truncate tracking-tight">{String(record.values[field.name] || "—")}</span>
-                                                 )}
+                                                  ) : (
+                                                      <div className="flex-1 flex items-center justify-between group/val">
+                                                        <span className="truncate tracking-tight font-bold">{String(record.values[field.name] || "—")}</span>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-8 w-8 opacity-0 group-hover/val:opacity-100 transition-opacity text-gray-500 hover:text-rose-500 hover:bg-rose-500/10 rounded-lg"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                const updatedRecord = {
+                                                                    ...record,
+                                                                    values: { ...record.values, [field.name]: "" },
+                                                                    lastUpdated: new Date().toISOString()
+                                                                };
+                                                                onDatabaseUpdate({
+                                                                    ...database!,
+                                                                    records: database!.records.map(r => r.id === record.id ? updatedRecord : r)
+                                                                });
+                                                                toast.success(`Broadcasting data purge: ${field.name} cleared`)
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                      </div>
+                                                  )}
                                             </div>
                                             {!isEditingThisField && field.type !== 'gallery' && (
                                                 <DropdownMenu>

@@ -58,6 +58,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   const [editingSchemaDatabase, setEditingSchemaDatabase] = useState<Database | null>(null)
   const [templateDatabase, setTemplateDatabase] = useState<Database | null>(null)
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null)
 
   const currentDatabase = useMemo(() => databases.find((db) => db.title === currentDb), [databases, currentDb])
 
@@ -270,7 +271,7 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                         onUpdateDatabase={updateDatabase}
                     />
                 ) : (
-                    <DatabaseView 
+                     <DatabaseView 
                         database={currentDatabase}
                         searchQuery={searchQuery}
                         onDatabaseUpdate={updateDatabase}
@@ -289,7 +290,9 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
                              setEditingSchemaDatabase(db)
                              setShowFormBuilder(true)
                          }}
-                     />
+                         sortConfig={sortConfig}
+                         onSortChange={setSortConfig}
+                      />
                 )}
             </div>
           </ScrollArea>
@@ -330,6 +333,8 @@ export default function SecureDatabase({ onOpenHelp }: SecureDatabaseProps) {
             setSelectedRecordId(null)
         }}
         onOpenHelp={onOpenHelp}
+        onSortClick={(key) => setSortConfig(prev => ({ key, direction: prev?.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }))}
+        sortConfig={sortConfig}
       />
 
       <TemplateSelector 
