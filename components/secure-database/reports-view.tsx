@@ -426,30 +426,37 @@ export function ReportsView({ database, onSaveReport, onGetReports, onDeleteRepo
 
                         {viewMode === "table" ? (
                             <div className="bg-white/2 border border-white/5 rounded-[3.5rem] overflow-hidden shadow-2xl backdrop-blur-3xl print:bg-white print:text-black print:rounded-none pr-4">
-                                <ScrollArea className="max-h-[70vh]">
-                                    <table className="w-full text-left border-collapse">
-                                        <thead>
-                                            <tr className="bg-black/40 border-b border-white/5">
-                                                {Object.keys(reportResult[0]).filter(k => k !== 'id').map(header => (
-                                                    <th key={header} className="p-8 text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em]">{header}</th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-white/5">
-                                            {reportResult.map((row, i) => (
-                                                <tr key={row.id || i} className="hover:bg-indigo-500/5 transition-colors group">
-                                                    {Object.keys(row).filter(k => k !== 'id').map(key => (
-                                                        <td key={key} className="p-8">
-                                                            <span className="text-sm font-bold text-gray-300 group-hover:text-white transition-colors">
-                                                                {Array.isArray(row[key]) ? row[key].join(', ') : String(row[key] || '—')}
-                                                            </span>
-                                                        </td>
+                                {reportResult.length > 0 ? (
+                                    <ScrollArea className="max-h-[70vh]">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="bg-black/40 border-b border-white/5">
+                                                    {Object.keys(reportResult[0]).filter(k => k !== 'id').map(header => (
+                                                        <th key={header} className="p-8 text-[11px] font-black uppercase text-indigo-400 tracking-[0.2em]">{header}</th>
                                                     ))}
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </ScrollArea>
+                                            </thead>
+                                            <tbody className="divide-y divide-white/5">
+                                                {reportResult.map((row, i) => (
+                                                    <tr key={row.id || i} className="hover:bg-indigo-500/5 transition-colors group">
+                                                        {Object.keys(row).filter(k => k !== 'id').map(key => (
+                                                            <td key={key} className="p-8">
+                                                                <span className="text-sm font-bold text-gray-300 group-hover:text-white transition-colors">
+                                                                    {Array.isArray(row[key]) ? row[key].join(', ') : String(row[key] || '—')}
+                                                                </span>
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </ScrollArea>
+                                ) : (
+                                    <div className="p-20 text-center">
+                                        <Clock className="h-10 w-10 text-gray-700 mx-auto mb-4" />
+                                        <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">No Intel Vectors Found</p>
+                                    </div>
+                                )}
                             </div>
                         ) : (
                             <div className="bg-white/2 border border-white/5 rounded-[4rem] p-16 h-[600px] flex items-center justify-center relative overflow-hidden">

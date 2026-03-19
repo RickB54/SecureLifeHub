@@ -30,7 +30,9 @@ import {
   Camera,
   Upload,
   Save,
-  Sparkles
+  Sparkles,
+  Mic,
+  Maximize2
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -85,17 +87,30 @@ export function DatabaseView({
   const [editingField, setEditingField] = useState<{ recordId: string; fieldName: string } | null>(null)
   const [fieldOptionsDraft, setFieldOptionsDraft] = useState<string[]>([])
   const [newOptionInput, setNewOptionInput] = useState("")
+  const [fullscreenNote, setFullscreenNote] = useState<{ recordId: string; fieldName: string; value: string } | null>(null)
+  const [fullscreenGallery, setFullscreenGallery] = useState<{ recordId: string; imageIndex: number } | null>(null)
   const recordRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
   
   const toggleExpand = (id: string) => {
+    const isExpanding = !expandedRecords[id];
     setExpandedRecords(prev => ({
       ...prev,
-      [id]: !prev[id]
+      [id]: isExpanding
     }))
+    
+    if (isExpanding) {
+        setTimeout(() => {
+            recordRefs.current[id]?.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }, 300);
+    }
   }
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const [activeRecordId, setActiveRecordId] = useState<string | null>(null)
+  const [isListening, setIsListening] = useState(false)
 
   useEffect(() => {
     if (initialExpandedRecordId) {
@@ -105,12 +120,25 @@ export function DatabaseView({
       }, 300)
     }
   }, [initialExpandedRecordId])
-
+ 
+  const prevCollapseAll = useRef(collapseAll)
   useEffect(() => {
-    if (collapseAll) {
-        setExpandedRecords({})
+    if (prevCollapseAll.current !== collapseAll) {
+        if (database) {
+            if (collapseAll) {
+                setExpandedRecords({})
+            } else {
+                const expansionMatrix: { [key: string]: boolean } = {}
+                database.records.forEach(r => {
+                    expansionMatrix[r.id] = true
+                })
+                setExpandedRecords(expansionMatrix)
+            }
+        }
+        prevCollapseAll.current = collapseAll
     }
-  }, [collapseAll])
+  }, [collapseAll, database])
+
 
   const filteredRecords = useMemo(() => {
     if (!database) return []
@@ -177,6 +205,9 @@ export function DatabaseView({
       })
       onDatabaseUpdate({ ...database, records: updatedRecords })
       toast.success(`${base64Images.length} assets successfully acquired`)
+      
+      // Clear inputs for subsequent uploads
+      if (e.target) e.target.value = ""
     } catch (error) {
       toast.error("Failed to process assets")
     }
@@ -197,20 +228,43 @@ export function DatabaseView({
     toast.success("Asset purged")
   }
 
-  const vibrantColors = [
-    { bg: "bg-purple-700", border: "border-purple-500/30", text: "text-purple-100" },
-    { bg: "bg-rose-700", border: "border-rose-500/30", text: "text-rose-100" },
-    { bg: "bg-indigo-700", border: "border-indigo-500/30", text: "text-indigo-100" },
-    { bg: "bg-emerald-700", border: "border-emerald-500/30", text: "text-emerald-100" },
-    { bg: "bg-amber-600", border: "border-amber-400/30", text: "text-amber-100" },
-    { bg: "bg-blue-700", border: "border-blue-500/30", text: "text-blue-100" },
-    { bg: "bg-teal-700", border: "border-teal-500/30", text: "text-teal-100" },
-    { bg: "bg-cyan-700", border: "border-cyan-500/30", text: "text-cyan-100" },
-  ]
+  const handleSpeechToText = () => {
+    if (!('webkitSpeechRecognition' in window)) {
+      toast.error("Speech recognition not supported in this browser")
+      return
+    }
 
-  const getRecordTheme = (index: number) => {
-    return vibrantColors[index % vibrantColors.length]
+    const SpeechRecognition = (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      toast.info("Neural link established. Listening...")
+    }
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      if (fullscreenNote) {
+        setFullscreenNote({ ...fullscreenNote, value: (fullscreenNote.value || "") + " " + transcript })
+      }
+      setIsListening(false)
+      toast.success("Intel acquired via neural link")
+    }
+
+    recognition.onerror = () => {
+      setIsListening(false)
+      toast.error("Neural link interrupted")
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+    }
+
+    recognition.start()
   }
+
 
   const colorMap: { [key: string]: string } = {
     emerald: "bg-emerald-600",
@@ -293,6 +347,18 @@ export function DatabaseView({
       </div>
     )
   }
+ 
+  const vibrantColors = [
+    { bg: "bg-indigo-600", border: "border-indigo-400" },
+    { bg: "bg-rose-600", border: "border-rose-400" },
+    { bg: "bg-amber-600", border: "border-amber-400" },
+    { bg: "bg-emerald-600", border: "border-emerald-400" },
+    { bg: "bg-sky-600", border: "border-sky-400" },
+    { bg: "bg-purple-600", border: "border-purple-400" },
+    { bg: "bg-fuchsia-600", border: "border-fuchsia-400" },
+    { bg: "bg-orange-600", border: "border-orange-400" },
+  ]
+  const getRecordTheme = (index: number) => vibrantColors[index % vibrantColors.length]
 
   return (
     <div className="space-y-6">
@@ -300,7 +366,7 @@ export function DatabaseView({
       <div className={`p-8 rounded-3xl ${themeColor} border ${themeBorder} flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl relative overflow-hidden group`}>
           <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent pointer-events-none" />
           <div className="relative z-10 font-bold uppercase tracking-tighter">
-              <h3 className="text-2xl font-black text-white leading-none mb-2 italic uppercase">{database.title}</h3>
+              <h3 className="text-2xl font-black text-white leading-none mb-2 italic uppercase">{database?.title}</h3>
               <p className="text-[10px] text-white/60 font-black tracking-widest uppercase">
                 {filteredRecords.length} records integrated into system • {searchQuery ? 'Active search filter' : 'Full data matrix'}
               </p>
@@ -315,7 +381,7 @@ export function DatabaseView({
               </Button>
               {onEditSchema && (
                 <Button 
-                  onClick={() => onEditSchema(database)}
+                  onClick={() => database && onEditSchema && onEditSchema(database!)}
                   variant="ghost" 
                   className="bg-black/20 hover:bg-black/40 text-white rounded-xl text-[10px] font-black uppercase tracking-widest h-10 px-5 border border-white/10"
                 >
@@ -334,95 +400,100 @@ export function DatabaseView({
           </div>
       </div>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-12 pt-8">
         {filteredRecords.map((record, index) => {
           const isExpanded = expandedRecords[record.id]
-          const titleField = database.fields[0].name
+          const titleField = database?.fields[0]?.name || 'id'
           const recordTheme = getRecordTheme(index)
           
           return (
-            <div 
+             <div 
               key={record.id}
               ref={el => { recordRefs.current[record.id] = el }}
               className={`rounded-[2.5rem] overflow-hidden border transition-all duration-500 shadow-2xl
-                ${isExpanded ? `${recordTheme.bg} ${recordTheme.border}` : 'bg-white/5 border-white/5 hover:border-white/10'}`}
+                ${recordTheme.bg} ${recordTheme.border}`}
             >
               {/* Record Header Bar */}
-              <div className="p-7 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className={`p-7 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b ${isExpanded ? 'border-white/10' : 'border-transparent'}`}>
                   <div className="flex items-center gap-5">
                       <div className="flex flex-col">
-                        <h4 className={`text-xl font-black tracking-tight italic uppercase truncate max-w-[400px] ${isExpanded ? 'text-white' : 'text-gray-100'}`}>
+                        <h4 className="text-2xl font-black tracking-tighter italic uppercase truncate max-w-[400px] text-white">
                             {record.values[titleField] || "Untitled Sector"}
                         </h4>
-                        {!isExpanded && (
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-400">Record Active</p>
-                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                            <div className="h-2 w-2 bg-indigo-500 rounded-full animate-pulse" />
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Record Active</p>
+                        </div>
                       </div>
-                      <div className={`h-1.5 w-1.5 rounded-full hidden md:block ${isExpanded ? 'bg-white/30' : 'bg-white/10'}`} />
-                      <p className={`text-[10px] font-black uppercase tracking-widest ${isExpanded ? 'text-white/40' : 'text-gray-600'}`}>
-                        {(() => {
-                            try {
-                                if (!record.created) return "Initializing Matrix...";
-                                const date = new Date(record.created);
-                                if (isNaN(date.getTime())) return "Temporal Drift";
-                                return format(date, "MM.dd.yyyy HH:mm:ss");
-                            } catch (e) {
-                                return "Temporal Error";
-                            }
-                        })()}
-                      </p>
+                      <div className="h-6 w-px bg-white/10 hidden md:block mx-2" />
+                      <div className="flex flex-col items-start gap-1">
+                        <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/30 italic">Initializing Matrix...</p>
+                        <p className="text-[9px] font-bold text-white/50 tracking-widest font-mono">
+                            {(() => {
+                                try {
+                                    if (!record.created) return "BUFFER_EMPTY";
+                                    const date = new Date(record.created);
+                                    if (isNaN(date.getTime())) return "DATE_INVALID";
+                                    return format(date, "MM.dd.yyyy / HH:mm:ss");
+                                } catch (e) {
+                                    return "DATE_ERR";
+                                }
+                            })()}
+                        </p>
+                      </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => onEditRecord(record)} className={`h-10 w-10 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => onDuplicateRecord(record)} className={`h-10 w-10 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            if (!isExpanded) toggleExpand(record.id)
-                            setTimeout(() => {
-                                const gallerySection = document.getElementById(`gallery-${record.id}`)
-                                gallerySection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                            }, 300)
-                        }}
-                        className={`h-10 w-10 rounded-xl relative ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                      >
-                          <ImageIcon className="h-4 w-4" />
-                          <span className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-black text-white text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-indigo-500">
-                              {record.images?.length || 0}
-                          </span>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => toggleFavorite(record.id)} className={`h-10 w-10 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'} ${record.isFavorite ? 'text-amber-400' : ''}`}>
-                        <Star className={`h-4 w-4 ${record.isFavorite ? 'fill-current' : ''}`} />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className={`h-10 w-10 rounded-xl ${isExpanded ? 'text-white hover:bg-black/20' : 'text-gray-400 hover:text-rose-400 hover:bg-white/5'}`}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <div className="flex items-center gap-2">
+                      <div className="flex items-center bg-black/20 rounded-2xl p-1 gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => onEditRecord(record)} className="h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all">
+                            <Edit2 className="h-5 w-5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => onDuplicateRecord(record)} className="h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all">
+                            <Copy className="h-5 w-5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                if (!isExpanded) toggleExpand(record.id)
+                                setTimeout(() => {
+                                    const gallerySection = document.getElementById(`gallery-${record.id}`)
+                                    gallerySection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                                }, 300)
+                            }}
+                            className="h-11 w-11 rounded-xl relative text-white hover:bg-white/10 transition-all"
+                          >
+                              <ImageIcon className="h-5 w-5" />
+                              <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 bg-white text-black text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-indigo-500">
+                                  {record.images?.length || 0}
+                              </span>
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => toggleFavorite(record.id)} className={`h-11 w-11 rounded-xl text-white hover:bg-white/10 transition-all ${record.isFavorite ? 'text-amber-400' : ''}`}>
+                            <Star className={`h-5 w-5 ${record.isFavorite ? 'fill-current' : ''}`} />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteRecord(record.id)} className="h-11 w-11 rounded-xl text-white hover:bg-rose-500 transition-all">
+                            <Trash2 className="h-5 w-5" />
+                          </Button>
+                      </div>
                       
-                      <div className="w-px h-6 bg-white/10 mx-2" />
+                      <div className="w-px h-8 bg-white/10 mx-2" />
 
                       <Button 
                         variant="ghost" 
-                        className={`px-3 py-1 rounded-xl flex items-center gap-2 group/expand h-10 ${isExpanded ? 'text-white bg-black/20 border border-white/10' : 'text-gray-400 hover:text-white'}`}
+                        className="px-6 rounded-2xl flex items-center gap-3 group/expand h-12 bg-white text-black hover:bg-white/90 shadow-xl transition-all"
                         onClick={() => toggleExpand(record.id)} 
                       >
-                        <span className="text-[9px] font-black uppercase tracking-widest hidden md:inline">{isExpanded ? 'Collapse Sector' : 'Access Data'}</span>
-                        {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4 group-hover/expand:translate-y-0.5 transition-transform" />}
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">{isExpanded ? 'Collapse Sector' : 'Access Data'}</span>
+                        {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5 group-hover/expand:translate-y-0.5 transition-transform" />}
                       </Button>
                   </div>
               </div>
 
               {/* Collapsed Top Fields Layout */}
               {!isExpanded && (
-                  <div className="px-8 pb-8 pt-0 border-t border-white/5 mt-0 min-h-[120px] bg-black/5 flex items-center">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 w-full">
-                          {database.fields.filter(f => f.showOnCard).slice(1).map(field => {
+                  <div className="px-8 pb-8 pt-6 mt-0 min-h-[100px] flex items-center flex-wrap gap-x-12 gap-y-6">
+                          {database && database.fields.filter(f => f.showOnCard).slice(1).map(field => {
                               const value = record.values[field.name];
                               let displayValue = String(value || "—");
                               
@@ -438,15 +509,14 @@ export function DatabaseView({
                               }
 
                               return (
-                                <div key={field.name} className="flex items-center gap-3">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400/80 min-w-[120px]">{field.name}:</span>
-                                    <span className="text-[11px] font-bold text-gray-400 truncate flex-1 tracking-tight">
+                                <div key={field.name} className="flex flex-col gap-1">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{field.name}:</span>
+                                    <span className="text-sm font-bold text-white tracking-tight">
                                       {displayValue}
                                     </span>
                                 </div>
                               );
                           })}
-                      </div>
                   </div>
               )}
 
@@ -454,11 +524,11 @@ export function DatabaseView({
               {isExpanded && (
                   <div className="bg-black/30 backdrop-blur-xl p-10 pt-4 border-t border-white/10 animate-in slide-in-from-top-4 duration-500">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-8">
-                        {database.fields.map((field) => {
+                        {database && database.fields.map((field) => {
                            const isEditingThisField = editingField?.recordId === record.id && editingField?.fieldName === field.name;
                            
                            return (
-                             <div key={field.name} className={`space-y-2.5 group ${field.type === 'checkbox' || field.type === 'textarea' || field.type === 'gallery' ? 'md:col-span-2' : ''}`}>
+                             <div key={field.name} className={`space-y-2.5 group ${field.type === 'checkbox' || field.type === 'textarea' || field.type === 'gallery' || field.name.toLowerCase().includes('note') ? 'md:col-span-2' : ''}`}>
                                 <div className="flex items-center justify-between pl-1">
                                     <div className="flex items-center gap-2">
                                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{field.name}</label>
@@ -581,8 +651,34 @@ export function DatabaseView({
                                                  }
                                              }}
                                         >
-                                            <div className="text-sm font-bold text-white pr-8 flex items-center gap-3 overflow-hidden w-full">
-                                                 {field.type === 'gallery' ? (
+                                            <div className="text-sm font-bold text-white pr-8 flex items-center gap-3 overflow-hidden w-full group/text">
+                                                  {(field.type === 'textarea' || field.name.toLocaleLowerCase().includes('note')) && (
+                                                     <div className="flex items-center gap-2 mr-2 shrink-0">
+                                                         <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-9 w-9 rounded-xl text-white/20 hover:text-indigo-400 hover:bg-white/10 transition-all active:scale-95"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setFullscreenNote({ recordId: record.id, fieldName: field.name, value: String(record.values[field.name] || "") });
+                                                            }}
+                                                         >
+                                                             <Edit2 className="h-4 w-4" />
+                                                         </Button>
+                                                         <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="h-9 w-9 rounded-xl text-white/20 hover:text-rose-400 hover:bg-white/10 transition-all active:scale-95"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toast.info("Neural STT engine initializing...");
+                                                            }}
+                                                         >
+                                                             <Mic className="h-4 w-4" />
+                                                         </Button>
+                                                     </div>
+                                                  )}
+                                                  {field.type === 'gallery' ? (
                                                      <>
                                                          <div className="p-2 rounded-lg bg-indigo-500/10">
                                                             <ImageIcon className="h-5 w-5 text-indigo-400" />
@@ -694,23 +790,19 @@ export function DatabaseView({
                                 {record.images && record.images.length > 0 ? (
                                     <>
                                         {record.images.map((img, i) => (
-                                            <div key={i} className="aspect-square rounded-[2.5rem] overflow-hidden border border-white/10 bg-black/40 group relative shadow-3xl hover:translate-y-[-4px] transition-all duration-500">
-                                                <img src={img} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt="Asset" />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-4">
-                                                    <Button 
-                                                        variant="ghost" 
-                                                        size="icon" 
-                                                        className="h-12 w-12 text-rose-500 hover:text-white hover:bg-rose-500 rounded-full shadow-2xl active:scale-90 transition-all"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleDeleteImage(record.id, i);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-6 w-6" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
+                                             <div 
+                                                key={i} 
+                                                className="aspect-square rounded-[2.5rem] overflow-hidden border border-white/10 bg-black/40 group relative shadow-3xl hover:translate-y-[-4px] transition-all duration-500 cursor-pointer"
+                                                onClick={() => setFullscreenGallery({ recordId: record.id, imageIndex: i })}
+                                             >
+                                                 <img src={img} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110" alt="Asset" />
+                                                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6">
+                                                     <div className="bg-indigo-500/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-indigo-500/30">
+                                                        <span className="text-[10px] font-black uppercase text-indigo-100 tracking-[0.2em]">Examine Asset</span>
+                                                     </div>
+                                                 </div>
+                                             </div>
+                                         ))}
                                         <button 
                                             onClick={() => {
                                                 setActiveRecordId(record.id)
@@ -772,7 +864,209 @@ export function DatabaseView({
             <p className="text-gray-600 text-xs mt-2 font-mono">ADAPTIVE_SEARCH_RESULT: 0_ENTRIES</p>
             <Button variant="link" onClick={() => {}} className="text-indigo-400 text-xs mt-6 uppercase font-black tracking-widest">Clear active filters</Button>
          </div>
-      )}
-    </div>
-  )
-}
+       )}
+ 
+        {/* Fullscreen Notes Overlay */}
+        {fullscreenNote && (
+           <div className="fixed inset-0 z-[1000] bg-black/95 backdrop-blur-3xl animate-in zoom-in-95 duration-500 flex flex-col items-center justify-center p-6 md:p-20 overflow-hidden">
+              <div className="absolute top-10 right-10 flex items-center gap-4">
+                 <Button 
+                     variant="ghost" 
+                     className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white rounded-2xl h-14 px-8 text-xs font-black uppercase tracking-widest gap-3 transition-all ring-1 ring-emerald-500/20"
+                     onClick={() => {
+                        if (!fullscreenNote) return;
+                        const rec = database?.records.find(r => r.id === fullscreenNote.recordId);
+                        if (database && rec) {
+                            onAddTodo({
+                                id: Math.random().toString(36).substr(2, 9),
+                                title: `Review: ${fullscreenNote.fieldName} from ${database.title}`,
+                                description: fullscreenNote.value,
+                                priority: 'normal',
+                                status: 'active',
+                                created: new Date().toISOString(),
+                                databaseSource: database.title
+                            });
+                            toast.success("Intel synced to Task Architect");
+                        }
+                     }}
+                 >
+                     <ListTodo className="h-5 w-5" />
+                     Connect to Flow
+                 </Button>
+                 <Button 
+                     variant="ghost" 
+                     size="icon" 
+                     className="h-14 w-14 rounded-full bg-white/5 border border-white/10 text-white hover:bg-rose-500 hover:text-white transition-all shadow-2xl"
+                     onClick={() => setFullscreenNote(null)}
+                 >
+                     <Plus className="h-6 w-6 rotate-45" />
+                 </Button>
+              </div>
+              
+              <div className="max-w-5xl w-full space-y-8 animate-in slide-in-from-bottom-12 duration-700">
+                 <div className="space-y-4">
+                     <div className="flex items-center gap-4">
+                         <div className="h-3 w-3 bg-indigo-500 rounded-full animate-pulse" />
+                         <h2 className="text-[10px] font-black uppercase tracking-[0.5em] text-indigo-400">Notes Architect v2.0 // Deep Focus</h2>
+                     </div>
+                     <h1 className="text-6xl md:text-8xl font-black text-white italic uppercase tracking-tighter leading-tight">{fullscreenNote?.fieldName}</h1>
+                 </div>
+ 
+                 <div className="relative group">
+                     <textarea 
+                         className="w-full h-[50vh] bg-transparent border-l-4 border-indigo-500/50 pl-12 text-2xl md:text-5xl font-black text-white/90 placeholder:text-white/5 focus:outline-none focus:border-indigo-500 transition-all resize-none leading-relaxed tracking-tight"
+                         value={fullscreenNote?.value || ''}
+                         onChange={(e) => {
+                             if (!fullscreenNote || !database) return;
+                             const newVal = e.target.value;
+                             setFullscreenNote({ ...fullscreenNote, value: newVal });
+                             
+                             const record = database.records.find(r => r.id === fullscreenNote.recordId);
+                             if (record) {
+                                 const updatedRecord = {
+                                     ...record,
+                                     values: { ...record.values, [fullscreenNote.fieldName]: newVal },
+                                     lastUpdated: new Date().toISOString()
+                                 };
+                                 onDatabaseUpdate({
+                                     ...database,
+                                     records: database.records.map(r => r.id === record.id ? updatedRecord : r)
+                                 });
+                             }
+                         }}
+                         autoFocus
+                         placeholder="Neural buffer ready. Begin stream..."
+                     />
+                     <div className="absolute top-0 right-0 h-full w-px bg-white/5" />
+                     <div className="absolute bottom-0 left-0 w-full h-px bg-white/5" />
+                     
+                     <div className="absolute bottom-10 left-12 flex items-center gap-10">
+                         <div className="flex flex-col">
+                             <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Words Generated</span>
+                             <span className="text-3xl font-black text-indigo-400/80">{fullscreenNote?.value.trim().split(/\s+/).filter(Boolean).length || 0}</span>
+                         </div>
+                         <div className="flex flex-col">
+                             <span className="text-[10px] font-black text-white/20 uppercase tracking-widest">Characters Logged</span>
+                             <span className="text-3xl font-black text-indigo-400/80">{fullscreenNote?.value.length || 0}</span>
+                         </div>
+                         <Button 
+                             variant="ghost" 
+                             className="bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white rounded-2xl h-14 w-14 p-0 shadow-2xl animate-pulse"
+                             onClick={handleSpeechToText}
+                         >
+                             <Mic className={`h-6 w-6 ${isListening ? 'animate-bounce' : ''}`} />
+                         </Button>
+                     </div>
+                 </div>
+                 
+                 <p className="text-[10px] text-white/20 font-bold uppercase tracking-[0.2em]">Neural Stream Logs // {format(new Date(), "HH:mm:ss")}</p>
+              </div>
+           </div>
+        )}
+ 
+        {/* Gallery Vision Fullscreen Overlay */}
+        {fullscreenGallery && (
+             <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-3xl animate-in fade-in duration-500 flex flex-col items-center justify-center p-8">
+                 <div className="w-full max-w-6xl flex items-center justify-between mb-12 relative z-10 px-8">
+                     <div className="flex items-center gap-4">
+                         <div className="p-4 rounded-3xl bg-indigo-500/20 text-indigo-400 shadow-[0_0_30px_rgba(129,140,248,0.2)]">
+                             <ImageIcon className="h-8 w-8" />
+                         </div>
+                         <div>
+                             <h2 className="text-3xl font-black text-white uppercase italic tracking-tighter">Gallery Vision</h2>
+                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.4em]">Asset Protocol: v4.2.0 • Immersive Environment</p>
+                         </div>
+                     </div>
+                     
+                     <div className="flex items-center gap-3">
+                         <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-emerald-500 hover:text-white transition-all shadow-2xl"
+                          onClick={() => {
+                              if (!fullscreenGallery) return;
+                              const imgUrl = database?.records.find(r => r.id === fullscreenGallery.recordId)?.images?.[fullscreenGallery.imageIndex];
+                              if (imgUrl) {
+                                  const link = document.createElement('a');
+                                  link.href = imgUrl;
+                                  link.download = `asset-${fullscreenGallery.recordId}-${fullscreenGallery.imageIndex}.png`;
+                                  link.click();
+                              }
+                          }}
+                         >
+                             <FileDown className="h-6 w-6" />
+                         </Button>
+                         <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 text-white hover:bg-rose-500 hover:text-white transition-all shadow-2xl"
+                          onClick={() => {
+                              if (!fullscreenGallery) return;
+                              const { recordId, imageIndex } = fullscreenGallery;
+                              handleDeleteImage(recordId, imageIndex);
+                              setFullscreenGallery(null);
+                          }}
+                         >
+                             <Trash2 className="h-6 w-6" />
+                         </Button>
+                         <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-14 w-14 rounded-full bg-white/5 border border-white/10 text-white hover:bg-white/20 transition-all shadow-2xl"
+                          onClick={() => setFullscreenGallery(null)}
+                         >
+                             <Plus className="h-6 w-6 rotate-45" />
+                         </Button>
+                     </div>
+                 </div>
+  
+                 <div className="relative w-full h-[70vh] flex items-center justify-center group/view">
+                     <img 
+                      src={database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images?.[fullscreenGallery?.imageIndex || 0]} 
+                      className="max-w-[90vw] max-h-full rounded-[3rem] shadow-[0_0_100px_rgba(30,58,138,0.3)] border border-white/10 cursor-zoom-out"
+                      onClick={() => setFullscreenGallery(null)}
+                      alt="Immersion View"
+                     />
+                     
+                     {/* Navigation */}
+                     <div className="absolute inset-x-10 flex items-center justify-between opacity-0 group-hover/view:opacity-100 transition-opacity">
+                         <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          disabled={fullscreenGallery?.imageIndex === 0}
+                          className="h-20 w-20 rounded-[2.5rem] bg-black/50 backdrop-blur-xl border border-white/10 text-white hover:bg-indigo-500 hover:border-indigo-500 disabled:opacity-0 transition-all"
+                          onClick={() => fullscreenGallery && setFullscreenGallery({ ...fullscreenGallery, imageIndex: (fullscreenGallery.imageIndex || 0) - 1 })}
+                         >
+                             <ChevronDown className="h-10 w-10 rotate-90" />
+                         </Button>
+                         <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          disabled={fullscreenGallery?.imageIndex === (database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images?.length || 1) - 1}
+                          className="h-20 w-20 rounded-[2.5rem] bg-black/50 backdrop-blur-xl border border-white/10 text-white hover:bg-indigo-500 hover:border-indigo-500 disabled:opacity-0 transition-all"
+                          onClick={() => fullscreenGallery && setFullscreenGallery({ ...fullscreenGallery, imageIndex: (fullscreenGallery.imageIndex || 0) + 1 })}
+                         >
+                             <ChevronDown className="h-10 w-10 -rotate-90" />
+                         </Button>
+                     </div>
+                 </div>
+  
+                 <div className="absolute bottom-12 flex flex-col items-center gap-6">
+                     <div className="flex gap-3">
+                         {database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images?.map((_, i) => (
+                             <div 
+                              key={i} 
+                              className={`h-1.5 transition-all rounded-full ${i === (fullscreenGallery?.imageIndex || 0) ? 'w-12 bg-indigo-500' : 'w-3 bg-white/10 hover:bg-white/20 cursor-pointer'}`}
+                              onClick={() => fullscreenGallery && setFullscreenGallery({ ...fullscreenGallery, imageIndex: i })}
+                             />
+                         ))}
+                     </div>
+                     <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.3em]">
+                         ASSET_INDEX: {(fullscreenGallery?.imageIndex || 0) + 1} / {database?.records.find(r => r.id === (fullscreenGallery?.recordId || ''))?.images?.length || 0}
+                     </p>
+                 </div>
+             </div>
+          )}
+     </div>
+   )
+ }

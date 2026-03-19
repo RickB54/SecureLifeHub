@@ -833,10 +833,10 @@ const HELP_PAGES: HelpPage[] = [
                                 <span className="text-amber-400 font-bold text-[10px] uppercase block mb-1">Export CSV & Print</span>
                                 <p className="text-[10px] text-gray-400">Convert your matrix data into standard CSV spreadsheets or generate a professional PDF print of your records.</p>
                             </div>
-                            <div className="p-3 bg-black/20 rounded-xl border border-white/5">
-                                <span className="text-rose-500 font-bold text-[10px] uppercase block mb-1">Architecture Neutralization (Delete)</span>
-                                <p className="text-[10px] text-gray-400">Permanently delete databases with full records. Note: This action requires high-level confirmation and is non-reversible.</p>
-                            </div>
+                             <div className="p-3 bg-black/20 rounded-xl border border-white/5">
+                                 <span className="text-rose-500 font-bold text-[10px] uppercase block mb-1">Architecture Neutralization (Delete)</span>
+                                 <p className="text-[10px] text-gray-400">Permanently delete databases with full records. Note: This action requires high-level confirmation and the <strong>Security PIN (Default: 1234)</strong>. This process is non-reversible.</p>
+                             </div>
                         </div>
                     </div>
 

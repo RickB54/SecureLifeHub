@@ -50,6 +50,17 @@ export function DatabaseActions({
   onOpenHelp,
 }: DatabaseActionsProps) {
   const [isProcessing, setIsProcessing] = useState(false)
+  const [pinInput, setPinInput] = useState("")
+  const DEFAULT_PIN = "1234"
+
+  const handleDangerAction = (action: () => void) => {
+    if (pinInput !== DEFAULT_PIN) {
+      toast.error("INVALID ACCESS CODE: Security protocol breach detected")
+      return
+    }
+    action()
+    setPinInput("")
+  }
 
   const handleExport = () => {
     if (!database) return
@@ -144,7 +155,10 @@ export function DatabaseActions({
     {
         title: "Configuration",
         items: [
-            { id: "new", label: "Create Database", icon: PlusCircle, onClick: onNewDatabase, color: "text-indigo-400", disabled: false, variant: "default" },
+            { id: "new", label: "Create Database", icon: PlusCircle, onClick: () => {
+                onNewDatabase()
+                toast.info("Initializing Architecture Matrix...")
+            }, color: "text-indigo-400", disabled: false, variant: "default" },
             { id: "template", label: "Use Template", icon: Copy, onClick: () => {
                 if (database) {
                     onUseTemplate(database)
@@ -152,18 +166,26 @@ export function DatabaseActions({
                 }
             }, color: "text-blue-400", disabled: !database, variant: "default" },
             { id: "display", label: "Change System PIN", icon: ShieldCheck, onClick: () => toast.info("Security PIN update environment restricted"), color: "text-purple-400", disabled: false, variant: "default" },
-            { id: "todo", label: "Task Integration", icon: ListTodo, onClick: () => {}, color: "text-emerald-400", disabled: false, variant: "default" },
+            { id: "todo", label: "Task Integration", icon: ListTodo, onClick: () => {
+                toast.info("Task synchronization node active")
+            }, color: "text-emerald-400", disabled: false, variant: "default" },
         ]
     },
     {
         title: "Data Management",
         items: [
             { id: "export-csv", label: "Export CSV", icon: FileDown, onClick: handleExportCsv, color: "text-amber-400", disabled: !database, variant: "default" },
-            { id: "print-db", label: "Print Database", icon: Printer, onClick: () => window.print(), color: "text-emerald-400", disabled: !database, variant: "default" },
+            { id: "print-db", label: "Print Database", icon: Printer, onClick: () => {
+                window.print()
+                toast.success("Routing to print architect")
+            }, color: "text-emerald-400", disabled: !database, variant: "default" },
             { id: "backup-one", label: "Backup Database", icon: Download, onClick: handleExport, color: "text-indigo-400", disabled: !database, variant: "default" },
             { id: "backup-all", label: "Backup All Databases", icon: FileUp, onClick: handleBackupAll, color: "text-blue-400", disabled: allDatabases.length === 0, variant: "default" },
             { id: "restore", label: "Restore Database", icon: FileUp, onClick: handleRestore, color: "text-rose-400", disabled: false, variant: "default" },
-            { id: "recover", label: "Recover Original DBs", icon: RefreshCcw, onClick: onResetToFactory, color: "text-indigo-400", disabled: false, variant: "default" },
+            { id: "recover", label: "Recover Original DBs", icon: RefreshCcw, onClick: () => {
+                onResetToFactory()
+                toast.success("Synchronizing cloud blueprints...")
+            }, color: "text-indigo-400", disabled: false, variant: "default" },
         ]
     },
     {
@@ -171,17 +193,21 @@ export function DatabaseActions({
         items: [
             { id: "delete", label: "Destroy Database", icon: Trash2, onClick: () => {
                 if (database && onDeleteDatabases) {
-                    if (window.confirm(`CRITICAL WARNING: This will permanently purge '${database.title}' and all its records from the cloud. Continue?`)) {
-                        onDeleteDatabases([database.id || database.title])
-                        toast.success("Database architecture neutralized")
-                    }
+                    handleDangerAction(() => {
+                        if (window.confirm(`CRITICAL WARNING: This will permanently purge '${database.title}' and all its records from the cloud. Continue?`)) {
+                            onDeleteDatabases([database.id || database.title])
+                            toast.success("Database architecture neutralized")
+                        }
+                    })
                 }
             }, color: "text-rose-600", disabled: !database, variant: "danger" },
-            { id: "clear", label: "Clear All Data", icon: Zap, onClick: () => {
-                if (window.confirm("OMEGA WARNING: This will erase EVERY database in your vault. This action CANNOT be undone. Proceed?")) {
-                    onDeleteDatabases?.(allDatabases.map(db => db.id || db.title))
-                    toast.success("Global vault purge complete")
-                }
+            { id: "clear", label: "Delete All Databases", icon: Zap, onClick: () => {
+                handleDangerAction(() => {
+                    if (window.confirm("OMEGA WARNING: This will erase EVERY database in your vault. This action CANNOT be undone. Proceed?")) {
+                        onDeleteDatabases?.(allDatabases.map(db => db.id || db.title))
+                        toast.success("Global vault purge complete")
+                    }
+                })
             }, color: "text-amber-600", disabled: allDatabases.length === 0, variant: "danger" },
         ]
     }
@@ -196,12 +222,15 @@ export function DatabaseActions({
                     <Button 
                         variant="ghost" 
                         size="icon" 
-                        onClick={() => onOpenHelp?.("secure-database")} 
-                        className="rounded-xl bg-white/5 border border-white/10 text-indigo-400 hover:text-white"
+                        onClick={() => {
+                            onOpenHelp?.("secure-database")
+                            toast.info("Architectural documentation loading...")
+                        }} 
+                        className="rounded-xl bg-white/5 border border-white/10 text-indigo-400 hover:text-white transition-all active:scale-95"
                     >
                         <HelpCircle className="h-5 w-5" />
                     </Button>
-                    <div className="p-2 rounded-xl bg-white/5 border border-white/10">
+                    <div className="p-2 rounded-xl bg-white/5 border border-white/10 shadow-2xl animate-pulse">
                         <ShieldCheck className="h-5 w-5 text-indigo-400" />
                     </div>
                 </div>
@@ -215,9 +244,27 @@ export function DatabaseActions({
             <div className="max-w-xl mx-auto space-y-8">
                 {actionSections.map((section) => (
                     <div key={section.title} className="space-y-4">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 px-4">
-                            {section.title}
-                        </h3>
+                        <div className="flex items-center justify-between px-4">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">
+                                {section.title}
+                            </h3>
+                            {section.title === "Danger Zone" && (
+                                <div className="flex flex-col items-end">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[9px] font-bold text-rose-500/50 uppercase tracking-widest">Pin Required: 1234</span>
+                                        <input 
+                                            type="password"
+                                            maxLength={4}
+                                            value={pinInput}
+                                            onChange={(e) => setPinInput(e.target.value)}
+                                            placeholder="XXXX"
+                                            className="w-16 h-8 bg-black border border-white/5 rounded-lg text-center text-xs font-black tracking-widest focus:border-rose-500/50 outline-none transition-all placeholder:text-white/5"
+                                        />
+                                    </div>
+                                    <p className="text-[8px] text-gray-700 italic mt-1 font-bold">Refer to help for decryption keys</p>
+                                </div>
+                            )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {section.items.map((item) => (
                                 <button
@@ -242,6 +289,7 @@ export function DatabaseActions({
                                         onClick={(e) => {
                                             e.stopPropagation()
                                             onOpenHelp?.("database-actions")
+                                            toast.info("Deep focus help initiated")
                                         }}
                                     >
                                         <HelpCircle className="h-3.5 w-3.5 text-indigo-400" />
@@ -253,13 +301,16 @@ export function DatabaseActions({
                 ))}
 
                 <div className="pt-8 text-center pb-12">
-                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5">
-                        <HelpCircle className="h-4 w-4 text-indigo-400" />
+                   <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5 shadow-2xl backdrop-blur-md">
+                        <HelpCircle className="h-4 w-4 text-indigo-400 shadow-[0_0_10px_rgba(129,140,248,0.5)]" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Need architectural guidance?</span>
                         <Button 
                             variant="link" 
-                            onClick={() => onOpenHelp?.("secure-database")}
-                            className="p-0 h-auto text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-300"
+                            onClick={() => {
+                                onOpenHelp?.("secure-database")
+                                toast.info("Deep architectural documentation requested")
+                            }}
+                            className="p-0 h-auto text-[10px] font-black uppercase text-indigo-400 hover:text-indigo-300 transition-all active:scale-90"
                         >
                             Open Documentation
                         </Button>
