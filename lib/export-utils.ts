@@ -5,19 +5,53 @@ import { saveAs } from "file-saver"
 
 export const getRecordsForItem = (itemId: string, records: any[]) => {
     return records.filter(r => {
-        if (itemId === "passwords" || itemId === "all-items" || itemId === "type-logins") return r.type === "password" || r.type === "login"
-        if (itemId === "type-payment-cards" || itemId === "financial-cards") return r.type === "financial-card"
-        if (itemId === "type-health-records") return r.type === "health-record" || r.type === "health"
-        if (itemId === "type-medications") return r.type === "medication"
-        if (itemId === "type-vitals") return r.type === "vitals"
-        if (itemId === "type-health-diary") return r.type === "health-diary"
-        if (itemId === "type-health-portals") return r.type === "health-portal"
-        if (itemId === "type-doctors") return r.type === "doctor"
-        if (itemId === "type-medical") return r.type === "medical-insurance" || r.type === "medical"
+        const type = (r.type || "").toLowerCase();
+        const cat = (r.category || "").toLowerCase();
+        const meta = r.item_metadata || {};
+
+        if (itemId === "passwords" || itemId === "all-items" || itemId === "type-logins") {
+            return type === "password" || type === "login" || cat === "logins" || cat === "passwords";
+        }
+        if (itemId === "type-payment-cards" || itemId === "financial-cards") {
+            return type === "financial-card" || type === "card" || cat === "payment cards" || meta.is_card;
+        }
+        if (itemId === "type-health-records") {
+            return type === "health-record" || type === "health" || cat === "health records";
+        }
+        if (itemId === "type-medications") {
+            return type === "medication" || cat === "medications";
+        }
+        if (itemId === "type-vitals") {
+            return type === "vitals" || cat === "vitals" || meta.is_vital;
+        }
+        if (itemId === "type-health-diary") {
+            return type === "health-diary" || cat === "health diary" || meta.is_diary;
+        }
+        if (itemId === "type-health-portals") {
+            return type === "health-portal" || cat === "health portals";
+        }
+        if (itemId === "type-doctors") {
+            return type === "doctor" || cat === "doctors";
+        }
+        if (itemId === "type-medical") {
+            return type === "medical-insurance" || type === "medical" || cat === "health insurance" || cat === "medical";
+        }
+        if (itemId === "type-goals") {
+            return type === "goal" || cat === "goals" || cat === "goals & timeline" || meta.is_goal;
+        }
+        if (itemId === "type-tasks") {
+            return type === "architect-task" || type === "task" || cat === "tasks";
+        }
+        if (itemId === "type-subscriptions") {
+            return type === "subscription" || cat === "subscriptions";
+        }
+        if (itemId === "type-budget") {
+            return type === "budget" || cat === "budget" || meta.is_budget;
+        }
         
         // Default: try to match by removing "type-" suffix logic
-        const inferredType = itemId.replace("type-", "")
-        return r.type === inferredType || r.category?.toLowerCase() === inferredType.replace("-", " ")
+        const inferredType = itemId.replace("type-", "").replace(/-/g, " ");
+        return type === inferredType || cat === inferredType || cat.includes(inferredType);
     })
 }
 

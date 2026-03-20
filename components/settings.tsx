@@ -1060,12 +1060,18 @@ export default function Settings({
                 <ExportData records={records} theme={theme || "dark"} />
               </div>
               
-              <div className="pt-6 border-t border-white/5 mt-auto">
+              <div className="pt-6 border-t border-white/5 mt-auto flex flex-col gap-3">
                 <button 
                   onClick={handleSanitize}
                   className="w-full py-4 px-6 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-[10px]"
                 >
                   <Database className="h-4 w-4" /> Sanitize Vault (Wipe Mocks)
+                </button>
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('trigger-mock-fill'))}
+                  className="w-full py-4 px-6 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-[10px]"
+                >
+                  <Plus className="h-4 w-4" /> Fill Missing Demo Data
                 </button>
               </div>
             </div>
@@ -1395,25 +1401,6 @@ export default function Settings({
                          <Database className="h-4 w-4" /> Sanitize Vault (Wipe Mocks)
                       </div>
                       <span className="text-[8px] opacity-60 normal-case font-medium">Reset Virtual Mocks & Clean DB</span>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      // Attempt to run the Fill function from the child component logic 
-                      // or we implement a shared one. Easiest: dispatch an event that ModuleAccessSettings listens to,
-                      // OR just call it if we define it here as well.
-                      // Since it's a huge function, I'll just trigger the child's button via event or similar?
-                      // Actually, I'll just add it to the Grid below Sanitize for convenience.
-                      window.dispatchEvent(new CustomEvent('trigger-mock-fill'));
-                    }}
-                    className="w-full py-5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-600/50 text-indigo-400 rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs"
-                  >
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-2">
-                         <Plus className="h-4 w-4" /> Fill Missing Demo Data
-                      </div>
-                      <span className="text-[8px] opacity-60 normal-case font-medium">Only for empty modules</span>
                     </div>
                   </button>
 
