@@ -25,6 +25,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { 
+  MOCKED_HEALTH, 
+  MOCKED_PASSWORDS, 
+  MOCKED_SUBSCRIPTIONS, 
+  MOCKED_GOALS, 
+  MOCKED_TASKS,
+  MOCKED_BUDGET
+} from "../lib/mock-data"
 
 interface DashboardProps {
   records: any[]
@@ -36,6 +44,7 @@ interface DashboardProps {
   addFolder: (name: string, parentId?: string, extra?: any) => Promise<any>
   securitySettings?: Record<string, { isLocked: boolean }>
   onOpenHelp?: (targetId?: string) => void
+  mockSettings?: Record<string, boolean>
 }
 
 const DEFAULT_AREAS = [
@@ -60,7 +69,8 @@ export default function Dashboard({
     updateItem, 
     addFolder, 
     securitySettings = {}, 
-    onOpenHelp 
+    onOpenHelp,
+    mockSettings
 }: DashboardProps) {
   const [addPasswordModalOpen, setAddPasswordModalOpen] = useState(false)
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
@@ -95,44 +105,57 @@ export default function Dashboard({
     setEnabledPulseIds(newIds)
     localStorage.setItem('dashboard_pulses', JSON.stringify(newIds))
   }
+  // -- Base Records (Merged with Mocks) --
+  const baseRecords = useMemo(() => {
+    let combined = [...records];
+    
+    if (mockSettings?.['type-health-records']) combined = [...combined, ...MOCKED_HEALTH];
+    if (mockSettings?.['passwords']) combined = [...combined, ...MOCKED_PASSWORDS];
+    if (mockSettings?.['type-subscriptions']) combined = [...combined, ...MOCKED_SUBSCRIPTIONS];
+    if (mockSettings?.['type-goals']) combined = [...combined, ...MOCKED_GOALS];
+    if (mockSettings?.['type-tasks']) combined = [...combined, ...MOCKED_TASKS];
+    if (mockSettings?.['type-budget']) combined = [...combined, ...MOCKED_BUDGET];
+    
+    return combined;
+  }, [records, mockSettings]);
 
   // -- Stats Calculation --
-  const folders = records.filter((r: any) => r.type === "folder")
-  const healthCount = records.filter((r: any) => r.category === "Health Records" || r.category === "Medications" || r.item_metadata?.is_vital).length
-  const vehicleCount = records.filter((r: any) => r.category === "Vehicles").length
-  const bizCount = records.filter((r: any) => r.category === "Business").length
-  const assetCount = records.filter((r: any) => r.category === "Assets" || r.type === "asset").length
-  const digitalCount = records.filter((r: any) => r.category === "Digital Life" || r.category === "Social Life").length
-  const diaryCount = records.filter((r: any) => r.category === "My Diary").length
-  const knowledgeCount = records.filter((r: any) => r.category === "Knowledge Vault").length
-  const travelCount = records.filter((r: any) => r.category === "Travel").length
-  const goalsCount = records.filter((r: any) => r.category === "Goals" || r.type === "goal").length
-  const vaultCount = records.filter((r: any) => r.type === "password" || r.category === "Logins").length
+  const folders = baseRecords.filter((r: any) => r.type === "folder")
+  const healthCount = baseRecords.filter((r: any) => r.category === "Health Records" || r.category === "Medications" || r.item_metadata?.is_vital).length
+  const vehicleCount = baseRecords.filter((r: any) => r.category === "Vehicles").length
+  const bizCount = baseRecords.filter((r: any) => r.category === "Business").length
+  const assetCount = baseRecords.filter((r: any) => r.category === "Assets" || r.type === "asset").length
+  const digitalCount = baseRecords.filter((r: any) => r.category === "Digital Life" || r.category === "Social Life").length
+  const diaryCount = baseRecords.filter((r: any) => r.category === "My Diary").length
+  const knowledgeCount = baseRecords.filter((r: any) => r.category === "Knowledge Vault").length
+  const travelCount = baseRecords.filter((r: any) => r.category === "Travel").length
+  const goalsCount = baseRecords.filter((r: any) => r.category === "Goals" || r.type === "goal" || r.item_metadata?.is_goal).length
+  const vaultCount = baseRecords.filter((r: any) => r.type === "password" || r.category === "Logins").length
 
-  const totalAssetValue = records
+  const totalAssetValue = baseRecords
     .filter((r: any) => (r.category === "Assets" || r.type === "asset") && r.item_metadata?.value)
     .reduce((sum: number, r: any) => sum + (parseFloat(r.item_metadata.value) || 0), 0)
 
-  const weakPasswords = records.filter((r: any) => r.type === "password" && r.strength === "weak").length
+  const weakPasswords = baseRecords.filter((r: any) => r.type === "password" && r.strength === "weak").length
   const securityScore = Math.max(0, 100 - (weakPasswords * 5))
-  const subCount = records.filter((r: any) => r.category === "Subscriptions" || r.type === "subscription").length
-  const mediaCount = records.filter((r: any) => r.category === "Secure Media" || r.type === "media").length
-  const passCount = records.filter((r: any) => r.type === "password" || r.type === "login").length
-  const favoriteCount = records.filter((r: any) => r.is_favorite).length
+  const subCount = baseRecords.filter((r: any) => r.category === "Subscriptions" || r.type === "subscription").length
+  const mediaCount = baseRecords.filter((r: any) => r.category === "Secure Media" || r.type === "media").length
+  const passCount = baseRecords.filter((r: any) => r.type === "password" || r.type === "login").length
+  const favoriteCount = baseRecords.filter((r: any) => r.is_favorite).length
 
   // Subscriptions Financials
-  const monthlyBurn = records
+  const monthlyBurn = baseRecords
     .filter(r => r.category === "Subscriptions" || r.type === "subscription")
     .reduce((acc, s) => acc + (parseFloat(s.item_metadata?.cost) || 0), 0)
 
   // Net Profit
-  const budgetItems = records.filter((r: any) => r.category === "Budget" || r.item_metadata?.is_budget)
+  const budgetItems = baseRecords.filter((r: any) => r.category === "Budget" || r.item_metadata?.is_budget)
   const totalIncome = budgetItems.filter((r: any) => r.item_metadata?.entry_type === 'income').reduce((s, r) => s + (parseFloat(r.item_metadata.amount) || 0), 0)
   const totalExpenses = budgetItems.filter((r: any) => r.item_metadata?.entry_type === 'expense').reduce((s, r) => s + (parseFloat(r.item_metadata.amount) || 0), 0)
   const netProfit = totalIncome - totalExpenses
 
   // Health Stats
-  const healthLogs = records.filter(r => r.type === "energy-mood-log")
+  const healthLogs = baseRecords.filter(r => r.type === "energy-mood-log" || r.type === "health-checkin")
   const avgEnergy = healthLogs.length > 0 ? healthLogs.reduce((acc, l) => acc + (l.item_metadata.energy || 0), 0) / healthLogs.length : 0
 
   // Pulse Definitions

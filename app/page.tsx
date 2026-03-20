@@ -258,18 +258,21 @@ function HomeContent() {
     }
   }, [user, isLocked, authLoading, searchParams, activePage, startupPage, navHistory.length])
 
-  // Security & Locking Logic
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
+  const [mockSettings, setMockSettings] = useState<Record<string, boolean>>({})
 
-  // Load security settings on mount, update on activePage change, and listen for live updates
+  // Load security & mock settings on mount, update on activePage change, and listen for live updates
   useEffect(() => {
     const handleStorage = () => {
       try {
-        const saved = localStorage.getItem("hub_security_settings")
-        if (saved) setSecuritySettings(JSON.parse(saved))
+        const savedSec = localStorage.getItem("hub_security_settings")
+        if (savedSec) setSecuritySettings(JSON.parse(savedSec))
+        
+        const savedMocks = localStorage.getItem("hub_mock_settings")
+        if (savedMocks) setMockSettings(JSON.parse(savedMocks))
       } catch (e) {
-        console.error("Failed to load security settings", e)
+        console.error("Failed to load settings", e)
       }
     }
 
@@ -294,10 +297,12 @@ function HomeContent() {
     
     window.addEventListener("hub_security_settings_changed", handleStorage)
     window.addEventListener("autoLockTimeoutChanged", handleTimeoutSync as EventListener)
+    window.addEventListener("storage", handleStorage) // Pick up hub_mock_settings
     
     return () => {
       window.removeEventListener("hub_security_settings_changed", handleStorage)
       window.removeEventListener("autoLockTimeoutChanged", handleTimeoutSync as EventListener)
+      window.removeEventListener("storage", handleStorage)
     }
   }, [activePage])
 
@@ -417,7 +422,8 @@ function HomeContent() {
       setHelpOpen(true)
     },
     isFullscreen,
-    setIsFullscreen
+    setIsFullscreen,
+    mockSettings // Pass down to modules
   }
 
 

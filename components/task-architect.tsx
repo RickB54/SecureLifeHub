@@ -22,6 +22,9 @@ import {
   Database
 } from "lucide-react"
 import { toast } from "sonner"
+import { MOCKED_TASKS } from "../lib/mock-data"
+import MockDataBanner from "./ui/mock-data-banner"
+import { useEffect } from "react"
 
 interface Task {
   id: string
@@ -40,10 +43,47 @@ interface TaskArchitectProps {
   updateItem: (id: string, updates: any) => Promise<void>
   deleteItem: (id: string) => Promise<void>
   theme: string
+  mockSettings?: Record<string, boolean>
 }
 
-export default function TaskArchitect({ records = [], addItem, updateItem, deleteItem, theme }: TaskArchitectProps) {
-  const tasks = useMemo(() => records.filter(r => r.type === "architect-task"), [records])
+export default function TaskArchitect({ records = [], addItem, updateItem, deleteItem, theme, mockSettings }: TaskArchitectProps) {
+  // Mock data state
+  const [showMockData, setShowMockData] = useState(false)
+  const [isForcedMock, setIsForcedMock] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('tasks_mock_dismissed') === 'true'
+      const localMock = mockSettings?.['type-tasks'] || false
+      
+      setIsForcedMock(localMock)
+      
+      // Show mock if forced OR (no real records AND not dismissed)
+      const realRecordsCount = records.filter(r => r.type === "architect-task").length
+
+      if (localMock) {
+        setShowMockData(true)
+      } else if (realRecordsCount === 0 && !dismissed) {
+        setShowMockData(true)
+      } else {
+        setShowMockData(false)
+      }
+    }
+  }, [records, mockSettings])
+
+  const handleClearMockData = () => {
+    setShowMockData(false)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tasks_mock_dismissed', 'true')
+      localStorage.setItem('tasks_mock_enabled', 'false')
+      window.dispatchEvent(new Event('storage'))
+    }
+  }
+
+  const tasks = useMemo(() => {
+    const base = showMockData ? MOCKED_TASKS : records;
+    return base.filter(r => r.type === "architect-task")
+  }, [records, showMockData])
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'completed'>('all')
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
@@ -167,6 +207,9 @@ export default function TaskArchitect({ records = [], addItem, updateItem, delet
 
       {/* Task Grid/List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-4">
+        {showMockData && (
+          <MockDataBanner theme={theme} onClear={handleClearMockData} isForced={isForcedMock} pageName="Task Architect" />
+        )}
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 opacity-20">
             <Target className="h-16 w-16 mb-4" />

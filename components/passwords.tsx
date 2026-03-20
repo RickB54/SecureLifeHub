@@ -68,6 +68,7 @@ interface PasswordsProps {
   isFullscreen?: boolean
   setIsFullscreen?: (val: boolean) => void
   onOpenHelp?: (targetId?: string) => void
+  mockSettings?: Record<string, boolean>
 }
 
 export default function Passwords({
@@ -85,7 +86,8 @@ export default function Passwords({
   setRecords,
   isFullscreen,
   setIsFullscreen,
-  onOpenHelp
+  onOpenHelp,
+  mockSettings
 }: PasswordsProps) {
   // State for view mode (folder only now)
   const [viewMode, setViewMode] = useState("folder")
@@ -155,20 +157,19 @@ export default function Passwords({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const dismissed = localStorage.getItem('passwords_mock_dismissed') === 'true'
-      const globalMock = localStorage.getItem('all_mock_data_enabled') === 'true'
-      const localMock = localStorage.getItem('passwords_mock_enabled') === 'true'
+      const localMock = mockSettings?.['passwords'] || false
       
-      setIsForcedMock(globalMock || localMock)
+      setIsForcedMock(localMock)
       // Show mock if forced OR (no real records AND not dismissed)
-      if (globalMock || localMock) {
+      if (localMock) {
         setShowMockData(true)
-      } else if (records.filter(r => r.type === 'password' || r.type === 'login').length === 0 && !dismissed) {
+      } else if (records.filter(r => r.type === 'password' || r.type === 'login' || r.category === 'Logins').length === 0 && !dismissed) {
         setShowMockData(true)
       } else {
         setShowMockData(false)
       }
     }
-  }, [records])
+  }, [records, mockSettings])
 
   const handleClearMockData = () => {
     setShowMockData(false)

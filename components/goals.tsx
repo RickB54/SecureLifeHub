@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { Plus, Target, Trash2, CheckCircle2, Circle, Trophy, History, LayoutDashboard, TrendingUp, Calendar, Medal, ImageIcon, Pencil } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Plus, Target, Trash2, CheckCircle2, Circle, Trophy, History, LayoutDashboard, TrendingUp, Calendar, Medal, ImageIcon, Pencil, HelpCircle } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from "recharts"
 import AddGoalModal from "./modals/add-goal-modal"
 import Lightbox from "./media/lightbox"
 import { toast } from "sonner"
+import { MOCKED_GOALS } from "../lib/mock-data"
+import MockDataBanner from "./ui/mock-data-banner"
 
 interface GoalsProps {
     records: any[]
@@ -14,9 +16,10 @@ interface GoalsProps {
     deleteItem: (id: string) => Promise<void>
     theme: string
     initialTab?: string
+    mockSettings?: Record<string, boolean>
 }
 
-export default function Goals({ records = [], addItem, updateItem, deleteItem, theme, initialTab = "active" }: GoalsProps) {
+export default function Goals({ records = [], addItem, updateItem, deleteItem, theme, initialTab = "active", mockSettings }: GoalsProps) {
     const [activeTab, setActiveTab] = useState(initialTab) // 'dashboard', 'active', 'history', 'habits'
     const [showAddModal, setShowAddModal] = useState(false)
     const [editingGoal, setEditingGoal] = useState<any>(null)
@@ -26,10 +29,46 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
     const [lightboxItems, setLightboxItems] = useState<any[]>([])
     const [lightboxIndex, setLightboxIndex] = useState(0)
 
+    // Mock data state
+    const [showMockData, setShowMockData] = useState(false)
+    const [isForcedMock, setIsForcedMock] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const dismissed = localStorage.getItem('goals_mock_dismissed') === 'true'
+            const localMock = mockSettings?.['type-goals'] || false
+            
+            setIsForcedMock(localMock)
+            
+            // Show mock if forced OR (no real records AND not dismissed)
+            const realRecordsCount = records.filter(r => r.item_metadata?.is_goal || r.category === "Goals").length
+
+            if (localMock) {
+                setShowMockData(true)
+            } else if (realRecordsCount === 0 && !dismissed) {
+                setShowMockData(true)
+            } else {
+                setShowMockData(false)
+            }
+        }
+    }, [records, mockSettings])
+
+    const handleClearMockData = () => {
+        setShowMockData(false)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('goals_mock_dismissed', 'true')
+            localStorage.setItem('goals_mock_enabled', 'false')
+            window.dispatchEvent(new Event('storage'))
+        }
+    }
+
     const isDark = theme !== 'light'
     
-    // Filter for items that are clearly identified as goals using the new metadata flag or legacy category
-    const allGoals = records.filter(r => r.item_metadata?.is_goal || r.category === "Goals")
+    // Filter for items that are clearly identified as goals
+    const allGoals = useMemo(() => {
+        const base = showMockData ? MOCKED_GOALS : records;
+        return base.filter(r => r.item_metadata?.is_goal || r.category === "Goals")
+    }, [records, showMockData])
 
     // Helper to calculate progress
     const getProgress = (item: any) => {
@@ -140,6 +179,10 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
+                {showMockData && (
+                    <MockDataBanner theme={theme} onClear={handleClearMockData} isForced={isForcedMock} pageName="Goals" />
+                )
+                }
 
                 {/* === DASHBOARD TAB === */}
                 {activeTab === 'dashboard' && (

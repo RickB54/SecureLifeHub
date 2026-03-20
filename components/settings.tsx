@@ -34,7 +34,8 @@ import {
   Globe,
   FolderTree,
   Grid,
-  HelpCircle
+  HelpCircle,
+  Target
 } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
@@ -45,7 +46,7 @@ import { VaultItem } from "@/hooks/use-vault"
 import BackupRecovery from "./settings/backup-recovery"
 import ExportData from "./settings/export-data"
 import TwoFactorAuthModal from "@/components/modals/two-factor-auth-modal"
-import { MOCKED_HEALTH, MOCKED_BUDGET, MOCKED_PASSWORDS } from "@/lib/mock-data"
+import { MOCKED_HEALTH, MOCKED_BUDGET, MOCKED_PASSWORDS, MOCKED_SUBSCRIPTIONS, MOCKED_GOALS, MOCKED_TASKS } from "@/lib/mock-data"
 
 // Robust mock identification logic helper
 const isItemMock = (r: any) => {
@@ -1501,6 +1502,49 @@ export default function Settings({
                        <div className="font-bold text-sm text-white">Vault Demo</div>
                     </div>
                     <p className="text-[10px] text-gray-400 leading-relaxed">Inject sample passwords and bank cards for testing.</p>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (confirm("Inject Subscriptions Demo Records? This will add sample digital services and costs.")) {
+                         if (!bulkAddItems) return;
+                         const mockSubs = MOCKED_SUBSCRIPTIONS.map(s => ({ ...s, is_mock: true, type: 'subscription' }));
+                         await bulkAddItems(mockSubs);
+                         window.dispatchEvent(new CustomEvent('vault-refresh'));
+                         toast.success("Subscription demonstration data injected!");
+                      }
+                    }}
+                    className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                       <div className="p-2 rounded-lg bg-emerald-400/10 text-emerald-500 group-hover:scale-110 transition-transform">
+                          <Globe className="h-4 w-4" />
+                       </div>
+                       <div className="font-bold text-sm text-white">Subscriptions Demo</div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">Inject sample recurring services to test the Billing Architect.</p>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (confirm("Inject Goals & Tasks Demo? This will add sample objectives and operational tasks.")) {
+                         if (!bulkAddItems) return;
+                         const mockGoals = MOCKED_GOALS.map(g => ({ ...g, is_mock: true, type: 'goal' }));
+                         const mockTasks = MOCKED_TASKS.map(t => ({ ...t, is_mock: t.id.startsWith('mock-'), type: 'task' }));
+                         await bulkAddItems([...mockGoals, ...mockTasks]);
+                         window.dispatchEvent(new CustomEvent('vault-refresh'));
+                         toast.success("Goals & Tasks demonstration data injected!");
+                      }
+                    }}
+                    className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                       <div className="p-2 rounded-lg bg-amber-400/10 text-amber-500 group-hover:scale-110 transition-transform">
+                          <Target className="h-4 w-4" />
+                       </div>
+                       <div className="font-bold text-sm text-white">Strategy Demo</div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">Inject sample goals and tasks for the Strategy Engine.</p>
                   </button>
 
                    <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 flex items-center gap-3">

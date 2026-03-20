@@ -33,9 +33,10 @@ interface HealthDashboardProps {
     setRecords?: any
     onOpenHelp?: (targetId?: string) => void
     initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin"
+    mockSettings?: Record<string, boolean>
 }
 
-export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard" }: HealthDashboardProps) {
+export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings }: HealthDashboardProps) {
     const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin">(initialTab)
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
@@ -72,17 +73,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const dismissed = localStorage.getItem('health_mock_dismissed') === 'true'
-            const globalMock = localStorage.getItem('all_mock_data_enabled') === 'true'
-            const localMock = localStorage.getItem('health_mock_enabled') === 'true'
+            const localMock = mockSettings?.['type-health-records'] || false
             
-            setIsForcedMock(globalMock || localMock)
+            setIsForcedMock(localMock)
             
             // Show mock if forced OR (no real records AND not dismissed)
             const realRecordsCount = records.filter(r => 
                 r.type === 'health-record' || r.category === 'Health Records' || r.category === 'Vitals' || r.type === 'medication' || r.category === 'Medications'
             ).length
 
-            if (globalMock || localMock) {
+            if (localMock) {
                 setShowMockData(true)
             } else if (realRecordsCount === 0 && !dismissed) {
                 setShowMockData(true)
@@ -90,7 +90,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 setShowMockData(false)
             }
         }
-    }, [records])
+    }, [records, mockSettings])
 
     const handleClearMockData = () => {
         setShowMockData(false)
@@ -164,14 +164,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }, [vitalRecords])
 
     const diaryEntries = useMemo(() => {
-        return records.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary || r.type === "health-checkin")
+        const base = showMockData ? MOCKED_HEALTH : records;
+        return base.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary || r.type === "health-checkin")
             .sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
-    }, [records])
+    }, [records, showMockData])
 
     const checkinHistory = useMemo(() => {
-        return records.filter(r => r.type === "health-checkin")
+        const base = showMockData ? MOCKED_HEALTH : records;
+        return base.filter(r => r.type === "health-checkin")
             .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
-    }, [records])
+    }, [records, showMockData])
 
     const medRecords = useMemo(() => {
         const base = showMockData ? MOCKED_HEALTH : records;

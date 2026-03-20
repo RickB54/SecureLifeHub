@@ -70,14 +70,45 @@ export const MOCKED_HEALTH = [
     },
     {
         id: "mock-h3",
-        title: "Morning Vitals Scan",
+        title: "Blood Pressure",
         category: "Vitals",
         health_category: "Daily",
         item_metadata: {
-            blood_pressure: "120/80",
-            heart_rate: "68 bpm",
-            oxygen: "98%",
-            weight: "175 lbs",
+            value: "118/78",
+            unit: "mmHg",
+            date: format(subDays(new Date(), 1), "yyyy-MM-dd"),
+            notes: "Stable morning reading."
+        }
+    },
+    {
+        id: "mock-h3-2",
+        title: "Blood Pressure",
+        category: "Vitals",
+        health_category: "Daily",
+        item_metadata: {
+            value: "121/81",
+            unit: "mmHg",
+            date: format(new Date(), "yyyy-MM-dd"),
+            notes: "Slightly elevated after coffee."
+        }
+    },
+    {
+        id: "mock-h-weight",
+        title: "Weight",
+        category: "Vitals",
+        item_metadata: {
+            value: "178.5",
+            unit: "lbs",
+            date: format(subDays(new Date(), 2), "yyyy-MM-dd")
+        }
+    },
+    {
+        id: "mock-h-weight-2",
+        title: "Weight",
+        category: "Vitals",
+        item_metadata: {
+            value: "177.2",
+            unit: "lbs",
             date: format(new Date(), "yyyy-MM-dd")
         }
     },
@@ -97,7 +128,7 @@ export const MOCKED_HEALTH = [
     },
     {
         id: "mock-h5",
-        type: "note",
+        type: "health-record",
         title: "General Practitioner Visit",
         category: "Health Records",
         item_metadata: {
@@ -116,25 +147,31 @@ export const MOCKED_SUBSCRIPTIONS = [
     {
         id: "mock-s1",
         title: "Spotify Premium",
+        type: "subscription",
         category: "Subscriptions",
         item_metadata: {
-            cost: 10.99,
-            frequency: "monthly",
+            cost: "10.99",
+            billing_cycle: "Monthly",
             renewal_date: format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
-            provider: "Spotify",
-            status: "active"
+            sub_category: "Music",
+            status: "active",
+            auto_renew: true,
+            color: "#1DB954"
         }
     },
     {
         id: "mock-s2",
         title: "Adobe Creative Cloud",
+        type: "subscription",
         category: "Subscriptions",
         item_metadata: {
-            cost: 54.99,
-            frequency: "monthly",
+            cost: "54.99",
+            billing_cycle: "Monthly",
             renewal_date: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
-            provider: "Adobe",
-            status: "active"
+            sub_category: "Software",
+            status: "active",
+            auto_renew: true,
+            color: "#FF0000"
         }
     }
 ]
@@ -144,24 +181,31 @@ export const MOCKED_GOALS = [
         id: "mock-g1",
         title: "Complete Marathon Training",
         category: "Goals",
-        goal_status: "in-progress",
         item_metadata: {
+            is_goal: true,
             target_date: "2024-12-31",
             progress: 45,
             priority: "high",
-            notes: "Ran 15 miles this weekend."
+            notes: "Ran 15 miles this weekend.",
+            checkpoints: [
+                { id: "cp1", title: "5K Baseline", completed: true },
+                { id: "cp2", title: "10K Milestone", completed: true },
+                { id: "cp3", title: "Half Marathon", completed: false }
+            ]
         }
     },
     {
         id: "mock-g2",
         title: "Morning Meditation Stack",
-        category: "Habits",
-        goal_status: "active",
+        category: "Goals",
         item_metadata: {
+            is_goal: true,
             streak: 12,
             best_streak: 30,
             frequency: "daily",
-            stability_index: 85
+            progress: 85,
+            priority: "medium",
+            is_habit: true
         }
     }
 ]
@@ -169,24 +213,28 @@ export const MOCKED_GOALS = [
 export const MOCKED_TASKS = [
     {
         id: "mock-t1",
+        type: "architect-task",
         title: "Refactor API Infrastructure",
         category: "Tasks",
         item_metadata: {
-            priority: "Urgent",
-            status: "In Progress",
-            due_date: format(new Date(), "yyyy-MM-dd"),
-            source: "Secure Database"
+            priority: "urgent",
+            completed: false,
+            description: "Update the core routing matrix for better throughput.",
+            category: "Core Ops",
+            dueDate: format(new Date(), "yyyy-MM-dd")
         }
     },
     {
         id: "mock-t2",
-        title: "Audit Password Security Levels",
+        type: "architect-task",
+        title: "Audit Security Protocols",
         category: "Tasks",
         item_metadata: {
-            priority: "Medium",
-            status: "Active",
-            due_date: format(new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), "yyyy-MM-dd"),
-            source: "Vault"
+            priority: "high",
+            completed: true,
+            description: "Review all RSA keys and rotation intervals.",
+            category: "Security",
+            dueDate: format(addDays(new Date(), 2), "yyyy-MM-dd")
         }
     }
 ]

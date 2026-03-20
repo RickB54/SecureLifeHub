@@ -12,6 +12,9 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts'
 import { toast } from "sonner"
+import { MOCKED_SUBSCRIPTIONS } from "../lib/mock-data"
+import MockDataBanner from "./ui/mock-data-banner"
+import { useEffect } from "react"
 
 interface SubscriptionsProps {
     records: any[]
@@ -21,6 +24,7 @@ interface SubscriptionsProps {
     deleteItem?: (id: string) => Promise<any>
     theme: string
     onOpenHelp?: (id?: string) => void
+    mockSettings?: Record<string, boolean>
 }
 
 const BILLING_CYCLES = ["Monthly", "Yearly", "Weekly", "Quarterly"]
@@ -36,7 +40,7 @@ function getDaysUntil(dateStr: string): number | null {
     return diff
 }
 
-export default function Subscriptions({ records = [], addItem, updateItem, deleteItem, theme, onOpenHelp }: SubscriptionsProps) {
+export default function Subscriptions({ records = [], addItem, updateItem, deleteItem, theme, onOpenHelp, mockSettings }: SubscriptionsProps) {
     const [searchTerm, setSearchTerm] = useState("")
     const [isAddModalOpen, setIsAddModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState<any>(null)
@@ -45,19 +49,52 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
         name: "", cost: "", cycle: "Monthly", date: "", category: "Other", notes: "", color: "#3B82F6", paymentMethodId: "", autoRenew: true
     })
 
-    const isDark = theme !== "light"
+    const isDark = theme === "dark" || theme !== "light"
+
+    // Mock data state
+    const [showMockData, setShowMockData] = useState(false)
+    const [isForcedMock, setIsForcedMock] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const dismissed = localStorage.getItem('subs_mock_dismissed') === 'true'
+            const localMock = mockSettings?.['type-subscriptions'] || false
+            
+            setIsForcedMock(localMock)
+            
+            // Show mock if forced OR (no real records AND not dismissed)
+            const realRecordsCount = records.filter(r => r.category === "Subscriptions" || r.type === "subscription").length
+
+            if (localMock) {
+                setShowMockData(true)
+            } else if (realRecordsCount === 0 && !dismissed) {
+                setShowMockData(true)
+            } else {
+                setShowMockData(false)
+            }
+        }
+    }, [records, mockSettings])
+
+    const handleClearMockData = () => {
+        setShowMockData(false)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('subs_mock_dismissed', 'true')
+            localStorage.setItem('subs_mock_enabled', 'false')
+            window.dispatchEvent(new Event('storage'))
+        }
+    }
 
     // Filtered data
-    const subscriptions = useMemo(() =>
-        records.filter(r => r.category === "Subscriptions" || r.type === "subscription")
+    const subscriptions = useMemo(() => {
+        const base = showMockData ? MOCKED_SUBSCRIPTIONS : records;
+        return base.filter(r => r.category === "Subscriptions" || r.type === "subscription")
             .filter(r => {
                 const name = (r.title || r.name || "").toLowerCase()
                 const cat = (r.item_metadata?.sub_category || "").toLowerCase()
                 const query = searchTerm.toLowerCase()
                 return name.includes(query) || cat.includes(query)
-            }),
-        [records, searchTerm]
-    )
+            })
+    }, [records, searchTerm, showMockData])
 
     // Financials
     const totalMonthly = useMemo(() => subscriptions.reduce((sum, sub) => {
@@ -170,6 +207,9 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
 
     return (
         <div className={`min-h-full pb-20 p-4 md:p-8 animate-in fade-in duration-500 ${isDark ? "text-white" : "text-gray-900"}`}>
+            {showMockData && (
+                <MockDataBanner theme={theme} onClear={handleClearMockData} isForced={isForcedMock} pageName="Subscriptions" />
+            )}
             {/* Header */}
             <div className="mb-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
