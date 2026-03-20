@@ -174,6 +174,11 @@ export default function Passwords({
   const handleClearMockData = () => {
     setShowMockData(false)
     if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("hub_mock_settings")
+      let mocks = saved ? JSON.parse(saved) : {}
+      mocks['passwords'] = false
+      localStorage.setItem("hub_mock_settings", JSON.stringify(mocks))
+
       localStorage.setItem('passwords_mock_dismissed', 'true')
       localStorage.setItem('passwords_mock_enabled', 'false')
       window.dispatchEvent(new Event('storage'))

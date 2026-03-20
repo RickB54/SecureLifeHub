@@ -95,8 +95,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const handleClearMockData = () => {
         setShowMockData(false)
         if (typeof window !== 'undefined') {
+            // Update global settings
+            const saved = localStorage.getItem("hub_mock_settings")
+            let mocks = saved ? JSON.parse(saved) : {}
+            mocks['type-health-records'] = false
+            localStorage.setItem("hub_mock_settings", JSON.stringify(mocks))
+            
+            // Legacy fallbacks
             localStorage.setItem('health_mock_dismissed', 'true')
             localStorage.setItem('health_mock_enabled', 'false')
+            
+            // Notify other components
             window.dispatchEvent(new Event('storage'))
         }
     }

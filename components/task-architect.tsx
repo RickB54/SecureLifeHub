@@ -74,6 +74,11 @@ export default function TaskArchitect({ records = [], addItem, updateItem, delet
   const handleClearMockData = () => {
     setShowMockData(false)
     if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("hub_mock_settings")
+      let mocks = saved ? JSON.parse(saved) : {}
+      mocks['type-tasks'] = false
+      localStorage.setItem("hub_mock_settings", JSON.stringify(mocks))
+
       localStorage.setItem('tasks_mock_dismissed', 'true')
       localStorage.setItem('tasks_mock_enabled', 'false')
       window.dispatchEvent(new Event('storage'))

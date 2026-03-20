@@ -1625,12 +1625,22 @@ function ModuleAccessSettings({
 
   const [mockSettings, setMockSettings] = useState<Record<string, boolean>>(() => {
     try {
-      const saved = localStorage.getItem("hub_mock_settings");
-      if (saved) return JSON.parse(saved);
-      // Fallback for budget mock setting if it exists
-      const budgetMock = localStorage.getItem("budget_mock_data_enabled") === "true";
-      return { "type-budget": budgetMock };
-    } catch (e) { return {} }
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem("hub_mock_settings");
+        if (saved) return JSON.parse(saved);
+        
+        // Match defaults in page.tsx
+        return { 
+          "type-health-records": true, 
+          "passwords": true, 
+          "type-goals": true, 
+          "type-tasks": true,
+          "type-subscriptions": true,
+          "type-budget": true
+        };
+      }
+    } catch (e) { console.error(e) }
+    return {};
   })
 
   const [editingPin, setEditingPin] = useState<string | null>(null)
@@ -1677,6 +1687,8 @@ function ModuleAccessSettings({
           if (moduleId === "type-secure-notes" && (r.type === "note" || r.type === "secure-note")) return true;
           if (moduleId === "secure-database" && r.type === "secure-database-record") return true;
           if (moduleId === "type-tasks" && r.type === "architect-task") return true;
+          if (moduleId === "type-subscriptions" && (r.category === "Subscriptions" || r.type === "subscription")) return true;
+          if (moduleId === "type-goals" && (r.item_metadata?.is_goal === true || r.category === "Goals")) return true;
           
           return false;
         });
