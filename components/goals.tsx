@@ -26,6 +26,8 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
     const [lightboxItems, setLightboxItems] = useState<any[]>([])
     const [lightboxIndex, setLightboxIndex] = useState(0)
 
+    const isDark = theme !== 'light'
+    
     // Filter for items that are clearly identified as goals using the new metadata flag or legacy category
     const allGoals = records.filter(r => r.item_metadata?.is_goal || r.category === "Goals")
 
@@ -319,15 +321,19 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
 
                 {/* === HABIT STACKS TAB === */}
                 {activeTab === 'habits' && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex justify-between items-center bg-white/5 p-6 rounded-[2rem] border border-white/5 backdrop-blur-md">
-                            <div>
-                                <h2 className="text-2xl font-black italic tracking-tighter text-pink-500 uppercase">Habit Architecture</h2>
-                                <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">Stack your routines for compound growth</p>
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                        {/* Tab Intro */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 p-10 rounded-[3rem] bg-gradient-to-br from-pink-500/10 via-rose-500/5 to-transparent border border-pink-500/10 backdrop-blur-3xl overflow-hidden relative group">
+                            <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <TrendingUp className="h-48 w-48 -mr-16 -mt-16" />
+                            </div>
+                            <div className="relative z-10">
+                                <h2 className="text-4xl font-black italic tracking-tighter text-white uppercase mb-2">Routine Architecture</h2>
+                                <p className="text-xs text-gray-400 font-black uppercase tracking-[0.3em] max-w-md leading-relaxed">Compound your growth by stacking atomic habits into unbreakable chains of execution.</p>
                             </div>
                             <button 
                                 onClick={async () => {
-                                    const name = prompt("Enter Stack Name (e.g. Morning Ritual):")
+                                    const name = prompt("Enter Architecture Name (e.g. Morning Ritual):")
                                     if (!name) return
                                     await addItem({
                                         type: "habit-stack",
@@ -336,70 +342,83 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                                         item_metadata: {
                                             is_habit_stack: true,
                                             habits: [
-                                                { trigger: "Waking up", action: "Drink water", icon: "💧" }
+                                                { trigger: "Waking up", action: "Drink 500ml water", icon: "💧" }
                                             ],
                                             color: "#ec4899",
                                             streak: 0,
-                                            lastCompleted: null
+                                            lastCompleted: null,
+                                            history: []
                                         }
                                     })
                                 }}
-                                className="bg-pink-600 hover:bg-pink-500 text-white p-4 rounded-2xl shadow-xl shadow-pink-500/20 transition-all active:scale-95"
+                                className="relative z-10 bg-pink-600 hover:bg-pink-500 text-white px-8 py-4 rounded-2xl shadow-2xl shadow-pink-900/40 transition-all hover:scale-105 active:scale-95 font-black uppercase tracking-widest text-xs flex items-center gap-2"
                             >
-                                <Plus className="h-6 w-6" />
+                                <Plus className="h-4 w-4" /> Initialize Stack
                             </button>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             {records.filter(r => r.type === "habit-stack" || r.item_metadata?.is_habit_stack).map(stack => (
-                                <div key={stack.id} className={`p-8 rounded-[2.5rem] border ${glassCardStyle} relative overflow-hidden group`}>
-                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
-                                        <TrendingUp className="h-32 w-32 -mr-10 -mt-10 rotate-12" />
+                                <div key={stack.id} className={`group p-10 rounded-[3.5rem] border transition-all duration-500 hover:shadow-2xl relative overflow-hidden flex flex-col ${isDark ? 'bg-[#151515] border-white/5 hover:border-pink-500/30' : 'bg-white border-gray-100 shadow-xl'}`}>
+                                    {/* Stability Index Background */}
+                                    <div className="absolute top-0 right-0 h-1 w-full bg-white/5 overflow-hidden">
+                                        <div className="h-full bg-pink-500 transition-all duration-1000" style={{ width: `${Math.min(100, (stack.item_metadata.streak || 0) * 10)}%` }} />
                                     </div>
 
-                                    <div className="relative z-10">
-                                        <div className="flex justify-between items-start mb-8">
+                                    <div className="relative z-10 flex flex-col h-full">
+                                        <div className="flex justify-between items-start mb-10">
                                             <div>
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-[10px] font-black uppercase bg-pink-500/10 text-pink-500 px-3 py-1 rounded-full">Active Stack</span>
-                                                    <span className="text-[10px] font-black uppercase bg-green-500/10 text-green-500 px-3 py-1 rounded-full">{stack.item_metadata?.streak || 0} Day Streak</span>
+                                                <div className="flex items-center gap-3 mb-4">
+                                                    <span className="text-[9px] font-black uppercase px-3 py-1 rounded-full bg-pink-500 text-black tracking-widest">Active Link</span>
+                                                    <span className="text-[9px] font-black uppercase px-3 py-1 rounded-full bg-white/5 text-gray-500 border border-white/5 tracking-widest">
+                                                       {stack.item_metadata?.streak || 0} Solar Cycle Streak
+                                                    </span>
                                                 </div>
-                                                <h3 className="text-3xl font-black italic tracking-tighter text-white uppercase">{stack.title}</h3>
+                                                <h3 className="text-3xl font-black italic tracking-tighter text-white uppercase group-hover:text-pink-500 transition-colors">{stack.title}</h3>
                                             </div>
-                                            <button onClick={() => deleteItem(stack.id)} className="p-2 text-gray-700 hover:text-red-500 transition-colors">
-                                                <Trash2 className="h-5 w-5" />
-                                            </button>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => deleteItem(stack.id)} className="p-3 rounded-2xl bg-white/5 hover:bg-red-500/10 text-gray-700 hover:text-red-500 transition-all">
+                                                    <Trash2 className="h-5 w-5" />
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-6">
+                                        {/* Habit Chain */}
+                                        <div className="space-y-0 flex-1 ml-4 border-l-2 border-dashed border-white/10 pl-10 pb-4">
                                             {(stack.item_metadata?.habits || []).map((h: any, idx: number) => (
-                                                <div key={idx} className="relative flex items-center gap-6 group/item">
-                                                    {/* Connector */}
-                                                    {idx < (stack.item_metadata.habits.length - 1) && (
-                                                        <div className="absolute left-7 top-14 w-0.5 h-12 bg-gradient-to-b from-pink-500 to-transparent opacity-20" />
-                                                    )}
-                                                    
-                                                    <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl group-hover/item:border-pink-500/50 transition-all shadow-lg">
-                                                        {h.icon || '✨'}
+                                                <div key={idx} className="relative py-6 group/item">
+                                                    {/* Connector Dot */}
+                                                    <div className="absolute -left-[3.15rem] top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-[#151515] border-2 border-white/10 flex items-center justify-center group-hover/item:border-pink-500 transition-colors z-20">
+                                                        <div className={`h-2 w-2 rounded-full ${stack.item_metadata.lastCompleted === new Date().toDateString() ? 'bg-pink-500 shadow-[0_0_10px_#ec4899]' : 'bg-white/20'}`} />
                                                     </div>
                                                     
-                                                    <div className="flex-1">
-                                                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-wider">After {h.trigger}</p>
-                                                        <p className="text-lg font-bold text-white uppercase group-hover/item:text-pink-400 transition-colors line-clamp-1">I will {h.action}</p>
-                                                    </div>
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="h-16 w-16 rounded-[1.5rem] bg-white/5 border border-white/10 flex items-center justify-center text-3xl group-hover/item:scale-110 transition-all shadow-2xl relative overflow-hidden">
+                                                            <div className="absolute inset-0 bg-pink-500/5 opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                                                            {h.icon || '⚡'}
+                                                        </div>
+                                                        
+                                                        <div className="flex-1">
+                                                            <p className="text-[9px] font-black uppercase text-pink-500/60 tracking-widest mb-1">Trigger: {h.trigger}</p>
+                                                            <p className="text-xl font-bold text-white uppercase tracking-tight group-hover/item:text-pink-400 transition-colors line-clamp-1">I will {h.action}</p>
+                                                        </div>
 
-                                                    <button 
-                                                        onClick={async () => {
-                                                            const newAction = prompt("Update Action:", h.action)
-                                                            if (!newAction) return
-                                                            const newHabits = [...stack.item_metadata.habits]
-                                                            newHabits[idx].action = newAction
-                                                            await updateItem(stack.id, { item_metadata: { ...stack.item_metadata, habits: newHabits } })
-                                                        }}
-                                                        className="p-2 opacity-0 group-hover/item:opacity-100 transition-opacity text-gray-500 hover:text-white"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </button>
+                                                        <div className="flex gap-1 opacity-0 group-hover/item:opacity-100 transition-opacity">
+                                                            <button 
+                                                                onClick={async () => {
+                                                                    const trigger = prompt("Edit Trigger:", h.trigger)
+                                                                    const action = prompt("Edit Action:", h.action)
+                                                                    if (!action) return
+                                                                    const newHabits = [...stack.item_metadata.habits]
+                                                                    newHabits[idx] = { ...h, trigger: trigger || h.trigger, action }
+                                                                    await updateItem(stack.id, { item_metadata: { ...stack.item_metadata, habits: newHabits } })
+                                                                }}
+                                                                className="p-2 text-gray-700 hover:text-white"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
 
@@ -408,21 +427,23 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                                                     const trigger = prompt("After what event?")
                                                     const action = prompt("What action will you take?")
                                                     if (!trigger || !action) return
-                                                    const newHabits = [...(stack.item_metadata.habits || []), { trigger, action, icon: "🔥" }]
+                                                    const icon = prompt("Emoji Icon?", "🔥")
+                                                    const newHabits = [...(stack.item_metadata.habits || []), { trigger, action, icon: icon || "🔥" }]
                                                     await updateItem(stack.id, { item_metadata: { ...stack.item_metadata, habits: newHabits } })
                                                 }}
-                                                className="w-full py-4 border border-dashed border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-600 hover:text-white hover:border-pink-500/50 transition-all mt-4"
+                                                className="w-full mt-6 py-4 border-2 border-dashed border-white/5 rounded-3xl text-[9px] font-black uppercase tracking-[0.4em] text-gray-700 hover:text-pink-500 hover:border-pink-500/30 transition-all flex items-center justify-center gap-2"
                                             >
-                                                + Add Link to Chain
+                                                <Plus className="h-3 w-3" /> Expand Architecture
                                             </button>
                                         </div>
 
-                                        <div className="mt-10 pt-8 border-t border-white/5 grid grid-cols-2 gap-4">
+                                        {/* Persistence Control */}
+                                        <div className="mt-12 pt-10 border-t border-white/5 grid grid-cols-2 gap-4">
                                             <button 
                                                 onClick={async () => {
                                                     const today = new Date().toDateString()
                                                     if (stack.item_metadata.lastCompleted === today) {
-                                                        toast.error("Already completed today!")
+                                                        toast.error("Architecture secured for current cycle")
                                                         return
                                                     }
                                                     await updateItem(stack.id, { 
@@ -432,15 +453,17 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
                                                             streak: (stack.item_metadata.streak || 0) + 1
                                                         } 
                                                     })
-                                                    toast.success("Chain secured for today! 🔥")
+                                                    toast.success("Routine verified. Momentum +1 🔥")
                                                 }}
-                                                className="col-span-1 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-2xl font-black uppercase italic tracking-tighter shadow-xl shadow-green-900/20 active:scale-95 transition-all text-xs"
+                                                className="col-span-1 py-5 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-[2rem] font-black uppercase italic tracking-tighter shadow-3xl shadow-pink-900/40 hover:scale-[1.02] active:scale-[0.98] transition-all text-[10px]"
                                             >
-                                                Completed Today
+                                                Secure Today
                                             </button>
-                                            <div className="col-span-1 p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col items-center justify-center">
-                                                <span className="text-[8px] font-black uppercase text-gray-500">Stability Index</span>
-                                                <span className="text-sm font-black text-white">{Math.min(100, (stack.item_metadata.streak || 0) * 10)}%</span>
+                                            <div className="col-span-1 p-4 rounded-[2rem] bg-white/2 border border-white/5 flex flex-col items-center justify-center">
+                                                <span className="text-[8px] font-black uppercase text-gray-600 tracking-widest mb-1">Stability Index</span>
+                                                <p className="text-xl font-black italic text-white tracking-tighter">
+                                                    {Math.min(100, (stack.item_metadata.streak || 0) * 8)}<span className="text-[10px] opacity-20 not-italic uppercase ml-1">%</span>
+                                                </p>
                                             </div>
                                         </div>
                                     </div>

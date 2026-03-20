@@ -260,7 +260,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
 
             return (
               <div key={section.id} className={`mb-2 p-1 rounded-2xl transition-all ${isSectionActive || isSubItemActive ? 'bg-white/5 border border-white/5' : ''}`}>
-                <div className="flex items-center justify-between w-full px-3 py-2 sticky top-0 bg-transparent">
+                <div className="flex items-center justify-between w-full px-4 py-3 bg-[#1a1a1a] rounded-xl border border-white/5 mb-1 shadow-md">
                   <button
                     onClick={() => {
                       handleNavigation(`section-${section.id}`)
@@ -273,33 +273,33 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleSection(section.id) }}
-                    className={`p-1.5 rounded-lg hover:bg-white/5 transition-colors ${expandedSections[section.id] ? iconColor : 'text-gray-500'}`}
+                    className={`p-2 rounded-lg hover:bg-white/5 transition-colors ${expandedSections[section.id] ? iconColor : 'text-gray-400'} border border-white/10 ml-2`}
                   >
                     {expandedSections[section.id] ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </button>
                 </div>
 
                 {expandedSections[section.id] && (
-                  <ul className="space-y-1 mt-2 pl-2">
+                  <ul className="space-y-1 mt-2 px-1">
                     {section.items.map((item) => {
                       const isItemActive = activePage === item.id
                       const isPinned = pinnedItems.includes(item.id)
                       return (
-                        <li key={item.id} className="group relative pr-2">
+                        <li key={item.id} className="group relative">
                           <button
                             onClick={() => handleNavigation(item.id)}
-                            className={`flex items-center w-full px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${isItemActive ? `${activeBg} text-white shadow-md` : "text-gray-500 hover:bg-white/5 hover:text-gray-200"}`}
+                            className={`flex items-center w-full px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${isItemActive ? `${activeBg} text-white shadow-md` : "text-gray-500 hover:bg-white/5 hover:text-gray-200"}`}
                           >
                             <div className={`${isItemActive ? "text-white" : iconColor} opacity-70`}>{item.icon}</div>
                             <span className="ml-3">{item.label}</span>
                           </button>
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[40]">
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[40]">
                             <button
-                              onClick={(e) => togglePin(e, item.id)}
-                              className={`p-2 transition-all rounded-xl hover:bg-white/10 opacity-100 ${isPinned ? 'text-yellow-500' : 'text-gray-600 hover:text-gray-400'}`}
+                              onClick={(e) => { e.stopPropagation(); togglePin(e, item.id); }}
+                              className={`p-1.5 transition-all rounded-lg hover:bg-white/20 ${isPinned ? 'text-yellow-500 bg-yellow-500/10' : 'text-gray-600 opacity-20 group-hover:opacity-100'}`}
                               aria-label={isPinned ? "Unpin shortcut" : "Pin shortcut"}
                             >
-                              <Star className={`h-5 w-5 ${isPinned ? 'fill-current' : ''}`} />
+                              <Star className={`h-4 w-4 ${isPinned ? 'fill-current' : ''}`} />
                             </button>
                           </div>
                         </li>

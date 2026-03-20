@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2 } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2, Zap } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -118,8 +118,31 @@ const HELP_PAGES: HelpPage[] = [
                         <p className="text-sm text-gray-400">All your data is encrypted and stored securely in your private vault. We never see your secrets.</p>
                     </div>
                     <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                        <h4 className="font-bold text-purple-400 mb-2 flex items-center gap-2"><Globe className="h-4 w-4" /> Global Access</h4>
-                        <p className="text-sm text-gray-400">Synchronize your data across all your devices using our Chrome Extension and Web App.</p>
+                        <h4 className="font-bold text-purple-400 mb-2 flex items-center gap-2"><LayoutGrid className="h-4 w-4" /> Strategic View</h4>
+                        <p className="text-sm text-gray-400">Toggle between the Grid View for task execution and the Life Wheel for strategic equilibrium analysis.</p>
+                    </div>
+                </div>
+
+                <div className="mt-12 p-8 rounded-[3rem] bg-indigo-500/5 border border-indigo-500/10">
+                    <h4 className="text-xl font-black italic tracking-tighter text-white uppercase mb-4 flex items-center gap-3">
+                         <Activity className="h-6 w-6 text-indigo-400" /> Life Wheel Equilibrium
+                    </h4>
+                    <p className="text-sm text-gray-400 leading-relaxed mb-6">
+                        The <strong>Life Wheel</strong> is a radar-based diagnostic tool that aggregates data from across your entire hub to visualize your personal balance.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div className="space-y-2">
+                             <div className="font-black text-indigo-400 uppercase tracking-widest">Calculated Vectors:</div>
+                             <ul className="space-y-1 text-gray-500 list-disc pl-4">
+                                <li><strong>Health:</strong> Vitals consistency & sleep trends.</li>
+                                <li><strong>Wealth:</strong> Asset growth vs. subscription creep.</li>
+                                <li><strong>Growth:</strong> Habit stability & goal completion.</li>
+                                <li><strong>Spirit:</strong> Mood indicators & journal frequency.</li>
+                             </ul>
+                        </div>
+                        <div className="p-4 bg-black/20 rounded-2xl border border-white/5 italic text-gray-500">
+                            "Imbalance in one area often leads to friction in others. Use the Personal Equilibrium chart to identify where your energy is leaking."
+                        </div>
                     </div>
                 </div>
             </div>
@@ -239,12 +262,12 @@ const HELP_PAGES: HelpPage[] = [
                 <p className="text-gray-300">Turn your dreams into actionable steps.</p>
                 <div className="space-y-4">
                     <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
-                        <h5 className="font-bold text-purple-400 text-sm mb-2">Step Tracking</h5>
-                        <p className="text-xs text-gray-400">Break down large objectives into smaller, manageable sub-tasks with their own deadlines.</p>
+                        <h5 className="font-bold text-purple-400 text-sm mb-2">Atomic Habit Stacks</h5>
+                        <p className="text-xs text-gray-400">Chain goals together to build high-stability routines. Use the <strong>Stability Index</strong> to measure how resilient your habits are to life's chaos.</p>
                     </div>
-                    <div className="p-4 bg-purple-500/5 border border-purple-500/10 rounded-2xl">
-                        <h5 className="font-bold text-purple-400 text-sm mb-2">Visual Progress</h5>
-                        <p className="text-xs text-gray-400">Automatic progress bars calculate how close you are to finishing based on completed steps.</p>
+                    <div className="p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl">
+                        <h5 className="font-bold text-indigo-400 text-sm mb-2">The Linked Chain</h5>
+                        <p className="text-xs text-gray-400">Visualize your streaks as a literal continuous chain. If you miss a day, the chain breaks visually, giving you a psychological incentive to 'don't break the chain'.</p>
                     </div>
                 </div>
             </div>
@@ -269,6 +292,10 @@ const HELP_PAGES: HelpPage[] = [
                     <div className="p-4 border border-white/5 bg-black/20 rounded-xl">
                         <span className="text-xs font-black text-gray-500 uppercase block mb-1">Auto-Fill</span>
                         <p className="text-sm text-gray-400">Install the Chrome Extension to automatically fill your credentials on any website.</p>
+                    </div>
+                    <div className="p-4 border border-yellow-500/10 bg-yellow-500/5 rounded-xl">
+                        <span className="text-xs font-black text-yellow-500 uppercase block mb-1">Mock Data Warning</span>
+                        <p className="text-sm text-gray-400">If you see a yellow banner, you are viewing sample data. This is for demonstration only—any "Copy" or "View" actions on mock passwords will show generic sample text.</p>
                     </div>
                 </div>
             </div>
@@ -360,16 +387,27 @@ const HELP_PAGES: HelpPage[] = [
                         </p>
                     </div>
 
-                    {/* Health Insurance */}
-                    <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
+                    {/* Capacity & Energy */}
+                    <div className="p-5 rounded-3xl bg-blue-600/10 border border-blue-500/20 shadow-lg">
                         <div className="flex items-center gap-3 mb-3">
-                            <Shield className="h-5 w-5 text-emerald-400" />
-                            <h5 className="font-black text-emerald-400 text-xs uppercase tracking-widest">Insurance & Policies</h5>
+                            <Sun className="h-6 w-6 text-blue-400" />
+                            <h5 className="font-black text-blue-400 text-xs uppercase tracking-[0.2em]">Capacity Planner (Spoon Theory)</h5>
                         </div>
                         <p className="text-xs text-gray-400 leading-relaxed">
-                            Centralize policy numbers, group IDs, and carrier contact info.
+                            Manage your cognitive and physical load based on 'Energy Tokens' (Spoons). Record your daily availability to prevent burnout.
                             <br /><br />
-                            <strong>How to use:</strong> Take photos of your insurance cards front and back. Have them ready at the clinic check-in desk.
+                            <strong>Vitality Trend:</strong> Our algorithm analyzes your mood and energy dips to suggest "Priority Shifts"—moving complex tasks to times of highest capacity.
+                        </p>
+                    </div>
+                    
+                    <div className="p-5 rounded-3xl bg-yellow-600/10 border border-yellow-500/20">
+                        <div className="flex items-center gap-3 mb-3">
+                            <Database className="h-5 w-5 text-yellow-400" />
+                            <h5 className="font-black text-yellow-400 text-xs uppercase tracking-widest">Mock Health Data</h5>
+                        </div>
+                        <p className="text-xs text-gray-400 leading-relaxed">
+                            To help you understand the health trends, we may pre-populate this hub with sample vitals and records. 
+                            <strong>Note:</strong> Mock data is clearly marked with a banner. You can remove it anytime in Settings.
                         </p>
                     </div>
                 </div>
@@ -468,17 +506,16 @@ const HELP_PAGES: HelpPage[] = [
             <div className="space-y-4">
                 <p className="text-gray-300">Track your online presence, subscriptions, and personal memoirs.</p>
                 <div className="space-y-3">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <span className="text-blue-400 font-bold text-xs uppercase block mb-1 tracking-widest">Subscription Manager</span>
-                        <p className="text-xs text-gray-400">Never forget a renewal date. Track monthly costs and billing cycles for apps and services.</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <span className="text-purple-400 font-bold text-xs uppercase block mb-1 tracking-widest">Online Presence</span>
-                        <p className="text-xs text-gray-400">Keep a master list of all social accounts and non-financial digital assets.</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
-                        <span className="text-amber-400 font-bold text-xs uppercase block mb-1 tracking-widest">Personal Diary</span>
-                        <p className="text-xs text-gray-400">A private space for your thoughts, protected by your master key.</p>
+                    <div className="p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/10">
+                        <span className="text-emerald-400 font-black text-[10px] uppercase block mb-2 tracking-[0.2em] flex items-center gap-2">
+                           <Zap className="h-4 w-4" /> Billing Architect (Node Creep)
+                        </span>
+                        <p className="text-xs text-gray-400 leading-relaxed font-bold mb-3">Detect and neutralize "Digital Leaks" before they impact your cash flow.</p>
+                        <ul className="space-y-2 text-[10px] text-gray-500">
+                           <li className="flex gap-2"><strong>Signal Alerts:</strong> Visual countdowns for upcoming renewals.</li>
+                           <li className="flex gap-2"><strong>Node Creep:</strong> Detects overlapping services (e.g., having 3 streaming apps) and suggests consolidation.</li>
+                           <li className="flex gap-2"><strong>Execution Matrix:</strong> Seeing the 12-month impact of a subscription in one view.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -783,15 +820,25 @@ const HELP_PAGES: HelpPage[] = [
         icon: Database,
         content: (
             <div className="space-y-6">
-                <p className="text-gray-300">Test the hub's capabilities by injecting sample data into specific modules.</p>
+                <p className="text-gray-300">Test the hub's capabilities by injecting sample data into specific modules. This allows you to explore the interface and analytics before committing your own records.</p>
                 <div className="space-y-4">
                     <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
                         <h5 className="font-bold text-emerald-400 text-sm mb-1 uppercase tracking-tighter">Budget Demo Data</h5>
                         <p className="text-xs text-gray-400 leading-relaxed">Instantly populate your Budget Manager with transactions, income, and goals. This lets you see the trend charts and category breakdowns without entering your own data first.</p>
                     </div>
-                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl">
-                        <h5 className="font-bold text-yellow-400 text-sm mb-1 uppercase tracking-tighter">Safe Cleanup</h5>
-                        <p className="text-xs text-gray-400">Use the "Sanitize Vault" tool to remove all injected mock data in one click. Our cleanup tools are specifically designed to PROTECT your real passwords and manual entries.</p>
+                    <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                        <h5 className="font-bold text-blue-400 text-sm mb-1 uppercase tracking-tighter">Health Hub Demo</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">Inject sample vitals (BP, Weight), medications, and diary entries to see how the Health Hub aggregates and analyzes your long-term wellness data.</p>
+                    </div>
+                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-500 border-dashed">
+                        <h5 className="font-bold text-yellow-400 text-sm mb-2 uppercase tracking-tighter flex items-center gap-2">
+                             <Shield className="h-4 w-4" /> Safety & Privacy Garantuee
+                        </h5>
+                        <p className="text-xs text-gray-300">Mock operations are completely sandboxed. Injecting or wiping mock data will <span className="font-black underline text-white">NEVER</span> touch your real passwords, secure notes, or personal financial records you've entered manually.</p>
+                    </div>
+                    <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+                        <h5 className="font-bold text-white text-sm mb-1 uppercase tracking-tighter">Safe Cleanup</h5>
+                        <p className="text-xs text-gray-400">Finished exploring? Use the "Sanitize Vault" tool in the Danger Zone or click the "Remove Mocks" button on any page banner to return to a clean, empty workspace.</p>
                     </div>
                 </div>
             </div>
@@ -979,16 +1026,16 @@ const HELP_PAGES: HelpPage[] = [
                     Irreversible Actions. We cannot recover data deleted using these tools.
                 </p>
                 <div className="space-y-4">
+                    <div className="p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-2xl">
+                        <h5 className="font-bold text-yellow-500 text-sm mb-2">Sanitize Vault (Wipe Mocks)</h5>
+                        <p className="text-xs text-gray-400 leading-relaxed">The safe way to clean your workspace. This tool resets all "Demo Session" flags in your browser and deletes any physical mock records from the database. <span className="text-white font-bold">Your real passwords and records stay exactly where they are.</span></p>
+                    </div>
                     <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                         <h5 className="font-bold text-red-400 text-sm mb-2">Individual Page Wipe</h5>
                         <p className="text-xs text-gray-400 leading-relaxed">Choose a specific module (like <span className="text-white">Vehicles</span> or <span className="text-white">Passwords</span>) and delete all items within it in one click. Other sections remain untouched.</p>
                     </div>
                     <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                        <h5 className="font-bold text-red-400 text-sm mb-2">Master Reset</h5>
-                        <p className="text-xs text-gray-400 leading-relaxed">Removes local customizations like PINs, biometrics, and themes without deleting your encrypted vault records.</p>
-                    </div>
-                    <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
-                        <h5 className="font-bold text-red-400 text-sm mb-2">Nuclear Wipe</h5>
+                        <h5 className="font-bold text-red-500 text-sm mb-2 flex items-center gap-2"><AlertCircle className="h-4 w-4" /> Nuclear Wipe</h5>
                         <p className="text-xs text-gray-400 leading-relaxed">The absolute last resort. This deletes EVERY record across your entire vault, including folders, passwords, and medical data. This resets your account to a baseline, factory-fresh state.</p>
                     </div>
                 </div>

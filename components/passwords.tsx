@@ -49,6 +49,8 @@ import DeleteConfirmationModal from "./delete-confirmation-modal"
 import AutoFill from "./auto-fill"
 import ViewPictureModal from "./modals/view-picture-modal"
 import { toast } from "sonner"
+import { MOCKED_PASSWORDS } from "../lib/mock-data"
+import MockDataBanner from "./ui/mock-data-banner"
 
 interface PasswordsProps {
   records: any[]
@@ -145,6 +147,37 @@ export default function Passwords({
 
   // State for active password popup
   const [activePasswordPopup, setActivePasswordPopup] = useState<string | null>(null)
+
+  // Mock data state
+  const [showMockData, setShowMockData] = useState(false)
+  const [isForcedMock, setIsForcedMock] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('passwords_mock_dismissed') === 'true'
+      const globalMock = localStorage.getItem('all_mock_data_enabled') === 'true'
+      const localMock = localStorage.getItem('passwords_mock_enabled') === 'true'
+      
+      setIsForcedMock(globalMock || localMock)
+      // Show mock if forced OR (no real records AND not dismissed)
+      if (globalMock || localMock) {
+        setShowMockData(true)
+      } else if (records.filter(r => r.type === 'password' || r.type === 'login').length === 0 && !dismissed) {
+        setShowMockData(true)
+      } else {
+        setShowMockData(false)
+      }
+    }
+  }, [records])
+
+  const handleClearMockData = () => {
+    setShowMockData(false)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('passwords_mock_dismissed', 'true')
+      localStorage.setItem('passwords_mock_enabled', 'false')
+      window.dispatchEvent(new Event('storage'))
+    }
+  }
 
   // Close password popup when clicking outside
   useEffect(() => {
@@ -378,7 +411,7 @@ export default function Passwords({
       const { id, created_at, updated_at, ...rest } = password
       await addItem({
         ...rest,
-        username: `${rest.username || ''} (Copy)`,
+        title: `${rest.title || rest.website || 'Untitled'} (Copy)`,
         type: "password"
       })
     } catch (error) {
@@ -509,7 +542,13 @@ export default function Passwords({
   }
 
   // Use displayedRecords instead of 'passwords' for filtering
-  const passwords = displayedRecords
+  const passwords = useMemo(() => {
+    if (showMockData) {
+      // Filter out any real records to avoid mixing, as requested
+      return MOCKED_PASSWORDS;
+    }
+    return displayedRecords;
+  }, [showMockData, displayedRecords]);
 
   // Get all unique categories
   const categories = [
@@ -2157,6 +2196,15 @@ export default function Passwords({
   return (
     <div className={`space-y-4 px-2 md:px-4 pb-10 relative h-full flex flex-col overflow-visible`}>
       {renderAZSidebar()}
+
+      {showMockData && (
+        <MockDataBanner 
+          onClear={handleClearMockData} 
+          theme={theme} 
+          isForced={isForcedMock}
+          pageName="Vault"
+        />
+      )}
 
       {/* COMPACT HEADER: Always visible, integrated search and counts */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-white/5 bg-background/50 backdrop-blur-sm sticky top-0 z-10">

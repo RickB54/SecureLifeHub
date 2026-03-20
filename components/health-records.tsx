@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
@@ -9,6 +9,8 @@ import Lightbox from "./media/lightbox"
 import Medications, { PillLibraryModal } from "./medications"
 import HealthAI from "./health-ai"
 import GoogleCalendarIntegration from "./google-calendar-integration"
+import { MOCKED_HEALTH } from "../lib/mock-data"
+import MockDataBanner from "./ui/mock-data-banner"
 
 interface HealthDashboardProps {
     records: any[]
@@ -50,6 +52,42 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         specialty: "",
         date: new Date().toISOString().slice(0, 16)
     })
+
+    // Mock data state
+    const [showMockData, setShowMockData] = useState(false)
+    const [isForcedMock, setIsForcedMock] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const dismissed = localStorage.getItem('health_mock_dismissed') === 'true'
+            const globalMock = localStorage.getItem('all_mock_data_enabled') === 'true'
+            const localMock = localStorage.getItem('health_mock_enabled') === 'true'
+            
+            setIsForcedMock(globalMock || localMock)
+            
+            // Show mock if forced OR (no real records AND not dismissed)
+            const realRecordsCount = records.filter(r => 
+                r.type === 'health-record' || r.category === 'Health Records' || r.category === 'Vitals' || r.type === 'medication' || r.category === 'Medications'
+            ).length
+
+            if (globalMock || localMock) {
+                setShowMockData(true)
+            } else if (realRecordsCount === 0 && !dismissed) {
+                setShowMockData(true)
+            } else {
+                setShowMockData(false)
+            }
+        }
+    }, [records])
+
+    const handleClearMockData = () => {
+        setShowMockData(false)
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('health_mock_dismissed', 'true')
+            localStorage.setItem('health_mock_enabled', 'false')
+            window.dispatchEvent(new Event('storage'))
+        }
+    }
 
     // Speech Recognition Setup
     const startSpeechToText = (field: keyof typeof apptFormData) => {
@@ -97,15 +135,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
     // --- DATA FILTERING ---
     const healthRecords = useMemo(() => {
-        return records.filter(r =>
+        const base = showMockData ? MOCKED_HEALTH : records;
+        return base.filter(r =>
             (r.type === "health-record" || r.category === "Health Records" || r.item_metadata?.is_health_record)
         ).sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
-    }, [records])
+    }, [records, showMockData])
 
     const vitalRecords = useMemo(() => {
-        return records.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital)
+        const base = showMockData ? MOCKED_HEALTH : records;
+        return base.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital)
             .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
-    }, [records])
+    }, [records, showMockData])
 
     const activeVitalRecords = useMemo(() => {
         return vitalRecords.filter(r => !r.item_metadata?.is_archived)
@@ -122,7 +162,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }, [records])
 
     const medRecords = useMemo(() => {
-        return records.filter(r => {
+        const base = showMockData ? MOCKED_HEALTH : records;
+        return base.filter(r => {
             const specificNames = ["Hydroxyzine", "Prednisone", "Loratadine", "Famotidine"];
             const isSpecificMed = specificNames.some(name => r.title?.includes(name));
 
@@ -132,7 +173,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 (r.item_metadata?.notes === "Imported Prescription") ||
                 isSpecificMed
         })
-    }, [records])
+    }, [records, showMockData])
 
     const upcomingAppts = useMemo(() => {
         return healthRecords.filter(r =>
@@ -1013,6 +1054,18 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
     return (
         <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50 text-gray-900' : 'bg-[#121212] text-white'} overflow-hidden`}>
+            
+            {showMockData && (
+                <div className="px-4 md:px-8 pt-8 -mb-4">
+                    <MockDataBanner 
+                        onClear={handleClearMockData} 
+                        theme={theme} 
+                        isForced={isForcedMock}
+                        pageName="Health Hub"
+                    />
+                </div>
+            )}
+
             <div className="p-4 md:p-8 pb-4">
                 <h1 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                     <Activity className="h-8 w-8 text-blue-400" /> Health Hub

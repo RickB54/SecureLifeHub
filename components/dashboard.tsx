@@ -1,18 +1,22 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import {
   Plus, Folder, Shield, AlertTriangle, Clock, ChevronRight,
   Heart, Car, Briefcase, Box, Smartphone,
   CheckCircle2,
   Book,
   Globe,
- Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
+  Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
   Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign, Database,
-  LayoutGrid, PieChart as WheelIcon, TrendingUp, Sparkles
+  LayoutGrid, PieChart as WheelIcon, TrendingUp, Sparkles, Wallet, Battery, Sun
 } from "lucide-react"
+import { 
+    Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, 
+    ResponsiveContainer, Tooltip as RechartsTooltip, 
+    AreaChart, Area, XAxis, YAxis 
+} from 'recharts'
 import { toast } from "sonner"
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import AddPasswordModal from "./modals/add-password-modal"
 import AddFolderModal from "./modals/add-folder-modal"
 import {
@@ -34,25 +38,45 @@ interface DashboardProps {
   onOpenHelp?: (targetId?: string) => void
 }
 
-export default function Dashboard({ records, setRecords, setActivePage, theme, addItem, updateItem, addFolder, securitySettings = {}, onOpenHelp }: DashboardProps) {
+const DEFAULT_AREAS = [
+    { subject: 'Health', score: 7, icon: Battery, color: '#10b981' },
+    { subject: 'Wealth', score: 5, icon: Wallet, color: '#f59e0b' },
+    { subject: 'Growth', score: 8, icon: TrendingUp, color: '#3b82f6' },
+    { subject: 'Spirit', score: 4, icon: Sun, color: '#8b5cf6' },
+    { subject: 'Social', score: 6, icon: UsersIcon, color: '#ec4899' },
+    { subject: 'Career', score: 9, icon: Briefcase, color: '#ef4444' },
+]
+
+function UsersIcon(props: any) {
+  return <Globe {...props} /> // Fallback or use Lucide Users if available
+}
+
+export default function Dashboard({ 
+    records, 
+    setRecords, 
+    setActivePage, 
+    theme, 
+    addItem, 
+    updateItem, 
+    addFolder, 
+    securitySettings = {}, 
+    onOpenHelp 
+}: DashboardProps) {
   const [addPasswordModalOpen, setAddPasswordModalOpen] = useState(false)
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
-  const [showPersonalizer, setShowPersonalizer] = useState(false)
   const [enabledPulseIds, setEnabledPulseIds] = useState<string[]>(['security', 'assets', 'goals'])
   const [dbCount, setDbCount] = useState(0)
   const [viewMode, setViewMode] = useState<'grid' | 'wheel'>('grid')
+  const [localScores, setLocalScores] = useState<Record<string, number>>({})
+  const [configOpen, setConfigOpen] = useState(false)
+
+  const isDark = theme !== "light"
 
   useEffect(() => {
     const saved = localStorage.getItem('dashboard_pulses')
     if (saved) {
-      try {
-        setEnabledPulseIds(JSON.parse(saved))
-      } catch (e) {
-        console.error("Failed to parse pulses", e)
-      }
+      try { enEnabledPulseIds(JSON.parse(saved)) } catch (e) {}
     }
-
-    // Calculate DB Count for the new card
     const savedDbs = localStorage.getItem('slh_custom_databases')
     if (savedDbs) {
       try {
@@ -61,6 +85,8 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
       } catch (e) {}
     }
   }, [])
+
+  function enEnabledPulseIds(val: string[]) { setEnabledPulseIds(val) }
 
   const togglePulse = (id: string) => {
     const newIds = enabledPulseIds.includes(id)
@@ -72,44 +98,42 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
 
   // -- Stats Calculation --
   const folders = records.filter((r: any) => r.type === "folder")
-  const totalItems = records.length
-
-  // Specific Category Counts
   const healthCount = records.filter((r: any) => r.category === "Health Records" || r.category === "Medications" || r.item_metadata?.is_vital).length
   const vehicleCount = records.filter((r: any) => r.category === "Vehicles").length
   const bizCount = records.filter((r: any) => r.category === "Business").length
-  const assetCount = records.filter((r: any) => r.category === "Assets").length
+  const assetCount = records.filter((r: any) => r.category === "Assets" || r.type === "asset").length
   const digitalCount = records.filter((r: any) => r.category === "Digital Life" || r.category === "Social Life").length
   const diaryCount = records.filter((r: any) => r.category === "My Diary").length
   const knowledgeCount = records.filter((r: any) => r.category === "Knowledge Vault").length
   const travelCount = records.filter((r: any) => r.category === "Travel").length
-  const goalsCount = records.filter((r: any) => r.category === "Goals").length
+  const goalsCount = records.filter((r: any) => r.category === "Goals" || r.type === "goal").length
   const vaultCount = records.filter((r: any) => r.type === "password" || r.category === "Logins").length
 
-  // Asset Value Calculation
   const totalAssetValue = records
-    .filter((r: any) => r.category === "Assets" && r.item_metadata?.value)
+    .filter((r: any) => (r.category === "Assets" || r.type === "asset") && r.item_metadata?.value)
     .reduce((sum: number, r: any) => sum + (parseFloat(r.item_metadata.value) || 0), 0)
 
-  // Security Score (Mock calculation based on weak passwords)
   const weakPasswords = records.filter((r: any) => r.type === "password" && r.strength === "weak").length
   const securityScore = Math.max(0, 100 - (weakPasswords * 5))
-
-  // Additional Analytics Data
   const subCount = records.filter((r: any) => r.category === "Subscriptions" || r.type === "subscription").length
   const mediaCount = records.filter((r: any) => r.category === "Secure Media" || r.type === "media").length
   const passCount = records.filter((r: any) => r.type === "password" || r.type === "login").length
   const favoriteCount = records.filter((r: any) => r.is_favorite).length
 
-  // Budget / Financial Stats
+  // Subscriptions Financials
+  const monthlyBurn = records
+    .filter(r => r.category === "Subscriptions" || r.type === "subscription")
+    .reduce((acc, s) => acc + (parseFloat(s.item_metadata?.cost) || 0), 0)
+
+  // Net Profit
   const budgetItems = records.filter((r: any) => r.category === "Budget" || r.item_metadata?.is_budget)
-  const totalIncome = budgetItems
-    .filter((r: any) => r.item_metadata?.entry_type === 'income')
-    .reduce((sum: number, r: any) => sum + (parseFloat(r.item_metadata.amount) || 0), 0)
-  const totalExpenses = budgetItems
-    .filter((r: any) => r.item_metadata?.entry_type === 'expense')
-    .reduce((sum: number, r: any) => sum + (parseFloat(r.item_metadata.amount) || 0), 0)
+  const totalIncome = budgetItems.filter((r: any) => r.item_metadata?.entry_type === 'income').reduce((s, r) => s + (parseFloat(r.item_metadata.amount) || 0), 0)
+  const totalExpenses = budgetItems.filter((r: any) => r.item_metadata?.entry_type === 'expense').reduce((s, r) => s + (parseFloat(r.item_metadata.amount) || 0), 0)
   const netProfit = totalIncome - totalExpenses
+
+  // Health Stats
+  const healthLogs = records.filter(r => r.type === "energy-mood-log")
+  const avgEnergy = healthLogs.length > 0 ? healthLogs.reduce((acc, l) => acc + (l.item_metadata.energy || 0), 0) / healthLogs.length : 0
 
   // Pulse Definitions
   const ALL_PULSES = [
@@ -128,740 +152,300 @@ export default function Dashboard({ records, setRecords, setActivePage, theme, a
     { id: 'favorites', label: 'Favorites', icon: Star, color: 'text-amber-500', valueText: `${favoriteCount} Starred` },
     { id: 'diary', label: 'Daily Diary', icon: Book, color: 'text-rose-500', valueText: `${diaryCount} Entries` },
   ]
-
   const activePulses = ALL_PULSES.filter(p => enabledPulseIds.includes(p.id))
 
-  // Recent Activity Clearing
+  // Recent Activity
   const [clearedAt, setClearedAt] = useState<number>(0)
-
   useEffect(() => {
     const saved = localStorage.getItem('dashboard_activity_cleared_at')
     if (saved) setClearedAt(parseInt(saved))
   }, [])
-
-  const handleClearActivity = () => {
-    if (window.confirm("Are you sure you want to clear your recent activity history? This will only remove the shortcuts from this dashboard view.")) {
-      const now = Date.now()
-      setClearedAt(now)
-      localStorage.setItem('dashboard_activity_cleared_at', now.toString())
-    }
-  }
-
-  // Recent Activity
   const recentItems = [...records]
     .filter((item: any) => new Date(item.updatedAt || 0).getTime() > clearedAt)
     .sort((a: any, b: any) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
-    .slice(0, 25)
+    .slice(0, 15)
 
-  // -- Life Wheel Scoring --
-  const lifeWheelData = [
-    { subject: 'Health', A: Math.min(100, (healthCount * 10)), fullMark: 100 },
-    { subject: 'Wealth', A: Math.min(100, (totalAssetValue / 1000)), fullMark: 100 },
-    { subject: 'Social', A: Math.min(100, (digitalCount * 10)), fullMark: 100 },
-    { subject: 'Growth', A: Math.min(100, (goalsCount * 20)), fullMark: 100 },
-    { subject: 'Logic', A: Math.min(100, (knowledgeCount * 15)), fullMark: 100 },
-    { subject: 'Spirit', A: Math.min(100, (diaryCount * 10)), fullMark: 100 },
-  ];
+  // -- Unified Life Wheel Calculation --
+  const lifeWheelData = useMemo(() => {
+    return DEFAULT_AREAS.map(area => {
+        let score = localScores[area.subject] || area.score
+        if (area.subject === 'Health') score = Math.max(score, avgEnergy || 0)
+        if (area.subject === 'Wealth') score = Math.max(score, Math.min(10, totalAssetValue / 10000))
+        if (area.subject === 'Growth') score = Math.max(score, Math.min(10, goalsCount))
+        return { ...area, A: score, fullMark: 10 }
+    })
+  }, [avgEnergy, totalAssetValue, goalsCount, localScores])
 
-  const averageLifeScore = Math.round(lifeWheelData.reduce((acc, curr) => acc + curr.A, 0) / lifeWheelData.length);
+  const averageLifeScore = Math.round(lifeWheelData.reduce((acc, curr) => acc + curr.A, 0) / lifeWheelData.length * 10);
 
   // Styles
-  const glassPanel = theme === 'light'
-    ? "bg-white/60 backdrop-blur-xl border border-white/40 shadow-xl"
-    : "bg-gray-800/40 backdrop-blur-xl border border-white/5 shadow-xl"
+  const glassPanel = isDark
+    ? "bg-[#1a1a1a]/60 backdrop-blur-3xl border border-white/5 shadow-2xl"
+    : "bg-white/60 backdrop-blur-xl border border-gray-200 shadow-xl"
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-
-      {/* Header & Life Pulse */}
+    <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      
+      {/* Header & Pulse Tools */}
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Welcome Section */}
-        <div className="flex-1 space-y-2 relative">
-          <div className="flex justify-between items-start">
-            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
-              Secure Life Hub
-            </h1>
-          </div>
-          <p className="text-gray-400 text-lg">Your entire digital and physical life, centralized.</p>
-
-          <div className="flex gap-3 mt-6">
-            <button
-              onClick={() => setAddPasswordModalOpen(true)}
-              className="flex items-center px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-500/20 transition-all font-medium text-white"
-            >
-              <Plus className="h-5 w-5 mr-2" /> Quick Add
-            </button>
-            <button
-              onClick={() => setAddFolderModalOpen(true)}
-              className="flex items-center px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-medium"
-            >
-              <Folder className="h-5 w-5 mr-2" /> New Folder
-            </button>
-            <button
-              onClick={() => setActivePage("settings")}
-              className="flex items-center px-5 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-medium"
-            >
-              <Activity className="h-5 w-5 mr-2" /> Settings
-            </button>
-          </div>
-        </div>
-
-        {/* Life Pulse Widget */}
         <div className="flex-1 space-y-4">
-          <div className={`rounded-3xl ${glassPanel} relative overflow-hidden group`}>
-            <div className="absolute top-4 right-4 z-20">
-              <button 
-                onClick={() => onOpenHelp?.("pulse-personalizer")}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all opacity-0 group-hover:opacity-100"
-              >
-                <HelpCircle className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-            <div className={`flex flex-wrap justify-center gap-2 px-6 py-4 w-full relative ${activePulses.length === 0 ? 'min-h-[80px] items-center' : ''}`}>
-              {activePulses.length === 0 ? (
-                <div className="w-full text-center opacity-30 italic text-sm">No analytics pinned. Click the settings icon to add.</div>
-              ) : (
-                activePulses.map((pulse) => {
-                  const goToPage = (id: string) => {
-                    const mapping: Record<string, string> = {
-                      security: 'security-audit',
-                      assets: 'type-assets',
-                      goals: 'type-goals',
-                      health: 'type-health-records',
-                      subscriptions: 'type-subscriptions',
-                      media: 'type-media',
-                      vehicles: 'type-vehicles',
-                      business: 'type-business',
-                      knowledge: 'type-knowledge',
-                      travel: 'type-travel',
-                      vault: 'passwords',
-                      budget: 'type-budget',
-                      favorites: 'favorites',
-                      diary: 'type-diary'
-                    }
-                    setActivePage(mapping[id] || 'dashboard')
-                  }
-
-                  return (
-                    <button
-                      key={pulse.id}
-                      onClick={() => goToPage(pulse.id)}
-                      className="flex flex-col items-center gap-1 px-3 py-2 rounded-2xl bg-white/5 min-w-[64px] hover:bg-white/10 hover:scale-105 active:scale-95 transition-all group/item"
-                    >
-                      {pulse.id === 'security' ? (
-                        <div className="relative w-10 h-10 flex items-center justify-center">
-                          <svg className="w-full h-full transform -rotate-90">
-                            <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-700/20" />
-                            <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="4" fill="transparent"
-                              strokeDasharray={`${2 * Math.PI * 16}`}
-                              strokeDashoffset={`${2 * Math.PI * 16 * (1 - (pulse.value || 0) / 100)}`}
-                              className={`${(pulse.value || 0) > 80 ? 'text-green-500' : 'text-yellow-500'} transition-all duration-1000 ease-out`} />
-                          </svg>
-                          <Shield className="absolute h-4 w-4 opacity-80" />
-                        </div>
-                      ) : (
-                        <div className="w-10 h-10 flex items-center justify-center bg-gray-500/10 rounded-full group-hover/item:scale-105 transition-transform">
-                          <pulse.icon className={`h-5 w-5 ${pulse.color}`} />
-                        </div>
-                      )}
-                      <p className="text-[9px] font-bold uppercase tracking-wide opacity-60 whitespace-nowrap">{pulse.label}</p>
-                      <p className={`text-[9px] opacity-50 font-mono ${pulse.id === 'assets' ? 'text-emerald-400' : ''}`}>{pulse.valueText}</p>
-                    </button>
-                  )
-                })
-              )}
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-4xl font-black italic tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 uppercase">
+                Life Architect Hub
+              </h1>
+              <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] mt-1">Centralized Operational Insight Engine</p>
             </div>
           </div>
+          <div className="flex gap-3">
+             <button onClick={() => setAddPasswordModalOpen(true)} className="flex items-center px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-900/20 text-white font-black uppercase text-[10px] tracking-widest transition-all active:scale-95">
+              <Plus className="h-4 w-4 mr-2" /> Quick Add
+            </button>
+            <button onClick={() => setAddFolderModalOpen(true)} className="flex items-center px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-gray-400 font-black uppercase text-[10px] tracking-widest transition-all hover:text-white">
+              <Folder className="h-4 w-4 mr-2" /> New Map
+            </button>
+          </div>
+        </div>
 
-          {/* Pulse Personalizer (Accordion Style) */}
-          {/* Pulse Personalizer (Permanent Accordion) */}
-          <div className={`rounded-3xl ${glassPanel} overflow-hidden shadow-2xl border border-white/10`}>
-            <Accordion type="single" collapsible className="w-full border-none">
-              <AccordionItem value="personalizer" className="border-none">
-                <AccordionTrigger className="px-6 py-5 hover:no-underline [&[data-state=open]>svg]:rotate-180 group/trigger">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between w-full pr-6 gap-3">
-                    <div className="text-left flex items-center gap-2">
-                      <div className="flex flex-col">
-                        <h3 className="text-xl font-bold text-blue-400 group-hover/trigger:text-blue-300 transition-colors flex items-center gap-2">
-                          Personalize Your Pulse
-                          <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={(e) => { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onOpenHelp?.("pulse-personalizer"); } }}
-                            className="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-blue-500/40 hover:text-blue-400 transition-all cursor-help"
-                          >
-                            <HelpCircle className="h-4 w-4" />
-                          </span>
-                        </h3>
-                        <p className="text-[10px] text-gray-400 mt-1 lowercase first-letter:uppercase font-medium">Configure analytics pinned to your dashboard</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 font-black uppercase tracking-widest whitespace-nowrap shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-                        {enabledPulseIds.length} Active
-                      </span>
-                    </div>
-                  </div>
+        <div className="flex-1 flex flex-col gap-4">
+           {/* Pulse Widget */}
+          <div className={`rounded-[2.5rem] ${glassPanel} p-6 relative group overflow-hidden`}>
+             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+             <div className="flex flex-wrap justify-center gap-2 relative">
+                {activePulses.length === 0 ? (
+                  <div className="opacity-20 italic text-xs py-4 uppercase font-black tracking-widest">No Signals Pinned</div>
+                ) : (
+                  activePulses.map(pulse => (
+                    <button key={pulse.id} onClick={() => setActivePage(ALL_PULSES.find(p => p.id === pulse.id)?.id as any)} className="flex flex-col items-center gap-1 p-3 rounded-2xl bg-white/5 hover:bg-white/10 hover:scale-105 transition-all min-w-[70px]">
+                        <pulse.icon className={`h-4 w-4 ${pulse.color}`} />
+                        <span className="text-[8px] font-black uppercase text-gray-500">{pulse.label}</span>
+                        <span className="text-[9px] font-bold text-white">{pulse.valueText}</span>
+                    </button>
+                  ))
+                )}
+             </div>
+          </div>
+
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="pulse" className="border-none">
+                <AccordionTrigger className={`px-6 py-4 rounded-3xl ${glassPanel} hover:no-underline font-black text-[10px] uppercase tracking-widest text-blue-400`}>
+                    Personalize Pulse Signals
                 </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2 duration-300">
-                    <div className="mt-2">
-                      <Accordion type="multiple" className="w-full space-y-3 border-none">
-                        {[
-                          { 
-                            id: 'core', 
-                            title: 'Security & Core', 
-                            items: ['security', 'vault', 'favorites'],
-                            icon: Shield
-                          },
-                          { 
-                            id: 'finance', 
-                            title: 'Finances & Assets', 
-                            items: ['assets', 'subscriptions'],
-                            icon: CreditCard
-                          },
-                          { 
-                            id: 'health', 
-                            title: 'Health & Life', 
-                            items: ['health', 'diary', 'goals'],
-                            icon: Activity
-                          },
-                          { 
-                            id: 'lifestyle', 
-                            title: 'Essentials & Hubs', 
-                            items: ['vehicles', 'business', 'knowledge', 'travel', 'media'],
-                            icon: Globe
-                          }
-                        ].map((group) => (
-                          <AccordionItem key={group.id} value={group.id} className="border border-white/5 rounded-2xl overflow-hidden px-4 bg-white/5">
-                            <AccordionTrigger className="hover:no-underline py-4">
-                              <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-xl bg-white/5 text-blue-400">
-                                  <group.icon className="h-4 w-4" />
-                                </div>
-                                <span className="text-xs font-black uppercase tracking-widest">{group.title}</span>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="pt-0 pb-5">
-                              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 mt-2">
-                                {ALL_PULSES.filter(p => group.items.includes(p.id)).map(pulse => {
-                                  const isActive = enabledPulseIds.includes(pulse.id)
-                                  return (
-                                    <button
-                                      key={pulse.id}
-                                      onClick={() => togglePulse(pulse.id)}
-                                      className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 group relative h-full justify-center ${isActive
-                                          ? 'bg-blue-600/20 border-blue-500/50 shadow-lg shadow-blue-500/10'
-                                          : 'bg-white/5 border-white/5 opacity-50 hover:opacity-100'
-                                        }`}
-                                    >
-                                      <div className={`p-2.5 rounded-xl transition-all ${isActive ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-gray-400'}`}>
-                                        <pulse.icon className="h-4 w-4" />
-                                      </div>
-                                      <span className="text-[10px] font-black uppercase tracking-tight text-center leading-tight">
-                                        {pulse.label}
-                                      </span>
-                                      {isActive && (
-                                        <div className="absolute top-2 right-2">
-                                          <Zap className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
-                                        </div>
-                                      )}
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
+                <AccordionContent className="pt-4 pb-0">
+                    <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2">
+                        {ALL_PULSES.map(pulse => (
+                            <button key={pulse.id} onClick={() => togglePulse(pulse.id)} className={`p-2 rounded-xl text-[8px] font-black uppercase tracking-tighter border transition-all ${enabledPulseIds.includes(pulse.id) ? 'bg-blue-600/20 border-blue-500/50 text-white' : 'bg-white/5 border-white/5 text-gray-600 hover:text-gray-400'}`}>
+                                {pulse.label}
+                            </button>
                         ))}
-                      </Accordion>
                     </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
+                </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       </div>
 
-
-
-      <div className="flex items-center justify-between pl-1">
-        <div className="flex items-center gap-3">
-            <h2 className="text-xl font-bold opacity-80 italic tracking-tight">Your Hubs</h2>
-            <button onClick={() => onOpenHelp?.("intro")} className="p-1 hover:bg-white/5 rounded-full text-gray-500 hover:text-blue-400 transition-colors">
-            <HelpCircle className="h-4 w-4" />
-            </button>
-        </div>
-
-        {/* View Toggle */}
-        <div className="flex items-center bg-black/20 p-1 rounded-xl border border-white/5">
-            <button 
-                onClick={() => setViewMode('grid')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-                <LayoutGrid className="h-3 w-3" /> List
-            </button>
-            <button 
-                onClick={() => setViewMode('wheel')}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all ${viewMode === 'wheel' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
-            >
-                <WheelIcon className="h-3 w-3" /> Life Wheel
-            </button>
+      {/* Main View Toggle */}
+      <div className="flex items-center justify-between pl-4">
+        <h2 className="text-xl font-black italic uppercase tracking-tighter text-white/80">Operational Mapping</h2>
+        <div className="flex bg-black/20 p-1 rounded-2xl border border-white/5">
+            <button onClick={() => setViewMode('grid')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/20' : 'text-gray-500 hover:text-white'}`}>Grid View</button>
+            <button onClick={() => setViewMode('wheel')} className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'wheel' ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-900/20' : 'text-gray-500 hover:text-white'}`}>Life Wheel</button>
         </div>
       </div>
 
-      {viewMode === 'wheel' ? (
-        <div className={`${glassPanel} p-8 rounded-[2.5rem] relative overflow-hidden animate-in zoom-in-95 duration-500`}>
-            {/* Background Glows */}
-            <div className="absolute -top-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-[100px]" />
-            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-[100px]" />
-
-            <div className="relative z-10 flex flex-col items-center">
-                <div className="text-center mb-8">
-                    <h3 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 italic tracking-tighter">THE LIFE WHEEL</h3>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-2">Personal Equilibrium Overview</p>
-                </div>
-
-                <div className="w-full h-[400px] md:h-[500px]">
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 animate-in slide-in-from-bottom-4 duration-700">
+            <ModuleCard title="Vault" count={vaultCount} description="Secure credentials & sync" icon={<Key />} color="purple" onClick={() => setActivePage('passwords')} isLocked={securitySettings['passwords']?.isLocked} onHelp={() => onOpenHelp?.('passwords')} />
+            <ModuleCard title="Health" count={healthCount} description="Vital signals & medical hub" icon={<Heart />} color="red" onClick={() => setActivePage('type-health-records')} isLocked={securitySettings['type-health-records']?.isLocked} onHelp={() => onOpenHelp?.('health')} />
+            <ModuleCard title="Financial Cards" count={records.filter((r: any) => r.type === "financial-card").length} description="Manage credit & debit cards" icon={<CreditCard />} color="emerald" onClick={() => setActivePage('financial-cards')} isLocked={securitySettings['financial-cards']?.isLocked} onHelp={() => onOpenHelp?.('finance')} />
+            <ModuleCard title="Subscriptions" count={subCount} description="Recurring load monitoring" icon={<Zap />} color="amber" onClick={() => setActivePage('type-subscriptions')} onHelp={() => onOpenHelp?.('subscriptions')} />
+            <ModuleCard title="Vehicles" count={vehicleCount} description="Fleet & transport terminal" icon={<Car />} color="blue" onClick={() => setActivePage('type-vehicles')} onHelp={() => onOpenHelp?.('mobility')} />
+            <ModuleCard title="Business" count={bizCount} description="Strategic project management" icon={<Briefcase />} color="orange" onClick={() => setActivePage('type-business')} onHelp={() => onOpenHelp?.('finance')} />
+            <ModuleCard title="Social" count={digitalCount} description="Online presence audit" icon={<Globe />} color="pink" onClick={() => setActivePage('type-digital-life')} onHelp={() => onOpenHelp?.('social')} />
+            <ModuleCard title="Databases" count={dbCount} description="Custom schema kolektions" icon={<Database />} color="indigo" onClick={() => setActivePage('secure-database')} onHelp={() => onOpenHelp?.('secure-database')} />
+            <ModuleCard title="Diary" count={diaryCount} description="Temporal consciousness log" icon={<Book />} color="rose" onClick={() => setActivePage('type-diary')} onHelp={() => onOpenHelp?.('social')} />
+            <ModuleCard title="Goals" count={goalsCount} description="Objective & habit architecture" icon={<Target />} color="teal" onClick={() => setActivePage('type-goals')} onHelp={() => onOpenHelp?.('goals')} />
+            <ModuleCard title="Media" count={mediaCount} description="High-fidelity visual vault" icon={<Image />} color="cyan" onClick={() => setActivePage('type-media')} onHelp={() => onOpenHelp?.('media')} />
+            <ModuleCard title="Travel" count={travelCount} description="Itinerary & mobility hub" icon={<Plane />} color="indigo" onClick={() => setActivePage('type-travel')} onHelp={() => onOpenHelp?.('mobility')} />
+        </div>
+      ) : (
+        <div className={`p-10 rounded-[3rem] ${glassPanel} animate-in zoom-in-95 duration-700`}>
+             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                <div className="lg:col-span-7 h-[500px] w-full relative">
+                    <div className="absolute inset-0 bg-indigo-500/5 blur-[120px] rounded-full" />
                     <ResponsiveContainer width="100%" height="100%">
                         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={lifeWheelData}>
                             <PolarGrid stroke="#ffffff10" />
-                            <PolarAngleAxis 
-                                dataKey="subject" 
-                                tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 800 }} 
-                            />
-                            <PolarRadiusAxis 
-                                angle={30} 
-                                domain={[0, 100]} 
-                                tick={false}
-                                axisLine={false}
-                            />
-                            <Radar
-                                name="Life Balance"
-                                dataKey="A"
-                                stroke="#6366f1"
-                                fill="#6366f1"
-                                fillOpacity={0.4}
-                                strokeWidth={3}
-                            />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#666', fontSize: 10, fontWeight: 'black' }} />
+                            <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
+                            <Radar name="Balance" dataKey="A" stroke="#6366f1" strokeWidth={4} fill="#6366f1" fillOpacity={0.15} />
                         </RadarChart>
                     </ResponsiveContainer>
                 </div>
-
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl mt-8">
-                    {/* Overall Score */}
-                    <div className="lg:col-span-1 p-6 rounded-3xl bg-white/5 border border-white/5 flex flex-col items-center justify-center text-center">
-                        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-4 shadow-xl shadow-blue-500/20">
-                            <Zap className="h-8 w-8 text-white" />
-                        </div>
-                        <h4 className="text-3xl font-black text-white">{averageLifeScore}%</h4>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mt-2">Overall Vitality</p>
+                <div className="lg:col-span-5 space-y-8">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-3xl font-black italic tracking-tighter text-white uppercase">Personal Equilibrium</h3>
+                        <button onClick={() => setConfigOpen(!configOpen)} className="p-3 rounded-2xl bg-white/5 text-gray-500 hover:text-white transition-all"><Settings2 className="h-4 w-4" /></button>
                     </div>
-
-                    {/* Insights */}
-                    <div className="lg:col-span-2 p-6 rounded-3xl bg-white/5 border border-white/5">
-                        <h4 className="font-black text-xs uppercase tracking-widest text-blue-400 mb-4 flex items-center gap-2">
-                            <Sparkles className="h-4 w-4" /> Hub Insights
-                        </h4>
-                        <div className="space-y-4">
-                            {[...lifeWheelData].sort((a,b) => a.A - b.A).slice(0, 2).map(area => (
-                                <div key={area.subject} className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                                        <span className="text-xs font-bold text-gray-300">Boost {area.subject}</span>
-                                    </div>
-                                    <span className="text-[10px] font-mono text-gray-500">Currently {Math.round(area.A)}%</span>
+                    {configOpen && (
+                        <div className="grid grid-cols-2 gap-3 p-6 rounded-3xl bg-black/20 animate-in slide-in-from-top-4 duration-300">
+                            {lifeWheelData.map(area => (
+                                <div key={area.subject} className="space-y-1">
+                                    <label className="text-[8px] font-black uppercase text-gray-500">{area.subject}</label>
+                                    <input type="number" min="0" max="10" value={area.A} onChange={e => setLocalScores(p => ({ ...p, [area.subject]: parseInt(e.target.value) }))} className="w-full bg-white/5 border border-white/5 rounded-xl p-2 text-center text-xs font-black text-white outline-none" />
                                 </div>
                             ))}
-                            <div className="pt-2 border-t border-white/5">
-                                <p className="text-[10px] leading-relaxed text-gray-400 italic">"Balance is not something you find, it's something you create."</p>
-                            </div>
+                        </div>
+                    )}
+                    <div className="space-y-4">
+                        <div className="p-8 rounded-[2rem] bg-indigo-600/10 border border-indigo-500/20 text-center relative overflow-hidden group">
+                           <div className="absolute -top-10 -right-10 p-10 opacity-5 group-hover:scale-110 transition-transform"><Sparkles className="h-32 w-32" /></div>
+                           <p className="text-[10px] font-black uppercase text-indigo-400 mb-2 tracking-widest">Aggregate Vitality Status</p>
+                           <p className="text-5xl font-black italic text-white tracking-tighter">{averageLifeScore}%</p>
+                           <p className="text-xs text-gray-600 mt-4 leading-relaxed font-bold italic tracking-tight">"Structural integrity depends on multi-node balance across all operational sectors."</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                             <div className="p-4 rounded-2xl bg-white/5 flex flex-col items-center">
+                                <p className="text-[8px] font-black text-gray-500 uppercase mb-1">Monthly Burn</p>
+                                <p className="text-lg font-black italic text-white">${monthlyBurn.toFixed(0)}</p>
+                             </div>
+                             <div className="p-4 rounded-2xl bg-white/5 flex flex-col items-center">
+                                <p className="text-[8px] font-black text-gray-500 uppercase mb-1">Active Targets</p>
+                                <p className="text-lg font-black italic text-white">{goalsCount}</p>
+                             </div>
+                             <div className="p-4 rounded-2xl bg-white/5 flex flex-col items-center">
+                                <p className="text-[8px] font-black text-gray-500 uppercase mb-1">Security Rating</p>
+                                <p className="text-lg font-black italic text-emerald-500">{securityScore}%</p>
+                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-        <ModuleCard
-          title="Vault"
-          count={vaultCount}
-          description="Manage your passwords, logins, and secure notes."
-          icon={<Key className="h-6 w-6 text-purple-500" />}
-          colorClass="border-purple-500"
-          shadowColor="rgba(168, 85, 247, 0.35)"
-          buttonColorClass="text-purple-400 hover:bg-purple-500"
-          onClick={() => setActivePage('passwords')}
-          onHelp={() => onOpenHelp?.("passwords")}
-          isLocked={securitySettings['passwords']?.isLocked}
-        />
-        <ModuleCard
-          title="Health"
-          count={healthCount}
-          description="Track health records, medications, and vitals."
-          icon={<Heart className="h-6 w-6 text-red-500" />}
-          colorClass="border-red-500"
-          shadowColor="rgba(239, 68, 68, 0.35)"
-          buttonColorClass="text-red-400 hover:bg-red-500"
-          onClick={() => setActivePage('type-health-records')}
-          onHelp={() => onOpenHelp?.("health")}
-          isLocked={securitySettings['type-health-records']?.isLocked}
-        />
-        <ModuleCard
-          title="Financial Cards"
-          count={records.filter((r: any) => r.type === "financial-card").length}
-          description="Manage your credit and debit cards securely."
-          icon={<CreditCard className="h-6 w-6 text-yellow-500" />}
-          colorClass="border-yellow-500"
-          shadowColor="rgba(234, 179, 8, 0.35)"
-          buttonColorClass="text-yellow-400 hover:bg-yellow-500"
-          onClick={() => setActivePage('financial-cards')}
-          onHelp={() => onOpenHelp?.("finance")}
-          isLocked={securitySettings['financial-cards']?.isLocked}
-        />
-        <ModuleCard
-          title="Vehicles"
-          count={vehicleCount}
-          description="Manage vehicle profiles, maintenance, and docs."
-          icon={<Car className="h-6 w-6 text-blue-500" />}
-          colorClass="border-blue-500"
-          shadowColor="rgba(59, 130, 246, 0.35)"
-          buttonColorClass="text-blue-400 hover:bg-blue-500"
-          onClick={() => setActivePage('type-vehicles')}
-          onHelp={() => onOpenHelp?.("mobility")}
-          isLocked={securitySettings['type-vehicles']?.isLocked}
-        />
-        <ModuleCard
-          title="Business"
-          count={bizCount}
-          description="Organize side projects, clients, and contracts."
-          icon={<Briefcase className="h-6 w-6 text-orange-500" />}
-          colorClass="border-orange-500"
-          shadowColor="rgba(249, 115, 22, 0.35)"
-          buttonColorClass="text-orange-400 hover:bg-orange-500"
-          onClick={() => setActivePage('type-business')}
-          onHelp={() => onOpenHelp?.("finance")}
-          isLocked={securitySettings['type-business']?.isLocked}
-        />
-        <ModuleCard
-          title="Assets"
-          count={assetCount}
-          description="Track physical inventory and asset values."
-          icon={<Box className="h-6 w-6 text-emerald-500" />}
-          colorClass="border-emerald-500"
-          shadowColor="rgba(16, 185, 129, 0.35)"
-          buttonColorClass="text-emerald-400 hover:bg-emerald-500"
-          onClick={() => setActivePage('type-assets')}
-          onHelp={() => onOpenHelp?.("finance")}
-          isLocked={securitySettings['type-assets']?.isLocked}
-        />
-        <ModuleCard
-          title="Social Life"
-          count={digitalCount}
-          description="Manage social media and online assets."
-          icon={<Globe className="h-6 w-6 text-pink-500" />}
-          colorClass="border-pink-500"
-          shadowColor="rgba(236, 72, 153, 0.35)"
-          buttonColorClass="text-pink-400 hover:bg-pink-500"
-          onClick={() => setActivePage('type-digital-life')}
-          onHelp={() => onOpenHelp?.("social")}
-          isLocked={securitySettings['type-digital-life']?.isLocked}
-        />
-        <ModuleCard
-          title="Secure Database"
-          count={dbCount}
-          description="High-fidelity kolektions with custom schemas and dynamic reports."
-          icon={<Database className="h-6 w-6 text-indigo-500" />}
-          colorClass="border-indigo-500"
-          shadowColor="rgba(99, 102, 241, 0.35)"
-          buttonColorClass="text-indigo-400 hover:bg-indigo-500"
-          onClick={() => setActivePage('secure-database')}
-          onHelp={() => onOpenHelp?.("secure-database")}
-        />
-        <ModuleCard
-          title="My Diary"
-          count={diaryCount}
-          description="Personal journal and daily thoughts."
-          icon={<Book className="h-6 w-6 text-rose-500" />}
-          colorClass="border-rose-500"
-          shadowColor="rgba(244, 63, 94, 0.35)"
-          buttonColorClass="text-rose-400 hover:bg-rose-500"
-          onClick={() => setActivePage('type-diary')}
-          onHelp={() => onOpenHelp?.("social")}
-          isLocked={securitySettings['diary']?.isLocked}
-        />
-        <ModuleCard
-          title="Subscriptions"
-          count={records.filter((r: any) => r.category === "Subscriptions" || r.type === "subscription").length}
-          description="Track recurring expenses and renewals."
-          icon={<CreditCard className="h-6 w-6 text-green-500" />}
-          colorClass="border-green-500"
-          shadowColor="rgba(34, 197, 94, 0.35)"
-          buttonColorClass="text-green-400 hover:bg-green-500"
-          onClick={() => setActivePage('type-subscriptions')}
-          onHelp={() => onOpenHelp?.("social")}
-          isLocked={securitySettings['type-subscriptions']?.isLocked}
-        />
-        <ModuleCard
-          title="Media Vault"
-          count={records.filter((r: any) => r.category === "Secure Media").length}
-          description="Encrypted gallery for photos and videos."
-          icon={<Image className="h-6 w-6 text-teal-500" />}
-          colorClass="border-teal-500"
-          shadowColor="rgba(20, 184, 166, 0.35)"
-          buttonColorClass="text-teal-400 hover:bg-teal-500"
-          onClick={() => setActivePage('type-media')}
-          onHelp={() => onOpenHelp?.("media")}
-          isLocked={securitySettings['media']?.isLocked}
-        />
-        <ModuleCard
-          title="Travel"
-          count={travelCount}
-          description="Travel plans, passports, and itineraries."
-          icon={<Plane className="h-6 w-6 text-indigo-500" />}
-          colorClass="border-indigo-500"
-          shadowColor="rgba(99, 102, 241, 0.35)"
-          buttonColorClass="text-indigo-400 hover:bg-indigo-500"
-          onClick={() => setActivePage('type-travel')}
-          onHelp={() => onOpenHelp?.("mobility")}
-          isLocked={securitySettings['type-travel']?.isLocked}
-        />
-        <ModuleCard
-          title="Task Architect"
-          count={records.filter((r: any) => r.type === "architect-task").length}
-          description="Strategic execution and objective tracking engine."
-          icon={<CheckCircle2 className="h-6 w-6 text-blue-500" />}
-          colorClass="border-blue-500"
-          shadowColor="rgba(59, 130, 246, 0.35)"
-          buttonColorClass="text-blue-400 hover:bg-blue-500"
-          onClick={() => setActivePage('type-tasks')}
-          onHelp={() => onOpenHelp?.("goals")}
-        />
-        <ModuleCard
-          title="Goals"
-          count={goalsCount}
-          description="Life goals and interactive progress tracking."
-          icon={<Target className="h-6 w-6 text-pink-500" />}
-          colorClass="border-pink-500"
-          shadowColor="rgba(236, 72, 153, 0.35)"
-          buttonColorClass="text-pink-400 hover:bg-pink-500"
-          onClick={() => setActivePage('type-goals')}
-          onHelp={() => onOpenHelp?.("goals")}
-          isLocked={securitySettings['goals']?.isLocked}
-          />
+             </div>
         </div>
       )}
 
-      <div className={`p-8 rounded-[2.5rem] ${glassPanel} border border-white/10 shadow-3xl mb-8`}>
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
-              <CheckCircle2 className="h-6 w-6" />
+      {/* Execution & Activity Section */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div className={`p-8 rounded-[3rem] ${glassPanel}`}>
+                 <div className="flex justify-between items-center mb-8 pr-2">
+                    <div className="flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-blue-500" />
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter">Execution Matrix</h2>
+                    </div>
+                    <button onClick={() => setActivePage('type-tasks')} className="text-[10px] font-black text-blue-500 hover:text-white uppercase tracking-widest">Full Command ΓÇö&gt;</button>
+                 </div>
+                 <div className="space-y-3">
+                    {records.filter(r => r.type === "architect-task" && !r.item_metadata?.completed).slice(0, 4).map(task => (
+                        <div key={task.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between group hover:border-blue-500/30 transition-all">
+                             <div className="flex items-center gap-4">
+                                <div className={`h-1.5 w-1.5 rounded-full ${task.item_metadata?.priority === 'urgent' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                                <span className="text-xs font-bold text-white uppercase tracking-tight">{task.title}</span>
+                             </div>
+                             <button onClick={() => updateItem(task.id, { item_metadata: { ...task.item_metadata, completed: true } })} className="opacity-0 group-hover:opacity-100 p-2 text-gray-500 hover:text-emerald-500 transition-all"><CheckCircle2 className="h-4 w-4" /></button>
+                        </div>
+                    ))}
+                    {records.filter(r => r.type === "architect-task" && !r.item_metadata?.completed).length === 0 && <div className="text-center py-6 opacity-20 text-[10px] font-black uppercase">No Active Protocols</div>}
+                 </div>
             </div>
-            <h2 className="text-xl font-black italic uppercase tracking-tighter">Execution Matrix</h2>
-          </div>
-          <button onClick={() => setActivePage('type-tasks')} className="text-[10px] font-black uppercase text-blue-500 hover:text-blue-400 transition-colors tracking-[0.2em]">View Full Hub —&gt;</button>
-        </div>
-        <div className="space-y-4">
-          {records.filter(r => r.type === "architect-task" && !r.item_metadata?.completed)
-            .sort((a,b) => {
-              const priorities: Record<string, number> = { urgent: 0, high: 1, medium: 2, low: 3 }
-              return priorities[a.item_metadata?.priority as keyof typeof priorities] - priorities[b.item_metadata?.priority as keyof typeof priorities]
-            })
-            .slice(0, 3).map((task) => (
-            <div key={task.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 flex items-center justify-between group hover:border-blue-500/30 transition-all">
-              <div className="flex items-center gap-4">
-                <div className={`h-1.5 w-1.5 rounded-full ${task.item_metadata?.priority === 'urgent' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-blue-500'}`} />
-                <div>
-                  <div className="text-sm font-bold text-white uppercase tracking-tight">{task.title}</div>
-                  <div className="text-[8px] font-black uppercase text-gray-600 tracking-widest">{task.item_metadata?.priority} priority</div>
-                </div>
-              </div>
-              <button 
-                onClick={async () => {
-                  await updateItem(task.id, { item_metadata: { ...task.item_metadata, completed: true, completedAt: new Date().toISOString() } })
-                  toast.success("Objective Synchronized")
-                }}
-                className="p-2 rounded-xl text-gray-700 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all opacity-0 group-hover:opacity-100"
-              >
-                <CheckCircle2 className="h-5 w-5" />
-              </button>
+
+            <div className={`p-8 rounded-[3rem] ${glassPanel}`}>
+                 <div className="flex justify-between items-center mb-8 pr-2">
+                    <div className="flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-amber-500" />
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter">Temporal Log</h2>
+                    </div>
+                    {recentItems.length > 0 && <button onClick={() => { setClearedAt(Date.now()); localStorage.setItem('dashboard_activity_cleared_at', Date.now().toString()); }} className="text-[10px] font-black text-amber-500 hover:text-white uppercase tracking-widest">Purge Logs</button>}
+                 </div>
+                 <div className="space-y-2">
+                    {recentItems.map(item => (
+                        <div key={item.id} className="flex items-center justify-between p-3 rounded-2xl bg-white/2 hover:bg-white/5 transition-all text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                            <span className="truncate max-w-[200px] text-white/80">{item.title || "Untitled Record"}</span>
+                            <span className="opacity-30">{new Date(item.updatedAt).toLocaleDateString()}</span>
+                        </div>
+                    ))}
+                    {recentItems.length === 0 && <div className="text-center py-6 opacity-20 text-[10px] font-black uppercase">Archive Synchronized</div>}
+                 </div>
             </div>
-          ))}
-          {records.filter(r => r.type === "architect-task" && !r.item_metadata?.completed).length === 0 && (
-            <div className="text-center py-6 opacity-30 italic text-xs uppercase font-black tracking-widest">No active objectives detected</div>
-          )}
-        </div>
       </div>
 
-      <div className={`p-0 rounded-3xl ${glassPanel} overflow-hidden shadow-2xl border border-white/10`}>
-        <Accordion type="single" collapsible className="w-full">
-          <AccordionItem value="activity" className="border-none">
-            <AccordionTrigger className="px-6 py-5 hover:no-underline [&[data-state=open]>svg]:rotate-180 group/trigger">
-              <div className="flex items-center justify-between w-full pr-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div className="text-left">
-                    <h2 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
-                      Recent Activity
-                      <span 
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => { e.stopPropagation(); onOpenHelp?.("settings-recents"); }}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onOpenHelp?.("settings-recents"); }}}
-                        className="p-1 px-1.5 rounded-lg bg-white/5 text-gray-400 hover:text-blue-400 transition-all flex items-center gap-1 cursor-pointer"
-                      >
-                        <HelpCircle className="h-3.5 w-3.5" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">Help</span>
-                      </span>
-                    </h2>
-                    <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-tight">{recentItems.length} Changes Captured</p>
-                  </div>
-                </div>
-                {recentItems.length > 0 && (
-                  <span
-                    onClick={(e) => { e.stopPropagation(); handleClearActivity(); }}
-                    className="text-[10px] font-black uppercase tracking-widest text-blue-500 hover:text-white transition-colors bg-blue-500/5 px-3 py-1.5 rounded-full border border-blue-500/10 cursor-pointer"
-                  >
-                    Clear History
-                  </span>
-                )}
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-6 pb-6 pt-0 animate-in slide-in-from-top-2 duration-300">
-              <div className="space-y-2">
-                {recentItems.map((item: any) => (
-                  <div key={item.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all group cursor-default">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-black/20 border border-white/5`}>
-                        {getIconForCategory(item.category)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-sm tracking-wide text-gray-200">{item.title || item.name || "Untitled"}</p>
-                        <p className="text-[10px] text-gray-500 flex items-center gap-2 uppercase font-black tracking-tight">
-                          {item.category || "General"} <span className="text-gray-700">•</span> <span>{new Date(item.updatedAt).toLocaleDateString()}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-blue-400 transition-colors" />
-                  </div>
-                ))}
-                {recentItems.length === 0 && (
-                  <div className="text-center py-10">
-                    <div className="inline-flex p-4 rounded-full bg-white/5 mb-3 text-gray-600">
-                      <Clock className="h-8 w-8" />
-                    </div>
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">No activity found</p>
-                  </div>
-                )}
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
-
-      {/* Modals */}
-      {addPasswordModalOpen && (
-        <AddPasswordModal
-          onClose={() => setAddPasswordModalOpen(false)}
-          onAdd={(item: any) => {
-            addItem({
-              ...item,
-              type: "password", // default
-              category: "Logins"
-            })
-            setAddPasswordModalOpen(false)
-          }}
-          folders={folders}
-          theme={theme}
-        />
-      )}
-      {addFolderModalOpen && (
-        <AddFolderModal
-          onClose={() => setAddFolderModalOpen(false)}
-          onAdd={async (folder: any) => {
-            await addFolder(folder.name, undefined, folder.parentFolder)
-            setAddFolderModalOpen(false)
-          }}
-          folders={folders}
-          theme={theme}
-        />
-      )}
+      <Modals addPasswordOpen={addPasswordModalOpen} setAddPasswordOpen={setAddPasswordModalOpen} addFolderOpen={addFolderModalOpen} setAddFolderOpen={setAddFolderModalOpen} folders={folders} theme={theme} addItem={addItem} addFolder={addFolder} />
     </div>
   )
 }
 
-// -- Subcomponents --
+function ModuleCard({ title, count, description, icon, color, onClick, isLocked, onHelp }: any) {
+    const colors: any = {
+        purple: "border-purple-500/30 hover:border-purple-500 text-purple-400 shadow-purple-900/10",
+        red: "border-red-500/30 hover:border-red-500 text-red-500 shadow-red-900/10",
+        emerald: "border-emerald-500/30 hover:border-emerald-500 text-emerald-400 shadow-emerald-900/10",
+        amber: "border-amber-500/30 hover:border-amber-500 text-amber-500 shadow-amber-900/10",
+        blue: "border-blue-500/30 hover:border-blue-500 text-blue-400 shadow-blue-900/10",
+        orange: "border-orange-500/30 hover:border-orange-500 text-orange-400 shadow-orange-900/10",
+        pink: "border-pink-500/30 hover:border-pink-500 text-pink-400 shadow-pink-900/10",
+        indigo: "border-indigo-500/30 hover:border-indigo-500 text-indigo-400 shadow-indigo-900/10",
+        rose: "border-rose-500/30 hover:border-rose-500 text-rose-500 shadow-rose-900/10",
+        teal: "border-teal-500/30 hover:border-teal-500 text-teal-400 shadow-teal-900/10",
+        cyan: "border-cyan-500/30 hover:border-cyan-500 text-cyan-400 shadow-cyan-900/10",
+    }
+    const colorStyle = colors[color] || colors.blue
 
-interface ModuleCardProps {
-  title: string
-  description: string
-  icon: any
-  colorClass: string
-  buttonColorClass: string
-  shadowColor?: string
-  onClick: () => void
-  count: number
-  isLocked?: boolean
-  onHelp?: () => void
-}
-
-function ModuleCard({ title, description, icon, colorClass, buttonColorClass, shadowColor, onClick, count, isLocked, onHelp }: ModuleCardProps) {
-  return (
-    <div
-      onClick={onClick}
-      className={`bg-[#1e1e1e] border-2 rounded-3xl flex flex-col overflow-hidden transition-all duration-300 group ${colorClass} relative w-full text-left active:scale-[0.98] cursor-pointer`}
-      style={{
-        boxShadow: shadowColor
-          ? `0 0 30px ${shadowColor}, 0 0 60px ${shadowColor.replace('0.35', '0.15')}, 0 8px 32px rgba(0,0,0,0.7)`
-          : '0 8px 32px rgba(0,0,0,0.7)'
-      }}
-    >
-      {isLocked && <Lock className="absolute top-4 right-4 h-4 w-4 text-yellow-500 z-10" />}
-      <div className="p-4 md:p-6 flex-1">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-white/5 group-hover:scale-110 group-active:scale-95 transition-transform">
-              {icon}
+    return (
+        <div className={`text-left p-8 rounded-[3rem] border bg-white/5 backdrop-blur-3xl transition-all hover:scale-[1.02] active:scale-[0.98] group relative flex flex-col justify-between h-full ${colorStyle}`}>
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+                {icon && <div className={color === 'pink' ? 'text-pink-500' : ''}>{Object.cloneElement(icon, { className: "h-20 w-20" })}</div>}
             </div>
-            <div>
-              <h3 className="font-bold text-sm md:text-lg text-white leading-tight">{title}</h3>
-              {count > 0 && <span className="text-[10px] font-mono bg-white/5 px-2 py-0.5 rounded text-gray-500">{count} Items</span>}
+            
+            <div className="relative z-10 w-full mb-8">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 rounded-2xl bg-white/5 cursor-pointer" onClick={onClick}>
+                          {icon && Object.cloneElement(icon, { className: "h-5 w-5" })}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xl font-black italic tracking-tighter text-white uppercase cursor-pointer" onClick={onClick}>{title}</h4>
+                          <button 
+                            type="button" 
+                            onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
+                            className="p-1 rounded-full hover:bg-white/10 text-gray-500 hover:text-blue-400 transition-all focus:outline-none"
+                            title={`Explain ${title}`}
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                          </button>
+                        </div>
+                    </div>
+                    {isLocked && <Shield className="h-4 w-4 text-white opacity-40" />}
+                </div>
+                <div className="mb-4">
+                  <span className="bg-white/5 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter text-gray-400 border border-white/5">{count} Items</span>
+                </div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed cursor-pointer" onClick={onClick}>{description}</p>
             </div>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
-            onPointerDown={(e) => e.stopPropagation()}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onHelp?.(); }}}
-            className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all cursor-pointer bg-white/5"
-            title="Help"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
+            
+            <div className="flex items-end justify-between relative z-10 cursor-pointer" onClick={onClick}>
+                <p className="text-5xl font-black italic tracking-tighter text-white">{count}</p>
+                <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Open Hub</span>
+                    <ChevronRight className="h-3 w-3 text-gray-700" />
+                </div>
+            </div>
         </div>
-        <p className="text-gray-400 text-[10px] md:text-xs leading-relaxed line-clamp-2 md:line-clamp-none">{description}</p>
-      </div>
-    </div>
-  )
+    )
 }
 
-function getIconForCategory(category: string) {
-  if (!category) return <Shield className="h-4 w-4 opacity-50" />
-  if (category.includes("Health") || category.includes("Med") || category.includes("Vital")) return <Heart className="h-4 w-4 text-red-500" />
-  if (category.includes("Vehicle")) return <Car className="h-4 w-4 text-blue-500" />
-  if (category.includes("Business")) return <Briefcase className="h-4 w-4 text-orange-500" />
-  if (category.includes("Asset")) return <Box className="h-4 w-4 text-emerald-500" />
-  if (category.includes("Digital") || category.includes("Social")) return <Globe className="h-4 w-4 text-pink-500" />
-  if (category.includes("Diary")) return <Book className="h-4 w-4 text-rose-500" />
-  if (category.includes("Knowledge")) return <Book className="h-4 w-4 text-yellow-500" />
-  if (category.includes("Travel")) return <Plane className="h-4 w-4 text-indigo-500" />
-  if (category.includes("Goal")) return <Target className="h-4 w-4 text-pink-500" />
-  if (category.includes("Media")) return <Image className="h-4 w-4 text-teal-500" />
-  if (category.includes("Sub")) return <CreditCard className="h-4 w-4 text-green-500" />
-  return <Key className="h-4 w-4 text-purple-500" />
+function Modals({ addPasswordOpen, setAddPasswordOpen, addFolderOpen, setAddFolderOpen, folders, theme, addItem, addFolder }: any) {
+    return (
+        <>
+            {addPasswordOpen && <AddPasswordModal onClose={() => setAddPasswordOpen(false)} onAdd={(item: any) => { addItem({ ...item, type: "password", category: "Logins" }); setAddPasswordOpen(false); }} folders={folders} theme={theme} />}
+            {addFolderOpen && <AddFolderModal onClose={() => setAddFolderOpen(false)} onAdd={async (folder: any) => { await addFolder(folder.name, undefined, folder.parentFolder); setAddFolderOpen(false); }} folders={folders} theme={theme} />}
+        </>
+    )
 }
 
+const Object: any = {
+    cloneElement: (el: any, props: any) => { 
+        if (!el) return null
+        const Icon = el.type
+        return <Icon {...el.props} {...props} />
+    }
+}

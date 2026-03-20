@@ -45,6 +45,7 @@ import { VaultItem } from "@/hooks/use-vault"
 import BackupRecovery from "./settings/backup-recovery"
 import ExportData from "./settings/export-data"
 import TwoFactorAuthModal from "@/components/modals/two-factor-auth-modal"
+import { MOCKED_HEALTH, MOCKED_BUDGET, MOCKED_PASSWORDS } from "@/lib/mock-data"
 
 // Robust mock identification logic helper
 const isItemMock = (r: any) => {
@@ -433,6 +434,50 @@ export default function Settings({
 
     reader.readAsText(file)
     e.target.value = "" // Reset the file input
+  }
+
+  // Robust shared Sanitize logic
+  const handleSanitize = async () => {
+    // 1. Virtual Mock Data Cleanup (New System)
+    const virtualMockKeys = [
+      'all_mock_data_enabled',
+      'passwords_mock_enabled',
+      'passwords_mock_dismissed',
+      'health_mock_enabled',
+      'health_mock_dismissed',
+      'subscriptions_mock_enabled',
+      'subscriptions_mock_dismissed',
+      'goals_mock_enabled',
+      'goals_mock_dismissed',
+      'tasks_mock_enabled',
+      'tasks_mock_dismissed',
+      'budget_mock_data_enabled',
+      'hub_mock_settings'
+    ];
+    
+    virtualMockKeys.forEach(key => localStorage.removeItem(key));
+    
+    // 2. Physical Database Cleanup (Legacy/Hybrid)
+    const mockItems = records.filter(r => isItemMock(r) && r.type !== 'password' && r.type !== 'login');
+    
+    if (mockItems.length === 0) {
+      window.dispatchEvent(new Event('storage'));
+      return toast.success("Virtual mock data flags reset. Database is clean.");
+    }
+    
+    if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records in database. Do you want to permanently delete them and keep only your real data? \n\n(IMPORTANT: This will NOT touch your secure Passwords)`)) {
+      if (!deleteItem) return;
+      toast.info("Cleaning up database mock data...");
+      for (const item of mockItems) {
+        await deleteItem(item.id, item.type || "item", { skipRefresh: true });
+      }
+      window.dispatchEvent(new CustomEvent('vault-refresh'));
+      window.dispatchEvent(new Event('storage'));
+      toast.success(`Successfully removed ${mockItems.length} mock records. Virtual mock flags reset.`);
+    } else {
+      window.dispatchEvent(new Event('storage'));
+      toast.success("Virtual mock data flags reset.");
+    }
   }
 
 
@@ -1015,20 +1060,7 @@ export default function Settings({
               
               <div className="pt-6 border-t border-white/5 mt-auto">
                 <button 
-                  onClick={async () => {
-                    const mockItems = records.filter(isItemMock);
-                    if (mockItems.length === 0) return toast.info("No mock data detected in your vault.");
-                    
-                    if (confirm(`DETECTED: ${mockItems.length} leftover mock/demo records. \n\nWould you like to PERMANENTLY delete them now to sanitize your vault?`)) {
-                      if (!deleteItem) return;
-                      toast.info("Sanitizing vault...");
-                      for (const item of mockItems) {
-                        await deleteItem(item.id, item.type || "item", { skipRefresh: true });
-                      }
-                      window.dispatchEvent(new CustomEvent('vault-refresh'));
-                      toast.success(`Sanitized: Removed ${mockItems.length} mock records.`);
-                    }
-                  }}
+                  onClick={handleSanitize}
                   className="w-full py-4 px-6 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/20 rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-[10px]"
                 >
                   <Database className="h-4 w-4" /> Sanitize Vault (Wipe Mocks)
@@ -1353,29 +1385,14 @@ export default function Settings({
                   </button>
 
                   <button
-                    onClick={async () => {
-                      // EXPLICITLY filter out anything related to passwords/logins
-                      const mockItems = records.filter(r => isItemMock(r) && r.type !== 'password' && r.type !== 'login');
-                      
-                      if (mockItems.length === 0) return toast.info("No mock data found to clean up.");
-                      
-                      if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records. Do you want to permanently delete them and keep only your real data? \n\n(IMPORTANT: This will NOT touch your secure Passwords)`)) {
-                        if (!deleteItem) return;
-                        toast.info("Cleaning up mock data...");
-                        for (const item of mockItems) {
-                          await deleteItem(item.id, item.type || "item", { skipRefresh: true });
-                        }
-                        window.dispatchEvent(new CustomEvent('vault-refresh'));
-                        toast.success(`Successfully removed ${mockItems.length} mock records. Your actual passwords remained untouched.`);
-                      }
-                    }}
+                    onClick={handleSanitize}
                     className="w-full py-5 bg-yellow-600/20 hover:bg-yellow-600/30 border border-yellow-600/50 text-yellow-500 rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs"
                   >
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-2">
                          <Database className="h-4 w-4" /> Sanitize Vault (Wipe Mocks)
                       </div>
-                      <span className="text-[8px] opacity-60 normal-case font-medium">Safe: Skips Passwords</span>
+                      <span className="text-[8px] opacity-60 normal-case font-medium">Reset Virtual Mocks & Clean DB</span>
                     </div>
                   </button>
 
@@ -1443,18 +1460,47 @@ export default function Settings({
                   </button>
 
                   <button
-                    onClick={() => {
-                      toast.info("Module demonstration injection coming soon!");
+                    onClick={async () => {
+                      if (confirm("Inject Health Hub Demo Records? This will add sample vitals and medical data (Mock) to explore trends.")) {
+                         if (!bulkAddItems) return;
+                         // Add mock flag to these specifically
+                         const mockHealth = MOCKED_HEALTH.map(h => ({ ...h, is_mock: true }));
+                         await bulkAddItems(mockHealth);
+                         window.dispatchEvent(new CustomEvent('vault-refresh'));
+                         toast.success("Health Hub demonstration data injected!");
+                      }
                     }}
-                    className="p-4 rounded-2xl bg-white/5 border border-white/5 opacity-50 cursor-not-allowed text-left"
+                    className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group"
                   >
                     <div className="flex items-center gap-3 mb-2">
-                       <div className="p-2 rounded-lg bg-white/10 text-gray-400">
-                          <Grid className="h-4 w-4" />
+                       <div className="p-2 rounded-lg bg-red-400/10 text-red-500 group-hover:scale-110 transition-transform">
+                          <Activity className="h-4 w-4" />
                        </div>
-                       <div className="font-bold text-sm">Health Hub Demo</div>
+                       <div className="font-bold text-sm text-white">Health Hub Demo</div>
                     </div>
                     <p className="text-[10px] text-gray-400 leading-relaxed">Inject sample vitals and medications for testing.</p>
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      if (confirm("Inject Password Vault Demo Records? This will add sample credentials (Mock) for various services.")) {
+                         if (!bulkAddItems) return;
+                         // Add mock flag to these specifically
+                         const mockPass = MOCKED_PASSWORDS.map(p => ({ ...p, is_mock: true, type: 'password' }));
+                         await bulkAddItems(mockPass);
+                         window.dispatchEvent(new CustomEvent('vault-refresh'));
+                         toast.success("Vault demonstration data injected!");
+                      }
+                    }}
+                    className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                       <div className="p-2 rounded-lg bg-purple-400/10 text-purple-400 group-hover:scale-110 transition-transform">
+                          <Lock className="h-4 w-4" />
+                       </div>
+                       <div className="font-bold text-sm text-white">Vault Demo</div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 leading-relaxed">Inject sample passwords and bank cards for testing.</p>
                   </button>
 
                    <div className="p-4 rounded-2xl border border-blue-500/20 bg-blue-500/5 flex items-center gap-3">
