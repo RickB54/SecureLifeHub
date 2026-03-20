@@ -1055,6 +1055,7 @@ export default function Settings({
             theme={theme || "dark"} 
             records={records}
             deleteItem={deleteItem}
+            bulkAddItems={bulkAddItems}
           />
         </SettingsCard>
 
