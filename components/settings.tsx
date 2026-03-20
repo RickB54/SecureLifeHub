@@ -460,14 +460,38 @@ export default function Settings({
     virtualMockKeys.forEach(key => localStorage.removeItem(key));
     
     // 2. Physical Database Cleanup (Legacy/Hybrid)
-    const mockItems = records.filter(r => isItemMock(r) && r.type !== 'password' && r.type !== 'login');
+    const affectedModulesSet = new Set<string>();
+    const mockItems = records.filter(r => {
+      // Always wipe items with explicit mock tags regardless of type
+      const isTagged = r.item_metadata?.mock === true || r.item_metadata?.is_mock === true || r.is_mock === true;
+      
+      // For everything else, use heuristic logic IF it's not a password/login
+      const isSensitive = r.type === 'password' || r.type === 'login' || r.category === 'Logins';
+      const isHeuristic = !isSensitive && isItemMock(r);
+
+      if (isTagged || isHeuristic) {
+        // Identify module for summary
+        if (r.type === "architect-task") affectedModulesSet.add("Task Architect");
+        else if (r.category === "Health Records" || r.category === "Medications" || r.item_metadata?.is_vital) affectedModulesSet.add("Health Hub");
+        else if (r.category === "Goals" || r.item_metadata?.is_goal) affectedModulesSet.add("Goals & Habits");
+        else if (r.category === "Subscriptions" || r.type === "subscription") affectedModulesSet.add("Subscriptions");
+        else if (r.category === "Budget" || r.item_metadata?.is_budget) affectedModulesSet.add("Budget Manager");
+        else if (r.type === "password" || r.type === "login") affectedModulesSet.add("Vault (Tagged Demo Only)");
+        else affectedModulesSet.add(r.category || "Other Items");
+        
+        return true;
+      }
+      return false;
+    });
     
     if (mockItems.length === 0) {
       window.dispatchEvent(new Event('storage'));
-      return toast.success("Virtual mock data flags reset. Database is clean.");
+      toast.success("Virtual mock data flags reset. Database is clean.");
+      return;
     }
     
-    if (confirm(`MASS CLEANUP: Found ${mockItems.length} mock records in database. Do you want to permanently delete them and keep only your real data? \n\n(IMPORTANT: This will NOT touch your secure Passwords)`)) {
+    const affectedList = Array.from(affectedModulesSet).sort();
+    if (confirm(`MASS CLEANUP: Found ${mockItems.length} demo records across these modules:\n• ${affectedList.join("\n• ")}\n\nDo you want to PERMANENTLY DELETE these mock records and keep only your real data? \n\n(IMPORTANT: This will NOT touch your real, personal passwords)`)) {
       if (!deleteItem) return;
       toast.info("Cleaning up database mock data...");
       for (const item of mockItems) {
@@ -1794,13 +1818,13 @@ function ModuleAccessSettings({
       "type-budget": MOCKED_BUDGET
     };
 
+    const modulesToFill: string[] = [];
+
     // 1. Identify modules with 0 real records
     modules.forEach(mod => {
       const realRecords = records.filter(r => {
-        // Exclude items already marked as mock
         if (isItemMock(r)) return false;
         
-        // Count items belonging to this module
         if (mod.id === "passwords" && (r.type === "password" || r.type === "login")) return true;
         if (mod.id === "type-health-records" && (r.category === "Health Records" || r.category === "Medications" || r.item_metadata?.is_vital)) return true;
         if (mod.id === "type-goals" && (r.category === "Goals" || r.item_metadata?.is_goal)) return true;
@@ -1812,10 +1836,11 @@ function ModuleAccessSettings({
       });
 
       if (realRecords.length === 0 && moduleMocks[mod.id]) {
-        // Module is empty and has mock data available
+        modulesToFill.push(mod.label);
+        
         const mocks = moduleMocks[mod.id].map(m => ({
           ...m,
-          id: undefined, // Let Supabase generate new ID
+          id: undefined,
           item_metadata: {
             ...m.item_metadata,
             mock: true,
@@ -1829,20 +1854,17 @@ function ModuleAccessSettings({
       }
     });
 
-    if (allPayloads.length > 0) {
-      try {
-        await bulkAddItems(allPayloads);
-        setMockSettings(updatedMocks);
-        localStorage.setItem("hub_mock_settings", JSON.stringify(updatedMocks));
-        window.dispatchEvent(new Event('storage'));
-        toast.success(`Successfully populated ${totalAdded} demo records across empty modules.`);
-      } catch (e) {
-        toast.error("Failed to populate demo data. Please try again.");
-        console.error(e);
-      }
-    } else {
+    if (allPayloads.length === 0) {
       toast.info("All modules already contain real data. No mock data was added.");
+      return;
     }
+
+    const confirmModuleFill = window.confirm(
+      `DEMO DATA INJECTION:\n\nWe found that the following modules are empty:\n• ${modulesToFill.join("\n• ")}\n\nWould you like to populate them with ${totalAdded} high-fidelity demo records? \n\n(Modules with your existing real data will be skipped)`
+    );
+    if (!confirmModuleFill) return;
+
+    toast.info("Populating modules...");
   }
 
   const handleSetPin = (moduleId: string) => {
