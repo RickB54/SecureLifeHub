@@ -486,7 +486,8 @@ export default function Settings({
     
     if (mockItems.length === 0) {
       window.dispatchEvent(new Event('storage'));
-      toast.success("Virtual mock data flags reset. Database is clean.");
+      toast.success("Database is clean! No mock records detected.");
+      alert(`SCAN COMPLETE:\n\nWe did not find any records with the 'Mock' tag or matching common demo patterns.\n\nYour existing records appear to be real personal data, so they were spared. If you see a record you want gone, you can delete it manually or use the 'Nuclear Wipe' below if you want to clear EVERYTHING.`);
       return;
     }
     
@@ -1796,18 +1797,15 @@ function ModuleAccessSettings({
   }
 
   const handleFillMissingMockData = async () => {
-    if (!bulkAddItems) return;
-    
-    const confirmFill = window.confirm(
-      "This tool will identify every module that is currently EMPTY (no real records) and 'fill' it with high-fidelity demo data.\n\nModules with your existing real data will NOT be touched.\n\nProceed with populating your hub with demonstration data?"
-    );
-    if (!confirmFill) return;
+    if (!bulkAddItems) {
+      toast.error("Database connection not ready. Please try again in a moment.");
+      return;
+    }
 
-    toast.info("Analyzing modules and drafting demo data...");
-    
+    const modulesToFill: string[] = [];
+    const allPayloads: any[] = [];
     const updatedMocks = { ...mockSettings };
     let totalAdded = 0;
-    const allPayloads: any[] = [];
 
     // Map modules to their mock data helpers
     const moduleMocks: Record<string, any[]> = {
@@ -1818,8 +1816,6 @@ function ModuleAccessSettings({
       "type-subscriptions": MOCKED_SUBSCRIPTIONS,
       "type-budget": MOCKED_BUDGET
     };
-
-    const modulesToFill: string[] = [];
 
     // 1. Identify modules with 0 real records
     modules.forEach(mod => {
@@ -1866,6 +1862,16 @@ function ModuleAccessSettings({
     if (!confirmModuleFill) return;
 
     toast.info("Populating modules...");
+    try {
+      await bulkAddItems(allPayloads);
+      setMockSettings(updatedMocks);
+      localStorage.setItem("hub_mock_settings", JSON.stringify(updatedMocks));
+      window.dispatchEvent(new Event('storage'));
+      toast.success(`Successfully populated ${totalAdded} demo records across empty modules.`);
+    } catch (e) {
+      toast.error("Failed to populate demo data. Please try again.");
+      console.error(e);
+    }
   }
 
   const handleSetPin = (moduleId: string) => {
