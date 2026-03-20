@@ -828,7 +828,7 @@ const HELP_PAGES: HelpPage[] = [
                     </div>
                     <div className="p-4 bg-blue-500/5 border border-blue-500/10 rounded-xl">
                         <h5 className="font-bold text-blue-400 text-sm mb-1 uppercase tracking-tighter">Health Hub Demo</h5>
-                        <p className="text-xs text-gray-400 leading-relaxed">Inject sample vitals (BP, Weight), medications, and diary entries to see how the Health Hub aggregates and analyzes your long-term wellness data.</p>
+                        <p className="text-xs text-gray-400 leading-relaxed">Inject sample vitals (BP, Weight), medical appointments, and daily check-ins to see how the Health Hub tracks your long-term vitality, mood trends, and medical schedule.</p>
                     </div>
                     <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-yellow-500 border-dashed">
                         <h5 className="font-bold text-yellow-400 text-sm mb-2 uppercase tracking-tighter flex items-center gap-2">

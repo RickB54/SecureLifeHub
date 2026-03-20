@@ -1,4 +1,4 @@
-import { format } from "date-fns"
+import { format, subDays, addDays } from "date-fns"
 
 export const MOCKED_PASSWORDS = [
     {
@@ -79,6 +79,35 @@ export const MOCKED_HEALTH = [
             oxygen: "98%",
             weight: "175 lbs",
             date: format(new Date(), "yyyy-MM-dd")
+        }
+    },
+    {
+        id: "mock-h4",
+        type: "health-checkin",
+        title: "Daily Check-in: 😊",
+        category: "Health Diary",
+        item_metadata: {
+            date: format(subDays(new Date(), 1), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"),
+            mood: "😊",
+            energy: 8,
+            capacity: "High",
+            notes: "Feeling great after a good sleep.",
+            is_diary: true
+        }
+    },
+    {
+        id: "mock-h5",
+        type: "note",
+        title: "General Practitioner Visit",
+        category: "Health Records",
+        item_metadata: {
+            is_health_record: true,
+            type: "Appointment",
+            date: format(addDays(new Date(), 2), "yyyy-MM-dd'T'10:00:00"),
+            doctor: "Dr. Hershel Greene",
+            location: "Alexandria Medical Center",
+            specialty: "Family Medicine",
+            notes: "Routine semi-annual checkup."
         }
     }
 ]
