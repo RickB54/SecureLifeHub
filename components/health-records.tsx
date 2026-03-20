@@ -12,6 +12,18 @@ import GoogleCalendarIntegration from "./google-calendar-integration"
 import { MOCKED_HEALTH } from "../lib/mock-data"
 import MockDataBanner from "./ui/mock-data-banner"
 
+// Helper to format date safely
+const safeFormat = (date: any, formatStr: string) => {
+    if (!date) return "";
+    try {
+        const d = typeof date === 'string' ? new Date(date) : date;
+        if (isNaN(d.getTime())) return "Invalid Date";
+        return format(d, formatStr);
+    } catch (e) {
+        return "Invalid Date";
+    }
+};
+
 interface HealthDashboardProps {
     records: any[]
     addItem: (item: any) => Promise<any>
@@ -334,7 +346,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <h4 className="font-bold text-sm truncate">{apt.title}</h4>
-                                        <p className="text-xs text-blue-400 font-medium mb-1">{format(new Date(apt.item_metadata.date), 'MMM d, h:mm a')}</p>
+                                        <p className="text-xs text-blue-400 font-medium mb-1">{safeFormat(apt.item_metadata.date, 'MMM d, h:mm a')}</p>
                                         <div className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black">
                                             <User className="h-3 w-3" /> {apt.item_metadata.doctor || "Medical Provider"}
                                         </div>
@@ -428,7 +440,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 <div className="flex-1 min-w-0">
                                     <h3 className="text-lg font-bold break-words group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.title}</h3>
                                     <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase tracking-wider">
-                                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {format(new Date(item.item_metadata?.date || item.created_at), 'PPP p')}</span>
+                                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {safeFormat(item.item_metadata?.date || item.created_at, 'PPP p')}</span>
                                         {item.item_metadata?.doctor && <span className="flex items-center gap-1 border-l border-white/10 pl-3"><User className="h-3 w-3" /> {item.item_metadata.doctor}</span>}
                                     </div>
                                 </div>
@@ -460,11 +472,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="p-3 rounded-xl bg-black/30 border border-white/5">
                                                     <div className="text-[8px] uppercase text-gray-500 font-black">Initial Date</div>
-                                                    <div className="text-xs font-bold">{format(new Date(item.item_metadata?.date || item.created_at), 'PP')}</div>
+                                                    <div className="text-xs font-bold">{safeFormat(item.item_metadata?.date || item.created_at, 'PP')}</div>
                                                 </div>
                                                 <div className="p-3 rounded-xl bg-black/30 border border-white/5">
                                                     <div className="text-[8px] uppercase text-gray-500 font-black">Logged At</div>
-                                                    <div className="text-xs font-bold">{format(new Date(item.created_at), 'PP')}</div>
+                                                    <div className="text-xs font-bold">{safeFormat(item.created_at, 'PP')}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -487,16 +499,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         const vitalGroups = [
             { id: 'bp', title: 'Blood Pressure', icon: Activity, color: 'rose', data: bpData, multi: true },
             { id: 'weight', title: 'Weight', icon: Weight, color: 'orange', data: weightData },
-            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: format(new Date(r.item_metadata.date), 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
         ]
 
         const filteredHistoricalLog = vitalRecords.filter(vital => {
@@ -612,7 +624,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </p>
                                     {latest?.item_metadata?.date && (
                                         <div className="text-[10px] text-blue-400 font-bold uppercase mt-2">
-                                            Recorded {format(new Date(latest.item_metadata.date), 'LLL d, yyyy')}
+                                            Recorded {safeFormat(latest.item_metadata.date, 'LLL d, yyyy')}
                                         </div>
                                     )}
                                 </div>
@@ -661,7 +673,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             <div>
                                                 <div className="font-bold text-sm">{vital.title}</div>
                                                 <div className="text-xs text-gray-400 flex items-center gap-2">
-                                                    <span>{format(new Date(vital.item_metadata.date), 'PP')}</span>
+                                                    <span>{safeFormat(vital.item_metadata.date, 'PP')}</span>
                                                     {vital.item_metadata.context && <span className="opacity-50 border-l border-gray-500/50 pl-2">{vital.item_metadata.context}</span>}
                                                 </div>
                                             </div>
@@ -735,7 +747,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </div>
                             <div className="text-right">
                                 {med.item_metadata?.refillDate && (
-                                    <div className="text-xs text-gray-500 mb-1">Refill: {format(new Date(med.item_metadata.refillDate), 'PP')}</div>
+                                    <div className="text-xs text-gray-500 mb-1">Refill: {safeFormat(med.item_metadata.refillDate, 'PP')}</div>
                                 )}
                                 <button onClick={() => { if (confirm("Delete medication?")) deleteItem(med.id) }} className="text-xs text-red-500 hover:text-red-400">Delete</button>
                             </div>
@@ -759,7 +771,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         return (
             <div className={`rounded-xl p-6 border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1e1e1e] border-white/10'}`}>
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">{format(currentMonth, 'MMMM yyyy')}</h2>
+                    <h2 className="text-xl font-bold">{safeFormat(currentMonth, 'MMMM yyyy')}</h2>
                     <div className="flex gap-2">
                         <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-white/10 rounded-lg">&lt;</button>
                         <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-white/10 rounded-lg">&gt;</button>
@@ -768,11 +780,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 <div className="grid grid-cols-7 gap-1">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => <div key={d} className="text-center text-xs font-bold text-gray-500 mb-2 uppercase">{d}</div>)}
                     {calendarDays.map((day, i) => {
-                        const dayEvents = [...healthRecords, ...vitalRecords].filter(r => isSameDay(new Date(r.item_metadata.date), day))
+                        const dayEvents = [...healthRecords, ...vitalRecords].filter(r => {
+                            const d = new Date(r.item_metadata.date)
+                            return !isNaN(d.getTime()) && isSameDay(d, day)
+                        })
                         const isCurrent = isSameMonth(day, monthStart)
                         return (
                             <div key={i} className={`min-h-[100px] border p-2 rounded-lg ${!isCurrent ? 'opacity-30' : ''} ${theme === 'light' ? 'border-gray-200' : 'border-white/10 bg-black/20'}`}>
-                                <div className="text-right text-xs mb-2 opacity-50">{format(day, 'd')}</div>
+                                <div className="text-right text-xs mb-2 opacity-50">{safeFormat(day, 'd')}</div>
                                 <div className="space-y-1">
                                     {dayEvents.slice(0, 3).map(ev => (
                                         <div key={ev.id} className="text-[10px] p-1 rounded bg-blue-500/20 text-blue-500 truncate">
@@ -868,8 +883,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                                 <div>
                                     <h3 className="text-lg font-bold mb-1 line-clamp-1">{apt.title}</h3>
-                                    <p className="text-sm text-blue-400 font-bold uppercase tracking-wider">{format(new Date(apt.item_metadata.date), 'MMMM d, yyyy')}</p>
-                                    <p className="text-xs text-gray-500 font-mono mt-1">{format(new Date(apt.item_metadata.date), 'h:mm a')}</p>
+                                    <p className="text-sm text-blue-400 font-bold uppercase tracking-wider">{safeFormat(apt.item_metadata.date, 'MMMM d, yyyy')}</p>
+                                    <p className="text-xs text-gray-500 font-mono mt-1">{safeFormat(apt.item_metadata.date, 'h:mm a')}</p>
                                 </div>
 
                                 <div className="pt-4 border-t border-white/5 space-y-2">
@@ -892,163 +907,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     )
 
     const renderCheckin = () => {
-        const [mood, setMood] = useState('😊')
-        const [energy, setEnergy] = useState(5)
-        const [capacity, setCapacity] = useState('Medium')
-        const [notes, setNotes] = useState('')
-
-        const checkinHistory = records.filter(r => r.type === "health-checkin")
-            .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
-
-        const handleSubmitCheckin = async (e: any) => {
-            e.preventDefault()
-            await addItem({
-                type: "health-checkin",
-                title: `Daily Check-in: ${mood}`,
-                category: "Health Diary",
-                item_metadata: {
-                    date: new Date().toISOString(),
-                    mood,
-                    energy,
-                    capacity,
-                    notes,
-                    is_diary: true
-                }
-            })
-            toast.success("Check-in logged!")
-            setActiveTab('dashboard')
-        }
-
-        const chartData = checkinHistory.slice(-14).map(c => ({
-            date: format(new Date(c.item_metadata.date), 'MMM d'),
-            energy: c.item_metadata.energy,
-            moodScore: ['😭', '😔', '😐', '😊', '🤩'].indexOf(c.item_metadata.mood) + 1
-        }))
-
         return (
-            <div className="space-y-8 animate-in zoom-in-95 duration-500">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Log Form */}
-                    <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl relative overflow-hidden'}`}>
-                        {/* Background Deco */}
-                        <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
-                        
-                        <h2 className="text-3xl font-black italic tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">DAILY VITALITY TUNE-IN</h2>
-                        
-                        <form onSubmit={handleSubmitCheckin} className="space-y-8 relative z-10">
-                            {/* Mood Selection */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Current Mood State</label>
-                                <div className="flex justify-between gap-2">
-                                    {['😭', '😔', '😐', '😊', '🤩'].map(m => (
-                                        <button 
-                                            key={m} 
-                                            type="button" 
-                                            onClick={() => setMood(m)}
-                                            className={`flex-1 aspect-square rounded-3xl text-3xl flex items-center justify-center transition-all ${mood === m ? 'bg-blue-600 scale-110 shadow-xl shadow-blue-500/30' : 'bg-white/5 hover:bg-white/10 opacity-40 hover:opacity-100 grayscale hover:grayscale-0'}`}
-                                        >
-                                            {m}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Energy Slider */}
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Energy Level (1-10)</label>
-                                    <span className="text-2xl font-black text-white">{energy}</span>
-                                </div>
-                                <input 
-                                    type="range" min="1" max="10" value={energy} 
-                                    onChange={e => setEnergy(parseInt(e.target.value))}
-                                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600" 
-                                />
-                                <div className="flex justify-between text-[8px] font-black uppercase text-gray-500 opacity-50 px-1">
-                                    <span>Depleted</span>
-                                    <span>Peak Performance</span>
-                                </div>
-                            </div>
-
-                            {/* Capacity Blocks */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Social/Task Capacity</label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    {['Low', 'Medium', 'High'].map(c => (
-                                        <button 
-                                            key={c} 
-                                            type="button" 
-                                            onClick={() => setCapacity(c)}
-                                            className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${capacity === c ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
-                                        >
-                                            {c}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Observations */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Internal Dialogue / Notes</label>
-                                <textarea 
-                                    value={notes} 
-                                    onChange={e => setNotes(e.target.value)}
-                                    placeholder="Brief summary of mental focus, influences, or environment..."
-                                    className="w-full h-32 p-5 bg-white/5 border border-white/5 rounded-3xl text-sm italic outline-none focus:border-blue-500/30 transition-all custom-scrollbar"
-                                />
-                            </div>
-
-                            <button className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-500/20 active:scale-95 transition-all">
-                                Log Daily Pulse
-                            </button>
-                        </form>
-                    </div>
-
-                    {/* Trends */}
-                    <div className="space-y-6">
-                        <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-8">Vitality trends (Last 14 Logs)</h3>
-                            <div className="h-[300px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={chartData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                        <XAxis dataKey="date" hide />
-                                        <YAxis domain={[1, 10]} hide />
-                                        <RechartsTooltip 
-                                            contentStyle={{ backgroundColor: '#121212', borderRadius: '12px', border: '1px solid #333' }}
-                                            itemStyle={{ fontSize: '12px' }}
-                                        />
-                                        <Line type="monotone" dataKey="energy" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6' }} />
-                                    </LineChart>
-                                </ResponsiveContainer>
-                            </div>
-                            <div className="flex items-center gap-2 mt-4">
-                                <Activity className="h-4 w-4 text-blue-500" />
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Energy Volatility Tracking</span>
-                            </div>
-                        </div>
-
-                        {/* Recent History */}
-                        <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl overflow-hidden'}`}>
-                            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-6">Recent Check-ins</h3>
-                            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                                {checkinHistory.slice(-5).reverse().map((log: any) => (
-                                    <div key={log.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/5">
-                                        <div className="text-2xl">{log.item_metadata.mood}</div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-xs font-bold text-white">{format(new Date(log.item_metadata.date), 'MMM d, p')}</span>
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Idx: {log.item_metadata.energy}/10</span>
-                                            </div>
-                                            <p className="text-[10px] text-gray-500 italic truncate w-48">{log.item_metadata.notes || 'No notes'}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <CheckinTab 
+                records={records} 
+                addItem={addItem} 
+                theme={theme} 
+                setActiveTab={setActiveTab} 
+            />
         )
     }
 
@@ -1444,6 +1309,173 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             onSelect={() => {}}
                         />
                     )}
+            </div>
+        </div>
+    )
+}
+
+// Separate component for CheckinTab to avoid Hook order issues
+function CheckinTab({ records, addItem, theme, setActiveTab }: { records: any[], addItem: (item: any) => Promise<any>, theme: string, setActiveTab: (tab: any) => void }) {
+    const [mood, setMood] = useState('😊')
+    const [energy, setEnergy] = useState(5)
+    const [capacity, setCapacity] = useState('Medium')
+    const [notes, setNotes] = useState('')
+
+    // Date formatting helper for internal use (already defined in parent but redeclared or accessed if prop)
+    // Actually we'll just use safeFormat from the parent context if we pass it, or just use what we have.
+    // Note: safeFormat is defined INSIDE HealthDashboard. We should either move it outside or pass it as a prop.
+    // I'll move safeFormat OUTSIDE of HealthDashboard to make it accessible to both.
+
+    const checkinHistory = records.filter(r => r.type === "health-checkin")
+        .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
+
+    const handleSubmitCheckin = async (e: any) => {
+        e.preventDefault()
+        await addItem({
+            type: "health-checkin",
+            title: `Daily Check-in: ${mood}`,
+            category: "Health Diary",
+            item_metadata: {
+                date: new Date().toISOString(),
+                mood,
+                energy,
+                capacity,
+                notes,
+                is_diary: true
+            }
+        })
+        toast.success("Check-in logged!")
+        setActiveTab('dashboard')
+    }
+
+    const chartData = checkinHistory.slice(-14).map(c => ({
+        date: safeFormat(c.item_metadata.date, 'MMM d'),
+        energy: c.item_metadata.energy,
+        moodScore: ['😭', '😔', '😐', '😊', '🤩'].indexOf(c.item_metadata.mood) + 1
+    }))
+
+    return (
+        <div className="space-y-8 animate-in zoom-in-95 duration-500 px-4 md:px-8 pb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Log Form */}
+                <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl relative overflow-hidden'}`}>
+                    {/* Background Deco */}
+                    <div className="absolute -top-12 -right-12 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+                    
+                    <h2 className="text-3xl font-black italic tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">DAILY VITALITY TUNE-IN</h2>
+                    
+                    <form onSubmit={handleSubmitCheckin} className="space-y-8 relative z-10">
+                        {/* Mood Selection */}
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Current Mood State</label>
+                            <div className="flex justify-between gap-2">
+                                {['😭', '😔', '😐', '😊', '🤩'].map(m => (
+                                    <button 
+                                        key={m} 
+                                        type="button" 
+                                        onClick={() => setMood(m)}
+                                        className={`flex-1 aspect-square rounded-3xl text-3xl flex items-center justify-center transition-all ${mood === m ? 'bg-blue-600 scale-110 shadow-xl shadow-blue-500/30' : 'bg-white/5 hover:bg-white/10 opacity-40 hover:opacity-100 grayscale hover:grayscale-0'}`}
+                                    >
+                                        {m}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Energy Slider */}
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Energy Level (1-10)</label>
+                                <span className="text-2xl font-black text-white">{energy}</span>
+                            </div>
+                            <input 
+                                type="range" min="1" max="10" value={energy} 
+                                onChange={e => setEnergy(parseInt(e.target.value))}
+                                className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-blue-600" 
+                            />
+                            <div className="flex justify-between text-[8px] font-black uppercase text-gray-500 opacity-50 px-1">
+                                <span>Depleted</span>
+                                <span>Peak Performance</span>
+                            </div>
+                        </div>
+
+                        {/* Capacity Blocks */}
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Social/Task Capacity</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {['Low', 'Medium', 'High'].map(c => (
+                                    <button 
+                                        key={c} 
+                                        type="button" 
+                                        onClick={() => setCapacity(c)}
+                                        className={`py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${capacity === c ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/5 text-gray-500 hover:text-white hover:bg-white/10'}`}
+                                    >
+                                        {c}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Observations */}
+                        <div className="space-y-4">
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Internal Dialogue / Notes</label>
+                            <textarea 
+                                value={notes} 
+                                onChange={e => setNotes(e.target.value)}
+                                placeholder="Brief summary of mental focus, influences, or environment..."
+                                className="w-full h-32 p-5 bg-white/5 border border-white/5 rounded-3xl text-sm italic outline-none focus:border-blue-500/30 transition-all custom-scrollbar"
+                            />
+                        </div>
+
+                        <button className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-500/20 active:scale-95 transition-all">
+                            Log Daily Pulse
+                        </button>
+                    </form>
+                </div>
+
+                {/* Trends */}
+                <div className="space-y-6">
+                    <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-8">Vitality trends (Last 14 Logs)</h3>
+                        <div className="h-[300px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={chartData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                    <XAxis dataKey="date" hide />
+                                    <YAxis domain={[1, 10]} hide />
+                                    <RechartsTooltip 
+                                        contentStyle={{ backgroundColor: '#121212', borderRadius: '12px', border: '1px solid #333' }}
+                                        itemStyle={{ fontSize: '12px' }}
+                                    />
+                                    <Line type="monotone" dataKey="energy" stroke="#3b82f6" strokeWidth={3} dot={{ fill: '#3b82f6' }} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex items-center gap-2 mt-4">
+                            <Activity className="h-4 w-4 text-blue-500" />
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Energy Volatility Tracking</span>
+                        </div>
+                    </div>
+
+                    {/* Recent History */}
+                    <div className={`p-8 rounded-[2.5rem] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl overflow-hidden'}`}>
+                        <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-6">Recent Check-ins</h3>
+                        <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            {checkinHistory.slice(-5).reverse().map((log: any) => (
+                                <div key={log.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 transition-all hover:bg-white/10">
+                                    <div className="text-2xl">{log.item_metadata.mood}</div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-bold text-white">{safeFormat(log.item_metadata.date, 'MMM d, p')}</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Idx: {log.item_metadata.energy}/10</span>
+                                        </div>
+                                        <p className="text-[10px] text-gray-500 italic truncate w-48">{log.item_metadata.notes || 'No notes'}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     )
