@@ -556,8 +556,8 @@ export default function Passwords({
       }
     }
 
-    // Filter by category
-    if (categoryFilter !== "all") {
+    // Filter by category - ignore if searching to make search global
+    if (categoryFilter !== "all" && searchQuery.trim() === "") {
       filtered = filtered.filter((password) => password.category === categoryFilter)
     }
 
@@ -1636,7 +1636,7 @@ export default function Passwords({
               <div className="min-w-0 flex-1">
                 <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight break-words" style={{ wordBreak: 'break-word' }}>{record.title || "Untitled"}</h2>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-xs font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>General</span>
+                  <span className={`text-xs font-bold uppercase tracking-widest ${theme === "light" ? "text-gray-400" : "text-gray-500"}`}>{record.category || "General"}</span>
                   {record.folder_id && (
                     <>
                       <span className="text-gray-600">•</span>
@@ -1869,19 +1869,7 @@ export default function Passwords({
             )}
           </div>
 
-          {/* Section: Notes - Moved up per user request */}
-          {record.notes && (
-            <div className="max-w-4xl pt-8 border-t border-white/5">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-4">Note</label>
-              <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-gray-50' : 'bg-white/5'} text-sm whitespace-pre-wrap text-gray-200 leading-relaxed font-medium border border-white/5`}>
-                {record.notes}
-              </div>
-            </div>
-          )}
-
-
-
-          {/* Custom Fields Section */}
+          {/* Custom Fields Section - Moved above notes per user request */}
           {record.item_metadata?.customFields && record.item_metadata.customFields.length > 0 && (
             <div className="max-w-4xl pt-8 border-t border-white/5">
               <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-5">Custom Fields</h3>
@@ -1931,6 +1919,16 @@ export default function Passwords({
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Section: Notes - Moved down below custom fields per user request */}
+          {record.notes && (
+            <div className="max-w-4xl pt-8 border-t border-white/5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-4">Note</label>
+              <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-gray-50' : 'bg-white/5'} text-sm whitespace-pre-wrap text-gray-200 leading-relaxed font-medium border border-white/5`}>
+                {record.notes}
               </div>
             </div>
           )}
