@@ -145,39 +145,38 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         recognition.start()
     }
 
-    // --- DATA FILTERING ---
+    // Consolidated records for use in ALL tabs
+    const consolidatedRecords = useMemo(() => {
+        return showMockData ? MOCKED_HEALTH : records;
+    }, [showMockData, records])
+
     const healthRecords = useMemo(() => {
-        const base = showMockData ? MOCKED_HEALTH : records;
-        return base.filter(r =>
+        return consolidatedRecords.filter(r => 
             (r.type === "health-record" || r.category === "Health Records" || r.item_metadata?.is_health_record)
-        ).sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
-    }, [records, showMockData])
+        ).sort((a, b) => new Date(b.item_metadata?.date || b.created_at || 0).getTime() - new Date(a.item_metadata?.date || a.created_at || 0).getTime())
+    }, [consolidatedRecords])
 
     const vitalRecords = useMemo(() => {
-        const base = showMockData ? MOCKED_HEALTH : records;
-        return base.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital)
+        return consolidatedRecords.filter(r => r.category === "Vitals" || r.item_metadata?.is_vital)
             .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
-    }, [records, showMockData])
+    }, [consolidatedRecords])
 
     const activeVitalRecords = useMemo(() => {
         return vitalRecords.filter(r => !r.item_metadata?.is_archived)
     }, [vitalRecords])
 
     const diaryEntries = useMemo(() => {
-        const base = showMockData ? MOCKED_HEALTH : records;
-        return base.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary || r.type === "health-checkin")
+        return consolidatedRecords.filter(r => r.category === "Health Diary" || r.item_metadata?.is_diary || r.type === "health-checkin")
             .sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
-    }, [records, showMockData])
+    }, [consolidatedRecords])
 
     const checkinHistory = useMemo(() => {
-        const base = showMockData ? MOCKED_HEALTH : records;
-        return base.filter(r => r.type === "health-checkin")
+        return consolidatedRecords.filter(r => r.type === "health-checkin")
             .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
-    }, [records, showMockData])
+    }, [consolidatedRecords])
 
     const medRecords = useMemo(() => {
-        const base = showMockData ? MOCKED_HEALTH : records;
-        return base.filter(r => {
+        return consolidatedRecords.filter(r => {
             const specificNames = ["Hydroxyzine", "Prednisone", "Loratadine", "Famotidine"];
             const isSpecificMed = specificNames.some(name => r.title?.includes(name));
 
@@ -187,7 +186,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 (r.item_metadata?.notes === "Imported Prescription") ||
                 isSpecificMed
         })
-    }, [records, showMockData])
+    }, [consolidatedRecords])
 
     const upcomingAppts = useMemo(() => {
         return healthRecords.filter(r =>
@@ -729,7 +728,6 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }
 
     const renderMeds = () => {
-        const medRecords = records.filter(r => r.category === "Medications" || r.type === "medication")
         return (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
                 {medRecords.length === 0 ? (

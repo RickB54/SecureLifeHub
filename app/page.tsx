@@ -260,7 +260,24 @@ function HomeContent() {
 
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
-  const [mockSettings, setMockSettings] = useState<Record<string, boolean>>({})
+  const [mockSettings, setMockSettings] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem("hub_mock_settings")
+        if (saved) return JSON.parse(saved)
+      } catch (e) {}
+      // Default to true for demo experience if no settings exist yet
+      return { 
+        "type-health-records": true, 
+        "passwords": true, 
+        "type-goals": true, 
+        "type-tasks": true,
+        "type-subscriptions": true,
+        "type-budget": true
+      }
+    }
+    return {}
+  })
 
   // Load security & mock settings on mount, update on activePage change, and listen for live updates
   useEffect(() => {

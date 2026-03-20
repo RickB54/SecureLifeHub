@@ -76,8 +76,20 @@ export const MOCKED_HEALTH = [
         item_metadata: {
             value: "118/78",
             unit: "mmHg",
-            date: format(subDays(new Date(), 1), "yyyy-MM-dd"),
-            notes: "Stable morning reading."
+            date: format(subDays(new Date(), 3), "yyyy-MM-dd"),
+            notes: "Morning rest reading."
+        }
+    },
+    {
+        id: "mock-h3-alt",
+        title: "Blood Pressure",
+        category: "Vitals",
+        health_category: "Daily",
+        item_metadata: {
+            value: "116/75",
+            unit: "mmHg",
+            date: format(subDays(new Date(), 2), "yyyy-MM-dd"),
+            notes: "Stable."
         }
     },
     {
@@ -88,8 +100,20 @@ export const MOCKED_HEALTH = [
         item_metadata: {
             value: "121/81",
             unit: "mmHg",
-            date: format(new Date(), "yyyy-MM-dd"),
+            date: format(subDays(new Date(), 1), "yyyy-MM-dd"),
             notes: "Slightly elevated after coffee."
+        }
+    },
+    {
+        id: "mock-h3-3",
+        title: "Blood Pressure",
+        category: "Vitals",
+        health_category: "Daily",
+        item_metadata: {
+            value: "119/79",
+            unit: "mmHg",
+            date: format(new Date(), "yyyy-MM-dd"),
+            notes: "Normal."
         }
     },
     {
@@ -99,7 +123,7 @@ export const MOCKED_HEALTH = [
         item_metadata: {
             value: "178.5",
             unit: "lbs",
-            date: format(subDays(new Date(), 2), "yyyy-MM-dd")
+            date: format(subDays(new Date(), 5), "yyyy-MM-dd")
         }
     },
     {
@@ -109,6 +133,26 @@ export const MOCKED_HEALTH = [
         item_metadata: {
             value: "177.2",
             unit: "lbs",
+            date: format(subDays(new Date(), 2), "yyyy-MM-dd")
+        }
+    },
+    {
+        id: "mock-h-weight-3",
+        title: "Weight",
+        category: "Vitals",
+        item_metadata: {
+            value: "176.8",
+            unit: "lbs",
+            date: format(new Date(), "yyyy-MM-dd")
+        }
+    },
+    {
+        id: "mock-h-temp",
+        title: "Temperature",
+        category: "Vitals",
+        item_metadata: {
+            value: "98.6",
+            unit: "°F",
             date: format(new Date(), "yyyy-MM-dd")
         }
     },
