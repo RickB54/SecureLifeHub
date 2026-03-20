@@ -35,7 +35,8 @@ import {
   FolderTree,
   Grid,
   HelpCircle,
-  Target
+  Target,
+  Plus
 } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import { toast } from "sonner"
@@ -146,7 +147,7 @@ export default function Settings({
   folders: any[]
   addItem?: any
   addFolder?: any
-  bulkAddItems?: any
+  bulkAddItems?: (items: any[]) => Promise<void>
   updateItem?: any
   deleteItem?: any
   theme?: string
@@ -1398,6 +1399,25 @@ export default function Settings({
                   </button>
 
                   <button
+                    onClick={() => {
+                      // Attempt to run the Fill function from the child component logic 
+                      // or we implement a shared one. Easiest: dispatch an event that ModuleAccessSettings listens to,
+                      // OR just call it if we define it here as well.
+                      // Since it's a huge function, I'll just trigger the child's button via event or similar?
+                      // Actually, I'll just add it to the Grid below Sanitize for convenience.
+                      window.dispatchEvent(new CustomEvent('trigger-mock-fill'));
+                    }}
+                    className="w-full py-5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-600/50 text-indigo-400 rounded-2xl font-black flex items-center justify-center gap-3 transition-all uppercase tracking-widest text-xs"
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-2">
+                         <Plus className="h-4 w-4" /> Fill Missing Demo Data
+                      </div>
+                      <span className="text-[8px] opacity-60 normal-case font-medium">Only for empty modules</span>
+                    </div>
+                  </button>
+
+                  <button
                     onClick={async () => {
                       if (confirm("⚠️ NUCLEAR OPTION: Delete EVERY SINGLE PIECE of data in this vault (including folders and passwords)?")) {
                         if (confirm("FINAL WARNING: This is absolutely irreversible. Type 'DELETE' to continue.")) {
@@ -1578,10 +1598,17 @@ export default function Settings({
             localStorage.setItem('hub_2fa_enabled', 'true')
             localStorage.setItem('hub_2fa_method', method)
             setShow2FA(false)
-            showNotification("Two-factor authentication enabled successfully")
+            toast.success("Two-factor authentication enabled successfully")
           }} 
         />
       )}
+
+      <ModuleAccessSettings 
+        theme={theme || "dark"} 
+        records={records} 
+        deleteItem={deleteItem}
+        bulkAddItems={bulkAddItems}
+      />
     </div>
   )
 }
@@ -1589,11 +1616,13 @@ export default function Settings({
 function ModuleAccessSettings({ 
   theme, 
   records, 
-  deleteItem 
+  deleteItem,
+  bulkAddItems 
 }: { 
   theme: string, 
   records: any[], 
-  deleteItem: (id: string, type?: string, options?: any) => Promise<void> 
+  deleteItem: (id: string, type?: string, options?: any) => Promise<void>,
+  bulkAddItems?: (items: any[]) => Promise<void>
 }) {
   // These IDs must match `activePage` values used in page.tsx
   const modules = [
@@ -1645,6 +1674,12 @@ function ModuleAccessSettings({
 
   const [editingPin, setEditingPin] = useState<string | null>(null)
   const [tempPin, setTempPin] = useState("")
+
+  useEffect(() => {
+    const handleTriggerFill = () => handleFillMissingMockData()
+    window.addEventListener('trigger-mock-fill', handleTriggerFill)
+    return () => window.removeEventListener('trigger-mock-fill', handleTriggerFill)
+  }, [records, mockSettings])
 
   const saveSettings = (newSettings: any) => {
     setSecuritySettings(newSettings)
@@ -1748,6 +1783,81 @@ function ModuleAccessSettings({
     window.dispatchEvent(new Event('storage'));
   }
 
+  const handleFillMissingMockData = async () => {
+    if (!bulkAddItems) return;
+    
+    const confirmFill = window.confirm(
+      "This tool will identify every module that is currently EMPTY (no real records) and 'fill' it with high-fidelity demo data.\n\nModules with your existing real data will NOT be touched.\n\nProceed with populating your hub with demonstration data?"
+    );
+    if (!confirmFill) return;
+
+    toast.info("Analyzing modules and drafting demo data...");
+    
+    const updatedMocks = { ...mockSettings };
+    let totalAdded = 0;
+    const allPayloads: any[] = [];
+
+    // Map modules to their mock data helpers
+    const moduleMocks: Record<string, any[]> = {
+      "type-health-records": MOCKED_HEALTH,
+      "passwords": MOCKED_PASSWORDS,
+      "type-goals": MOCKED_GOALS,
+      "type-tasks": MOCKED_TASKS,
+      "type-subscriptions": MOCKED_SUBSCRIPTIONS,
+      "type-budget": MOCKED_BUDGET
+    };
+
+    // 1. Identify modules with 0 real records
+    modules.forEach(mod => {
+      const realRecords = records.filter(r => {
+        // Exclude items already marked as mock
+        if (isItemMock(r)) return false;
+        
+        // Count items belonging to this module
+        if (mod.id === "passwords" && (r.type === "password" || r.type === "login")) return true;
+        if (mod.id === "type-health-records" && (r.category === "Health Records" || r.category === "Medications" || r.item_metadata?.is_vital)) return true;
+        if (mod.id === "type-goals" && (r.category === "Goals" || r.item_metadata?.is_goal)) return true;
+        if (mod.id === "type-tasks" && r.type === "architect-task") return true;
+        if (mod.id === "type-subscriptions" && (r.category === "Subscriptions" || r.type === "subscription")) return true;
+        if (mod.id === "type-budget" && (r.category === "Budget" || r.item_metadata?.is_budget)) return true;
+        
+        return false;
+      });
+
+      if (realRecords.length === 0 && moduleMocks[mod.id]) {
+        // Module is empty and has mock data available
+        const mocks = moduleMocks[mod.id].map(m => ({
+          ...m,
+          id: undefined, // Let Supabase generate new ID
+          item_metadata: {
+            ...m.item_metadata,
+            mock: true,
+            is_mock: true
+          }
+        }));
+        
+        allPayloads.push(...mocks);
+        updatedMocks[mod.id] = true;
+        totalAdded += mocks.length;
+      }
+    });
+
+    if (allPayloads.length > 0) {
+      try {
+        await bulkAddItems(allPayloads);
+        setMockSettings(updatedMocks);
+        localStorage.setItem("hub_mock_settings", JSON.stringify(updatedMocks));
+        window.dispatchEvent(new Event('storage'));
+        toast.success(`Successfully populated ${totalAdded} demo records across empty modules.`);
+      } catch (e) {
+        toast.error("Failed to populate demo data. Please try again.");
+        console.error(e);
+      }
+    } else {
+      toast.info("All modules already contain real data. No mock data was added.");
+    }
+  }
+
   const handleSetPin = (moduleId: string) => {
     if (tempPin.length !== 4) return alert("PIN must be 4 digits")
     const current = securitySettings[moduleId] || { isLocked: false }
@@ -1788,13 +1898,22 @@ function ModuleAccessSettings({
                  </p>
                </div>
             </div>
-            <button
-                onClick={handleToggleAllMocks}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all focus:outline-none ${Object.values(mockSettings).some(Boolean) ? 'bg-yellow-500' : 'bg-gray-700'}`}
-                title="Toggle Master Mock Data"
-            >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${Object.values(mockSettings).some(Boolean) ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={handleFillMissingMockData}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg ${theme === 'light' ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/20' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/30'}`}
+                    title="Fill Empty Modules with Demo Data"
+                >
+                    <Plus className="h-4 w-4" /> Fill All
+                </button>
+                <button
+                    onClick={handleToggleAllMocks}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-all focus:outline-none ${Object.values(mockSettings).some(Boolean) ? 'bg-yellow-500' : 'bg-gray-700'}`}
+                    title="Toggle Master Mock Data"
+                >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${Object.values(mockSettings).some(Boolean) ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
