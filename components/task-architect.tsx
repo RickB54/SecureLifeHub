@@ -55,13 +55,14 @@ export default function TaskArchitect({ records = [], addItem, updateItem, delet
     if (typeof window !== 'undefined') {
       const dismissed = localStorage.getItem('tasks_mock_dismissed') === 'true'
       const localMock = mockSettings?.['type-tasks'] || false
+      const realRecordsCount = records.filter(r => r.type === "architect-task").length
       
       setIsForcedMock(localMock)
       
-      // Show mock if forced OR (no real records AND not dismissed)
-      const realRecordsCount = records.filter(r => r.type === "architect-task").length
-
-      if (localMock) {
+      // RULE: If there are ANY real records, NEVER show mock data
+      if (realRecordsCount > 0) {
+        setShowMockData(false)
+      } else if (localMock) {
         setShowMockData(true)
       } else if (realRecordsCount === 0 && !dismissed) {
         setShowMockData(true)

@@ -37,13 +37,14 @@ export default function Goals({ records = [], addItem, updateItem, deleteItem, t
         if (typeof window !== 'undefined') {
             const dismissed = localStorage.getItem('goals_mock_dismissed') === 'true'
             const localMock = mockSettings?.['type-goals'] || false
+            const realRecordsCount = records.filter(r => r.item_metadata?.is_goal || r.category === "Goals").length
             
             setIsForcedMock(localMock)
             
-            // Show mock if forced OR (no real records AND not dismissed)
-            const realRecordsCount = records.filter(r => r.item_metadata?.is_goal || r.category === "Goals").length
-
-            if (localMock) {
+            // RULE: If there are ANY real records, NEVER show mock data
+            if (realRecordsCount > 0) {
+                setShowMockData(false)
+            } else if (localMock) {
                 setShowMockData(true)
             } else if (realRecordsCount === 0 && !dismissed) {
                 setShowMockData(true)

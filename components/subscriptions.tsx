@@ -59,13 +59,14 @@ export default function Subscriptions({ records = [], addItem, updateItem, delet
         if (typeof window !== 'undefined') {
             const dismissed = localStorage.getItem('subs_mock_dismissed') === 'true'
             const localMock = mockSettings?.['type-subscriptions'] || false
+            const realRecordsCount = records.filter(r => r.category === "Subscriptions" || r.type === "subscription").length
             
             setIsForcedMock(localMock)
             
-            // Show mock if forced OR (no real records AND not dismissed)
-            const realRecordsCount = records.filter(r => r.category === "Subscriptions" || r.type === "subscription").length
-
-            if (localMock) {
+            // RULE: If there are ANY real records, NEVER show mock data
+            if (realRecordsCount > 0) {
+                setShowMockData(false)
+            } else if (localMock) {
                 setShowMockData(true)
             } else if (realRecordsCount === 0 && !dismissed) {
                 setShowMockData(true)

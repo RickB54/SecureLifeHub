@@ -109,12 +109,22 @@ export default function Dashboard({
   const baseRecords = useMemo(() => {
     let combined = [...records];
     
-    if (mockSettings?.['type-health-records']) combined = [...combined, ...MOCKED_HEALTH];
-    if (mockSettings?.['passwords']) combined = [...combined, ...MOCKED_PASSWORDS];
-    if (mockSettings?.['type-subscriptions']) combined = [...combined, ...MOCKED_SUBSCRIPTIONS];
-    if (mockSettings?.['type-goals']) combined = [...combined, ...MOCKED_GOALS];
-    if (mockSettings?.['type-tasks']) combined = [...combined, ...MOCKED_TASKS];
-    if (mockSettings?.['type-budget']) combined = [...combined, ...MOCKED_BUDGET];
+    // Extract real records by type for checking
+    const realPasswords = records.filter(r => r.type === 'password' || r.type === 'login' || r.category === 'Logins')
+    const realHealth = records.filter(r => r.type === 'health-record' || r.category === 'Health Records' || r.category === 'Vitals' || r.type === 'medication' || r.category === 'Medications')
+    const realSubs = records.filter(r => r.category === "Subscriptions" || r.type === "subscription")
+    const realGoals = records.filter(r => r.item_metadata?.is_goal || r.category === "Goals")
+    const realTasks = records.filter(r => r.type === "architect-task")
+    const realBudget = records.filter(r => r.category === "Budget" || r.item_metadata?.is_budget)
+
+    // Only add mock data if there are ZERO real records of that type, even if mock settings are enabled.
+    // This follows the priority rule set for individual pages.
+    if (mockSettings?.['type-health-records'] && realHealth.length === 0) combined = [...combined, ...MOCKED_HEALTH];
+    if (mockSettings?.['passwords'] && realPasswords.length === 0) combined = [...combined, ...MOCKED_PASSWORDS];
+    if (mockSettings?.['type-subscriptions'] && realSubs.length === 0) combined = [...combined, ...MOCKED_SUBSCRIPTIONS];
+    if (mockSettings?.['type-goals'] && realGoals.length === 0) combined = [...combined, ...MOCKED_GOALS];
+    if (mockSettings?.['type-tasks'] && realTasks.length === 0) combined = [...combined, ...MOCKED_TASKS];
+    if (mockSettings?.['type-budget'] && realBudget.length === 0) combined = [...combined, ...MOCKED_BUDGET];
     
     return combined;
   }, [records, mockSettings]);

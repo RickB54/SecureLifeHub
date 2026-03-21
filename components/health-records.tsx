@@ -74,15 +74,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         if (typeof window !== 'undefined') {
             const dismissed = localStorage.getItem('health_mock_dismissed') === 'true'
             const localMock = mockSettings?.['type-health-records'] || false
-            
-            setIsForcedMock(localMock)
-            
-            // Show mock if forced OR (no real records AND not dismissed)
             const realRecordsCount = records.filter(r => 
                 r.type === 'health-record' || r.category === 'Health Records' || r.category === 'Vitals' || r.type === 'medication' || r.category === 'Medications'
             ).length
-
-            if (localMock) {
+            
+            setIsForcedMock(localMock)
+            
+            // RULE: If there are ANY real records, NEVER show mock data
+            if (realRecordsCount > 0) {
+                setShowMockData(false)
+            } else if (localMock) {
                 setShowMockData(true)
             } else if (realRecordsCount === 0 && !dismissed) {
                 setShowMockData(true)

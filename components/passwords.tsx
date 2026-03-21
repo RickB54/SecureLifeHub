@@ -158,12 +158,17 @@ export default function Passwords({
     if (typeof window !== 'undefined') {
       const dismissed = localStorage.getItem('passwords_mock_dismissed') === 'true'
       const localMock = mockSettings?.['passwords'] || false
+      const realRecordsCount = records.filter(r => r.type === 'password' || r.type === 'login' || r.category === 'Logins').length
       
       setIsForcedMock(localMock)
-      // Show mock if forced OR (no real records AND not dismissed)
-      if (localMock) {
+      
+      // RULE: If there are ANY real records, NEVER show mock data.
+      // This is a high-priority safeguard for data integrity.
+      if (realRecordsCount > 0) {
+        setShowMockData(false)
+      } else if (localMock) {
         setShowMockData(true)
-      } else if (records.filter(r => r.type === 'password' || r.type === 'login' || r.category === 'Logins').length === 0 && !dismissed) {
+      } else if (realRecordsCount === 0 && !dismissed) {
         setShowMockData(true)
       } else {
         setShowMockData(false)
