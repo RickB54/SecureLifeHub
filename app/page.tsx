@@ -224,15 +224,18 @@ function HomeContent() {
     // Sync local state for Settings UI
     if (savedStartup !== startupPage) setStartupPage(savedStartup)
 
-    // A. Unified Landing Logic (Startup preference vs URL sync)
-    // - If we have a URL param, prioritize it.
-    // - If we are at root, check if we've navigated or if it's special.
-    // - If not navigated, use startup preference.
+    // A. Unified Landing Logic (Startup preference vs URL sync vs Session Override)
+    let forcePage = null
+    if (typeof window !== 'undefined') {
+      forcePage = sessionStorage.getItem('slh_target_page')
+      if (forcePage) sessionStorage.removeItem('slh_target_page')
+    }
+
     const isNavigated = navHistory.length > 0
-    const desiredPage = pageParam || (isNavigated || isRecovery ? "dashboard" : savedStartup)
+    const desiredPage = forcePage || pageParam || (isNavigated || isRecovery ? "dashboard" : savedStartup)
 
     if (desiredPage !== activePage && !isLocked && user) {
-      console.log(`🚀 Navigating to: ${desiredPage} (Context: ${pageParam ? 'URL' : 'Startup'})`)
+      console.log(`🚀 Navigating to: ${desiredPage} (Context: ${forcePage ? 'Session' : pageParam ? 'URL' : 'Startup'})`)
       const mainEl = document.getElementById("main-scroll-container")
       if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
       setActivePage(desiredPage)

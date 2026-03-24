@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "SecureLifeHub Auto-Fill",
-    "version": "1.0",
+    "version": "1.3.0",
     "description": "Auto-fill and Capture passwords for SecureLifeHub",
     "permissions": [
         "activeTab",

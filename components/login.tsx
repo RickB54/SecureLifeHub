@@ -37,6 +37,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     const hashParams = new URLSearchParams(window.location.hash.substring(1))
     const type = params.get('type') || hashParams.get('type')
     const isRecovery = type === 'recovery'
+    const requestedPage = params.get('page') || hashParams.get('page')
+
+    // Persist the requested page across auth redirects/reloads
+    if (requestedPage) {
+      console.log("📌 Capturing requested page for post-login:", requestedPage)
+      sessionStorage.setItem('slh_target_page', requestedPage)
+    }
 
     if (isRecovery) {
       console.log("🛠️ Recovery URL Detected - Entering Reset Mode")
@@ -161,7 +168,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           const isRecoveryFlow = searchParams.get('type') === 'recovery' || window.location.hash.includes('type=recovery')
           const target = searchParams.get('page')
           
-          if (isRecoveryFlow && target) {
+          if (target) {
             router.push(`/?page=${target}`)
           } else {
             // Always go to root to let startup logic take over after unlock
@@ -245,7 +252,7 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         localStorage.setItem('full_login_timestamp', Date.now().toString())
         const target = searchParams.get('page')
         
-        if (isRecovery && target) {
+        if (target) {
             router.push(`/?page=${target}`)
         } else {
             router.push('/')
@@ -266,7 +273,11 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
             if (currentSession) {
               console.log("SecureLifeHub: URL sync failed but existing session found, continuing.")
               const targetPage = params.get('page') || hashParams.get('page')
-              window.history.replaceState({}, '', window.location.pathname)
+              const cleanParams = new URLSearchParams(window.location.search)
+              cleanParams.delete('access_token')
+              cleanParams.delete('refresh_token')
+              const newQuery = cleanParams.toString()
+              window.history.replaceState({}, '', `${window.location.pathname}${newQuery ? '?' + newQuery : ''}`)
               if (targetPage) router.push(`/?page=${targetPage}`)
               else router.push('/')
               return
@@ -280,9 +291,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
           } else {
             localStorage.setItem('full_login_timestamp', Date.now().toString())
             const target = params.get('page') || hashParams.get('page')
-            window.history.replaceState({}, '', window.location.pathname)
+            const cleanParams = new URLSearchParams(window.location.search)
+            cleanParams.delete('access_token')
+            cleanParams.delete('refresh_token')
+            const newQuery = cleanParams.toString()
+            window.history.replaceState({}, '', `${window.location.pathname}${newQuery ? '?' + newQuery : ''}`)
             
-            if (isRecovery && target) {
+            if (target) {
               router.push(`/?page=${target}`)
             } else {
               router.push('/')
@@ -327,8 +342,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
         localStorage.setItem('lastLoginEmail', trimmedEmail)
         // Stamp the time of full master-password login so biometric session duration can be enforced
         localStorage.setItem('full_login_timestamp', Date.now().toString())
+        const target = searchParams.get('page')
         setIsLocked(false)
-        router.push('/')
+        if (target) {
+          router.push(`/?page=${target}`)
+        } else {
+          router.push('/')
+        }
       }
     } catch (err: any) { 
       let msg = err.message
@@ -400,9 +420,13 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
       const { error } = await supabase.auth.updateUser({ password: newPassword })
       if (error) throw error
       toast.success("Password updated successfully!")
-      setIsLocked(false)
-      // Redirect to root to allow startup preference to take effect
-      router.push('/')
+      const target = searchParams.get('page')
+      if (target) {
+        router.push(`/?page=${target}`)
+      } else {
+        // Redirect to root to allow startup preference to take effect
+        router.push('/')
+      }
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -415,8 +439,12 @@ export default function Login({ isUnlockMode = false }: LoginProps) {
     if (twoFactorCode === "123456") {
       localStorage.setItem('lastLoginEmail', email.trim().toLowerCase())
       localStorage.setItem('full_login_timestamp', Date.now().toString())
-      setIsLocked(false)
-      router.push('/')
+      const target = searchParams.get('page')
+      if (target) {
+        router.push(`/?page=${target}`)
+      } else {
+        router.push('/')
+      }
     } else {
       setError("Invalid 2FA code. Please try again.")
     }

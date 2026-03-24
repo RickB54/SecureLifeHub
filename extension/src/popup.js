@@ -355,6 +355,7 @@ function renderSections() {
         { id: "dashboard", label: "Dashboard", icon: "🏠", page: "dashboard", color: "text-blue-400" },
         { id: "favorites", label: "Favorites", icon: "⭐", page: "favorites", color: "text-yellow-400" },
         { id: "payment-cards", label: "Financial Cards", icon: "💳", page: "financial-cards", color: "text-emerald-400" },
+        { id: "secure-database", label: "Secure Database", icon: "🗄️", page: "secure-database", color: "text-purple-400" },
         { id: "personal-info", label: "Personal Info", icon: "👤", page: "personal-info", color: "text-indigo-400" },
         { id: "private-notes", label: "Private Notes", icon: "📝", page: "type-secure-notes", color: "text-amber-400" },
         { id: "healthHub", label: "Health Hub", icon: "🏥", page: "type-health-records", color: "text-red-400" },
@@ -379,18 +380,34 @@ function renderSections() {
             <div class="flex-1">
                 <div class="text-sm font-medium text-gray-200">${sec.label}</div>
             </div>
-            <svg class="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
+            <div class="p-1.5 hover:bg-[#444] rounded-md transition-all group-hover:text-white section-arrow-btn" title="Open in Extension">
+                <svg class="w-4 h-4 text-gray-500 group-hover:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
         `
-        div.addEventListener('click', () => {
+
+        // Right Arrow Click: Extension internal "open/expand" behavior
+        const arrowBtn = div.querySelector('.section-arrow-btn')
+        arrowBtn.addEventListener('click', (e) => {
+            e.stopPropagation()
             if (sec.id === 'payment-cards') {
                 switchSidebarTab('cards')
                 searchInput.value = ""
                 searchInput.placeholder = "Search Cards..."
+            } else if (sec.id === 'dashboard' || sec.id === 'favorites') {
+                switchSidebarTab('vault')
+                searchInput.value = ""
+                searchInput.placeholder = "Search Vault..."
             } else {
+                // If no specific extension view, default to web vault for "open" request
                 openInWebVault(sec.page)
             }
+        })
+
+        // Main Div/Text Click: Directed directly to the main menu item (Web Vault)
+        div.addEventListener('click', () => {
+            openInWebVault(sec.page)
         })
         sectionsView.appendChild(div)
     })

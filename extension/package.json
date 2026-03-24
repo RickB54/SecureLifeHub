@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "scripts": {
         "build": "parcel build --target extension --no-source-maps --no-optimize --no-content-hash",
+        "build:prod": "cross-env WEB_VAULT_URL=https://securelifehub.netlify.app npm run build",
         "watch": "parcel watch --target extension"
     },
     "dependencies": {
