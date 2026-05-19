@@ -100,6 +100,7 @@ export const HELP_MAP: Record<string, string> = {
     "reporting-engine": "reporting-engine-details",
     "type-tasks": "task-architect",
     "task-architect": "task-architect",
+    "extension-guide": "extension-guide",
 }
 
 const HELP_PAGES: HelpPage[] = [
@@ -1106,6 +1107,62 @@ const HELP_PAGES: HelpPage[] = [
                 </div>
             </div>
         )
+    },
+    {
+        id: "extension-guide",
+        title: "Browser Extension Install Guide",
+        icon: Globe,
+        content: (
+            <div className="space-y-4 text-sm leading-relaxed">
+                <p className="text-gray-300">How to install the SecureLifeHub Chrome Extension on any of your devices.</p>
+                
+                <div className="p-4 border border-white/5 bg-blue-500/5 rounded-xl">
+                    <h5 className="font-bold text-blue-400 mb-1">1. Get the Extension File</h5>
+                    <p className="text-xs text-gray-400 mb-2">Placing the file on your Google Drive is the absolute best way to do this!</p>
+                    <ul className="list-disc pl-5 text-xs text-gray-400 space-y-1">
+                        <li>Locate <strong>SecureLifeHub_Extension.zip</strong> in your main project folder.</li>
+                        <li>Upload this zip file to your Google Drive.</li>
+                        <li>On any new device, open Google Drive and download the ZIP file.</li>
+                        <li><strong>Extract/Unzip</strong> the file into a folder.</li>
+                    </ul>
+                </div>
+
+                <div className="p-4 border border-white/5 bg-purple-500/5 rounded-xl">
+                    <h5 className="font-bold text-purple-400 mb-1">2. Install on another PC / Laptop</h5>
+                    <ul className="list-decimal pl-5 text-xs text-gray-400 space-y-1 mt-2">
+                        <li>Open Google Chrome.</li>
+                        <li>Type <code className="bg-black/30 px-1 rounded text-white font-mono">chrome://extensions/</code> into the address bar.</li>
+                        <li>Turn <strong>ON</strong> the switch for <strong>Developer mode</strong> (top right).</li>
+                        <li>Click the <strong>Load unpacked</strong> button (top left).</li>
+                        <li>Select the folder you extracted from the zip file.</li>
+                    </ul>
+                </div>
+
+                <div className="p-4 border border-white/5 bg-emerald-500/5 rounded-xl">
+                    <h5 className="font-bold text-emerald-400 mb-1">3. Install on Mobile (Phone)</h5>
+                    <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-widest text-emerald-500/70">Standard Mobile Chrome does not support extensions</p>
+                    <div className="space-y-3">
+                        <div>
+                            <span className="text-white text-xs font-bold">For Android Users:</span>
+                            <ul className="list-disc pl-5 text-xs text-gray-400 space-y-1 mt-1">
+                                <li>Install <strong>Kiwi Browser</strong> from the Play Store.</li>
+                                <li>Open Kiwi Browser, tap menu (three dots) → Extensions.</li>
+                                <li>Turn on Developer mode and tap <strong>+(from .zip/.crx/.user.js)</strong> or Load unpacked.</li>
+                                <li>Select your extracted folder or zip file.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <span className="text-white text-xs font-bold">For iPhone Users:</span>
+                            <ul className="list-disc pl-5 text-xs text-gray-400 space-y-1 mt-1">
+                                <li>Install <strong>Orion Browser</strong> from the App Store.</li>
+                                <li>Open Orion Browser, tap menu (three dots) → Extensions.</li>
+                                <li>Select Install from File (Load Unpacked) and pick the extracted folder.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )
     }
 ]
 
@@ -1278,3 +1335,4 @@ export default function HelpModal({ isOpen, onClose, theme, initialPageId }: { i
         </div>
     )
 }
+
