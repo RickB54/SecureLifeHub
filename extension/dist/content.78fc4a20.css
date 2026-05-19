@@ -1,0 +1,24 @@
+.slh-field-icon {
+  cursor: pointer;
+  z-index: 9999;
+  opacity: .8;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  transition: opacity .2s;
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  box-shadow: 0 1px 3px #0000004d;
+}
+
+.slh-field-icon:hover {
+  opacity: 1;
+  transform: translateY(-50%)scale(1.1);
+}
+
+.slh-input-wrapper {
+  display: inline-block !important;
+  position: relative !important;
+}
