@@ -690,7 +690,13 @@ export default function Passwords({
   }, [passwords, typeFilter, categoryFilter, timeFilter, favoriteFilter, archivedFilter, searchQuery, customDate]);
 
   // Final filtered list including current folder selection
+  // NOTE: When a search query is active, we intentionally ignore the folder filter
+  // so that search works globally across ALL folders (e.g. typing "ore" finds
+  // "Oreilly's Detail Supplies" even if a different folder is currently selected).
   const filteredPasswords = useMemo(() => {
+    // Search is active — return results from ALL folders
+    if (searchQuery.trim() !== "") return allFilteredSortedPasswords;
+
     if (!selectedFolder) return allFilteredSortedPasswords;
     
     if (selectedFolder === "no-folder") {
@@ -698,7 +704,7 @@ export default function Passwords({
     }
     
     return allFilteredSortedPasswords.filter((p) => p.folder_id === selectedFolder);
-  }, [allFilteredSortedPasswords, selectedFolder]);
+  }, [allFilteredSortedPasswords, selectedFolder, searchQuery]);
 
   // Function to get direct passwords in a folder (for folder mode)
   const getDirectPasswordsInFolder = (folderId: string, items: any[] = passwords) => {
@@ -983,20 +989,23 @@ export default function Passwords({
     }
 
     const shouldShowFolder = (folder: any): boolean => {
-      const totalCount = getFolderCount(folder.id)
       const isFiltering = searchQuery || categoryFilter !== "all" || favoriteFilter || archivedFilter || timeFilter !== "all"
 
-      // Hide empty folders if ANY filter is active
-      if (isFiltering && totalCount === 0) return false
+      if (!searchQuery) {
+        // When no search, only hide folders that are truly empty under current filters
+        const totalCount = getFolderCount(folder.id)
+        if (isFiltering && totalCount === 0) return false
+        return true
+      }
 
-      if (!searchQuery) return true
-
+      // When searching, check against the already-filtered list so folder tree
+      // reflects the same results shown in the flat search view
       const query = searchQuery.toLowerCase()
       const nameMatch = folder.name.toLowerCase().includes(query)
-      const hasDirectMatch = getDirectPasswordsInFolder(folder.id, items).length > 0
+      const hasDirectMatch = allFilteredSortedPasswords.some(p => p.folder_id === folder.id)
       // @ts-ignore
       const subs = folders.filter((f) => f.parent_id === folder.id)
-      const hasSubfolderMatch = subs.some(sub => shouldShowFolder(sub))
+      const hasSubfolderMatch = subs.some((sub: any) => shouldShowFolder(sub))
 
       return nameMatch || hasDirectMatch || hasSubfolderMatch
     }
@@ -1007,7 +1016,10 @@ export default function Passwords({
       const isExpanded = expandedFolders[folder.id]
       const isSelected = selectedFolder === folder.id
       const subfolders = getSubfolders(folder.id)
-      const directPasswords = getDirectPasswordsInFolder(folder.id, items)
+      // When searching, show only items that match the search query (use filtered list)
+      const directPasswords = searchQuery.trim()
+        ? allFilteredSortedPasswords.filter(p => p.folder_id === folder.id)
+        : getDirectPasswordsInFolder(folder.id, items)
 
       // Total count for this folder (direct + recursive subfolders)
       const totalCount = getFolderCount(folder.id)
