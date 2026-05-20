@@ -2426,15 +2426,16 @@ export default function Passwords({
       <div className="flex-1 overflow-hidden flex flex-col md:flex-row gap-4 mt-2">
 
         {/* === RECORD DETAIL VIEW in List Mode === */}
-        {/* Only show detail panel when search is NOT active — search should always show flat results */}
-        {selectedRecord && forceListView && !searchQuery.trim() && (
+        {/* Clicking a search result sets selectedRecord → this panel shows */}
+        {selectedRecord && forceListView && (
           <div className="flex-1 h-full w-full animate-in fade-in slide-in-from-right-4 duration-300">
             {renderRecordDetails(selectedRecord)}
           </div>
         )}
 
         {/* === FLAT LIST VIEW: Full-width, no folders === */}
-        {(!selectedRecord || searchQuery.trim()) && forceListView && (
+        {/* Typing in search clears selectedRecord → this panel shows */}
+        {!selectedRecord && forceListView && (
           <div className="flex-1 h-full flex flex-col gap-2">
             <div className={`flex items-center gap-2 px-1 py-1 text-xs font-bold uppercase tracking-wider ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>
               <ListIcon className="h-3.5 w-3.5" />
