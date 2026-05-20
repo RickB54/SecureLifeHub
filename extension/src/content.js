@@ -29,14 +29,9 @@ const observer = new MutationObserver((mutations) => {
 observer.observe(document.body, { childList: true, subtree: true });
 
 function scanPage() {
-    if (!cachedVaultItems.length) return;
-
     // Don't AUTOMATICALLY autofill on our own app
     const currentHost = window.location.hostname;
     if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost.includes('securelifehub')) {
-        // We still allow MANUAL fill if the user clicks the button in popup,
-        // so we don't return early if we want to allow decoration.
-        // But the user usually doesn't want icons on their own app.
         return;
     }
 
@@ -55,6 +50,7 @@ function scanPage() {
         return hostname === storedDomain || hostname.endsWith('.' + storedDomain);
     });
 
+    let bestMatch = null;
     if (matches.length > 0) {
         // Prioritize exact match
         const exactMatch = matches.find(item => {
@@ -65,10 +61,14 @@ function scanPage() {
             return hostname === storedDomain;
         });
 
-        const bestMatch = exactMatch || matches[0];
+        bestMatch = exactMatch || matches[0];
         console.log("SecureLifeHub: Credentials found for", hostname, bestMatch);
-        identifyAndDecorateFields(bestMatch);
+    } else {
+        console.log("SecureLifeHub: No credentials found for", hostname);
     }
+
+    // Always identify and decorate fields, even if bestMatch is null
+    identifyAndDecorateFields(bestMatch);
 }
 
 function identifyAndDecorateFields(match) {
@@ -81,9 +81,6 @@ function identifyAndDecorateFields(match) {
     if (passwordInput) {
         // Look for preceding text input
         let currentIndex = inputs.indexOf(passwordInput);
-        // Search backwards in the DOM order (approximate)
-        // A better way is looking at the 'inputs' array we just grabbed
-        // logic: user input usually comes before password
         for (let i = currentIndex - 1; i >= 0; i--) {
             const candidate = inputs[i];
             const type = candidate.type;
@@ -116,7 +113,13 @@ function decorateInput(input, match, fieldType) {
     const icon = document.createElement('img');
     icon.src = chrome.runtime.getURL('icons/field-icon.jpg'); // Adjust if copied elsewhere
     icon.className = 'slh-field-icon';
-    icon.title = `SecureLifeHub: Fill ${fieldType === 'username' ? match.username : '••••••••'}`;
+
+    if (match) {
+        icon.title = `SecureLifeHub: Fill ${fieldType === 'username' ? match.username : '••••••••'}`;
+    } else {
+        icon.title = 'SecureLifeHub: Save new credentials';
+        icon.style.filter = 'grayscale(100%) opacity(0.7)'; // Dimmed and greyscale if no match
+    }
 
     // Inject
     parent.appendChild(icon);
@@ -126,8 +129,14 @@ function decorateInput(input, match, fieldType) {
         e.preventDefault();
         e.stopPropagation();
 
-        // "Ask" logic: The click IS the answer "Yes"
-        fillCredentials(match);
+        if (match) {
+            fillCredentials(match);
+        } else {
+            const add = confirm('SecureLifeHub: No credentials found for this site. Open your vault to add a new password?');
+            if (add) {
+                window.open('https://securelifehub.netlify.app', '_blank');
+            }
+        }
     });
 }
 
@@ -199,7 +208,6 @@ function fillCredentials(data) {
     }
 }
 
-
 function performFill(element, value) {
     // Focus first so the field is "active"
     element.focus();
@@ -255,7 +263,6 @@ function syncSessionWithWebApp() {
     if (!isAppDomain) return;
 
     // Supabase stores the session in localStorage under a key like 'sb-<project-ref>-auth-token'
-    // We can iterate to find it or use the known project ref if we have it.
     // Project Ref: uhkfmppomxibrwhtaxsg
     const PROJECT_REF = "uhkfmppomxibrwhtaxsg";
     const AUTH_KEY = `sb-${PROJECT_REF}-auth-token`;
