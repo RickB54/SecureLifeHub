@@ -1,4 +1,4 @@
-import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2 } from "lucide-react"
+import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2, StickyNote } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -97,6 +97,7 @@ export const sidebarSections = [
         color: "violet",
         items: [
             { id: "type-secure-notes", label: "Secure Notes", icon: <FileText className="h-4 w-4" /> },
+            { id: "type-sticky-notes", label: "Sticky Notes", icon: <StickyNote className="h-4 w-4" /> },
             { id: "type-digital-life", label: "Online Presence", icon: <Globe className="h-4 w-4" /> },
             { id: "type-diary", label: "My Diary", icon: <Book className="h-4 w-4" /> },
             { id: "type-subscriptions", label: "Subscription Manager", icon: <CreditCard className="h-4 w-4" /> },

@@ -46,6 +46,7 @@ import TaskArchitect from "@/components/task-architect"
 import { sidebarSections } from "@/lib/sidebar-config"
 import HelpModal from "@/components/modals/help-modal"
 import SecureNotes from "@/components/secure-notes"
+import StickyNotes from "@/components/StickyNotes"
 import SecureDatabase from "@/components/secure-database/secure-database"
 import { Minimize } from "lucide-react"
 
@@ -212,6 +213,17 @@ function HomeContent() {
       return () => clearTimeout(tm)
     }
   }, [helpOpen])
+
+  // Listen for help requests from child components (e.g., StickyNotes help button)
+  useEffect(() => {
+    const handleOpenHelp = (e: any) => {
+      const pageId = e.detail?.pageId
+      if (pageId) setHelpInitialPage(pageId)
+      setHelpOpen(true)
+    }
+    window.addEventListener('slh_open_help', handleOpenHelp)
+    return () => window.removeEventListener('slh_open_help', handleOpenHelp)
+  }, [])
 
   // 2. CONSOLIDATED STARTUP & NAVIGATION EFFECT
   useEffect(() => {
@@ -612,6 +624,8 @@ function HomeContent() {
         return <Passwords {...commonProps} initialCategoryFilter="Software Licenses" />
       case "type-secure-notes":
         return <SecureNotes {...commonProps} />
+      case "type-sticky-notes":
+        return <StickyNotes setActivePage={handleNavigate} />
 
       // Global Filters
       case "favorites":

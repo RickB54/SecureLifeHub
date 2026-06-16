@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2, Zap } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2, Zap, StickyNote, Pin, Tag, Folder, ChevronDown, Search, RefreshCw, Palette } from "lucide-react"
 import Logo from "../logo"
 
 interface HelpPage {
@@ -100,10 +100,193 @@ export const HELP_MAP: Record<string, string> = {
     "reporting-engine": "reporting-engine-details",
     "type-tasks": "task-architect",
     "task-architect": "task-architect",
+    "type-sticky-notes": "sticky-notes",
     "extension-guide": "extension-guide",
 }
 
 const HELP_PAGES: HelpPage[] = [
+    {
+        id: "sticky-notes",
+        title: "Sticky Notes",
+        icon: StickyNote,
+        content: (
+            <div className="space-y-6">
+                <p className="text-lg text-gray-300 leading-relaxed">
+                    Sticky Notes is your personal digital corkboard — a highly interactive workspace for capturing thoughts, tasks, ideas, and reminders as colorful sticky notes, organized into folders and labels.
+                </p>
+
+                {/* What Is It */}
+                <div className="p-5 rounded-2xl bg-yellow-500/10 border border-yellow-500/20">
+                    <h4 className="font-black text-yellow-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <StickyNote className="h-4 w-4" /> What Are Sticky Notes?
+                    </h4>
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                        Each "sticky" is a richly formatted note card displayed on a virtual board. You can colorize them, pin important ones to the top,
+                        tag and organize them into notebooks and labels, embed images directly into the note content,
+                        and even turn any note into a live checklist. Everything syncs instantly to your private Supabase database so your notes are always available across devices.
+                    </p>
+                </div>
+
+                {/* Core Concepts */}
+                <div className="space-y-4">
+                    <h4 className="font-black text-white text-xs uppercase tracking-widest flex items-center gap-2">
+                        <Folder className="h-4 w-4 text-blue-400" /> Organization System
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/15">
+                            <div className="font-black text-blue-400 text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1"><Folder className="h-3 w-3" /> Notebooks (Folders)</div>
+                            <p className="text-[11px] text-gray-400">Top-level groupings for your notes. Create separate notebooks for Work, Personal, Shopping, Projects, etc. Click a notebook in the sidebar to filter to only its notes.</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/15">
+                            <div className="font-black text-purple-400 text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1"><FileText className="h-3 w-3" /> Sections (Labels)</div>
+                            <p className="text-[11px] text-gray-400">Sublabels within notebooks. For example, the "Work" notebook might have sections: "Meetings," "Ideas," "Action Items." A note can belong to multiple labels at once.</p>
+                        </div>
+                        <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/15">
+                            <div className="font-black text-emerald-400 text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1"><StickyNote className="h-3 w-3" /> Notes (Stickies)</div>
+                            <p className="text-[11px] text-gray-400">The actual cards on the board. Each note has a title, rich text content, color, and optional tags/labels. Notes can be pinned, locked, or sent to the Secure Notes vault.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Creating & Editing */}
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
+                    <h4 className="font-black text-white text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <HelpCircle className="h-4 w-4 text-yellow-400" /> How To Use Sticky Notes
+                    </h4>
+                    <div className="space-y-4">
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">01</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Creating a New Sticky</h5>
+                                <p className="text-[10px] text-gray-500">Click the <strong className="text-yellow-400">+ New Sticky</strong> button in the top right corner. A note editor will open where you can type a title and body content. Hit <strong>Save</strong> to drop it on the board. You can also click the camera icon to paste or upload an image directly into the note.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">02</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Editing a Sticky</h5>
+                                <p className="text-[10px] text-gray-500">Hover over any sticky to reveal the action toolbar. Click the <strong>✏️ Edit</strong> icon (or the pencil) to open the full note editor for that card. Changes are saved automatically to the cloud when you click Save.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">03</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Changing Colors</h5>
+                                <p className="text-[10px] text-gray-500">Hover the sticky, then click the <strong>🎨 Palette</strong> icon in the toolbar. Choose from 23 available colors. The sticky instantly re-renders in the selected color across all devices.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">04</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Drag & Drop Reordering</h5>
+                                <p className="text-[10px] text-gray-500">Grab the <strong>⠿ drag handle</strong> in the top-left corner of any sticky and drag it to a new position on the board. Your custom order is saved locally so it persists between sessions.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">05</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Pinning Important Notes</h5>
+                                <p className="text-[10px] text-gray-500">Click the <strong>📌 Pin</strong> icon to lock a note to the very top of the board. Pinned stickies always appear before unpinned ones regardless of sort order. Click again to unpin.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">06</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Managing Labels</h5>
+                                <p className="text-[10px] text-gray-500">Click <strong>Change labels</strong> in the sticky card dropdown menu (or within the editor) to quickly assign or create label tags. The sidebar categories are fully functioning as Labels. You can filter the board by selecting any Label from the left panel.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">07</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Checkbox / Live Lists</h5>
+                                <p className="text-[10px] text-gray-500">Enable checklist items by prepending status icons (⬜, ✅, ⏳, ❌) to lines. In the editor, a click-to-toggle dropdown trigger will align perfectly over the emoji in the text to prevent duplication. Select the status of each item cleanly without layout shifting.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">08</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Set a Reminder</h5>
+                                <p className="text-[10px] text-gray-500">Click the <strong>🔔 Reminder</strong> icon in the editor toolbar. You can select standard presets (Later today, Tomorrow, Next week) or configure a custom date, time, and repetition rule (Daily, Weekly, Monthly, etc.). Reminders show a visual badge on the card and send you a notification when they trigger.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">09</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Send to Secure Notes</h5>
+                                <p className="text-[10px] text-gray-500">Any sticky can be "promoted" to your encrypted Secure Notes vault. Use the <strong>↑ Send to Notes</strong> action from the sticky's overflow menu. This removes the sticky tag and moves it into the private notes area.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <span className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-[10px] font-black text-zinc-900 font-mono">10</span>
+                            <div>
+                                <h5 className="text-[11px] font-bold text-gray-200">Safe Deletion Warnings</h5>
+                                <p className="text-[10px] text-gray-500">To prevent accidental data loss, deleting notebook folders or submenu labels requires a double-confirmation prompt before they are permanently deleted from the system.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar & Filtering */}
+                <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/15">
+                    <h4 className="font-black text-blue-400 text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                        <Search className="h-4 w-4" /> Sidebar, Search & Filtering
+                    </h4>
+                    <div className="space-y-3 text-[11px] text-gray-400">
+                        <p><strong className="text-white">📂 Categories Sidebar:</strong> Click the panel icon in the header to toggle the left sidebar. It lists all your notebooks and sections. Click any notebook to see only its stickies. Click a section name to narrow further to just that label.</p>
+                        <p><strong className="text-white">🔍 Search Bar:</strong> The search bar (top of main area) filters stickies in real-time as you type. It searches both the title and body content of every note simultaneously.</p>
+                        <p><strong className="text-white">📅 Date Filter:</strong> Use the date dropdown to show only stickies created or updated Today, This Week, This Month, This Year, or All Time.</p>
+                        <p><strong className="text-white">🔢 Sort By:</strong> Sort stickies by Manual (drag) order, or by Created/Updated date ascending or descending.</p>
+                        <p><strong className="text-white">👁 Visibility Settings:</strong> The sliders icon opens Visibility Settings. Toggle entire notebooks or individual sections on/off. Hidden notebooks won't appear on the board even if they contain notes.</p>
+                    </div>
+                </div>
+
+                {/* Settings Reference */}
+                <div className="p-5 rounded-2xl bg-zinc-800/50 border border-zinc-700/50">
+                    <h4 className="font-black text-white text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-zinc-400" /> Settings Reference
+                    </h4>
+                    <div className="space-y-3">
+                        {[
+                            { label: 'Enable Animations', desc: 'Enables smooth fade, zoom, or bounce effects when notes are created, edited, moved, or deleted. You can choose from 6 different animation styles in the dropdown below this toggle.' },
+                            { label: 'List View Mode', desc: 'Switches the board from a card grid to a compact vertical list view. Ideal for text-heavy notes where you want to scan many entries quickly.' },
+                            { label: 'Masonry Layout', desc: 'In Grid mode, enables Pinterest-style masonry packing so notes of different heights stack tightly without uniform row gaps. Disabled by default.' },
+                            { label: 'Show Tags', desc: 'Displays your label chips (colored tags) at the bottom of each sticky card. Turn off to get a cleaner, more minimal look on the board.' },
+                            { label: 'Isolate Stickies', desc: 'When ON, the board ONLY shows notes that carry the __sticky-notes__ system tag. Notes created elsewhere (e.g., Secure Notes) won\'t appear. When OFF, any note in your database can appear.' },
+                            { label: 'Match Interior Color', desc: 'When enabled, the inside of the note editor matches the outside card color when you open it for editing — giving a cohesive, immersive feel.' },
+                            { label: 'Show Toolbar', desc: 'Controls whether the quick-action icon row (Edit, Color, Pin, Delete…) appears on hover. Disable for a cleaner board; you can still access actions via the ⋮ overflow menu.' },
+                            { label: 'Dark Theme Board', desc: 'Switches the board background from the signature warm brown corkboard texture to a sleek dark/pitch-black surface. Ideal for low-light environments.' },
+                        ].map(item => (
+                            <div key={item.label} className="flex gap-3 items-start">
+                                <div className="w-2 h-2 rounded-full bg-yellow-500 mt-1.5 shrink-0" />
+                                <div>
+                                    <span className="text-[11px] font-bold text-white">{item.label}: </span>
+                                    <span className="text-[11px] text-gray-400">{item.desc}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Sync */}
+                <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/15">
+                    <h4 className="font-black text-emerald-400 text-xs uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4" /> Cloud Sync
+                    </h4>
+                    <p className="text-[11px] text-gray-400 leading-relaxed">
+                        All stickies are synced to your private Supabase account in real-time. Row Level Security (RLS) ensures only your account can ever read or write your notes.
+                        The <strong className="text-white">🔄 Sync</strong> button in the toolbar forces a fresh pull from the server — use it if you suspect a note is missing or you want to see edits made on another device.
+                        Note display order is saved locally in your browser, so it remains consistent on each device independently.
+                    </p>
+                </div>
+
+                {/* Tips */}
+                <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/15 text-[10px] text-gray-500 italic">
+                    💡 <strong className="text-amber-400">Pro Tip:</strong> Use the <strong>Duplicate</strong> action (from the ⋮ menu) to quickly clone a sticky template — great for repeating to-do lists or weekly check-ins. Combine with <strong>Pin</strong> to keep your weekly template permanently at the top.
+                </div>
+            </div>
+        )
+    },
     {
         id: "intro",
         title: "Welcome to Secure Life Hub",
