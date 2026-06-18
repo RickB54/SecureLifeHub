@@ -436,7 +436,7 @@ function HomeContent() {
     updateItem,
     updateFolder,
     deleteItem,
-    bulkAddItems,
+    bulkAddItems: bulkAddItems as ((items: any[]) => Promise<void>) | undefined,
     autoLockTimeout,
     setAutoLockTimeout,
     twoFactorEnabled,

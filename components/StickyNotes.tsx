@@ -36,32 +36,34 @@ import { toast } from "@/hooks/use-toast";
 
 // --- Sortable Sticky Note Component ---
 const STICKY_COLORS = [
-  { id: 'yellow', bg: 'bg-[#fef08a]', border: 'border-[#facc15]', text: 'text-[#5c4033]', tagBg: 'bg-[#eab308]/30', tagText: 'text-[#5c4033]' },
-  { id: 'blue', bg: 'bg-blue-500', border: 'border-blue-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'emerald', bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'rose', bg: 'bg-rose-500', border: 'border-rose-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'purple', bg: 'bg-purple-500', border: 'border-purple-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'deepblue', bg: 'bg-[#1e3a8a]', border: 'border-[#1e40af]', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'orange', bg: 'bg-orange-500', border: 'border-orange-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'gray', bg: 'bg-zinc-700', border: 'border-zinc-600', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'teal', bg: 'bg-teal-600', border: 'border-teal-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'indigo', bg: 'bg-indigo-500', border: 'border-indigo-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'pink', bg: 'bg-pink-400', border: 'border-pink-300', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'cyan', bg: 'bg-cyan-500', border: 'border-cyan-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'amber', bg: 'bg-amber-400', border: 'border-amber-300', text: 'text-amber-950', tagBg: 'bg-amber-900/20', tagText: 'text-amber-950' },
-  { id: 'lime', bg: 'bg-lime-400', border: 'border-lime-300', text: 'text-lime-950', tagBg: 'bg-lime-900/20', tagText: 'text-lime-950' },
-  { id: 'fuchsia', bg: 'bg-fuchsia-500', border: 'border-fuchsia-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'violet', bg: 'bg-violet-600', border: 'border-violet-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'red', bg: 'bg-red-500', border: 'border-red-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'green', bg: 'bg-green-600', border: 'border-green-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'slate', bg: 'bg-slate-600', border: 'border-slate-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'sky', bg: 'bg-sky-400', border: 'border-sky-300', text: 'text-sky-950', tagBg: 'bg-sky-900/20', tagText: 'text-sky-950' },
-  { id: 'stone', bg: 'bg-stone-500', border: 'border-stone-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'brown', bg: 'bg-[#8B4513]', border: 'border-[#A0522D]', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white' },
-  { id: 'mint', bg: 'bg-[#98FF98]', border: 'border-[#7FFFD4]', text: 'text-[#004d00]', tagBg: 'bg-[#004d00]/20', tagText: 'text-[#004d00]' },
+  { id: 'yellow', bg: 'bg-[#fef08a]', border: 'border-[#facc15]', text: 'text-[#5c4033]', tagBg: 'bg-[#eab308]/30', tagText: 'text-[#5c4033]', textRing: '#5c4033' },
+  { id: 'blue', bg: 'bg-blue-500', border: 'border-blue-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'emerald', bg: 'bg-emerald-500', border: 'border-emerald-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'rose', bg: 'bg-rose-500', border: 'border-rose-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'purple', bg: 'bg-purple-500', border: 'border-purple-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'deepblue', bg: 'bg-[#1e3a8a]', border: 'border-[#1e40af]', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'orange', bg: 'bg-orange-500', border: 'border-orange-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'gray', bg: 'bg-zinc-700', border: 'border-zinc-600', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'teal', bg: 'bg-teal-600', border: 'border-teal-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'indigo', bg: 'bg-indigo-500', border: 'border-indigo-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'pink', bg: 'bg-pink-400', border: 'border-pink-300', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'cyan', bg: 'bg-cyan-500', border: 'border-cyan-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'amber', bg: 'bg-amber-400', border: 'border-amber-300', text: 'text-amber-950', tagBg: 'bg-amber-900/20', tagText: 'text-amber-950', textRing: '#451a03' },
+  { id: 'lime', bg: 'bg-lime-400', border: 'border-lime-300', text: 'text-lime-950', tagBg: 'bg-lime-900/20', tagText: 'text-lime-950', textRing: '#1a2e05' },
+  { id: 'fuchsia', bg: 'bg-fuchsia-500', border: 'border-fuchsia-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'violet', bg: 'bg-violet-600', border: 'border-violet-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'red', bg: 'bg-red-500', border: 'border-red-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'green', bg: 'bg-green-600', border: 'border-green-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'slate', bg: 'bg-slate-600', border: 'border-slate-500', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'sky', bg: 'bg-sky-400', border: 'border-sky-300', text: 'text-sky-950', tagBg: 'bg-sky-900/20', tagText: 'text-sky-950', textRing: '#0c4a6e' },
+  { id: 'stone', bg: 'bg-stone-500', border: 'border-stone-400', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'brown', bg: 'bg-[#8B4513]', border: 'border-[#A0522D]', text: 'text-white', tagBg: 'bg-white/30', tagText: 'text-white', textRing: '#ffffff' },
+  { id: 'mint', bg: 'bg-[#98FF98]', border: 'border-[#7FFFD4]', text: 'text-[#004d00]', tagBg: 'bg-[#004d00]/20', tagText: 'text-[#004d00]', textRing: '#004d00' },
+  { id: 'black', bg: 'bg-black', border: 'border-zinc-700', text: 'text-white', tagBg: 'bg-white/20', tagText: 'text-white', textRing: '#ffffff' },
 ];
 
-const getCleanContent = (content) => {
+
+const getCleanContent = (content: string) => {
   if (!content) return "";
   const splitIndex = content.search(/!\[.*?\]\(https?:\/\/[^\)]+\)/);
   if (splitIndex === -1) return content;
@@ -106,9 +108,10 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       const found = STICKY_COLORS.find(c => c.id === colorId);
       if (found) return found;
     }
-    const hash = note.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return STICKY_COLORS[hash % 6];
+    // Default: black
+    return STICKY_COLORS.find(c => c.id === 'black') || STICKY_COLORS[0];
   }, [note.id, note.tags]);
+
 
   return (
     <div
@@ -119,7 +122,7 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       }}
       onClick={() => onEdit(note)}
       className={`
-        relative group p-5 rounded shadow-lg transition-all duration-200 min-h-[200px] flex flex-col cursor-pointer
+        relative group p-5 rounded shadow-lg transition-all duration-200 flex flex-col cursor-pointer
         ${isDragging ? 'shadow-2xl scale-105 opacity-90' : 'hover:shadow-xl hover:-translate-y-1'}
         ${color.bg} ${color.border} ${color.text} border
       `}
@@ -169,12 +172,15 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
           return null;
         })()}
         <h3 className="font-bold text-lg leading-tight mb-2">
-          <span className="line-clamp-2 inline">{note.title}</span>
+          <span
+            className="line-clamp-3 inline"
+            title={note.title && note.title.length > 80 ? note.title : undefined}
+          >{note.title}</span>
           <span className="text-[10px] opacity-50 font-normal ml-2 tracking-widest whitespace-nowrap align-middle">
             {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
         </h3>
-        <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-6">{getCleanContent(note.content)}</p>
+        <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">{getCleanContent(note.content)}</p>
       </div>
       {(() => {
         const reminder = getReminderData(note);
@@ -235,8 +241,19 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
                 {STICKY_COLORS.map(c => (
-                  <div key={c.id} onClick={() => onChangeColor(note, c.id)} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${note.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} />
+                  <div
+                    key={c.id}
+                    onClick={() => onChangeColor(note, c.id)}
+                    className={`w-8 h-8 rounded-full cursor-pointer ${c.bg}`}
+                    style={{
+                      outline: note.tags?.includes(`__color:${c.id}__`) ? '2px solid white' : 'none',
+                      outlineOffset: '2px',
+                      boxShadow: `0 0 0 3px ${c.textRing || '#fff'}`
+                    }}
+                    title={c.id}
+                  />
                 ))}
+
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { e.stopPropagation(); onSendToNotes(note); }}>
@@ -316,8 +333,8 @@ const SortableListRow = ({
       const found = STICKY_COLORS.find(c => c.id === colorId);
       if (found) return found;
     }
-    const hash = note.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return STICKY_COLORS[hash % 6];
+    return STICKY_COLORS.find(c => c.id === 'black') || STICKY_COLORS[0];
+
   }, [note.id, note.tags]);
 
   const timestamp = React.useMemo(() => {
@@ -416,14 +433,20 @@ const SortableListRow = ({
             <div className="border-t border-zinc-800 my-1" />
             <div className="px-2 py-1 text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Change Color</div>
             <div className="px-2 py-1.5 grid grid-cols-5 gap-1.5">
-              {STICKY_COLORS.slice(0, 10).map(c => (
-                <button 
-                  key={c.id} 
-                  onClick={() => onChangeColor(note, c.id)} 
-                  className={`w-6 h-6 rounded-full border ${note.tags?.includes(`__color:${c.id}__`) ? 'border-white' : 'border-transparent'} ${c.bg}`} 
+              {STICKY_COLORS.map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => onChangeColor(note, c.id)}
+                  className={`w-6 h-6 rounded-full ${c.bg}`}
+                  style={{
+                    outline: note.tags?.includes(`__color:${c.id}__`) ? '2px solid white' : 'none',
+                    outlineOffset: '1px',
+                    boxShadow: `0 0 0 2px ${c.textRing || '#fff'}`
+                  }}
                   title={c.id}
                 />
               ))}
+
             </div>
             <div className="border-t border-zinc-800 my-1" />
             <DropdownMenuItem onClick={() => onDelete(note.id)} className="text-red-400 hover:text-red-300 hover:bg-red-400/10">
@@ -462,6 +485,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   };
 
   const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [originalNoteSnapshot, setOriginalNoteSnapshot] = useState<Note | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
 
   const [reminderSubView, setReminderSubView] = useState<'options' | 'picker'>('options');
@@ -471,7 +495,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const handleEditNote = (note: Note) => {
     setEditingNote(note);
+    setOriginalNoteSnapshot(note);
     setReminderSubView('options');
+
     const rem = getReminderData(note);
     if (rem) {
       setReminderDate(rem.date);
@@ -657,8 +683,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     isolate: localStorage.getItem('sticky_notes_isolate') === 'true',
     toolbar: localStorage.getItem('sticky_notes_toolbar') === null ? true : localStorage.getItem('sticky_notes_toolbar') !== 'false',
     matchColor: localStorage.getItem('sticky_notes_match_color') === 'true',
-    darkTheme: localStorage.getItem('sticky_notes_dark_theme') === null ? true : localStorage.getItem('sticky_notes_dark_theme') !== 'false'
+    darkTheme: localStorage.getItem('sticky_notes_dark_theme') === null ? true : localStorage.getItem('sticky_notes_dark_theme') !== 'false',
+    showReturnMarkers: localStorage.getItem('sticky_notes_return_markers') === 'true',
+    autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') === 'true',
   });
+
 
   // Animation style: 'smooth' (default), 'pop', 'bounce', 'slide', 'flip', 'neon'
   const [animStyle, setAnimStyle] = useState<string>(() => localStorage.getItem('sticky_notes_anim_style') || 'smooth');
@@ -704,14 +733,17 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
   }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme', val: boolean) => {
-    if (key === 'darkTheme') {
-      localStorage.setItem('sticky_notes_dark_theme', String(val));
-    } else {
-      localStorage.setItem(`sticky_notes_${key}`, String(val));
-    }
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers', val: boolean) => {
+    const keyMap: Record<string, string> = {
+      darkTheme: 'sticky_notes_dark_theme',
+      showReturnMarkers: 'sticky_notes_return_markers',
+      autoLineNumbers: 'sticky_notes_auto_line_numbers',
+    };
+    const storageKey = keyMap[key] || `sticky_notes_${key}`;
+    localStorage.setItem(storageKey, String(val));
     setPrefs(p => ({ ...p, [key]: val }));
   };
+
 
   // Fetch data on mount
   useEffect(() => {
@@ -1048,18 +1080,31 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         }
         toast({ title: "Note Created" });
       } else {
-        await notesStore.updateNote(editingNote.id, { 
-          section_id: sectionId, 
-          title: editingNote.title, 
-          content: editingNote.content,
-          tags: editingNote.tags 
-        });
-        toast({ title: "Note Updated" });
+        // Only write to DB if something actually changed to avoid bumping updated_at
+        const snap = originalNoteSnapshot;
+        const changed = !snap ||
+          snap.title !== editingNote.title ||
+          snap.content !== editingNote.content ||
+          snap.section_id !== editingNote.section_id ||
+          JSON.stringify(snap.tags) !== JSON.stringify(editingNote.tags);
+        if (changed) {
+          await notesStore.updateNote(editingNote.id, {
+            section_id: sectionId,
+            title: editingNote.title,
+            content: editingNote.content,
+            tags: editingNote.tags
+          });
+          toast({ title: "Note Updated" });
+        } else {
+          toast({ title: "No changes" });
+        }
       }
       setIsNoteModalOpen(false);
       setEditingNote(null);
+      setOriginalNoteSnapshot(null);
     }
   };
+
 
   const handleSendToNotes = async (note: Note) => {
     const tags = note.tags?.filter(t => t !== '__sticky-notes__') || [];
@@ -1147,9 +1192,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const handleCreateNotebook = async () => {
     if (newNotebookName.trim()) {
-      const nbId = await notesStore.createNotebook(newNotebookName);
-      if (nbId) {
-        await notesStore.createSection(nbId, "General");
+      const nb = await notesStore.createNotebook(newNotebookName);
+      if (nb?.id) {
+        await notesStore.createSection(nb.id, "General");
       }
       setNewNotebookName("");
       setIsNotebookModalOpen(false);
@@ -1626,8 +1671,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS.find(c => c.id === 'gray')!;
         
         return (
-        <div 
-          onClick={handleSaveNote}
+        <div
+          onClick={() => { setIsNoteModalOpen(false); setEditingNote(null); setOriginalNoteSnapshot(null); }}
           className="fixed inset-0 z-[300] bg-black/60 flex items-center justify-center p-4 animate-in fade-in cursor-pointer"
         >
           <div 
@@ -1643,9 +1688,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   </div>
                 )}
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsNoteModalOpen(false)} className={`${editColor.text} hover:bg-black/10`}>
-                <X className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className={`${editColor.text} hover:bg-black/10`} title="Note Settings">
+                  <Settings className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => { setIsNoteModalOpen(false); setEditingNote(null); setOriginalNoteSnapshot(null); }} className={`${editColor.text} hover:bg-black/10`}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
             </div>
             
             {noteHeaders.length > 0 && (
@@ -1784,9 +1835,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     </div>
                   </div>
 
-                  <Textarea 
+                  <Textarea
                     ref={textareaRef}
-                    value={getCleanContent(editingNote.content)} 
+                    value={getCleanContent(editingNote.content)}
                     onChange={e => {
                       const newText = e.target.value;
                       const splitIndex = editingNote.content.search(/!\[.*?\]\(https?:\/\/[^\)]+\)/);
@@ -1797,10 +1848,68 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         setEditingNote({ ...editingNote, content: newText + imagesPart });
                       }
                     }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey && editingNote) {
+                        const ta = e.currentTarget;
+                        const pos = ta.selectionStart;
+                        const val = ta.value;
+                        // Get the current line
+                        const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
+                        const currentLine = val.substring(lineStart, pos);
+                        const trimmed = currentLine.trim();
+
+                        // Auto line number: if current line starts with N. pattern
+                        if (prefs.autoLineNumbers && /^\d+\.\s/.test(trimmed)) {
+                          if (trimmed === trimmed.match(/^\d+\.\s/)?.[0]) {
+                            // Empty numbered line — stop numbering, remove the number prefix
+                            e.preventDefault();
+                            const newContent = val.substring(0, lineStart) + '\n' + val.substring(pos);
+                            setEditingNote({ ...editingNote, content: newContent });
+                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart + 1; }, 0);
+                            return;
+                          }
+                          e.preventDefault();
+                          const num = parseInt(trimmed.match(/^(\d+)\./)?.[1] || '0', 10);
+                          const nextLine = `${num + 1}. `;
+                          const newContent = val.substring(0, pos) + '\n' + nextLine + val.substring(pos);
+                          setEditingNote({ ...editingNote, content: newContent });
+                          setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 1 + nextLine.length; }, 0);
+                          return;
+                        }
+
+                        // Checkbox on Enter: only if current line has real text content (not empty)
+                        if (trimmed.length > 0 && !trimmed.startsWith('☐') && !trimmed.startsWith('☑') && !trimmed.startsWith('- [ ]') && !trimmed.startsWith('- [x]')) {
+                          e.preventDefault();
+                          const newContent = val.substring(0, pos) + '\n☐ ' + val.substring(pos);
+                          setEditingNote({ ...editingNote, content: newContent });
+                          setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 3; }, 0);
+                          return;
+                        }
+
+                        // If current line is a checkbox line (starts with ☐ or ☑), continue pattern
+                        if (trimmed.startsWith('☐ ') || trimmed.startsWith('☑ ')) {
+                          e.preventDefault();
+                          const restOfLine = trimmed.substring(2).trim();
+                          if (!restOfLine) {
+                            // Empty checkbox line → remove checkbox and add plain newline
+                            const newContent = val.substring(0, lineStart) + '\n' + val.substring(pos);
+                            setEditingNote({ ...editingNote, content: newContent });
+                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart + 1; }, 0);
+                          } else {
+                            const newContent = val.substring(0, pos) + '\n☐ ' + val.substring(pos);
+                            setEditingNote({ ...editingNote, content: newContent });
+                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 3; }, 0);
+                          }
+                          return;
+                        }
+                      }
+                    }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
                     className="flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 pl-12 text-base leading-relaxed"
                     placeholder="Write something (use # headers to create section links)..."
                   />
+
+
 
                   {/* Mirror Div for height calculations */}
                   <div 
@@ -1808,9 +1917,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     className="absolute top-0 left-0 p-4 pl-12 text-base leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10"
                     aria-hidden
                   >
-                    {getCleanContent(editingNote.content).split('\n').map((line, i) => (
-                      <div key={i} className="min-h-[1.625em] leading-relaxed">{line || ' '}</div>
+                    {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
+                      <div key={i} className="min-h-[1.625em] leading-relaxed relative">
+                        {line || ' '}
+                        {prefs.showReturnMarkers && line && (
+                          <span className="text-[10px] opacity-30 select-none ml-0.5">¶</span>
+                        )}
+                      </div>
                     ))}
+
                   </div>
 
                   {(() => {
@@ -1997,20 +2112,32 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-800 p-2 grid grid-cols-4 gap-2 z-[400]">
-                    {STICKY_COLORS.map(c => (
-                      <div key={c.id} onClick={() => {
-                        let newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
-                        newTags.push(`__inside_color:${c.id}__`);
-                        if (prefs.matchColor) {
-                          newTags = newTags.filter(t => !t.startsWith('__color:'));
-                          newTags.push(`__color:${c.id}__`);
-                        }
-                        setEditingNote({...editingNote, tags: newTags});
-                      }} className={`w-8 h-8 rounded-full cursor-pointer border-2 ${
-                        (prefs.matchColor ? editingNote.tags?.includes(`__color:${c.id}__`) : editingNote.tags?.includes(`__inside_color:${c.id}__`)) 
-                          ? 'border-white' : 'border-transparent'
-                      } ${c.bg}`} />
-                    ))}
+                    {STICKY_COLORS.map(c => {
+                      const isActive = prefs.matchColor
+                        ? editingNote.tags?.includes(`__color:${c.id}__`)
+                        : editingNote.tags?.includes(`__inside_color:${c.id}__`);
+                      return (
+                        <div
+                          key={c.id}
+                          onClick={() => {
+                            let newTags = editingNote.tags?.filter(t => !t.startsWith('__inside_color:')) || [];
+                            newTags.push(`__inside_color:${c.id}__`);
+                            if (prefs.matchColor) {
+                              newTags = newTags.filter(t => !t.startsWith('__color:'));
+                              newTags.push(`__color:${c.id}__`);
+                            }
+                            setEditingNote({...editingNote, tags: newTags});
+                          }}
+                          className={`w-8 h-8 rounded-full cursor-pointer ${c.bg}`}
+                          style={{
+                            outline: isActive ? '2px solid white' : 'none',
+                            outlineOffset: '2px',
+                            boxShadow: `0 0 0 3px ${c.textRing || '#fff'}`
+                          }}
+                        />
+                      );
+                    })}
+
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Send to Personal Notes" onClick={(e) => { 
@@ -2044,7 +2171,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 </DropdownMenu>
               </div>
               <div className="flex gap-2 font-semibold">
-                <Button variant="outline" onClick={() => setIsNoteModalOpen(false)} className={`border-black/20 ${editColor.text} hover:bg-black/10 bg-transparent px-2.5 sm:px-4 text-xs sm:text-sm`}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setIsNoteModalOpen(false); setEditingNote(null); setOriginalNoteSnapshot(null); }} className={`border-black/20 ${editColor.text} hover:bg-black/10 bg-transparent px-2.5 sm:px-4 text-xs sm:text-sm`}>Cancel</Button>
+
                 <Button onClick={handleSaveNote} className={`bg-black/20 ${editColor.text} hover:bg-black/30 border border-black/10 px-3 sm:px-4`}>
                   <Save className="w-4 h-4 sm:mr-2" />
                   <span className="hidden sm:inline">Save Sticky</span>
@@ -2201,6 +2329,27 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
                 </label>
               </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-sm">Show Return Markers</div>
+                  <div className="text-xs text-zinc-500">Show ¶ at end of hard-return lines inside open notes (like formatting marks)</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={prefs.showReturnMarkers} onChange={e => updatePref('showReturnMarkers', e.target.checked)} />
+                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-white text-sm">Automatic Line Numbers</div>
+                  <div className="text-xs text-zinc-500">Starting a line with "1." auto-continues numbering on each Enter. Press Enter on empty line to stop.</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={prefs.autoLineNumbers} onChange={e => updatePref('autoLineNumbers', e.target.checked)} />
+                  <div className="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
+
               <div className="pt-4 border-t border-zinc-800">
                 <Button 
                   variant="destructive" 

@@ -30,10 +30,19 @@ export interface Notebook {
   created_at: string;
 }
 
+// Sync state stored in localStorage per section
+export interface SectionSyncState {
+  enabled: boolean;
+  status: 'green' | 'red' | 'none'; // green=synced, red=mismatched/never, none=disabled
+  lastSyncedAt?: string;
+}
+
 interface NotesState {
   notes: Note[];
   sections: Section[];
   notebooks: Notebook[];
+  // Per-section sync state (keyed by section id)
+  sectionSyncStates: Record<string, SectionSyncState>;
   refresh: () => Promise<void>;
   createNotebook: (name: string) => Promise<Notebook>;
   deleteNotebook: (id: string) => Promise<void>;
@@ -44,12 +53,46 @@ interface NotesState {
   createNote: (sectionId: string | null, title: string, content: string, tags?: string[]) => Promise<string>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
+  setSectionSyncState: (sectionId: string, state: Partial<SectionSyncState>) => void;
+  loadSectionSyncStates: () => void;
+}
+
+const SYNC_STATES_KEY = 'sticky_notes_section_sync_states';
+
+function loadSyncStatesFromStorage(): Record<string, SectionSyncState> {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(SYNC_STATES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSyncStatesToStorage(states: Record<string, SectionSyncState>) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SYNC_STATES_KEY, JSON.stringify(states));
+  } catch {}
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
   notes: [],
   sections: [],
   notebooks: [],
+  sectionSyncStates: loadSyncStatesFromStorage(),
+
+  loadSectionSyncStates: () => {
+    set({ sectionSyncStates: loadSyncStatesFromStorage() });
+  },
+
+  setSectionSyncState: (sectionId: string, state: Partial<SectionSyncState>) => {
+    const current = get().sectionSyncStates;
+    const existing = current[sectionId] || { enabled: false, status: 'none' };
+    const updated = { ...current, [sectionId]: { ...existing, ...state } };
+    saveSyncStatesToStorage(updated);
+    set({ sectionSyncStates: updated });
+  },
 
   refresh: async () => {
     try {
@@ -142,6 +185,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       .eq("id", id);
 
     if (error) throw error;
+    // Also remove sync state for this section
+    const current = get().sectionSyncStates;
+    const { [id]: _, ...rest } = current;
+    saveSyncStatesToStorage(rest);
+    set({ sectionSyncStates: rest });
     await get().refresh();
   },
 
