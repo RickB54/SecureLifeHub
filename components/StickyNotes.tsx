@@ -3,11 +3,12 @@ import {
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, Square, FileText, Folder, ChevronDown, ChevronRight,
   Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon,
-  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag
+  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -710,6 +711,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     showReturnMarkers: localStorage.getItem('sticky_notes_return_markers') === 'true',
     autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') === 'true',
     showCheckboxes: localStorage.getItem('sticky_notes_show_checkboxes') !== 'false',
+    textSize: localStorage.getItem('sticky_notes_text_size') ? parseInt(localStorage.getItem('sticky_notes_text_size')!) : 20,
   });
 
 
@@ -761,12 +763,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
   }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes', val: boolean) => {
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes' | 'textSize', val: boolean | number) => {
     const keyMap: Record<string, string> = {
       darkTheme: 'sticky_notes_dark_theme',
       showReturnMarkers: 'sticky_notes_return_markers',
       autoLineNumbers: 'sticky_notes_auto_line_numbers',
       showCheckboxes: 'sticky_notes_show_checkboxes',
+      textSize: 'sticky_notes_text_size',
     };
     const storageKey = keyMap[key] || `sticky_notes_${key}`;
     localStorage.setItem(storageKey, String(val));
@@ -1872,7 +1875,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <Input 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
-                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 text-2xl font-bold`}
+                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 font-bold`}
+                  style={{ fontSize: `${Math.round(prefs.textSize * 1.2)}px` }}
                   placeholder="Sticky title..."
                 />
               </div>
@@ -1989,7 +1993,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
-                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 text-xl leading-relaxed ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 leading-relaxed ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    style={{ fontSize: `${prefs.textSize}px` }}
                     placeholder="Write something (use # headers to create section links)..."
                   />
 
@@ -1998,7 +2003,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   {/* Mirror Div for height calculations */}
                   <div 
                     ref={mirrorRef} 
-                    className={`absolute top-0 left-0 p-4 text-xl leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    className={`absolute top-0 left-0 p-4 leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    style={{ fontSize: `${prefs.textSize}px` }}
                     aria-hidden
                   >
                     {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
@@ -2231,6 +2237,44 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 }}>
                   <FileText className="w-5 h-5" />
                 </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Adjust Text Size">
+                      <Type className="w-5 h-5" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="center" className="w-64 bg-zinc-900 border-zinc-800 text-white z-[400] p-4">
+                    <h4 className="font-bold text-sm mb-3 text-zinc-300">Text Size</h4>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {[16, 20, 24].map(size => (
+                        <Button 
+                          key={size} 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => updatePref('textSize', size)}
+                          className={`border-zinc-700 hover:bg-zinc-800 ${prefs.textSize === size ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'text-zinc-400'}`}
+                        >
+                          {size}px
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-500 font-bold uppercase">Custom:</span>
+                      <Input 
+                        type="number" 
+                        value={prefs.textSize} 
+                        onChange={e => {
+                          const val = parseInt(e.target.value);
+                          if (!isNaN(val) && val >= 10 && val <= 100) {
+                            updatePref('textSize', val);
+                          }
+                        }}
+                        className="h-8 bg-black/20 border-zinc-700 text-white w-20"
+                      />
+                      <span className="text-xs text-zinc-500">px</span>
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="icon" variant="ghost" className={`h-9 w-9 ${editColor.text} hover:bg-black/10`}>
