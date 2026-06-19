@@ -172,7 +172,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, onEdit, onDel
           }
           return null;
         })()}
-        <h3 className="font-bold text-lg leading-tight mb-2">
+        <h3 className="font-bold text-xl leading-tight mb-2">
           <span
             className="line-clamp-3 inline"
             title={note.title && note.title.length > 80 ? note.title : undefined}
@@ -181,7 +181,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, onEdit, onDel
             {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
         </h3>
-        <p className="text-sm opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">{getCleanContent(note.content)}</p>
+        <p className="text-base opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">{getCleanContent(note.content)}</p>
       </div>
       {(() => {
         const reminder = getReminderData(note);
@@ -379,7 +379,7 @@ const SortableListRow = React.memo(({
       {/* Title & Timestamp content area */}
       <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
         {/* Title: 1 or 2 lines */}
-        <h4 className="font-semibold text-zinc-100 text-sm leading-tight line-clamp-2">
+        <h4 className="font-semibold text-zinc-100 text-base leading-tight line-clamp-2">
           {note.title || <span className="italic opacity-50 text-zinc-400">Untitled Sticky</span>}
         </h4>
         
@@ -961,13 +961,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     
     Array.from(mirror.children).forEach((child: any, i) => {
       const lineText = lines[i] || '';
-      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌]\s*/, ''));
+      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, ''));
       let status = 'none';
       const trimmed = lineText.trim();
       if (trimmed.startsWith('✅')) status = 'done';
       else if (trimmed.startsWith('⏳')) status = 'waiting';
       else if (trimmed.startsWith('❌')) status = 'cancelled';
       else if (trimmed.startsWith('⬜')) status = 'todo';
+      else if (trimmed.startsWith('☐')) status = 'todo';
+      else if (trimmed.startsWith('☑')) status = 'done';
       
       tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
     });
@@ -978,7 +980,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     if (!editingNote) return;
     const lines = editingNote.content.split('\n');
     let line = lines[index];
-    line = line.replace(/^[✅⏳⬜❌]\s*/, '');
+    line = line.replace(/^[✅⏳⬜❌☐☑]\s*/, '');
     if (newStatusIcon !== 'none') {
       line = `${newStatusIcon} ${line}`;
     }
@@ -1868,7 +1870,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <Input 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
-                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20`}
+                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 text-lg font-semibold`}
                   placeholder="Sticky title..."
                 />
               </div>
@@ -1887,10 +1889,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   <div className="absolute inset-y-0 left-0 right-0 z-20 pointer-events-none">
                     <div style={{ transform: `translateY(-${scrollTop}px)` }}>
                       {lineTops.map(line => (
-                        <div key={line.index} className="absolute left-0 right-0 pointer-events-auto" style={{ top: line.top, height: line.height }}>
+                        <div key={line.index} className="absolute left-0 w-8 pointer-events-auto" style={{ top: line.top, height: line.height }}>
                           {(line.isList || line.status !== 'none') ? (
                             <DropdownMenu>
-                              <DropdownMenuTrigger className={`absolute left-[6px] top-[1px] w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 transition-colors ${editColor.bg}`}>
+                              <DropdownMenuTrigger className={`absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 transition-colors ${editColor.bg}`}>
                                  {line.status === 'done' ? '✅' : line.status === 'waiting' ? '⏳' : line.status === 'cancelled' ? '❌' : '⬜'}
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" side="bottom" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
@@ -1903,7 +1905,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             </DropdownMenu>
                           ) : (
                             <DropdownMenu>
-                              <DropdownMenuTrigger className="absolute left-[6px] top-[1px] w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-0 hover:opacity-100 transition-opacity">
+                              <DropdownMenuTrigger className="absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-0 hover:opacity-100 transition-opacity">
                                  ⬜
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" side="bottom" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
@@ -1983,7 +1985,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
-                    className="flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 pl-12 text-base leading-relaxed"
+                    className="flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 pl-12 text-lg leading-relaxed"
                     placeholder="Write something (use # headers to create section links)..."
                   />
 
@@ -1992,7 +1994,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   {/* Mirror Div for height calculations */}
                   <div 
                     ref={mirrorRef} 
-                    className="absolute top-0 left-0 p-4 pl-12 text-base leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10"
+                    className="absolute top-0 left-0 p-4 pl-12 text-lg leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10"
                     aria-hidden
                   >
                     {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
