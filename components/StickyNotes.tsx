@@ -712,6 +712,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') === 'true',
     showCheckboxes: localStorage.getItem('sticky_notes_show_checkboxes') !== 'false',
     textSize: localStorage.getItem('sticky_notes_text_size') ? parseInt(localStorage.getItem('sticky_notes_text_size')!) : 20,
+    lineHeight: localStorage.getItem('sticky_notes_line_height') ? parseFloat(localStorage.getItem('sticky_notes_line_height')!) : 1.625,
   });
 
 
@@ -763,13 +764,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
   }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes' | 'textSize', val: boolean | number) => {
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes' | 'textSize' | 'lineHeight', val: boolean | number) => {
     const keyMap: Record<string, string> = {
       darkTheme: 'sticky_notes_dark_theme',
       showReturnMarkers: 'sticky_notes_return_markers',
       autoLineNumbers: 'sticky_notes_auto_line_numbers',
       showCheckboxes: 'sticky_notes_show_checkboxes',
       textSize: 'sticky_notes_text_size',
+      lineHeight: 'sticky_notes_line_height',
     };
     const storageKey = keyMap[key] || `sticky_notes_${key}`;
     localStorage.setItem(storageKey, String(val));
@@ -1993,8 +1995,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
-                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 leading-relaxed ${prefs.showCheckboxes ? 'pl-12' : ''}`}
-                    style={{ fontSize: `${prefs.textSize}px` }}
+                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight }}
                     placeholder="Write something (use # headers to create section links)..."
                   />
 
@@ -2003,12 +2005,12 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   {/* Mirror Div for height calculations */}
                   <div 
                     ref={mirrorRef} 
-                    className={`absolute top-0 left-0 p-4 leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
-                    style={{ fontSize: `${prefs.textSize}px` }}
+                    className={`absolute top-0 left-0 p-4 whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight }}
                     aria-hidden
                   >
                     {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
-                      <div key={i} className="min-h-[1.625em] leading-relaxed relative">
+                      <div key={i} className="relative" style={{ minHeight: `${prefs.lineHeight}em` }}>
                         {line || ' '}
                         {prefs.showReturnMarkers && line && (
                           <span className="text-[10px] opacity-30 select-none ml-0.5">¶</span>
@@ -2272,6 +2274,36 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         className="h-8 bg-black/20 border-zinc-700 text-white w-20"
                       />
                       <span className="text-xs text-zinc-500">px</span>
+                    </div>
+
+                    <h4 className="font-bold text-sm mb-3 text-zinc-300 mt-4 border-t border-zinc-800 pt-3">Line Spacing</h4>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {[1.0, 1.5, 2.0].map(size => (
+                        <Button 
+                          key={size} 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => updatePref('lineHeight', size)}
+                          className={`border-zinc-700 hover:bg-zinc-800 ${prefs.lineHeight === size ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' : 'text-zinc-400'}`}
+                        >
+                          {size}
+                        </Button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-zinc-500 font-bold uppercase">Custom:</span>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        value={prefs.lineHeight} 
+                        onChange={e => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val) && val >= 0.5 && val <= 5.0) {
+                            updatePref('lineHeight', val);
+                          }
+                        }}
+                        className="h-8 bg-black/20 border-zinc-700 text-white w-20"
+                      />
                     </div>
                   </PopoverContent>
                 </Popover>
