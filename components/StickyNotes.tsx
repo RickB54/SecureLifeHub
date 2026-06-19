@@ -716,6 +716,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [animStyle, setAnimStyle] = useState<string>(() => localStorage.getItem('sticky_notes_anim_style') || 'smooth');
   // Neon Burst: additive glow effect on top of any animation
   const [neonBurst, setNeonBurst] = useState<boolean>(() => localStorage.getItem('sticky_notes_neon_burst') === 'true');
+  // Tick incremented on style change to force card remount and replay animation
+  const [animTick, setAnimTick] = useState(0);
 
   const [excludedNotebooks, setExcludedNotebooks] = useState<string[]>(() => {
     try {
@@ -1336,10 +1338,44 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <div className="flex items-center gap-2">
                   <p className="text-[10px] sm:text-xs text-zinc-400 hidden sm:block">Organize your thoughts and tasks</p>
                   {prefs.anim && (
-                    <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400" title="Active transition style">
-                      {animStyle === 'smooth' ? '✨' : animStyle === 'pop' ? '🎯' : animStyle === 'bounce' ? '🏀' : animStyle === 'slide' ? '➡️' : animStyle === 'flip' ? '🃏' : '✨'}
-                      {animStyle}{neonBurst ? ' + ⚡' : ''}
-                    </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-400/60 transition-all cursor-pointer"
+                          title="Click to change transition style"
+                        >
+                          {animStyle === 'smooth' ? '✨' : animStyle === 'pop' ? '🎯' : animStyle === 'bounce' ? '🏀' : animStyle === 'slide' ? '➡️' : animStyle === 'flip' ? '🃏' : '✨'}
+                          {animStyle}{neonBurst ? ' + ⚡' : ''}
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-44 bg-zinc-900 border-zinc-700 text-zinc-200 z-[400] p-1">
+                        <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 px-2 pt-1 pb-0.5">Transition Style</div>
+                        {[
+                          { id: 'smooth', label: '✨ Smooth Zoom' },
+                          { id: 'pop',    label: '🎯 Pop' },
+                          { id: 'bounce', label: '🏀 Bounce' },
+                          { id: 'slide',  label: '➡️ Slide In' },
+                          { id: 'flip',   label: '🃏 3D Flip' },
+                        ].map(s => (
+                          <DropdownMenuItem
+                            key={s.id}
+                            onClick={() => { setAnimStyle(s.id); localStorage.setItem('sticky_notes_anim_style', s.id); setAnimTick(t => t + 1); }}
+                            className={`text-xs cursor-pointer flex items-center justify-between ${animStyle === s.id ? 'text-yellow-400 bg-yellow-500/10' : 'hover:bg-zinc-800'}`}
+                          >
+                            {s.label}
+                            {animStyle === s.id && <span className="text-yellow-400 text-[10px]">✓</span>}
+                          </DropdownMenuItem>
+                        ))}
+                        <div className="border-t border-zinc-700 my-1" />
+                        <DropdownMenuItem
+                          onClick={() => { const next = !neonBurst; setNeonBurst(next); localStorage.setItem('sticky_notes_neon_burst', String(next)); }}
+                          className="text-xs cursor-pointer flex items-center justify-between hover:bg-zinc-800"
+                        >
+                          <span>⚡ Neon Burst</span>
+                          <span className={`text-[10px] font-bold ${neonBurst ? 'text-yellow-400' : 'text-zinc-600'}`}>{neonBurst ? 'ON' : 'OFF'}</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
               </div>
@@ -1589,7 +1625,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableListRow
-                            key={`${note.id}-${note.is_pinned}`}
+                            key={`${note.id}-${note.is_pinned}-${animTick}`}
                             note={note}
                             animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
@@ -1611,7 +1647,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableSticky 
-                            key={`${note.id}-${note.is_pinned}`} 
+                            key={`${note.id}-${note.is_pinned}-${animTick}`} 
                             note={note} 
                             animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
@@ -1651,7 +1687,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableListRow
-                            key={`${note.id}-${note.is_pinned}`}
+                            key={`${note.id}-${note.is_pinned}-${animTick}`}
                             note={note}
                             animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
@@ -1673,7 +1709,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableSticky 
-                            key={`${note.id}-${note.is_pinned}`} 
+                            key={`${note.id}-${note.is_pinned}-${animTick}`} 
                             note={note} 
                             animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
