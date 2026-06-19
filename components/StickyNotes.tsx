@@ -1339,9 +1339,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       )}
       
       {/* Header */}
-      <div className="flex-none flex flex-col md:flex-row md:items-center justify-between p-2 sm:p-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-10 gap-2">
+      <div className="flex-none flex flex-col 2xl:flex-row 2xl:items-center justify-between p-2 sm:p-4 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md z-10 gap-4">
         {/* Row 1: Title and mobile action triggers */}
-        <div className="flex items-center justify-between w-full md:w-auto">
+        <div className="flex flex-wrap items-center justify-between w-full 2xl:w-auto gap-2">
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Button variant="ghost" size="icon" onClick={handleClose} className="text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10">
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -1422,7 +1422,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           </div>
  
           {/* Compact actions only visible on Mobile (<md) */}
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex flex-wrap items-center justify-end gap-1 md:hidden mt-2 sm:mt-0 w-full min-[400px]:w-auto">
             <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sync Stickies">
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
             </Button>
@@ -1442,9 +1442,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         </div>
 
         {/* Row 2: Search, Filters, and viewMode Toggle */}
-        <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center justify-start 2xl:justify-end gap-2 w-full 2xl:w-auto 2xl:flex-1">
           {/* Search bar */}
-          <div className="relative flex-1 md:flex-none md:w-64">
+          <div className="relative flex-grow sm:flex-grow-0 sm:w-56 min-w-[150px]">
             <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-400" />
             <Input 
               placeholder="Search stickies..." 
@@ -1459,9 +1459,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Dates Filter - now fully visible on mobile */}
-            <div className="flex items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1">
               <select 
                 className="bg-zinc-900 text-white text-[10px] sm:text-xs border border-zinc-700 rounded h-9 px-1.5 sm:px-2 outline-none focus:ring-1 focus:ring-yellow-500 max-w-[85px] sm:max-w-none" 
                 value={dateFilter} 
@@ -1522,7 +1522,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           </div>
 
           {/* Desktop-only action buttons */}
-          <div className="hidden md:flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="hidden md:flex flex-wrap items-center gap-1.5 sm:gap-2 shrink-0 ml-auto 2xl:ml-0">
             <Button variant="ghost" size="icon" onClick={handleSync} disabled={isSyncing} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sync Stickies">
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-emerald-500' : ''}`} />
             </Button>
