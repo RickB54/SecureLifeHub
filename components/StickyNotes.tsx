@@ -78,7 +78,7 @@ const getReminderData = (note: Note) => {
   return { date, time, repeat: repeat || 'none' };
 };
 
-const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void }) => {
+const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
   const {
     attributes,
     listeners,
@@ -261,6 +261,9 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
             </Button>
           </div>
           <div className="flex gap-1">
+            <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} title="Open Settings" onClick={(e) => { e.stopPropagation(); onOpenSettings?.(); }}>
+              <Settings className="w-4 h-4" />
+            </Button>
             <Button size="icon" variant="ghost" className={`h-8 w-8 ${color.text} hover:bg-black/10`} onClick={(e) => { e.stopPropagation(); onEdit(note); }}>
               <Edit2 className="w-4 h-4" />
             </Button>
@@ -1587,7 +1590,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             showTags={true}
                             showToolbar={prefs.toolbar}
                             onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                            onOpenSettings={() => setIsSettingsOpen(true)}
                           />
+
+
                         );
                       })}
                     </div>
@@ -1644,7 +1650,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             showTags={true}
                             showToolbar={prefs.toolbar}
                             onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                            onOpenSettings={() => setIsSettingsOpen(true)}
                           />
+
                         );
                       })}
                     </div>
@@ -1665,8 +1673,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
       {/* Edit Note Modal */}
       {editingNote && isNoteModalOpen && (() => {
-        const outsideColorId = editingNote.tags?.find(t => t.startsWith('__color:'))?.split(':')[1]?.replace('__', '') || STICKY_COLORS[(editingNote.id === 'new' ? 'A' : editingNote.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % 6]?.id || 'yellow';
-        const insideColorTagId = editingNote.tags?.find(t => t.startsWith('__inside_color:'))?.split(':')[1]?.replace('__', '') || 'gray';
+        const outsideColorId = editingNote.tags?.find(t => t.startsWith('__color:'))?.split(':')[1]?.replace('__', '') || 'black';
+        const insideColorTagId = editingNote.tags?.find(t => t.startsWith('__inside_color:'))?.split(':')[1]?.replace('__', '') || 'black';
+
         const editColorId = prefs.matchColor ? outsideColorId : insideColorTagId;
         const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS.find(c => c.id === 'gray')!;
         
@@ -1806,7 +1815,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         <div key={line.index} className="absolute left-0 right-0 pointer-events-auto" style={{ top: line.top, height: line.height }}>
                           {(line.isList || line.status !== 'none') ? (
                             <DropdownMenu>
-                              <DropdownMenuTrigger className={`absolute left-[48px] top-[2px] w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 transition-colors ${editColor.bg}`}>
+                              <DropdownMenuTrigger className={`absolute left-[6px] top-[1px] w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 transition-colors ${editColor.bg}`}>
                                  {line.status === 'done' ? '✅' : line.status === 'waiting' ? '⏳' : line.status === 'cancelled' ? '❌' : '⬜'}
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" side="bottom" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
@@ -1819,7 +1828,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             </DropdownMenu>
                           ) : (
                             <DropdownMenu>
-                              <DropdownMenuTrigger className="absolute left-[10px] top-[2px] w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-0 hover:opacity-100 transition-opacity">
+                              <DropdownMenuTrigger className="absolute left-[6px] top-[1px] w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 opacity-0 hover:opacity-100 transition-opacity">
                                  ⬜
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" side="bottom" className="min-w-0 w-40 bg-zinc-900 border-zinc-800 text-white z-[400]">
@@ -1853,15 +1862,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const ta = e.currentTarget;
                         const pos = ta.selectionStart;
                         const val = ta.value;
-                        // Get the current line
                         const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
                         const currentLine = val.substring(lineStart, pos);
                         const trimmed = currentLine.trim();
 
-                        // Auto line number: if current line starts with N. pattern
+                        // Auto line numbers: only if pref enabled AND line starts with N.
                         if (prefs.autoLineNumbers && /^\d+\.\s/.test(trimmed)) {
-                          if (trimmed === trimmed.match(/^\d+\.\s/)?.[0]) {
-                            // Empty numbered line — stop numbering, remove the number prefix
+                          const restOfLine = trimmed.replace(/^\d+\.\s*/, '');
+                          if (!restOfLine.trim()) {
+                            // Empty numbered line — stop numbering, clear prefix
                             e.preventDefault();
                             const newContent = val.substring(0, lineStart) + '\n' + val.substring(pos);
                             setEditingNote({ ...editingNote, content: newContent });
@@ -1877,31 +1886,25 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           return;
                         }
 
-                        // Checkbox on Enter: only if current line has real text content (not empty)
-                        if (trimmed.length > 0 && !trimmed.startsWith('☐') && !trimmed.startsWith('☑') && !trimmed.startsWith('- [ ]') && !trimmed.startsWith('- [x]')) {
+                        // Checkbox continuation: ONLY if current line itself starts with ☐ or ☑
+                        if (trimmed.startsWith('☐') || trimmed.startsWith('☑')) {
                           e.preventDefault();
-                          const newContent = val.substring(0, pos) + '\n☐ ' + val.substring(pos);
-                          setEditingNote({ ...editingNote, content: newContent });
-                          setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 3; }, 0);
-                          return;
-                        }
-
-                        // If current line is a checkbox line (starts with ☐ or ☑), continue pattern
-                        if (trimmed.startsWith('☐ ') || trimmed.startsWith('☑ ')) {
-                          e.preventDefault();
-                          const restOfLine = trimmed.substring(2).trim();
-                          if (!restOfLine) {
-                            // Empty checkbox line → remove checkbox and add plain newline
+                          const restOfLine = trimmed.replace(/^[☐☑]\s*/, '');
+                          if (!restOfLine.trim()) {
+                            // Empty checkbox line → exit checkbox mode (just newline)
                             const newContent = val.substring(0, lineStart) + '\n' + val.substring(pos);
                             setEditingNote({ ...editingNote, content: newContent });
                             setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart + 1; }, 0);
                           } else {
+                            // Continue checkbox on next line
                             const newContent = val.substring(0, pos) + '\n☐ ' + val.substring(pos);
                             setEditingNote({ ...editingNote, content: newContent });
                             setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 3; }, 0);
                           }
                           return;
                         }
+
+                        // Default: normal newline — do NOT intercept
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
