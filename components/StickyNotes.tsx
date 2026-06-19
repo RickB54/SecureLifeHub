@@ -78,7 +78,7 @@ const getReminderData = (note: Note) => {
   return { date, time, repeat: repeat || 'none' };
 };
 
-const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
+const SortableSticky = React.memo(({ note, animClass, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
   const {
     attributes,
     listeners,
@@ -125,6 +125,7 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
         relative group p-5 rounded shadow-lg transition-all duration-200 flex flex-col cursor-pointer
         ${isDragging ? 'shadow-2xl scale-105 opacity-90' : 'hover:shadow-xl hover:-translate-y-1'}
         ${color.bg} ${color.border} ${color.text} border
+        ${animClass || ''}
       `}
     >
       <div 
@@ -288,11 +289,12 @@ const SortableSticky = ({ note, sectionName, onEdit, onDelete, onSendToNotes, on
       )}
     </div>
   );
-};
+});
 
 // --- Sortable List Row Component ---
-const SortableListRow = ({ 
+const SortableListRow = React.memo(({ 
   note, 
+  animClass,
   sectionName, 
   onEdit, 
   onDelete, 
@@ -301,9 +303,11 @@ const SortableListRow = ({
   onChangeColor, 
   onTogglePin, 
   showToolbar,
-  onChangeLabels
+  onChangeLabels,
+  onOpenSettings
 }: { 
   note: Note, 
+  animClass?: string,
   sectionName?: string, 
   onEdit: (n: Note) => void, 
   onDelete: (id: string) => void, 
@@ -355,6 +359,7 @@ const SortableListRow = ({
       className={`
         relative group flex items-center gap-3 p-3 rounded-lg bg-zinc-900/90 border border-zinc-800/80 transition-all duration-200 cursor-pointer select-none
         ${isDragging ? 'shadow-2xl scale-[1.01] opacity-90 border-zinc-700 bg-zinc-800' : 'hover:bg-zinc-800/50 hover:border-zinc-700'}
+        ${animClass || ''}
       `}
     >
       {/* Sticky color vertical accent bar */}
@@ -460,6 +465,19 @@ const SortableListRow = ({
       </div>
     </div>
   );
+});
+
+const getAnimClass = (enabled: boolean, style: string) => {
+  if (!enabled) return '';
+  switch (style) {
+    case 'smooth': return 'animate-in zoom-in-95 fade-in duration-700 ease-out';
+    case 'pop': return 'animate-in zoom-in-50 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]';
+    case 'bounce': return 'animate-in slide-in-from-top-16 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]';
+    case 'slide': return 'animate-in slide-in-from-left-16 fade-in duration-700 ease-out';
+    case 'flip': return 'animate-in fade-in zoom-in-90 duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]';
+    case 'neon': return 'animate-in fade-in zoom-in-95 duration-700 ease-out drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]';
+    default: return 'animate-in zoom-in-95 fade-in duration-500';
+  }
 };
 
 export default function StickyNotes({ setActivePage }: { setActivePage: (page: string) => void }) {
@@ -1187,10 +1205,12 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   };
 
   const handleDeleteNote = async (id: string) => {
-    if (confirm("Delete this sticky note?")) {
-      await notesStore.deleteNote(id);
-      toast({ title: "Deleted" });
-    }
+    setTimeout(async () => {
+      if (window.confirm("Delete this sticky note?")) {
+        await notesStore.deleteNote(id);
+        toast({ title: "Deleted" });
+      }
+    }, 10);
   };
 
   const handleCreateNotebook = async () => {
@@ -1557,6 +1577,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableListRow
                             key={`${note.id}-${note.is_pinned}`}
                             note={note}
+                            animClass={getAnimClass(prefs.anim, animStyle)}
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
@@ -1578,6 +1599,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableSticky 
                             key={`${note.id}-${note.is_pinned}`} 
                             note={note} 
+                            animClass={getAnimClass(prefs.anim, animStyle)}
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
@@ -1617,6 +1639,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableListRow
                             key={`${note.id}-${note.is_pinned}`}
                             note={note}
+                            animClass={getAnimClass(prefs.anim, animStyle)}
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
@@ -1638,6 +1661,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableSticky 
                             key={`${note.id}-${note.is_pinned}`} 
                             note={note} 
+                            animClass={getAnimClass(prefs.anim, animStyle)}
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
@@ -2355,27 +2379,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
               <div className="pt-4 border-t border-zinc-800">
                 <Button 
-                  variant="destructive" 
-                  onClick={async () => {
-                    if (activeNotes.length === 0) {
-                      toast({ title: "Nothing to clean up!" });
-                      return;
-                    }
-                    const message = selectedSection ? "Delete ALL stickies in this specific submenu?" 
-                                  : selectedNotebook ? "Delete ALL stickies in this entire label group?" 
-                                  : "WARNING: Delete ALL stickies currently visible on the board?";
-                    if (confirm(message)) {
-                      for (const note of activeNotes) {
-                        await notesStore.deleteNote(note.id);
-                      }
-                      toast({ title: "Cleaned up successfully" });
-                    }
-                  }}
-                  className="w-full bg-red-900/50 hover:bg-red-900 text-red-200 border border-red-800"
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="w-full bg-zinc-100 hover:bg-white text-zinc-900 border border-transparent font-bold mt-4"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" /> Clean Up Label Group
+                  <Save className="w-4 h-4 mr-2" /> Save Settings
                 </Button>
-                <p className="text-[10px] text-zinc-500 mt-2 text-center">Deletes all stickies currently visible on the board. This action cannot be undone.</p>
               </div>
             </div>
           </div>
