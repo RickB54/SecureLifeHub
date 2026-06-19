@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import { 
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
-  LayoutDashboard, CheckSquare, FileText, Folder, ChevronDown, ChevronRight,
+  LayoutDashboard, CheckSquare, Square, FileText, Folder, ChevronDown, ChevronRight,
   Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon,
   GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag
 } from "lucide-react";
@@ -709,6 +709,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     darkTheme: localStorage.getItem('sticky_notes_dark_theme') === null ? true : localStorage.getItem('sticky_notes_dark_theme') !== 'false',
     showReturnMarkers: localStorage.getItem('sticky_notes_return_markers') === 'true',
     autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') === 'true',
+    showCheckboxes: localStorage.getItem('sticky_notes_show_checkboxes') !== 'false',
   });
 
 
@@ -760,11 +761,12 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
   }, [excludedNotebooks, excludedSections, selectedNotebook, selectedSection]);
 
-  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers', val: boolean) => {
+  const updatePref = (key: 'anim' | 'tags' | 'masonry' | 'isolate' | 'toolbar' | 'matchColor' | 'darkTheme' | 'showReturnMarkers' | 'autoLineNumbers' | 'showCheckboxes', val: boolean) => {
     const keyMap: Record<string, string> = {
       darkTheme: 'sticky_notes_dark_theme',
       showReturnMarkers: 'sticky_notes_return_markers',
       autoLineNumbers: 'sticky_notes_auto_line_numbers',
+      showCheckboxes: 'sticky_notes_show_checkboxes',
     };
     const storageKey = keyMap[key] || `sticky_notes_${key}`;
     localStorage.setItem(storageKey, String(val));
@@ -1883,10 +1885,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 </div>
                 <div className={`flex-1 relative flex flex-col overflow-hidden rounded-md border ${editColor.border} bg-black/5`}>
                   {/* Gutter Background */}
-                  <div className={`absolute top-0 bottom-0 left-0 w-8 border-r ${editColor.border} opacity-30 pointer-events-none z-10`} />
+                  {prefs.showCheckboxes && <div className={`absolute top-0 bottom-0 left-0 w-8 border-r ${editColor.border} opacity-30 pointer-events-none z-10`} />}
                   
                   {/* Gutter Icons */}
-                  <div className="absolute inset-y-0 left-0 right-0 z-20 pointer-events-none">
+                  {prefs.showCheckboxes && (
+                    <div className="absolute inset-y-0 left-0 right-0 z-20 pointer-events-none">
                     <div style={{ transform: `translateY(-${scrollTop}px)` }}>
                       {lineTops.map(line => (
                         <div key={line.index} className="absolute left-0 w-8 pointer-events-auto" style={{ top: line.top, height: line.height }}>
@@ -1920,6 +1923,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       ))}
                     </div>
                   </div>
+                  )}
 
                   <Textarea
                     ref={textareaRef}
@@ -1985,7 +1989,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
-                    className="flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 pl-12 text-lg leading-relaxed"
+                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 text-lg leading-relaxed ${prefs.showCheckboxes ? 'pl-12' : ''}`}
                     placeholder="Write something (use # headers to create section links)..."
                   />
 
@@ -1994,7 +1998,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   {/* Mirror Div for height calculations */}
                   <div 
                     ref={mirrorRef} 
-                    className="absolute top-0 left-0 p-4 pl-12 text-lg leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10"
+                    className={`absolute top-0 left-0 p-4 text-lg leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
                     aria-hidden
                   >
                     {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
@@ -2246,6 +2250,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
                     )}
+                    <DropdownMenuItem onClick={() => updatePref('showCheckboxes', !prefs.showCheckboxes)}>
+                      {prefs.showCheckboxes ? 'Hide checkboxes' : 'Show checkboxes'}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { navigator.clipboard.writeText(editingNote.content); toast({ title: "Copied to clipboard" }); }}>Copy to Google Docs</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
