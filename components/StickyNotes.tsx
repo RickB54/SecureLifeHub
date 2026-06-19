@@ -985,6 +985,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const mirrorRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [lineTops, setLineTops] = useState<{index: number, top: number, isList: boolean, status: string, height: number}[]>([]);
+  const [showScrollTopBtn, setShowScrollTopBtn] = useState(false);
+  const mainBoardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!textareaRef.current || !mirrorRef.current || !isNoteModalOpen || !editingNote) return;
@@ -1649,7 +1651,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         </div>
 
         {/* Main Board */}
-        <div className="flex-1 overflow-y-auto p-8 relative z-10">
+        <div 
+          ref={mainBoardRef}
+          onScroll={(e) => setShowScrollTopBtn(e.currentTarget.scrollTop > 300)}
+          className="flex-1 overflow-y-auto p-8 relative z-10 scroll-smooth"
+        >
           <Button 
             variant="outline" 
             size="icon" 
@@ -1657,6 +1663,17 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             className={`fixed bottom-6 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-800 ${isSidebarOpen ? 'lg:hidden' : ''}`}
           >
             <PanelLeftClose className={`w-5 h-5 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} />
+          </Button>
+
+          {/* Scroll to Top Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => mainBoardRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+            className={`fixed bottom-20 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-yellow-500 hover:text-yellow-400 hover:bg-zinc-800 transition-all duration-300 ${showScrollTopBtn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+            title="Scroll to Top"
+          >
+            <ChevronUp className="w-5 h-5" />
           </Button>
 
           {/* Quick Note Bar */}
