@@ -467,17 +467,19 @@ const SortableListRow = React.memo(({
   );
 });
 
-const getAnimClass = (enabled: boolean, style: string) => {
+const getAnimClass = (enabled: boolean, style: string, neonBurst = false) => {
   if (!enabled) return '';
+  let cls = '';
   switch (style) {
-    case 'smooth': return 'animate-in zoom-in-95 fade-in duration-700 ease-out';
-    case 'pop': return 'animate-in zoom-in-50 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]';
-    case 'bounce': return 'animate-in slide-in-from-top-16 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]';
-    case 'slide': return 'animate-in slide-in-from-left-16 fade-in duration-700 ease-out';
-    case 'flip': return 'animate-in fade-in zoom-in-90 duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]';
-    case 'neon': return 'animate-in fade-in zoom-in-95 duration-700 ease-out drop-shadow-[0_0_20px_rgba(250,204,21,0.8)]';
-    default: return 'animate-in zoom-in-95 fade-in duration-500';
+    case 'smooth': cls = 'animate-in zoom-in-95 fade-in duration-700 ease-out'; break;
+    case 'pop':    cls = 'animate-in zoom-in-50 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]'; break;
+    case 'bounce': cls = 'animate-in slide-in-from-top-16 fade-in duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)]'; break;
+    case 'slide':  cls = 'animate-in slide-in-from-left-16 fade-in duration-700 ease-out'; break;
+    case 'flip':   cls = 'slh-flip-in-3d'; break;
+    default:       cls = 'animate-in zoom-in-95 fade-in duration-500'; break;
   }
+  if (neonBurst) cls += ' drop-shadow-[0_0_20px_rgba(250,204,21,0.8)] saturate-200';
+  return cls;
 };
 
 export default function StickyNotes({ setActivePage }: { setActivePage: (page: string) => void }) {
@@ -710,8 +712,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   });
 
 
-  // Animation style: 'smooth' (default), 'pop', 'bounce', 'slide', 'flip', 'neon'
+  // Animation style: 'smooth' (default), 'pop', 'bounce', 'slide', 'flip'
   const [animStyle, setAnimStyle] = useState<string>(() => localStorage.getItem('sticky_notes_anim_style') || 'smooth');
+  // Neon Burst: additive glow effect on top of any animation
+  const [neonBurst, setNeonBurst] = useState<boolean>(() => localStorage.getItem('sticky_notes_neon_burst') === 'true');
 
   const [excludedNotebooks, setExcludedNotebooks] = useState<string[]>(() => {
     try {
@@ -1281,13 +1285,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           @keyframes sn-bounce { 0%{opacity:0;transform:translateY(-40px);} 60%{transform:translateY(10px);} 80%{transform:translateY(-5px);} 100%{opacity:1;transform:translateY(0);} }
           @keyframes sn-slide  { from{opacity:0;transform:translateX(-60px);} to{opacity:1;transform:translateX(0);} }
           @keyframes sn-flip   { from{opacity:0;transform:perspective(600px) rotateY(-90deg);} to{opacity:1;transform:perspective(600px) rotateY(0deg);} }
-          @keyframes sn-neon   { 0%{opacity:0;filter:brightness(3) saturate(3) blur(8px);transform:scale(0.8);} 100%{opacity:1;filter:brightness(1) saturate(1) blur(0);transform:scale(1);} }
           .sn-anim-smooth { animation: sn-smooth 0.35s cubic-bezier(0.34,1.3,0.64,1) both; }
           .sn-anim-pop    { animation: sn-pop    0.40s cubic-bezier(0.34,1.56,0.64,1) both; }
           .sn-anim-bounce { animation: sn-bounce 0.55s ease both; }
           .sn-anim-slide  { animation: sn-slide  0.35s ease both; }
           .sn-anim-flip   { animation: sn-flip   0.45s ease both; }
-          .sn-anim-neon   { animation: sn-neon   0.50s ease both; }
+          @keyframes slh-flip-in  { from{opacity:0;transform:perspective(1200px) rotateX(-90deg) scale(0.95);} to{opacity:1;transform:perspective(1200px) rotateX(0deg) scale(1);} }
+          @keyframes slh-flip-out { from{opacity:1;transform:perspective(1200px) rotateX(0deg) scale(1);} to{opacity:0;transform:perspective(1200px) rotateX(90deg) scale(0.95);} }
+          .slh-flip-in-3d  { animation: slh-flip-in  0.55s cubic-bezier(0.34,1.1,0.64,1) both; transform-origin: center top; }
+          .slh-flip-out-3d { animation: slh-flip-out 0.25s ease-in both; transform-origin: center top; }
         `}</style>
       )}
       
@@ -1327,7 +1333,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     <HelpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 </h1>
-                <p className="text-[10px] sm:text-xs text-zinc-400 hidden sm:block">Organize your thoughts and tasks</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[10px] sm:text-xs text-zinc-400 hidden sm:block">Organize your thoughts and tasks</p>
+                  {prefs.anim && (
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400" title="Active transition style">
+                      {animStyle === 'smooth' ? '✨' : animStyle === 'pop' ? '🎯' : animStyle === 'bounce' ? '🏀' : animStyle === 'slide' ? '➡️' : animStyle === 'flip' ? '🃏' : '✨'}
+                      {animStyle}{neonBurst ? ' + ⚡' : ''}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -1577,7 +1591,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableListRow
                             key={`${note.id}-${note.is_pinned}`}
                             note={note}
-                            animClass={getAnimClass(prefs.anim, animStyle)}
+                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
@@ -1599,7 +1613,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableSticky 
                             key={`${note.id}-${note.is_pinned}`} 
                             note={note} 
-                            animClass={getAnimClass(prefs.anim, animStyle)}
+                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
@@ -1639,7 +1653,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableListRow
                             key={`${note.id}-${note.is_pinned}`}
                             note={note}
-                            animClass={getAnimClass(prefs.anim, animStyle)}
+                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
                             onEdit={handleEditNote}
                             onDelete={handleDeleteNote}
@@ -1661,7 +1675,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <SortableSticky 
                             key={`${note.id}-${note.is_pinned}`} 
                             note={note} 
-                            animClass={getAnimClass(prefs.anim, animStyle)}
+                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
                             onDelete={handleDeleteNote} 
@@ -1703,6 +1717,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         const editColorId = prefs.matchColor ? outsideColorId : insideColorTagId;
         const editColor = STICKY_COLORS.find(c => c.id === editColorId) || STICKY_COLORS.find(c => c.id === 'gray')!;
         
+        const isFlip = animStyle === 'flip';
         return (
         <div
           onClick={() => { setIsNoteModalOpen(false); setEditingNote(null); setOriginalNoteSnapshot(null); }}
@@ -1710,7 +1725,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         >
           <div 
             onClick={(e) => e.stopPropagation()}
-            className={`${editColor.bg} w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 ${editColor.border} flex flex-col h-[95vh] cursor-default`}
+            className={`${editColor.bg} w-full max-w-5xl rounded-lg shadow-2xl overflow-hidden border-2 ${editColor.border} flex flex-col h-[95vh] cursor-default ${getAnimClass(prefs.anim, animStyle, neonBurst)}`}
           >
             <div className={`p-4 border-b border-black/10 flex justify-between items-start ${editColor.bg} brightness-95`}>
               <div className="flex flex-col gap-1">
@@ -2280,7 +2295,6 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       { id: 'bounce', label: '🏀 Bounce',      desc: 'Drop from top' },
                       { id: 'slide',  label: '➡️ Slide In',    desc: 'Sweep from left' },
                       { id: 'flip',   label: '🃏 3D Flip',     desc: 'Perspective rotate' },
-                      { id: 'neon',   label: '⚡ Neon Burst',  desc: 'Glow & sharpen' },
                     ].map(s => (
                       <button
                         key={s.id}
@@ -2291,6 +2305,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         <div className="text-[10px] text-zinc-500 mt-0.5">{s.desc}</div>
                       </button>
                     ))}
+                  </div>
+                  {/* Neon Burst: additive option on top of any style */}
+                  <div className="flex items-center justify-between pt-1">
+                    <div>
+                      <div className="text-xs font-bold text-zinc-300">⚡ Neon Burst</div>
+                      <div className="text-[10px] text-zinc-500">Add glow effect to any transition</div>
+                    </div>
+                    <input type="checkbox" checked={neonBurst} onChange={e => { setNeonBurst(e.target.checked); localStorage.setItem('sticky_notes_neon_burst', String(e.target.checked)); }} className="w-4 h-4 accent-yellow-500" />
                   </div>
                 </div>
               )}
