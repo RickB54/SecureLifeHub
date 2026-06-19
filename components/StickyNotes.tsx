@@ -318,7 +318,8 @@ const SortableListRow = React.memo(({
   onChangeColor: (n: Note, colorId: string) => void, 
   onTogglePin: (n: Note) => void, 
   showToolbar?: boolean,
-  onChangeLabels?: (n: Note) => void
+  onChangeLabels?: (n: Note) => void,
+  onOpenSettings?: () => void
 }) => {
   const {
     attributes,
@@ -1650,6 +1651,17 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           </ScrollArea>
         </div>
 
+        {/* Scroll to Top Button */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => mainBoardRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+          className={`absolute bottom-6 right-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-yellow-500 hover:text-yellow-400 hover:bg-zinc-800 transition-all duration-300 ${showScrollTopBtn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+          title="Scroll to Top"
+        >
+          <ChevronUp className="w-5 h-5" />
+        </Button>
+
         {/* Main Board */}
         <div 
           ref={mainBoardRef}
@@ -1663,17 +1675,6 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             className={`fixed bottom-6 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-white hover:bg-zinc-800 ${isSidebarOpen ? 'lg:hidden' : ''}`}
           >
             <PanelLeftClose className={`w-5 h-5 transition-transform ${isSidebarOpen ? '' : 'rotate-180'}`} />
-          </Button>
-
-          {/* Scroll to Top Button */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => mainBoardRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
-            className={`fixed bottom-20 left-6 z-[60] rounded-full shadow-2xl bg-zinc-950 border-zinc-800 text-yellow-500 hover:text-yellow-400 hover:bg-zinc-800 transition-all duration-300 ${showScrollTopBtn ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
-            title="Scroll to Top"
-          >
-            <ChevronUp className="w-5 h-5" />
           </Button>
 
           {/* Quick Note Bar */}
