@@ -79,7 +79,7 @@ const getReminderData = (note: Note) => {
   return { date, time, repeat: repeat || 'none' };
 };
 
-const SortableSticky = React.memo(({ note, animClass, sectionName, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
+const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, isMasonry?: boolean, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
   const {
     attributes,
     listeners,
@@ -127,6 +127,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, onEdit, onDel
         ${isDragging ? 'shadow-2xl scale-105 opacity-90' : 'hover:shadow-xl hover:-translate-y-1'}
         ${color.bg} ${color.border} ${color.text} border
         ${animClass || ''}
+        ${isMasonry ? 'break-inside-avoid mb-8' : ''}
       `}
     >
       <div 
@@ -698,6 +699,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const [sortBy, setSortBy] = useState<string>("manual");
   const [dateFilter, setDateFilter] = useState<string>("all");
+  const [dateFilterStart, setDateFilterStart] = useState("");
+  const [dateFilterEnd, setDateFilterEnd] = useState("");
 
   // Prefs state for live updates
   const [prefs, setPrefs] = useState({
@@ -923,12 +926,39 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         if (dateFilter === "today") {
           if (d.toDateString() !== now.toDateString()) return false;
         } else if (dateFilter === "this-week") {
-          const firstDay = new Date(now.setDate(now.getDate() - now.getDay()));
+          const nowRef = new Date();
+          const firstDay = new Date(nowRef.setDate(nowRef.getDate() - nowRef.getDay()));
+          firstDay.setHours(0,0,0,0);
           if (d < firstDay) return false;
+        } else if (dateFilter === "last-week") {
+          const nowRef = new Date();
+          const firstDayOfThisWeek = new Date(nowRef.setDate(nowRef.getDate() - nowRef.getDay()));
+          firstDayOfThisWeek.setHours(0,0,0,0);
+          const lastDayOfLastWeek = new Date(firstDayOfThisWeek.getTime() - 1);
+          const firstDayOfLastWeek = new Date(lastDayOfLastWeek.getTime() - 6 * 24 * 60 * 60 * 1000);
+          firstDayOfLastWeek.setHours(0,0,0,0);
+          if (d < firstDayOfLastWeek || d > lastDayOfLastWeek) return false;
         } else if (dateFilter === "this-month") {
           if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === "last-month") {
+          const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+          const lastMonthYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+          if (d.getMonth() !== lastMonth || d.getFullYear() !== lastMonthYear) return false;
         } else if (dateFilter === "this-year") {
           if (d.getFullYear() !== now.getFullYear()) return false;
+        } else if (dateFilter === "last-year") {
+          if (d.getFullYear() !== now.getFullYear() - 1) return false;
+        } else if (dateFilter === "custom-range") {
+          if (dateFilterStart) {
+            const startD = new Date(dateFilterStart);
+            startD.setHours(0,0,0,0);
+            if (d < startD) return false;
+          }
+          if (dateFilterEnd) {
+            const endD = new Date(dateFilterEnd);
+            endD.setHours(23,59,59,999);
+            if (d > endD) return false;
+          }
         }
       }
 
@@ -949,7 +979,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
-  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, sortBy]);
+  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
@@ -1431,17 +1461,41 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Dates Filter - now fully visible on mobile */}
-            <select 
-              className="bg-zinc-900 text-white text-[10px] sm:text-xs border border-zinc-700 rounded h-9 px-1.5 sm:px-2 outline-none focus:ring-1 focus:ring-yellow-500 max-w-[85px] sm:max-w-none" 
-              value={dateFilter} 
-              onChange={e => setDateFilter(e.target.value)}
-            >
-              <option value="all">All Dates</option>
-              <option value="today">Today</option>
-              <option value="this-week">This Week</option>
-              <option value="this-month">This Month</option>
-              <option value="this-year">This Year</option>
-            </select>
+            <div className="flex items-center gap-1">
+              <select 
+                className="bg-zinc-900 text-white text-[10px] sm:text-xs border border-zinc-700 rounded h-9 px-1.5 sm:px-2 outline-none focus:ring-1 focus:ring-yellow-500 max-w-[85px] sm:max-w-none" 
+                value={dateFilter} 
+                onChange={e => setDateFilter(e.target.value)}
+              >
+                <option value="all">All Dates</option>
+                <option value="today">Today</option>
+                <option value="this-week">This Week</option>
+                <option value="last-week">Last Week</option>
+                <option value="this-month">This Month</option>
+                <option value="last-month">Last Month</option>
+                <option value="this-year">This Year</option>
+                <option value="last-year">Last Year</option>
+                <option value="custom-range">Custom Range</option>
+              </select>
+
+              {dateFilter === "custom-range" && (
+                <div className="flex items-center gap-1">
+                  <input 
+                    type="date" 
+                    className="bg-zinc-900 text-white text-[10px] sm:text-xs border border-zinc-700 rounded h-9 px-1.5 outline-none focus:ring-1 focus:ring-yellow-500"
+                    value={dateFilterStart}
+                    onChange={e => setDateFilterStart(e.target.value)}
+                  />
+                  <span className="text-zinc-500">-</span>
+                  <input 
+                    type="date" 
+                    className="bg-zinc-900 text-white text-[10px] sm:text-xs border border-zinc-700 rounded h-9 px-1.5 outline-none focus:ring-1 focus:ring-yellow-500"
+                    value={dateFilterEnd}
+                    onChange={e => setDateFilterEnd(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
 
             {/* Sort Filter - fully visible on mobile */}
             <select 
@@ -1651,13 +1705,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       })}
                     </div>
                   ) : (
-                    <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
+                    <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
                       {activeNotes.filter(n => n.is_pinned).map(note => {
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableSticky 
                             key={`${note.id}-${note.is_pinned}-${animTick}`} 
                             note={note} 
+                            isMasonry={isMasonry}
                             animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
@@ -1713,13 +1768,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       })}
                     </div>
                   ) : (
-                    <div className={`grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 ${isMasonry ? 'items-start' : 'items-stretch'}`}>
+                    <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
                       {activeNotes.filter(n => !n.is_pinned).map(note => {
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableSticky 
                             key={`${note.id}-${note.is_pinned}-${animTick}`} 
                             note={note} 
+                            isMasonry={isMasonry}
                             animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
                             sectionName={sectionName}
                             onEdit={handleEditNote} 
@@ -2389,8 +2445,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
       {/* Settings Modal */}
       {isSettingsOpen && (
-        <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-md overflow-hidden shadow-2xl">
+        <div 
+          onClick={() => setIsSettingsOpen(false)}
+          className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4 animate-in fade-in cursor-pointer"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-zinc-900 border border-zinc-800 rounded-lg w-full max-w-md overflow-hidden shadow-2xl cursor-default"
+          >
             <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
               <h2 className="text-white font-bold flex items-center gap-2"><Settings className="w-4 h-4 text-yellow-500"/> Sticky Notes Settings</h2>
               <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(false)} className="text-zinc-400 hover:text-white h-8 w-8">
