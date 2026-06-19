@@ -2007,17 +2007,17 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const val = ta.value;
                         const lineStart = val.lastIndexOf('\n', pos - 1) + 1;
                         const currentLine = val.substring(lineStart, pos);
-                        const trimmed = currentLine.trim();
+                        const trimmed = currentLine.trimStart();
 
                         // Auto line numbers: only if pref enabled AND line starts with N.
-                        if (prefs.autoLineNumbers && /^\d+\.\s/.test(trimmed)) {
+                        if (prefs.autoLineNumbers && /^\d+\.\s+/.test(trimmed)) {
                           const restOfLine = trimmed.replace(/^\d+\.\s*/, '');
                           if (!restOfLine.trim()) {
                             // Empty numbered line — stop numbering, clear prefix
                             e.preventDefault();
-                            const newContent = val.substring(0, lineStart) + '\n' + val.substring(pos);
+                            const newContent = val.substring(0, lineStart) + val.substring(pos);
                             setEditingNote({ ...editingNote, content: newContent });
-                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart + 1; }, 0);
+                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart; }, 0);
                             return;
                           }
                           e.preventDefault();
@@ -2034,10 +2034,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           e.preventDefault();
                           const restOfLine = trimmed.replace(/^[☐☑]\s*/, '');
                           if (!restOfLine.trim()) {
-                            // Empty checkbox line → exit checkbox mode (just newline)
-                            const newContent = val.substring(0, lineStart) + '\n' + val.substring(pos);
+                            // Empty checkbox line → exit checkbox mode (clear prefix)
+                            const newContent = val.substring(0, lineStart) + val.substring(pos);
                             setEditingNote({ ...editingNote, content: newContent });
-                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart + 1; }, 0);
+                            setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart; }, 0);
                           } else {
                             // Continue checkbox on next line
                             const newContent = val.substring(0, pos) + '\n☐ ' + val.substring(pos);
