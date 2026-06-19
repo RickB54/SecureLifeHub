@@ -1872,7 +1872,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <Input 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
-                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 text-lg font-semibold`}
+                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 text-2xl font-bold`}
                   placeholder="Sticky title..."
                 />
               </div>
@@ -1989,7 +1989,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
-                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 text-lg leading-relaxed ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 text-xl leading-relaxed ${prefs.showCheckboxes ? 'pl-12' : ''}`}
                     placeholder="Write something (use # headers to create section links)..."
                   />
 
@@ -1998,7 +1998,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   {/* Mirror Div for height calculations */}
                   <div 
                     ref={mirrorRef} 
-                    className={`absolute top-0 left-0 p-4 text-lg leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    className={`absolute top-0 left-0 p-4 text-xl leading-relaxed whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
                     aria-hidden
                   >
                     {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
