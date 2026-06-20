@@ -25,6 +25,7 @@ export const metadata: Metadata = {
 }
 
 import AuthProvider from "@/components/auth-provider"
+import { Toaster } from "@/components/ui/toaster"
 
 export default function RootLayout({
   children,
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="en">
       <body suppressHydrationWarning>
         <AuthProvider>{children}</AuthProvider>
+        <Toaster />
       </body>
     </html>
   )

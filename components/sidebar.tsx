@@ -5,6 +5,18 @@ import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings,
 import { sidebarSections } from "@/lib/sidebar-config"
 import DeleteConfirmationModal from "./delete-confirmation-modal"
 import { toast } from "sonner"
+import { useNotesStore } from "@/store/notes"
+import { getReminderData } from "./StickyNotes"
+
+// Helper to check if a reminder is currently triggered (for badge count)
+const isReminderTriggered = (reminder: ReturnType<typeof getReminderData>) => {
+  if (!reminder) return false;
+  const now = new Date();
+  const [year, month, day] = reminder.date.split('-').map(Number);
+  const [hour, minute] = reminder.time.split(':').map(Number);
+  const reminderDate = new Date(year, month - 1, day, hour, minute);
+  return reminderDate <= now;
+};
 
 interface SidebarProps {
   activePage: string
@@ -45,6 +57,111 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   const [showConfirm, setShowConfirm] = useState(false)
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
   const isLongPressActive = useRef(false)
+  
+  const notesStore = useNotesStore();
+  const [activeAlarmCount, setActiveAlarmCount] = useState(0);
+
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      const triggeredStr = localStorage.getItem('sticky_notes_triggered_reminders') || '[]';
+      let triggeredIds: string[] = [];
+      try { triggeredIds = JSON.parse(triggeredStr); } catch {}
+
+      let updatedTriggered = false;
+      let count = 0;
+
+      notesStore.notes.forEach(note => {
+        const reminder = getReminderData(note);
+        if (!reminder) return;
+
+        // Parse reminder date and time
+        const [year, month, day] = reminder.date.split('-').map(Number);
+        const [hour, minute] = reminder.time.split(':').map(Number);
+        if (!year || isNaN(hour)) return;
+        const reminderDate = new Date(year, month - 1, day, hour, minute);
+
+        if (reminderDate <= now) {
+          count++;
+          if (!triggeredIds.includes(note.id)) {
+            // Trigger notification
+            if (reminder.popup !== false) {
+              toast({
+                title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
+                description: note.content.replace(/^[✅⏳⬜❌☐☑]\s*/gm, '').replace(/[\u200B-\u200D\uFEFF]/g, '').substring(0, 100),
+                duration: 10000,
+              });
+            }
+            if (reminder.sound !== false) {
+              try {
+                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                if (AudioContextClass) {
+                  const ctx = new AudioContextClass();
+                  const osc = ctx.createOscillator();
+                  const gain = ctx.createGain();
+                  osc.connect(gain);
+                  gain.connect(ctx.destination);
+                  osc.type = 'sine';
+                  osc.frequency.setValueAtTime(880, ctx.currentTime);
+                  gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                  osc.start();
+                  osc.stop(ctx.currentTime + 0.15);
+                  
+                  setTimeout(() => {
+                    try {
+                      const osc2 = ctx.createOscillator();
+                      const gain2 = ctx.createGain();
+                      osc2.connect(gain2);
+                      gain2.connect(ctx.destination);
+                      osc2.type = 'sine';
+                      osc2.frequency.setValueAtTime(1100, ctx.currentTime);
+                      gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+                      osc2.start();
+                      osc2.stop(ctx.currentTime + 0.15);
+                    } catch (e) {}
+                  }, 200);
+                }
+              } catch (e) {}
+            }
+            
+            triggeredIds.push(note.id);
+            updatedTriggered = true;
+
+            // Handle repeating rules
+            if (reminder.repeat && reminder.repeat !== 'none') {
+              let nextDate = new Date(reminderDate);
+              if (reminder.repeat === 'daily') {
+                nextDate.setDate(nextDate.getDate() + 1);
+              } else if (reminder.repeat === 'weekly') {
+                nextDate.setDate(nextDate.getDate() + 7);
+              } else if (reminder.repeat === 'monthly') {
+                nextDate.setMonth(nextDate.getMonth() + 1);
+              } else if (reminder.repeat === 'yearly') {
+                nextDate.setFullYear(nextDate.getFullYear() + 1);
+              }
+              
+              const nextDateStr = nextDate.toISOString().split('T')[0];
+              const nextTimeStr = nextDate.toTimeString().split(' ')[0].substring(0, 5);
+              const cleanTags = (note.tags || []).filter(t => !t.startsWith('__reminder:'));
+              cleanTags.push(`__reminder:${nextDateStr}|${nextTimeStr}|${reminder.repeat}__`);
+              
+              notesStore.updateNote(note.id, { tags: cleanTags });
+              triggeredIds = triggeredIds.filter(id => id !== note.id);
+            }
+          }
+        }
+      });
+
+      if (updatedTriggered) {
+        localStorage.setItem('sticky_notes_triggered_reminders', JSON.stringify(triggeredIds));
+      }
+      setActiveAlarmCount(count);
+    };
+
+    const interval = setInterval(checkReminders, 15000);
+    checkReminders();
+    return () => clearInterval(interval);
+  }, [notesStore.notes]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024)
@@ -290,7 +407,14 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                             onClick={() => handleNavigation(item.id)}
                             className={`flex items-center w-full px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${isItemActive ? `${activeBg} text-white shadow-md` : "text-gray-500 hover:bg-white/5 hover:text-gray-200"}`}
                           >
-                            <div className={`${isItemActive ? "text-white" : iconColor} opacity-70`}>{item.icon}</div>
+                            <div className={`${isItemActive ? "text-white" : iconColor} opacity-70 relative`}>
+                              {item.icon}
+                              {item.id === 'type-sticky-notes' && activeAlarmCount > 0 && (
+                                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] text-white font-bold ring-1 ring-black">
+                                  {activeAlarmCount}
+                                </span>
+                              )}
+                            </div>
                             <span className="ml-3">{item.label}</span>
                           </button>
                           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[40]">

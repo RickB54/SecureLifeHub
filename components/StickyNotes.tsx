@@ -91,7 +91,7 @@ const getBoardDisplayContent = (content: string) => {
   }).join('\n');
 };
 
-const getReminderData = (note: Note) => {
+export const getReminderData = (note: Note) => {
   const tag = note.tags?.find(t => t.startsWith('__reminder:'));
   if (!tag) return null;
   const content = tag.substring(11, tag.length - 2); // strip __reminder: and __
@@ -819,104 +819,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     notesStore.refresh();
   }, []);
 
-  // Check reminders every 15 seconds
-  useEffect(() => {
-    const checkReminders = () => {
-      const now = new Date();
-      const triggeredStr = localStorage.getItem('sticky_notes_triggered_reminders') || '[]';
-      let triggeredIds: string[] = [];
-      try {
-        triggeredIds = JSON.parse(triggeredStr);
-      } catch {}
 
-      let updatedTriggered = false;
-
-      notesStore.notes.forEach(note => {
-        const reminder = getReminderData(note);
-        if (!reminder) return;
-
-        // Parse reminder date and time
-        const [year, month, day] = reminder.date.split('-').map(Number);
-        const [hour, minute] = reminder.time.split(':').map(Number);
-        const reminderDate = new Date(year, month - 1, day, hour, minute);
-
-        if (reminderDate <= now && !triggeredIds.includes(note.id)) {
-          // Trigger notification
-          if (reminder.popup !== false) {
-            toast({
-              title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
-              description: getCleanContent(note.content).substring(0, 100),
-              variant: "default",
-            });
-          }
-          if (reminder.sound !== false) {
-            try {
-              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-              if (AudioContextClass) {
-                const ctx = new AudioContextClass();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime);
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.15);
-                
-                setTimeout(() => {
-                  try {
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(1100, ctx.currentTime);
-                    gain2.gain.setValueAtTime(0.1, ctx.currentTime);
-                    osc2.start();
-                    osc2.stop(ctx.currentTime + 0.15);
-                  } catch (e) {}
-                }, 200);
-              }
-            } catch (e) {}
-          }
-          
-          triggeredIds.push(note.id);
-          updatedTriggered = true;
-
-          // Handle repeating rules
-          if (reminder.repeat && reminder.repeat !== 'none') {
-            let nextDate = new Date(reminderDate);
-            if (reminder.repeat === 'daily') {
-              nextDate.setDate(nextDate.getDate() + 1);
-            } else if (reminder.repeat === 'weekly') {
-              nextDate.setDate(nextDate.getDate() + 7);
-            } else if (reminder.repeat === 'monthly') {
-              nextDate.setMonth(nextDate.getMonth() + 1);
-            } else if (reminder.repeat === 'yearly') {
-              nextDate.setFullYear(nextDate.getFullYear() + 1);
-            }
-            
-            const nextDateStr = nextDate.toISOString().split('T')[0];
-            const nextTimeStr = nextDate.toTimeString().split(' ')[0].substring(0, 5);
-            const cleanTags = (note.tags || []).filter(t => !t.startsWith('__reminder:'));
-            cleanTags.push(`__reminder:${nextDateStr}|${nextTimeStr}|${reminder.repeat}__`);
-            
-            notesStore.updateNote(note.id, { tags: cleanTags });
-            triggeredIds = triggeredIds.filter(id => id !== note.id);
-          }
-        }
-      });
-
-      if (updatedTriggered) {
-        localStorage.setItem('sticky_notes_triggered_reminders', JSON.stringify(triggeredIds));
-      }
-    };
-
-    const interval = setInterval(checkReminders, 15000);
-    checkReminders();
-    return () => clearInterval(interval);
-  }, [notesStore.notes]);
 
   const handleClose = () => {
     setIsExiting(true);
