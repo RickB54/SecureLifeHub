@@ -792,7 +792,18 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       } catch {}
     };
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+
+    const handleOpenStickyNote = (e: any) => {
+      if (e.detail && e.detail.note) {
+        handleEditNote(e.detail.note);
+      }
+    };
+    window.addEventListener('open-sticky-note', handleOpenStickyNote);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('open-sticky-note', handleOpenStickyNote);
+    };
   }, []);
 
   useEffect(() => {

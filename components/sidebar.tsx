@@ -5,6 +5,7 @@ import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings,
 import { sidebarSections } from "@/lib/sidebar-config"
 import DeleteConfirmationModal from "./delete-confirmation-modal"
 import { toast } from "@/hooks/use-toast"
+import { ToastAction } from "@/components/ui/toast"
 import { useNotesStore } from "@/store/notes"
 import { getReminderData } from "./StickyNotes"
 
@@ -85,6 +86,16 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
               title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
               description: (note.content || '').replace(/^[✅⏳⬜❌☐☑]\s*/gm, '').replace(/[\u200B-\u200D\uFEFF]/g, '').substring(0, 100),
               duration: 10000,
+              action: (
+                <ToastAction altText="Open Note" onClick={() => {
+                  setActivePage('sticky-notes');
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('open-sticky-note', { detail: { note } }));
+                  }, 100);
+                }}>
+                  Open Note
+                </ToastAction>
+              ),
             });
           }
           if (reminder.sound !== false) {
