@@ -64,6 +64,14 @@ const STICKY_COLORS = [
 ];
 
 
+const STATUS_MARKERS: Record<string, string> = {
+  '✅': '\u200B\u200C\u200D\u200E',
+  '⬜': '\u200B\u200C\u200D\u200F',
+  '⏳': '\u200B\u200C\u200E\u200F',
+  '❌': '\u200B\u200D\u200E\u200F',
+};
+const INVISIBLE_REGEX = /^(\u200B\u200C\u200D\u200E|\u200B\u200C\u200D\u200F|\u200B\u200C\u200E\u200F|\u200B\u200D\u200E\u200F)/;
+
 const getCleanContent = (content: string) => {
   if (!content) return "";
   const splitIndex = content.search(/!\[.*?\]\(https?:\/\/[^\)]+\)/);
@@ -71,12 +79,24 @@ const getCleanContent = (content: string) => {
   return content.substring(0, splitIndex).trim();
 };
 
+const getBoardDisplayContent = (content: string) => {
+  if (!content) return "";
+  const cleaned = getCleanContent(content);
+  return cleaned.split('\n').map(line => {
+    if (line.startsWith(STATUS_MARKERS['✅'])) return '✅ ' + line.substring(4);
+    if (line.startsWith(STATUS_MARKERS['⬜'])) return '⬜ ' + line.substring(4);
+    if (line.startsWith(STATUS_MARKERS['⏳'])) return '⏳ ' + line.substring(4);
+    if (line.startsWith(STATUS_MARKERS['❌'])) return '❌ ' + line.substring(4);
+    return line;
+  }).join('\n');
+};
+
 const getReminderData = (note: Note) => {
   const tag = note.tags?.find(t => t.startsWith('__reminder:'));
   if (!tag) return null;
   const content = tag.substring(11, tag.length - 2); // strip __reminder: and __
-  const [date, time, repeat] = content.split('|');
-  return { date, time, repeat: repeat || 'none' };
+  const [date, time, repeat, sound, popup] = content.split('|');
+  return { date, time, repeat: repeat || 'none', sound: sound === 'true', popup: popup === 'true' };
 };
 
 const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, isMasonry?: boolean, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
@@ -183,7 +203,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
             {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
         </h3>
-        <p className="text-base opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">{getCleanContent(note.content)}</p>
+        <p className="text-base opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">{getBoardDisplayContent(note.content)}</p>
       </div>
       {(() => {
         const reminder = getReminderData(note);
@@ -518,6 +538,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [reminderDate, setReminderDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [reminderTime, setReminderTime] = useState('18:00');
   const [reminderRepeat, setReminderRepeat] = useState('none');
+  const [reminderSound, setReminderSound] = useState(true);
+  const [reminderPopup, setReminderPopup] = useState(true);
 
   const handleEditNote = (note: Note) => {
     setEditingNote(note);
@@ -529,10 +551,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       setReminderDate(rem.date);
       setReminderTime(rem.time);
       setReminderRepeat(rem.repeat);
+      setReminderSound(rem.sound !== undefined ? rem.sound : true);
+      setReminderPopup(rem.popup !== undefined ? rem.popup : true);
     } else {
       setReminderDate(new Date().toISOString().split('T')[0]);
       setReminderTime('18:00');
       setReminderRepeat('none');
+      setReminderSound(true);
+      setReminderPopup(true);
     }
     setIsNoteModalOpen(true);
   };
@@ -561,7 +587,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
     const dateStr = targetDate.toISOString().split('T')[0];
     const tags = (editingNote.tags || []).filter(t => !t.startsWith('__reminder:'));
-    tags.push(`__reminder:${dateStr}|${targetTime}|none__`);
+    tags.push(`__reminder:${dateStr}|${targetTime}|none|true|true__`);
     
     // Remove from triggered list
     const triggeredStr = localStorage.getItem('sticky_notes_triggered_reminders') || '[]';
@@ -577,7 +603,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const handleSaveCustomReminder = () => {
     if (!editingNote) return;
     const tags = (editingNote.tags || []).filter(t => !t.startsWith('__reminder:'));
-    tags.push(`__reminder:${reminderDate}|${reminderTime}|${reminderRepeat}__`);
+    tags.push(`__reminder:${reminderDate}|${reminderTime}|${reminderRepeat}|${reminderSound}|${reminderPopup}__`);
 
     // Remove from triggered list
     const triggeredStr = localStorage.getItem('sticky_notes_triggered_reminders') || '[]';
@@ -1001,15 +1027,17 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     
     Array.from(mirror.children).forEach((child: any, i) => {
       const lineText = lines[i] || '';
-      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, ''));
-      let status = 'none';
       const trimmed = lineText.trim();
-      if (trimmed.startsWith('✅')) status = 'done';
-      else if (trimmed.startsWith('⏳')) status = 'waiting';
-      else if (trimmed.startsWith('❌')) status = 'cancelled';
-      else if (trimmed.startsWith('⬜')) status = 'todo';
+      
+      let status = 'none';
+      if (trimmed.startsWith('✅') || trimmed.startsWith(STATUS_MARKERS['✅'])) status = 'done';
+      else if (trimmed.startsWith('⏳') || trimmed.startsWith(STATUS_MARKERS['⏳'])) status = 'waiting';
+      else if (trimmed.startsWith('❌') || trimmed.startsWith(STATUS_MARKERS['❌'])) status = 'cancelled';
+      else if (trimmed.startsWith('⬜') || trimmed.startsWith(STATUS_MARKERS['⬜'])) status = 'todo';
       else if (trimmed.startsWith('☐')) status = 'todo';
       else if (trimmed.startsWith('☑')) status = 'done';
+
+      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '')) || status !== 'none';
       
       tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
     });
@@ -1020,12 +1048,20 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     if (!editingNote) return;
     const lines = editingNote.content.split('\n');
     let line = lines[index];
-    line = line.replace(/^[✅⏳⬜❌☐☑]\s*/, '');
-    if (newStatusIcon !== 'none') {
-      line = `${newStatusIcon} ${line}`;
+    line = line.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '');
+    if (newStatusIcon !== 'none' && STATUS_MARKERS[newStatusIcon]) {
+      line = `${STATUS_MARKERS[newStatusIcon]}${line}`;
     }
     lines[index] = line;
     setEditingNote({ ...editingNote, content: lines.join('\n') });
+  };
+
+  const handleRemoveAllStatuses = () => {
+    if (!editingNote) return;
+    if (!window.confirm("Are you sure you want to remove all status checkboxes from this note?")) return;
+    const lines = editingNote.content.split('\n');
+    const newLines = lines.map(line => line.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, ''));
+    setEditingNote({ ...editingNote, content: newLines.join('\n') });
   };
 
   const noteHeaders = useMemo(() => {
@@ -1984,6 +2020,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-red-400" onClick={() => handleSetStatus(line.index, 'none')}><span className="mr-2 pl-4"></span> Remove Status</DropdownMenuItem>
+                                <div className="border-t border-zinc-800 my-1" />
+                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
@@ -1996,6 +2034,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⬜')}><span className="mr-2">⬜</span> To Do</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
+                                <div className="border-t border-zinc-800 my-1" />
+                                <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           )}
@@ -2200,10 +2240,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <span className="text-[10px] text-zinc-500 font-mono">Mon, 8:00 AM</span>
                         </DropdownMenuItem>
                         <div className="border-t border-zinc-800 my-1" />
-                        <DropdownMenuItem className="cursor-pointer flex items-center justify-between" onClick={() => setReminderSubView('picker')}>
+                        <div 
+                          className="relative flex cursor-pointer select-none items-center justify-between rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-zinc-800 hover:text-zinc-50" 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReminderSubView('picker'); }}
+                        >
                           <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> Pick date & time</span>
                           <ChevronRight className="w-4 h-4 text-zinc-500" />
-                        </DropdownMenuItem>
+                        </div>
                       </>
                     ) : (
                       <div className="space-y-3">
@@ -2249,6 +2292,14 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             <option value="monthly">Monthly</option>
                             <option value="yearly">Yearly</option>
                           </select>
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <label className="text-[10px] uppercase font-bold text-zinc-500">Play Sound</label>
+                          <input type="checkbox" checked={reminderSound} onChange={e => setReminderSound(e.target.checked)} className="accent-blue-500" />
+                        </div>
+                        <div className="flex items-center justify-between pt-1">
+                          <label className="text-[10px] uppercase font-bold text-zinc-500">Show Popup</label>
+                          <input type="checkbox" checked={reminderPopup} onChange={e => setReminderPopup(e.target.checked)} className="accent-blue-500" />
                         </div>
                         <div className="flex justify-end gap-2 pt-2">
                           <Button 
