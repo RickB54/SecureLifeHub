@@ -544,7 +544,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [originalNoteSnapshot, setOriginalNoteSnapshot] = useState<Note | null>(null);
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
 
-  const [reminderSubView, setReminderSubView] = useState<'options' | 'picker'>('options');
+  const [isReminderMenuOpen, setIsReminderMenuOpen] = useState(false);
   const [reminderDate, setReminderDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [reminderTime, setReminderTime] = useState('18:00');
   const [reminderRepeat, setReminderRepeat] = useState('none');
@@ -554,7 +554,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const handleEditNote = (note: Note) => {
     setEditingNote(note);
     setOriginalNoteSnapshot(note);
-    setReminderSubView('options');
+    setIsReminderMenuOpen(false);
 
     const rem = getReminderData(note);
     if (rem) {
@@ -575,36 +575,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     setIsNoteModalOpen(true);
   };
 
-  const handleSetPresetReminder = (preset: 'today' | 'tomorrow' | 'next-week') => {
+
+  const handleRemoveReminder = () => {
     if (!editingNote) return;
-    const now = new Date();
-    let targetDate = new Date();
-    let targetTime = '18:00';
-
-    if (preset === 'today') {
-      targetDate.setHours(18, 0, 0, 0);
-      if (targetDate <= now) {
-        targetDate.setDate(targetDate.getDate() + 1);
-      }
-      targetTime = '18:00';
-    } else if (preset === 'tomorrow') {
-      targetDate.setDate(targetDate.getDate() + 1);
-      targetTime = '08:00';
-    } else if (preset === 'next-week') {
-      const currentDay = targetDate.getDay();
-      const distance = (1 + 7 - currentDay) % 7 || 7;
-      targetDate.setDate(targetDate.getDate() + distance);
-      targetTime = '08:00';
-    }
-
-    const dateStr = targetDate.toISOString().split('T')[0];
-    
-    setReminderDate(dateStr);
-    setReminderTime(targetTime);
-    setReminderRepeat('none');
-    setReminderSound(true);
-    setReminderPopup(true);
-    setReminderSubView('picker');
+    const tags = (editingNote.tags || []).filter(t => !t.startsWith('__reminder:'));
+    setEditingNote({ ...editingNote, tags });
+    setIsReminderMenuOpen(false);
+    toast({ title: "Reminder removed" });
   };
 
   const handleSaveCustomReminder = () => {
@@ -620,15 +597,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     } catch {}
 
     setEditingNote({ ...editingNote, tags });
-    setReminderSubView('options');
+    setIsReminderMenuOpen(false);
     toast({ title: `Reminder configured. Make sure to Save Sticky to apply!`, duration: 4000 });
-  };
-
-  const handleRemoveReminder = () => {
-    if (!editingNote) return;
-    const tags = (editingNote.tags || []).filter(t => !t.startsWith('__reminder:'));
-    setEditingNote({ ...editingNote, tags });
-    toast({ title: "Reminder removed" });
   };
 
   // New Notebook (Category) Modal
@@ -1118,7 +1088,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
     
     setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: extraTags, versions: [], created_at: '', updated_at: '' });
-    setReminderSubView('options');
+    setIsReminderMenuOpen(false);
     const now = new Date();
     now.setMinutes(now.getMinutes() + 1);
     setReminderDate(now.toISOString().split('T')[0]);
@@ -2248,7 +2218,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <Button size="icon" variant="ghost" onClick={() => handleImageSelect(false)} className={`h-9 w-9 ${editColor.text} hover:bg-black/10`} title="Add Image">
                   <ImageIcon className="w-5 h-5" />
                 </Button>
-                <DropdownMenu>
+                <DropdownMenu open={isReminderMenuOpen} onOpenChange={setIsReminderMenuOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       size="icon" 
@@ -2260,63 +2230,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-72 bg-zinc-900 border-zinc-800 text-zinc-300 p-3 z-[400] space-y-3">
-                    {reminderSubView === 'options' ? (
-                      <>
-                        <div className="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center gap-1.5">
-                          <Bell className="w-3.5 h-3.5" />
-                          Set a Reminder
-                        </div>
-                        {getReminderData(editingNote) && (
-                          <div className="bg-zinc-800 p-2 rounded border border-zinc-700 text-xs flex justify-between items-center">
-                            <div>
-                              <span className="font-bold text-yellow-500">Active: </span>
-                              <span>{getReminderData(editingNote)!.date} {formatAmPm(getReminderData(editingNote)!.time)}</span>
-                              {getReminderData(editingNote)!.repeat !== 'none' && (
-                                <span className="block text-[10px] text-zinc-500 uppercase">Repeats: {getReminderData(editingNote)!.repeat}</span>
-                              )}
-                            </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-red-400 hover:text-red-300 hover:bg-red-400/10 px-2 h-7"
-                              onClick={handleRemoveReminder}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                        )}
-                        <DropdownMenuItem className="cursor-pointer flex items-center justify-between" onClick={() => handleSetPresetReminder('today')}>
-                          <span>Later today</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">6:00 PM</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer flex items-center justify-between" onClick={() => handleSetPresetReminder('tomorrow')}>
-                          <span>Tomorrow</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">8:00 AM</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer flex items-center justify-between" onClick={() => handleSetPresetReminder('next-week')}>
-                          <span>Next week</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">Mon, 8:00 AM</span>
-                        </DropdownMenuItem>
-                        <div className="border-t border-zinc-800 my-1" />
-                        <div 
-                          className="relative flex cursor-pointer select-none items-center justify-between rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-zinc-800 hover:text-zinc-50" 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setReminderSubView('picker'); }}
-                        >
-                          <span className="flex items-center gap-2"><Clock className="w-4 h-4" /> Pick date & time</span>
-                          <ChevronRight className="w-4 h-4 text-zinc-500" />
-                        </div>
-                      </>
-                    ) : (
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-400">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 text-zinc-400 hover:text-white"
-                            onClick={() => setReminderSubView('options')}
-                          >
-                            <ArrowLeft className="w-4 h-4" />
-                          </Button>
                           Custom Reminder
                         </div>
                         <div className="space-y-1">
@@ -2360,14 +2275,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <input type="checkbox" checked={reminderPopup} onChange={e => setReminderPopup(e.target.checked)} className="accent-blue-500" />
                         </div>
                         <div className="flex justify-end gap-2 pt-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setReminderSubView('options')}
-                            className="text-xs text-zinc-400 hover:text-white"
-                          >
-                            Back
-                          </Button>
+                          {getReminderData(editingNote) && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={handleRemoveReminder}
+                              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-400/10 mr-auto"
+                            >
+                              Remove
+                            </Button>
+                          )}
                           <Button 
                             size="sm" 
                             onClick={handleSaveCustomReminder}
@@ -2377,8 +2294,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           </Button>
                         </div>
                       </div>
-                    )}
-                  </DropdownMenuContent>
+                    </DropdownMenuContent>
                 </DropdownMenu>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
