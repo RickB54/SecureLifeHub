@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, HelpCircle } from "lucide-react"
 import { sidebarSections } from "@/lib/sidebar-config"
 import DeleteConfirmationModal from "./delete-confirmation-modal"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 import { useNotesStore } from "@/store/notes"
 import { getReminderData } from "./StickyNotes"
 
@@ -457,7 +457,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
             togglePin(null, pendingUnpin)
             setShowConfirm(false)
             setPendingUnpin(null)
-            toast.success("Shortcut removed")
+            toast({ title: "Shortcut removed" })
           }}
           itemName={`the '${findItemById(pendingUnpin)?.item.label}' shortcut`}
           theme={theme}

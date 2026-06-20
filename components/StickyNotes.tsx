@@ -234,7 +234,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 </span>
               </div>
             )}
-            {showTags && (
+            {showTags && (note.tags?.filter(t => !t.startsWith('__')).length > 0 || (uniqueCardSections.length === 0 && !note.section_id)) && (
               <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
                 {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
                   <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
@@ -644,7 +644,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [isSyncing, setIsSyncing] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
+  const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
   const [labelSearchText, setLabelSearchText] = useState("");
+
+  const notesWithReminders = useMemo(() => notesStore.notes.filter(n => getReminderData(n) !== null), [notesStore.notes]);
 
   const handleAddLabel = async () => {
     const trimmed = labelSearchText.trim();
@@ -1471,6 +1474,37 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
         {/* Row 2: Search, Filters, and viewMode Toggle */}
         <div className="flex flex-wrap items-center justify-start 2xl:justify-end gap-2 w-full 2xl:w-auto 2xl:flex-1">
+          {/* Active Reminders Button */}
+          <Button 
+            variant="outline" 
+            className="h-9 px-3 gap-2 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 relative hidden sm:flex shrink-0"
+            onClick={() => setIsRemindersModalOpen(true)}
+            title="View Active Reminders"
+          >
+            <Bell className={`w-4 h-4 ${notesWithReminders.length > 0 ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-500'}`} />
+            <span className="text-xs font-semibold text-zinc-300">Reminders</span>
+            {notesWithReminders.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-1 ring-black">
+                {notesWithReminders.length}
+              </span>
+            )}
+          </Button>
+          
+          {/* Active Reminders Button Mobile */}
+          <Button 
+            variant="outline" 
+            className="h-9 w-9 p-0 bg-zinc-900 border-zinc-700 hover:bg-zinc-800 relative sm:hidden shrink-0 flex items-center justify-center"
+            onClick={() => setIsRemindersModalOpen(true)}
+            title="View Active Reminders"
+          >
+            <Bell className={`w-4 h-4 ${notesWithReminders.length > 0 ? 'text-yellow-500 fill-yellow-500' : 'text-zinc-500'}`} />
+            {notesWithReminders.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-1 ring-black">
+                {notesWithReminders.length}
+              </span>
+            )}
+          </Button>
+
           {/* Search bar */}
           <div className="relative flex-grow sm:flex-grow-0 sm:w-56 min-w-[150px]">
             <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-zinc-400" />
@@ -2771,6 +2805,75 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               >
                 Done
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reminders Modal */}
+      {isRemindersModalOpen && (
+        <div 
+          className="fixed inset-0 z-[450] bg-black/60 flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setIsRemindersModalOpen(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-lg bg-zinc-900 border border-zinc-800 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+          >
+            <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                <Bell className="w-4 h-4 text-yellow-500" />
+                Active Reminders ({notesWithReminders.length})
+              </h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsRemindersModalOpen(false)} 
+                className="h-8 w-8 text-zinc-400 hover:text-white rounded-full"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            <div className="p-4 overflow-y-auto space-y-2">
+              {notesWithReminders.length === 0 ? (
+                <div className="text-center text-zinc-500 py-8">
+                  <Bell className="w-8 h-8 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm">No active reminders.</p>
+                  <p className="text-xs mt-1 opacity-60">Set a reminder on a sticky note to see it here.</p>
+                </div>
+              ) : (
+                notesWithReminders.map(note => {
+                  const rem = getReminderData(note);
+                  return (
+                    <div 
+                      key={note.id}
+                      onClick={() => {
+                        setIsRemindersModalOpen(false);
+                        onEdit(note);
+                      }}
+                      className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 cursor-pointer transition-all group"
+                    >
+                      <div className="flex-1 min-w-0 pr-4">
+                        <h4 className="text-white text-sm font-semibold truncate">
+                          {note.title || getCleanContent(note.content).substring(0, 30) || 'Untitled Note'}
+                        </h4>
+                        <div className="flex items-center gap-2 mt-1 opacity-70">
+                          <span className="text-xs text-yellow-500 font-medium">
+                            {rem?.date} {rem?.time && formatAmPm(rem.time)}
+                          </span>
+                          {rem?.repeat && rem.repeat !== 'none' && (
+                            <span className="text-[10px] bg-zinc-700 px-1.5 rounded text-zinc-300">
+                              {rem.repeat}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-zinc-500 group-hover:text-white transition-colors" />
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
