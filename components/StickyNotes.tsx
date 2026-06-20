@@ -564,8 +564,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       setReminderSound(rem.sound !== undefined ? rem.sound : true);
       setReminderPopup(rem.popup !== undefined ? rem.popup : true);
     } else {
-      setReminderDate(new Date().toISOString().split('T')[0]);
-      setReminderTime('18:00');
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 1);
+      setReminderDate(now.toISOString().split('T')[0]);
+      setReminderTime(now.toTimeString().split(' ')[0].substring(0, 5));
       setReminderRepeat('none');
       setReminderSound(true);
       setReminderPopup(true);
@@ -1106,8 +1108,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     
     setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: extraTags, versions: [], created_at: '', updated_at: '' });
     setReminderSubView('options');
-    setReminderDate(new Date().toISOString().split('T')[0]);
-    setReminderTime('18:00');
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 1);
+    setReminderDate(now.toISOString().split('T')[0]);
+    setReminderTime(now.toTimeString().split(' ')[0].substring(0, 5));
     setReminderRepeat('none');
     setIsNoteModalOpen(true);
   };

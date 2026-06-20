@@ -83,7 +83,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
           if (reminder.popup !== false) {
             toast({
               title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
-              description: note.content.replace(/^[✅⏳⬜❌☐☑]\s*/gm, '').replace(/[\u200B-\u200D\uFEFF]/g, '').substring(0, 100),
+              description: (note.content || '').replace(/^[✅⏳⬜❌☐☑]\s*/gm, '').replace(/[\u200B-\u200D\uFEFF]/g, '').substring(0, 100),
               duration: 10000,
             });
           }
@@ -135,7 +135,9 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
             const nextDateStr = nextDate.toISOString().split('T')[0];
             const nextTimeStr = nextDate.toTimeString().split(' ')[0].substring(0, 5);
             const cleanTags = (note.tags || []).filter(t => !t.startsWith('__reminder:'));
-            cleanTags.push(`__reminder:${nextDateStr}|${nextTimeStr}|${reminder.repeat}__`);
+            const soundPref = reminder.sound === false ? 'false' : 'true';
+            const popupPref = reminder.popup === false ? 'false' : 'true';
+            cleanTags.push(`__reminder:${nextDateStr}|${nextTimeStr}|${reminder.repeat}|${soundPref}|${popupPref}__`);
             
             notesStore.updateNote(note.id, { tags: cleanTags });
           } else {
