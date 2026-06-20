@@ -96,7 +96,17 @@ const getReminderData = (note: Note) => {
   if (!tag) return null;
   const content = tag.substring(11, tag.length - 2); // strip __reminder: and __
   const [date, time, repeat, sound, popup] = content.split('|');
-  return { date, time, repeat: repeat || 'none', sound: sound === 'true', popup: popup === 'true' };
+  return { date, time, repeat: repeat || 'none', sound: sound !== 'false', popup: popup !== 'false' };
+};
+
+const formatAmPm = (timeStr: string) => {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':');
+  let hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12;
+  hour = hour ? hour : 12;
+  return `${hour}:${m} ${ampm}`;
 };
 
 const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, onEdit, onDelete, onSendToNotes, onDuplicate, onChangeColor, onToggleCheckboxes, onTogglePin, onImageClick, showTags, showToolbar, onChangeLabels, onOpenSettings }: { note: Note, animClass?: string, sectionName?: string, isMasonry?: boolean, onEdit: (n: Note) => void, onDelete: (id: string) => void, onSendToNotes: (n: Note) => void, onDuplicate: (n: Note) => void, onChangeColor: (n: Note, colorId: string) => void, onToggleCheckboxes: (n: Note) => void, onTogglePin: (n: Note) => void, onImageClick: (img: string) => void, showTags?: boolean, showToolbar?: boolean, onChangeLabels?: (n: Note) => void, onOpenSettings?: () => void }) => {
@@ -219,7 +229,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
               <div className={`mt-2 flex items-center gap-1.5 text-[10px] font-bold ${color.text} opacity-75`}>
                 <Bell className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
                 <span>
-                  {reminder.date} {reminder.time}
+                  {reminder.date} {formatAmPm(reminder.time)}
                   {reminder.repeat !== 'none' && ` (${reminder.repeat})`}
                 </span>
               </div>
@@ -298,7 +308,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-zinc-900 border-zinc-800 text-zinc-300 z-[400]">
                 <DropdownMenuItem onClick={() => onDelete(note.id)}>Delete note</DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onChangeLabels?.(note); }}>Change labels</DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onChangeLabels?.(note); }}>Change tags</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => toast({ title: "Drawing Canvas", description: "This feature will be enabled in a future update." })}>Add drawing</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onDuplicate(note)}>Make a copy</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onToggleCheckboxes(note)}>Show checkboxes</DropdownMenuItem>
@@ -413,7 +423,7 @@ const SortableListRow = React.memo(({
             return reminder ? (
               <span className="flex items-center gap-1 text-[9px] font-bold bg-zinc-850 text-yellow-500 border border-yellow-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
                 <Bell className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-                {reminder.date}
+                {reminder.date} {formatAmPm(reminder.time)}
               </span>
             ) : null;
           })()}
@@ -453,7 +463,7 @@ const SortableListRow = React.memo(({
               <Edit2 className="w-4 h-4 mr-2" /> Edit Sticky
             </DropdownMenuItem>
             <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onChangeLabels?.(note); }}>
-              <Tag className="w-4 h-4 mr-2" /> Change labels
+              <Tag className="w-4 h-4 mr-2" /> Change tags
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onDuplicate(note)}>
               <Copy className="w-4 h-4 mr-2" /> Make a copy
@@ -720,7 +730,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         }
       }
       setEditingNote({ ...editingNote, tags: newTags, section_id: newSectionId });
-      toast({ title: "Label deleted successfully" });
+      toast({ title: "Tag deleted successfully" });
     }
   };
 
@@ -837,11 +847,44 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
         if (reminderDate <= now && !triggeredIds.includes(note.id)) {
           // Trigger notification
-          toast({
-            title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
-            description: getCleanContent(note.content).substring(0, 100),
-            variant: "default",
-          });
+          if (reminder.popup !== false) {
+            toast({
+              title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
+              description: getCleanContent(note.content).substring(0, 100),
+              variant: "default",
+            });
+          }
+          if (reminder.sound !== false) {
+            try {
+              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+              if (AudioContextClass) {
+                const ctx = new AudioContextClass();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+                
+                setTimeout(() => {
+                  try {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1100, ctx.currentTime);
+                    gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+                    osc2.start();
+                    osc2.stop(ctx.currentTime + 0.15);
+                  } catch (e) {}
+                }, 200);
+              }
+            } catch (e) {}
+          }
           
           triggeredIds.push(note.id);
           updatedTriggered = true;
@@ -1126,7 +1169,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         targetSection = sections[0].id;
         sectionName = sections[0].name;
       } else {
-        alert("Please add a Label Folder first! (Click the + next to the Labels in the sidebar)");
+        alert("Please add a Tag Folder first! (Click the + next to the Labels in the sidebar)");
         return;
       }
     }
@@ -1175,6 +1218,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const handleSaveNote = async () => {
     if (editingNote) {
+      const normalTags = (editingNote.tags || []).filter(t => !t.startsWith('__'));
+      if (normalTags.length === 0) {
+        if (!window.confirm("Save without a tag? If you are in a submenu, it will auto tag the note to that menu item name.")) {
+          return;
+        }
+      }
+
       const sectionId = editingNote.section_id || null;
       if (editingNote.id === 'new') {
         const finalTags = editingNote.tags || [];
@@ -1310,26 +1360,26 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   };
 
   const handleDeleteNotebook = async (id: string) => {
-    if (confirm("WARNING: Are you sure you want to delete this Label Group? This will delete the group folder and ALL stickies and submenus inside it.")) {
-      if (confirm("CRITICAL WARNING: This action CANNOT be undone. All notes and section sublabels within this label group will be permanently erased. Are you absolutely sure?")) {
+    if (confirm("WARNING: Are you sure you want to delete this Tag Group? This will delete the group folder and ALL stickies and submenus inside it.")) {
+      if (confirm("CRITICAL WARNING: This action CANNOT be undone. All notes and section sublabels within this Tag Group will be permanently erased. Are you absolutely sure?")) {
         await notesStore.deleteNotebook(id);
-        toast({ title: "Label Group deleted successfully" });
+        toast({ title: "Tag Group deleted successfully" });
       }
     }
   };
 
   const handleEditNotebook = async (nb: Notebook) => {
-    const newName = prompt("Edit Label Group Name:", nb.name);
+    const newName = prompt("Edit Tag Group Name:", nb.name);
     if (newName && newName.trim()) {
       await notesStore.updateNotebook(nb.id, newName.trim());
     }
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (confirm("WARNING: Are you sure you want to delete this Submenu Label? All stickies inside it will lose their association with this label.")) {
-      if (confirm("CRITICAL WARNING: This action cannot be undone. Are you absolutely sure you want to delete this submenu label?")) {
+    if (confirm("WARNING: Are you sure you want to delete this Submenu Tag? All stickies inside it will lose their association with this label.")) {
+      if (confirm("CRITICAL WARNING: This action cannot be undone. Are you absolutely sure you want to delete this Submenu Tag?")) {
         await notesStore.deleteSection(id);
-        toast({ title: "Submenu Label deleted successfully" });
+        toast({ title: "Submenu Tag deleted successfully" });
       }
     }
   };
@@ -1339,6 +1389,24 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     if (newName && newName.trim()) {
       await notesStore.updateSection(sec.id, newName.trim());
     }
+  };
+
+  const handleRemoveAllStatusesInSection = async (sectionId: string) => {
+    if (!window.confirm("Are you sure you want to remove ALL status checkboxes from ALL notes in this section? This cannot be undone.")) return;
+    
+    const notesInSection = notesStore.notes.filter(n => n.section_id === sectionId || n.tags?.includes(`__section:${sectionId}`));
+    
+    let count = 0;
+    for (const note of notesInSection) {
+      const lines = note.content.split('\n');
+      const newLines = lines.map(line => line.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, ''));
+      const newContent = newLines.join('\n');
+      if (newContent !== note.content) {
+        await notesStore.updateNote(note.id, { content: newContent });
+        count++;
+      }
+    }
+    toast({ title: `Removed statuses from ${count} note(s)` });
   };
 
   const handleCreateSection = async () => {
@@ -1390,7 +1458,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               size="icon" 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
               className={`text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10 ${isSidebarOpen ? 'text-yellow-500 hover:text-yellow-400' : ''}`}
-              title={isSidebarOpen ? "Hide Labels" : "Show Labels"}
+              title={isSidebarOpen ? "Hide Tags" : "Show Tags"}
             >
               <PanelLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
@@ -1596,10 +1664,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 lg:hidden" title="Close Sidebar">
                 <PanelLeftClose className="w-4 h-4" />
               </Button>
-              <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Labels</h2>
+              <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
               <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Show All'}</Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Label Folder">
+            <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
               <Plus className="w-4 h-4" />
             </Button>
           </div>
@@ -1636,8 +1704,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditNotebook(nb); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Label Group</DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteNotebook(nb.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Label Group</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditNotebook(nb); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Tag Group</DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteNotebook(nb.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Tag Group</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                     <button 
@@ -1668,6 +1736,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSection(sec); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Submenu</DropdownMenuItem>
+                              <div className="border-t border-zinc-800 my-1" />
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRemoveAllStatusesInSection(sec.id); }} className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10"><CheckSquare className="w-4 h-4 mr-2"/> Remove All Statuses</DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteSection(sec.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Submenu</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -2009,7 +2079,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     <div style={{ transform: `translateY(-${scrollTop}px)` }}>
                       {lineTops.map(line => (
                         <div key={line.index} className="absolute left-0 w-8 pointer-events-auto" style={{ top: line.top, height: line.height }}>
-                          {(line.isList || line.status !== 'none') ? (
+                          {line.status !== 'none' ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger className={`absolute left-[6px] top-0 w-[22px] h-[22px] flex items-center justify-center rounded hover:bg-black/10 transition-colors ${editColor.bg}`}>
                                  {line.status === 'done' ? '✅' : line.status === 'waiting' ? '⏳' : line.status === 'cancelled' ? '❌' : '⬜'}
@@ -2212,7 +2282,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           <div className="bg-zinc-800 p-2 rounded border border-zinc-700 text-xs flex justify-between items-center">
                             <div>
                               <span className="font-bold text-yellow-500">Active: </span>
-                              <span>{getReminderData(editingNote)!.date} {getReminderData(editingNote)!.time}</span>
+                              <span>{getReminderData(editingNote)!.date} {formatAmPm(getReminderData(editingNote)!.time)}</span>
                               {getReminderData(editingNote)!.repeat !== 'none' && (
                                 <span className="block text-[10px] text-zinc-500 uppercase">Repeats: {getReminderData(editingNote)!.repeat}</span>
                               )}
@@ -2447,7 +2517,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         setIsNoteModalOpen(false); 
                       }
                     }}>Delete note</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change labels</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change tags</DropdownMenuItem>
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
                     )}
@@ -2476,11 +2546,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       {isNotebookModalOpen && (
         <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
           <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-full max-w-sm">
-            <h2 className="text-white font-bold mb-4">Create Label Group</h2>
+            <h2 className="text-white font-bold mb-4">Create Tag Group</h2>
             <Input 
               value={newNotebookName} 
               onChange={e => setNewNotebookName(e.target.value)} 
-              placeholder="Label group name..."
+              placeholder="Tag Group name..."
               className="bg-zinc-950 border-zinc-800 text-white mb-4"
               autoFocus
             />
@@ -2790,7 +2860,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             className="w-full max-w-sm rounded-lg bg-zinc-900 border border-zinc-800 shadow-2xl overflow-hidden flex flex-col"
           >
             <div className="p-4 border-b border-zinc-800 flex justify-between items-center bg-zinc-950">
-              <h3 className="font-bold text-white text-base">Label note</h3>
+              <h3 className="font-bold text-white text-base">Tag note</h3>
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -2851,7 +2921,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             size="icon" 
                             onClick={() => handleDeleteLabelFromPopup(sec.id)}
                             className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                            title="Delete Label"
+                            title="Delete Tag"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </Button>
