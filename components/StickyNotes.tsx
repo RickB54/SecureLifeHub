@@ -2009,12 +2009,24 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               })()}
               <div className="shrink-0">
                 <label className={`text-xs font-bold ${editColor.text} uppercase mb-1 block`}>Title</label>
-                <Input 
+                <Textarea 
                   value={editingNote.title} 
                   onChange={e => setEditingNote({...editingNote, title: e.target.value})}
-                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 font-bold`}
+                  onInput={(e) => {
+                    const target = e.target as HTMLTextAreaElement;
+                    target.style.height = 'auto';
+                    target.style.height = target.scrollHeight + 'px';
+                  }}
+                  ref={(el) => {
+                    if (el) {
+                      el.style.height = 'auto';
+                      el.style.height = el.scrollHeight + 'px';
+                    }
+                  }}
+                  className={`bg-black/5 ${editColor.border} ${editColor.text} placeholder:${editColor.text} placeholder:opacity-50 focus-visible:ring-black/20 font-bold resize-none overflow-hidden min-h-[42px] py-2`}
                   style={{ fontSize: `${Math.round(prefs.textSize * 1.2)}px` }}
                   placeholder="Sticky title..."
+                  rows={1}
                 />
               </div>
               <div className="flex-1 flex flex-col relative">
@@ -2730,7 +2742,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                                   next = [...prev, nb.id];
                                 }
                                 localStorage.setItem('sticky_notes_excluded_notebooks', JSON.stringify(next));
-                                window.dispatchEvent(new Event('storage'));
+                                setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
                                 return next;
                               });
                             }}
@@ -2760,7 +2772,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                                         next = [...prev, sec.id];
                                       }
                                       localStorage.setItem('sticky_notes_excluded_sections', JSON.stringify(next));
-                                      window.dispatchEvent(new Event('storage'));
+                                      setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
                                       return next;
                                     });
                                   }}
@@ -2792,7 +2804,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   setExcludedSections([]);
                   localStorage.removeItem('sticky_notes_excluded_notebooks');
                   localStorage.removeItem('sticky_notes_excluded_sections');
-                  window.dispatchEvent(new Event('storage'));
+                  setTimeout(() => window.dispatchEvent(new Event('storage')), 0);
                   toast({ title: "Reset visibility to all folders" });
                 }}
                 className="text-zinc-400 hover:bg-zinc-800 text-xs h-9"
