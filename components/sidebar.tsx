@@ -64,16 +64,13 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   useEffect(() => {
     const checkReminders = () => {
       const now = new Date();
-      const triggeredStr = localStorage.getItem('sticky_notes_triggered_reminders') || '[]';
-      let triggeredIds: string[] = [];
-      try { triggeredIds = JSON.parse(triggeredStr); } catch {}
-
-      let updatedTriggered = false;
       let count = 0;
 
       notesStore.notes.forEach(note => {
         const reminder = getReminderData(note);
         if (!reminder) return;
+
+        count++; // Initially count all notes with a reminder tag
 
         // Parse reminder date and time
         const [year, month, day] = reminder.date.split('-').map(Number);
@@ -82,79 +79,74 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
         const reminderDate = new Date(year, month - 1, day, hour, minute);
 
         if (reminderDate <= now) {
-          count++;
-          if (!triggeredIds.includes(note.id)) {
-            // Trigger notification
-            if (reminder.popup !== false) {
-              toast({
-                title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
-                description: note.content.replace(/^[✅⏳⬜❌☐☑]\s*/gm, '').replace(/[\u200B-\u200D\uFEFF]/g, '').substring(0, 100),
-                duration: 10000,
-              });
-            }
-            if (reminder.sound !== false) {
-              try {
-                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                if (AudioContextClass) {
-                  const ctx = new AudioContextClass();
-                  const osc = ctx.createOscillator();
-                  const gain = ctx.createGain();
-                  osc.connect(gain);
-                  gain.connect(ctx.destination);
-                  osc.type = 'sine';
-                  osc.frequency.setValueAtTime(880, ctx.currentTime);
-                  gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                  osc.start();
-                  osc.stop(ctx.currentTime + 0.15);
-                  
-                  setTimeout(() => {
-                    try {
-                      const osc2 = ctx.createOscillator();
-                      const gain2 = ctx.createGain();
-                      osc2.connect(gain2);
-                      gain2.connect(ctx.destination);
-                      osc2.type = 'sine';
-                      osc2.frequency.setValueAtTime(1100, ctx.currentTime);
-                      gain2.gain.setValueAtTime(0.1, ctx.currentTime);
-                      osc2.start();
-                      osc2.stop(ctx.currentTime + 0.15);
-                    } catch (e) {}
-                  }, 200);
-                }
-              } catch (e) {}
+          // Trigger notification
+          if (reminder.popup !== false) {
+            toast({
+              title: `🔔 Reminder: ${note.title || 'Untitled Sticky'}`,
+              description: note.content.replace(/^[✅⏳⬜❌☐☑]\s*/gm, '').replace(/[\u200B-\u200D\uFEFF]/g, '').substring(0, 100),
+              duration: 10000,
+            });
+          }
+          if (reminder.sound !== false) {
+            try {
+              const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+              if (AudioContextClass) {
+                const ctx = new AudioContextClass();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+                
+                setTimeout(() => {
+                  try {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(1100, ctx.currentTime);
+                    gain2.gain.setValueAtTime(0.1, ctx.currentTime);
+                    osc2.start();
+                    osc2.stop(ctx.currentTime + 0.15);
+                  } catch (e) {}
+                }, 200);
+              }
+            } catch (e) {}
+          }
+
+          // Handle repeating rules or clear the tag
+          if (reminder.repeat && reminder.repeat !== 'none') {
+            let nextDate = new Date(reminderDate);
+            if (reminder.repeat === 'daily') {
+              nextDate.setDate(nextDate.getDate() + 1);
+            } else if (reminder.repeat === 'weekly') {
+              nextDate.setDate(nextDate.getDate() + 7);
+            } else if (reminder.repeat === 'monthly') {
+              nextDate.setMonth(nextDate.getMonth() + 1);
+            } else if (reminder.repeat === 'yearly') {
+              nextDate.setFullYear(nextDate.getFullYear() + 1);
             }
             
-            triggeredIds.push(note.id);
-            updatedTriggered = true;
-
-            // Handle repeating rules
-            if (reminder.repeat && reminder.repeat !== 'none') {
-              let nextDate = new Date(reminderDate);
-              if (reminder.repeat === 'daily') {
-                nextDate.setDate(nextDate.getDate() + 1);
-              } else if (reminder.repeat === 'weekly') {
-                nextDate.setDate(nextDate.getDate() + 7);
-              } else if (reminder.repeat === 'monthly') {
-                nextDate.setMonth(nextDate.getMonth() + 1);
-              } else if (reminder.repeat === 'yearly') {
-                nextDate.setFullYear(nextDate.getFullYear() + 1);
-              }
-              
-              const nextDateStr = nextDate.toISOString().split('T')[0];
-              const nextTimeStr = nextDate.toTimeString().split(' ')[0].substring(0, 5);
-              const cleanTags = (note.tags || []).filter(t => !t.startsWith('__reminder:'));
-              cleanTags.push(`__reminder:${nextDateStr}|${nextTimeStr}|${reminder.repeat}__`);
-              
-              notesStore.updateNote(note.id, { tags: cleanTags });
-              triggeredIds = triggeredIds.filter(id => id !== note.id);
-            }
+            const nextDateStr = nextDate.toISOString().split('T')[0];
+            const nextTimeStr = nextDate.toTimeString().split(' ')[0].substring(0, 5);
+            const cleanTags = (note.tags || []).filter(t => !t.startsWith('__reminder:'));
+            cleanTags.push(`__reminder:${nextDateStr}|${nextTimeStr}|${reminder.repeat}__`);
+            
+            notesStore.updateNote(note.id, { tags: cleanTags });
+          } else {
+            // One-off reminder: completely clear it!
+            const cleanTags = (note.tags || []).filter(t => !t.startsWith('__reminder:'));
+            notesStore.updateNote(note.id, { tags: cleanTags });
+            count--; // Decrease count since it's deleted now
           }
         }
       });
 
-      if (updatedTriggered) {
-        localStorage.setItem('sticky_notes_triggered_reminders', JSON.stringify(triggeredIds));
-      }
       setActiveAlarmCount(count);
     };
 
