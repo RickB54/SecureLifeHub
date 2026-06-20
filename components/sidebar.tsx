@@ -88,7 +88,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
               duration: 10000,
               action: (
                 <ToastAction altText="Open Note" onClick={() => {
-                  setActivePage('sticky-notes');
+                  setActivePage('type-sticky-notes');
                   setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('open-sticky-note', { detail: { note } }));
                   }, 100);
