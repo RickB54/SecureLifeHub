@@ -596,18 +596,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
 
     const dateStr = targetDate.toISOString().split('T')[0];
-    const tags = (editingNote.tags || []).filter(t => !t.startsWith('__reminder:'));
-    tags.push(`__reminder:${dateStr}|${targetTime}|none|true|true__`);
     
-    // Remove from triggered list
-    const triggeredStr = localStorage.getItem('sticky_notes_triggered_reminders') || '[]';
-    try {
-      const triggered = JSON.parse(triggeredStr).filter((id: string) => id !== editingNote.id);
-      localStorage.setItem('sticky_notes_triggered_reminders', JSON.stringify(triggered));
-    } catch {}
-
-    setEditingNote({ ...editingNote, tags });
-    toast({ title: `Reminder set for ${dateStr} at ${targetTime}` });
+    setReminderDate(dateStr);
+    setReminderTime(targetTime);
+    setReminderRepeat('none');
+    setReminderSound(true);
+    setReminderPopup(true);
+    setReminderSubView('picker');
   };
 
   const handleSaveCustomReminder = () => {
@@ -624,7 +619,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
     setEditingNote({ ...editingNote, tags });
     setReminderSubView('options');
-    toast({ title: `Reminder set for ${reminderDate} at ${reminderTime}` });
+    toast({ title: `Reminder configured. Make sure to Save Sticky to apply!`, duration: 4000 });
   };
 
   const handleRemoveReminder = () => {
@@ -1243,6 +1238,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       const hasTag = !!editingNote.section_id || (editingNote.tags || []).some(t => !t.startsWith('__') || t.startsWith('__section:'));
       if (!hasTag) {
         if (!window.confirm("Save without a tag? If you are in a submenu, it will auto tag the note to that menu item name.")) {
+          setIsLabelModalOpen(true);
           return;
         }
       }
