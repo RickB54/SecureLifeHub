@@ -1099,6 +1099,28 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     setEditingNote({ ...editingNote, content: lines.join('\n') });
   };
 
+  const handleSetStatusForBlock = (index: number, newStatusIcon: string) => {
+    if (!editingNote) return;
+    const lines = editingNote.content.split('\n');
+    let startIdx = index;
+    let endIdx = index;
+    while (startIdx > 0 && lines[startIdx - 1].trim() !== '') {
+      startIdx--;
+    }
+    while (endIdx < lines.length - 1 && lines[endIdx + 1].trim() !== '') {
+      endIdx++;
+    }
+    for (let i = startIdx; i <= endIdx; i++) {
+      let line = lines[i];
+      line = line.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '');
+      if (newStatusIcon !== 'none' && STATUS_MARKERS[newStatusIcon]) {
+        line = `${STATUS_MARKERS[newStatusIcon]}${line}`;
+      }
+      lines[i] = line;
+    }
+    setEditingNote({ ...editingNote, content: lines.join('\n') });
+  };
+
   const handleRemoveAllStatuses = () => {
     if (!editingNote) return;
     if (!window.confirm("Are you sure you want to remove all status checkboxes from this note?")) return;
@@ -1218,8 +1240,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const handleSaveNote = async () => {
     if (editingNote) {
-      const normalTags = (editingNote.tags || []).filter(t => !t.startsWith('__'));
-      if (normalTags.length === 0) {
+      const hasTag = !!editingNote.section_id || (editingNote.tags || []).some(t => !t.startsWith('__') || t.startsWith('__section:'));
+      if (!hasTag) {
         if (!window.confirm("Save without a tag? If you are in a submenu, it will auto tag the note to that menu item name.")) {
           return;
         }
@@ -2091,6 +2113,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-red-400" onClick={() => handleSetStatus(line.index, 'none')}><span className="mr-2 pl-4"></span> Remove Status</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '⬜')}><span className="mr-2">⬜</span> Apply 'To Do' to Block</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '✅')}><span className="mr-2">✅</span> Apply 'Done' to Block</DropdownMenuItem>
+                                <div className="border-t border-zinc-800 my-1" />
                                 <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -2104,6 +2129,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⬜')}><span className="mr-2">⬜</span> To Do</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '⏳')}><span className="mr-2">⏳</span> Waiting</DropdownMenuItem>
                                 <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800" onClick={() => handleSetStatus(line.index, '❌')}><span className="mr-2">❌</span> Not Done</DropdownMenuItem>
+                                <div className="border-t border-zinc-800 my-1" />
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '⬜')}><span className="mr-2">⬜</span> Apply 'To Do' to Block</DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer hover:bg-zinc-800 text-blue-400" onClick={() => handleSetStatusForBlock(line.index, '✅')}><span className="mr-2">✅</span> Apply 'Done' to Block</DropdownMenuItem>
                                 <div className="border-t border-zinc-800 my-1" />
                                 <DropdownMenuItem className="cursor-pointer hover:bg-red-900/20 text-red-400" onClick={handleRemoveAllStatuses}><span className="mr-2 pl-4"></span> Remove All Statuses</DropdownMenuItem>
                               </DropdownMenuContent>
