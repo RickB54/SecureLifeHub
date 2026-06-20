@@ -2862,7 +2862,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       key={note.id}
                       onClick={() => {
                         setIsRemindersModalOpen(false);
-                        onEdit(note);
+                        handleEditNote(note);
                       }}
                       className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/50 hover:bg-zinc-800 border border-zinc-700/50 cursor-pointer transition-all group"
                     >

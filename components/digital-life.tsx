@@ -73,8 +73,8 @@ export default function DigitalLife({ records, addItem, deleteItem, theme, initi
             const holidaysJson = await holidaysRes.json()
 
             if (Array.isArray(holidaysJson)) {
-                setEventsData(holidaysJson.map((h: any) => ({
-                    id: h.date,
+                setEventsData(holidaysJson.map((h: any, idx: number) => ({
+                    id: `${h.date}-${idx}`,
                     title: h.localName,
                     date: h.date,
                     location: "National",
