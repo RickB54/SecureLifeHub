@@ -1592,9 +1592,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
-                <DropdownMenuItem onClick={() => setArchiveFilter('active')} className={archiveFilter === 'active' ? 'text-yellow-400' : ''}>Active</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className={archiveFilter === 'archived' ? 'text-yellow-400' : ''}>Archived</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-yellow-400' : ''}>Both</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('active')} className={archiveFilter === 'active' ? 'text-emerald-400 font-bold' : ''}>Active</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className={archiveFilter === 'archived' ? 'text-red-400 font-bold' : ''}>Archived</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-zinc-400 font-bold' : ''}>Both</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Settings">
@@ -1748,9 +1748,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
-                <DropdownMenuItem onClick={() => setArchiveFilter('active')} className={archiveFilter === 'active' ? 'text-yellow-400' : ''}>Active</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className={archiveFilter === 'archived' ? 'text-yellow-400' : ''}>Archived</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-yellow-400' : ''}>Both</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('active')} className={archiveFilter === 'active' ? 'text-emerald-400 font-bold' : ''}>Active</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className={archiveFilter === 'archived' ? 'text-red-400 font-bold' : ''}>Archived</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-zinc-400 font-bold' : ''}>Both</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button 
