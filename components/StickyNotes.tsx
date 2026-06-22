@@ -3,7 +3,8 @@ import {
   X, Plus, Trash2, Edit2, Save, PanelLeftClose, PanelLeft, 
   LayoutDashboard, CheckSquare, Square, FileText, Folder, ChevronDown, ChevronRight, ChevronUp,
   Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon,
-  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type
+  GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type,
+  Archive, Mic, MicOff
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -234,13 +235,16 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 </span>
               </div>
             )}
-            {showTags && (note.tags?.filter(t => !t.startsWith('__')).length > 0 || (uniqueCardSections.length === 0 && !note.section_id)) && (
+            {showTags && (note.tags?.filter(t => !t.startsWith('__') || t === '__archived__').length > 0 || (uniqueCardSections.length === 0 && !note.section_id)) && (
               <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
+                {note.tags?.includes('__archived__') && (
+                  <span className={`text-[9px] uppercase font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-sm`}>Archived</span>
+                )}
                 {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
                   <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
-                )) : (
+                )) : (!note.tags?.includes('__archived__') && (
                   <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
-                )}
+                ))}
               </div>
             )}
 
@@ -418,6 +422,11 @@ const SortableListRow = React.memo(({
         
         {/* Timestamp & Section */}
         <div className="flex items-center gap-2 shrink-0">
+          {note.tags?.includes('__archived__') && (
+            <span className="text-[9px] font-bold bg-red-500/20 text-red-400 border border-red-500/20 px-1.5 py-0.5 rounded uppercase tracking-wider">
+              Archived
+            </span>
+          )}
           {(() => {
             const reminder = getReminderData(note);
             return reminder ? (
@@ -709,6 +718,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [dateFilterStart, setDateFilterStart] = useState("");
   const [dateFilterEnd, setDateFilterEnd] = useState("");
 
+  const [archiveFilter, setArchiveFilter] = useState<'active'|'archived'|'both'>('active');
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
   // Prefs state for live updates
   const [prefs, setPrefs] = useState({
     anim: localStorage.getItem('sticky_notes_anim') !== 'false',
@@ -862,6 +875,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const activeNotes = useMemo(() => {
     let filtered = orderedAllNotes.filter(n => {
+      if (archiveFilter === 'active' && n.tags?.includes('__archived__')) return false;
+      if (archiveFilter === 'archived' && !n.tags?.includes('__archived__')) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (selectedSection) {
@@ -1331,6 +1346,62 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const showTags = prefs.tags;
   const isMasonry = prefs.masonry;
 
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+    try {
+      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        toast({ title: "Speech recognition not supported in this browser.", variant: "destructive" });
+        return;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + ' ';
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setEditingNote(prev => {
+            if (!prev) return prev;
+            const cursor = textareaRef.current?.selectionStart || prev.content.length;
+            const newContent = prev.content.substring(0, cursor) + finalTranscript + prev.content.substring(cursor);
+            return { ...prev, content: newContent };
+          });
+        }
+      };
+      
+      recognition.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsListening(false);
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+      
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsListening(true);
+      toast({ title: "Listening..." });
+    } catch (err) {
+      console.error(err);
+      setIsListening(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-140px)] w-full rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 relative">
 
@@ -1361,15 +1432,6 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <Button variant="ghost" size="icon" onClick={handleClose} className="text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10">
               <X className="w-5 h-5 sm:w-6 sm:h-6" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
-              className={`text-zinc-400 hover:text-white shrink-0 h-8 w-8 sm:h-10 sm:w-10 ${isSidebarOpen ? 'text-yellow-500 hover:text-yellow-400' : ''}`}
-              title={isSidebarOpen ? "Hide Tags" : "Show Tags"}
-            >
-              <PanelLeft className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-1.5 sm:p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30 shrink-0">
@@ -1445,6 +1507,18 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Sticky Notes Visibility">
               <Sliders className="w-3.5 h-3.5 text-blue-400" />
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Archive Filter">
+                  <Archive className="w-3.5 h-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
+                <DropdownMenuItem onClick={() => setArchiveFilter('active')} className={archiveFilter === 'active' ? 'text-yellow-400' : ''}>Active</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className={archiveFilter === 'archived' ? 'text-yellow-400' : ''}>Archived</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-yellow-400' : ''}>Both</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Settings">
               <Settings className="w-3.5 h-3.5" />
             </Button>
@@ -1576,6 +1650,18 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             <Button variant="ghost" size="icon" onClick={() => setIsVisibilityOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Sticky Notes Visibility">
               <Sliders className="w-4 h-4 text-blue-400" />
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Archive Filter">
+                  <Archive className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
+                <DropdownMenuItem onClick={() => setArchiveFilter('active')} className={archiveFilter === 'active' ? 'text-yellow-400' : ''}>Active</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('archived')} className={archiveFilter === 'archived' ? 'text-yellow-400' : ''}>Archived</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-yellow-400' : ''}>Both</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Settings">
               <Settings className="w-4 h-4" />
             </Button>
@@ -1605,11 +1691,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <PanelLeftClose className="w-4 h-4" />
               </Button>
               <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
-              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Show All'}</Button>
+              <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Expand'}</Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
-              <Plus className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
+                <Plus className="w-4 h-4" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 hidden lg:flex" title="Close Sidebar">
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           <ScrollArea className="flex-1 min-w-[16rem]">
             <div className="p-3 space-y-2">
@@ -1714,6 +1805,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           onScroll={(e) => setShowScrollTopBtn(e.currentTarget.scrollTop > 300)}
           className="flex-1 overflow-y-auto p-8 relative z-10 scroll-smooth"
         >
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+            className={`absolute top-4 left-4 z-[60] h-8 w-8 text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 rounded shadow ${isSidebarOpen ? 'text-yellow-500 hover:text-yellow-400' : ''}`}
+            title={isSidebarOpen ? "Hide Tags" : "Show Tags"}
+          >
+            <PanelLeft className="w-5 h-5" />
+          </Button>
+
           <Button 
             variant="outline" 
             size="icon" 
@@ -2017,9 +2118,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               <div className="flex-1 flex flex-col relative">
                 <div className="flex justify-between items-end mb-1">
                   <label className={`text-xs font-bold ${editColor.text} uppercase block`}>Content</label>
-                  <Button size="sm" variant="ghost" onClick={handleAddSection} className={`h-6 text-[10px] ${editColor.text} hover:bg-black/10 uppercase font-bold tracking-wider`}>
-                    <Plus className="w-3 h-3 mr-1" /> Add New Section Here
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={toggleListening} className={`h-6 px-2 text-[10px] ${editColor.text} ${isListening ? 'bg-red-500/20 text-red-500' : 'hover:bg-black/10'} uppercase font-bold tracking-wider`}>
+                      {isListening ? <MicOff className="w-3 h-3 mr-1 animate-pulse" /> : <Mic className="w-3 h-3 mr-1" />}
+                      {isListening ? "Listening..." : "Dictate"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={handleAddSection} className={`h-6 text-[10px] ${editColor.text} hover:bg-black/10 uppercase font-bold tracking-wider`}>
+                      <Plus className="w-3 h-3 mr-1" /> Add New Section Here
+                    </Button>
+                  </div>
                 </div>
                 <div className={`flex-1 relative flex flex-col overflow-hidden rounded-md border ${editColor.border} bg-black/5`}>
                   {/* Gutter Background */}
@@ -2422,6 +2529,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}>Delete note</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>Change tags</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const tags = editingNote.tags || [];
+                      const isArchived = tags.includes('__archived__');
+                      setEditingNote({ ...editingNote, tags: isArchived ? tags.filter(t => t !== '__archived__') : [...tags, '__archived__'] });
+                    }}>
+                      {editingNote.tags?.includes('__archived__') ? 'Unarchive note' : 'Archive note'}
+                    </DropdownMenuItem>
                     {editingNote.id !== 'new' && (
                       <DropdownMenuItem onClick={() => handleDuplicateNote(editingNote)}>Make a copy</DropdownMenuItem>
                     )}
