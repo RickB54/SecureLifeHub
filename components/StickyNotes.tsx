@@ -246,7 +246,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                     if (!sec) return null;
                     return (
                       <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
-                        {sec.name}
+                        {getFullSectionName(secId)}
                       </span>
                     );
                   })
@@ -628,6 +628,23 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const notesWithReminders = useMemo(() => notesStore.notes.filter(n => getReminderData(n) !== null), [notesStore.notes]);
 
+  type DeletePromptState = {
+    isOpen: boolean;
+    type: 'notebook' | 'section';
+    id: string;
+    name: string;
+    noteCount: number;
+  } | null;
+  const [deletePrompt, setDeletePrompt] = useState<DeletePromptState>(null);
+
+  const getFullSectionName = (secId: string) => {
+    const sec = notesStore.sections.find(s => s.id === secId);
+    if (!sec) return "";
+    const nb = notesStore.notebooks.find(n => n.id === sec.notebook_id);
+    if (!nb || nb.name === sec.name) return sec.name;
+    return `${nb.name} / ${sec.name}`;
+  };
+
   const handleAddLabel = async () => {
     const trimmed = labelSearchText.trim();
     if (!trimmed || !editingNote) return;
@@ -966,31 +983,41 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   useEffect(() => {
     if (!textareaRef.current || !mirrorRef.current || !isNoteModalOpen || !editingNote) return;
-    const ta = textareaRef.current;
-    const mirror = mirrorRef.current;
     
-    mirror.style.width = `${ta.clientWidth}px`;
+    const updateTops = () => {
+      const ta = textareaRef.current;
+      const mirror = mirrorRef.current;
+      if (!ta || !mirror) return;
 
-    const lines = editingNote.content.split('\n');
-    const tops: any[] = [];
+      mirror.style.width = `${ta.clientWidth}px`;
+
+      const lines = editingNote.content.split('\n');
+      const tops: any[] = [];
+      
+      Array.from(mirror.children).forEach((child: any, i) => {
+        const lineText = lines[i] || '';
+        const trimmed = lineText.trim();
+        
+        let status = 'none';
+        if (trimmed.startsWith('✅') || trimmed.startsWith(STATUS_MARKERS['✅'])) status = 'done';
+        else if (trimmed.startsWith('⏳') || trimmed.startsWith(STATUS_MARKERS['⏳'])) status = 'waiting';
+        else if (trimmed.startsWith('❌') || trimmed.startsWith(STATUS_MARKERS['❌'])) status = 'cancelled';
+        else if (trimmed.startsWith('⬜') || trimmed.startsWith(STATUS_MARKERS['⬜'])) status = 'todo';
+        else if (trimmed.startsWith('☐')) status = 'todo';
+        else if (trimmed.startsWith('☑')) status = 'done';
+
+        const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '')) || status !== 'none';
+        
+        tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
+      });
+      setLineTops(tops);
+    };
+
+    updateTops();
+    const observer = new ResizeObserver(() => updateTops());
+    observer.observe(textareaRef.current);
     
-    Array.from(mirror.children).forEach((child: any, i) => {
-      const lineText = lines[i] || '';
-      const trimmed = lineText.trim();
-      
-      let status = 'none';
-      if (trimmed.startsWith('✅') || trimmed.startsWith(STATUS_MARKERS['✅'])) status = 'done';
-      else if (trimmed.startsWith('⏳') || trimmed.startsWith(STATUS_MARKERS['⏳'])) status = 'waiting';
-      else if (trimmed.startsWith('❌') || trimmed.startsWith(STATUS_MARKERS['❌'])) status = 'cancelled';
-      else if (trimmed.startsWith('⬜') || trimmed.startsWith(STATUS_MARKERS['⬜'])) status = 'todo';
-      else if (trimmed.startsWith('☐')) status = 'todo';
-      else if (trimmed.startsWith('☑')) status = 'done';
-
-      const isList = /^(\s*)([-*]|\d+\.)\s/.test(lineText.replace(/^[✅⏳⬜❌☐☑]\s*/, '').replace(INVISIBLE_REGEX, '')) || status !== 'none';
-      
-      tops.push({ index: i, top: child.offsetTop, isList, status, height: child.offsetHeight });
-    });
-    setLineTops(tops);
+    return () => observer.disconnect();
   }, [editingNote?.content, isNoteModalOpen]);
 
   const handleSetStatus = (index: number, newStatusIcon: string) => {
@@ -1296,7 +1323,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     if (newNotebookName.trim()) {
       const nb = await notesStore.createNotebook(newNotebookName);
       if (nb?.id) {
-        await notesStore.createSection(nb.id, "General");
+        await notesStore.createSection(nb.id, newNotebookName.trim());
       }
       setNewNotebookName("");
       setIsNotebookModalOpen(false);
@@ -1305,10 +1332,17 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   };
 
   const handleDeleteNotebook = async (id: string) => {
-    if (confirm("WARNING: Are you sure you want to delete this Tag Group? This will delete the group folder and ALL stickies and submenus inside it.")) {
-      if (confirm("CRITICAL WARNING: This action CANNOT be undone. All notes and section sublabels within this Tag Group will be permanently erased. Are you absolutely sure?")) {
+    const nb = notesStore.notebooks.find(n => n.id === id);
+    if (!nb) return;
+    const sectionIds = notesStore.sections.filter(s => s.notebook_id === id).map(s => s.id);
+    const notesInNb = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
+    
+    if (notesInNb.length > 0) {
+      setDeletePrompt({ isOpen: true, type: 'notebook', id, name: nb.name, noteCount: notesInNb.length });
+    } else {
+      if (confirm(`Are you sure you want to delete the category "${nb.name}"?`)) {
         await notesStore.deleteNotebook(id);
-        toast({ title: "Tag Group deleted successfully" });
+        toast({ title: "Category deleted successfully" });
       }
     }
   };
@@ -1321,10 +1355,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   };
 
   const handleDeleteSection = async (id: string) => {
-    if (confirm("WARNING: Are you sure you want to delete this Submenu Tag? All stickies inside it will lose their association with this label.")) {
-      if (confirm("CRITICAL WARNING: This action cannot be undone. Are you absolutely sure you want to delete this Submenu Tag?")) {
+    const sec = notesStore.sections.find(s => s.id === id);
+    if (!sec) return;
+    const notesInSec = notesStore.notes.filter(n => n.section_id === id || n.tags?.includes(`__section:${id}`));
+    
+    if (notesInSec.length > 0) {
+      setDeletePrompt({ isOpen: true, type: 'section', id, name: sec.name, noteCount: notesInSec.length });
+    } else {
+      if (confirm(`Are you sure you want to delete the submenu "${sec.name}"?`)) {
         await notesStore.deleteSection(id);
-        toast({ title: "Submenu Tag deleted successfully" });
+        toast({ title: "Submenu deleted successfully" });
       }
     }
   };
@@ -1778,7 +1818,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="p-2 opacity-50 hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity">
+                        <button className="p-2 text-zinc-400 hover:text-white transition-colors cursor-pointer">
                           <MoreVertical className="w-4 h-4" />
                         </button>
                       </DropdownMenuTrigger>
@@ -1815,7 +1855,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           </button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button className="p-1.5 opacity-50 hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity">
+                              <button className="p-1.5 text-zinc-400 hover:text-white transition-colors cursor-pointer">
                                 <MoreVertical className="w-3 h-3" />
                               </button>
                             </DropdownMenuTrigger>
@@ -2397,7 +2437,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           if (!sec) return null;
                           return (
                             <div key={secId} className="inline-flex items-center text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-black/25 bg-black/5 text-inherit select-none">
-                              {sec.name}
+                              {getFullSectionName(secId)}
                             </div>
                           );
                         })}
@@ -3117,17 +3157,28 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                               onChange={() => handleToggleLabel(sec.id)}
                               className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
                             />
-                            <span className="text-sm font-medium">{sec.name}</span>
+                            <span className="text-sm font-medium">{getFullSectionName(sec.id)}</span>
                           </label>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleDeleteLabelFromPopup(sec.id)}
-                            className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                            title="Delete Tag"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => { e.stopPropagation(); setIsLabelModalOpen(false); handleEditSection(sec); }}
+                              className="h-7 w-7 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded"
+                              title="Edit Tag"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={(e) => { e.stopPropagation(); handleDeleteLabelFromPopup(sec.id); }}
+                              className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded"
+                              title="Delete Tag"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                       );
                     })
@@ -3141,6 +3192,83 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 className="bg-blue-600 hover:bg-blue-500 text-white text-xs h-8 px-6 rounded-lg font-semibold"
               >
                 Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Prompt Modal */}
+      {deletePrompt?.isOpen && (
+        <div className="fixed inset-0 z-[500] bg-black/80 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-white font-bold mb-2 flex items-center gap-2 text-lg">
+              <span className="text-red-500">⚠️</span> Warning
+            </h2>
+            <p className="text-zinc-300 text-sm mb-6 leading-relaxed">
+              You are deleting the {deletePrompt.type === 'notebook' ? 'Category' : 'Submenu'} <strong>"{deletePrompt.name}"</strong>, which contains <strong>{deletePrompt.noteCount}</strong> sticky note{deletePrompt.noteCount > 1 ? 's' : ''}.<br/><br/>
+              What would you like to do with these notes?
+            </p>
+            <div className="flex flex-col gap-3">
+              <Button 
+                variant="outline" 
+                className="bg-zinc-800 border-zinc-700 text-white hover:bg-zinc-700 font-semibold"
+                onClick={async () => {
+                  // Keep notes (untag them)
+                  const isNb = deletePrompt.type === 'notebook';
+                  let sectionIds = isNb ? notesStore.sections.filter(s => s.notebook_id === deletePrompt.id).map(s => s.id) : [deletePrompt.id];
+                  const notesToUpdate = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
+                  
+                  // Unlink notes sequentially
+                  for (const n of notesToUpdate) {
+                    const newTags = n.tags?.filter(t => !sectionIds.some(sid => t === `__section:${sid}`)) || [];
+                    let newSectionId = n.section_id;
+                    if (newSectionId && sectionIds.includes(newSectionId)) {
+                      newSectionId = newTags.find(t => t.startsWith('__section:'))?.replace('__section:', '') || null;
+                    }
+                    await notesStore.updateNote(n.id, { section_id: newSectionId, tags: newTags });
+                  }
+
+                  if (isNb) {
+                    await notesStore.deleteNotebook(deletePrompt.id);
+                  } else {
+                    await notesStore.deleteSection(deletePrompt.id);
+                  }
+                  toast({ title: `${isNb ? 'Category' : 'Submenu'} deleted, notes kept` });
+                  setDeletePrompt(null);
+                }}
+              >
+                Keep Notes (Un-tag)
+              </Button>
+              <Button 
+                className="bg-red-600 hover:bg-red-500 text-white font-semibold"
+                onClick={async () => {
+                  // Delete notes sequentially (to ensure no orphaned UI state if Supabase cascade takes a moment)
+                  const isNb = deletePrompt.type === 'notebook';
+                  let sectionIds = isNb ? notesStore.sections.filter(s => s.notebook_id === deletePrompt.id).map(s => s.id) : [deletePrompt.id];
+                  const notesToDelete = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
+                  
+                  for (const n of notesToDelete) {
+                    await notesStore.deleteNote(n.id);
+                  }
+
+                  if (isNb) {
+                    await notesStore.deleteNotebook(deletePrompt.id);
+                  } else {
+                    await notesStore.deleteSection(deletePrompt.id);
+                  }
+                  toast({ title: `${isNb ? 'Category' : 'Submenu'} and notes deleted` });
+                  setDeletePrompt(null);
+                }}
+              >
+                Delete Notes & Menu
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+                onClick={() => setDeletePrompt(null)}
+              >
+                Cancel
               </Button>
             </div>
           </div>
