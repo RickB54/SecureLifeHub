@@ -4,7 +4,7 @@ import {
   LayoutDashboard, CheckSquare, Square, FileText, Folder, ChevronDown, ChevronRight, ChevronUp,
   Search, Settings, Palette, MoreVertical, Copy, ArrowUp, Pin, RefreshCw, Image as ImageIcon,
   GripVertical, LayoutGrid, List, Sliders, HelpCircle, Bell, Clock, ArrowLeft, Tag, Type,
-  Archive, Mic, MicOff
+  Archive, Mic, MicOff, Eye, PinOff
 } from "lucide-react";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
@@ -719,6 +719,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [dateFilterEnd, setDateFilterEnd] = useState("");
 
   const [archiveFilter, setArchiveFilter] = useState<'active'|'archived'|'both'>('active');
+  const [pinnedFilter, setPinnedFilter] = useState<'all'|'pinned'|'unpinned'>('all');
+  const cyclePinnedFilter = () => {
+    if (pinnedFilter === 'all') setPinnedFilter('pinned');
+    else if (pinnedFilter === 'pinned') setPinnedFilter('unpinned');
+    else setPinnedFilter('all');
+  };
+
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
@@ -877,6 +884,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     let filtered = orderedAllNotes.filter(n => {
       if (archiveFilter === 'active' && n.tags?.includes('__archived__')) return false;
       if (archiveFilter === 'archived' && !n.tags?.includes('__archived__')) return false;
+      if (pinnedFilter === 'pinned' && !n.is_pinned) return false;
+      if (pinnedFilter === 'unpinned' && n.is_pinned) return false;
       if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
       if (searchQuery && !n.title.toLowerCase().includes(searchQuery.toLowerCase()) && !n.content?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       if (selectedSection) {
@@ -948,7 +957,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
-  }, [orderedAllNotes, archiveFilter, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
+  }, [orderedAllNotes, archiveFilter, pinnedFilter, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
@@ -1346,6 +1355,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const showTags = prefs.tags;
   const isMasonry = prefs.masonry;
 
+  const renderPinned = activeNotes.filter(n => n.is_pinned && !n.tags?.includes('__archived__'));
+  const renderOthers = activeNotes.filter(n => !n.is_pinned && !n.tags?.includes('__archived__'));
+  const renderArchived = activeNotes.filter(n => n.tags?.includes('__archived__'));
+
   const toggleListening = () => {
     if (isListening) {
       if (recognitionRef.current) recognitionRef.current.stop();
@@ -1693,12 +1706,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
               <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Expand'}</Button>
             </div>
-            <div className="flex items-center gap-1">
               <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
                 <Plus className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="h-6 w-6 text-zinc-400 hover:bg-zinc-800 hidden lg:flex" title="Close Sidebar">
-                <PanelLeftClose className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -1840,16 +1849,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           </div>
 
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            {activeNotes.filter(n => n.is_pinned).length > 0 && (
+            {renderPinned.length > 0 && (
               <div className="mb-12">
                 <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2">Pinned</h3>
                 <SortableContext 
-                  items={activeNotes.filter(n => n.is_pinned).map(n => n.id)} 
+                  items={renderPinned.map(n => n.id)} 
                   strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
                 >
                   {viewMode === 'list' ? (
                     <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-                      {activeNotes.filter(n => n.is_pinned).map(note => {
+                      {renderPinned.map(note => {
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableListRow
@@ -1871,7 +1880,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     </div>
                   ) : (
                     <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
-                      {activeNotes.filter(n => n.is_pinned).map(note => {
+                      {renderPinned.map(note => {
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableSticky 
@@ -1893,8 +1902,6 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
                             onOpenSettings={() => setIsSettingsOpen(true)}
                           />
-
-
                         );
                       })}
                     </div>
@@ -1903,16 +1910,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               </div>
             )}
             
-            {activeNotes.filter(n => !n.is_pinned).length > 0 && (
+            {renderOthers.length > 0 && (
               <div>
-                {activeNotes.filter(n => n.is_pinned).length > 0 && <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2 mt-8">Others</h3>}
+                {renderPinned.length > 0 && <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-4 ml-2 mt-8">Others</h3>}
                 <SortableContext 
-                  items={activeNotes.filter(n => !n.is_pinned).map(n => n.id)} 
+                  items={renderOthers.map(n => n.id)} 
                   strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
                 >
                   {viewMode === 'list' ? (
                     <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-                      {activeNotes.filter(n => !n.is_pinned).map(note => {
+                      {renderOthers.map(note => {
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableListRow
@@ -1934,7 +1941,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     </div>
                   ) : (
                     <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
-                      {activeNotes.filter(n => !n.is_pinned).map(note => {
+                      {renderOthers.map(note => {
                         const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
                         return (
                           <SortableSticky 
@@ -1956,7 +1963,67 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
                             onOpenSettings={() => setIsSettingsOpen(true)}
                           />
+                        );
+                      })}
+                    </div>
+                  )}
+                </SortableContext>
+              </div>
+            )}
 
+            {renderArchived.length > 0 && (
+              <div className="mt-12 border-t border-zinc-800/50 pt-8">
+                <h3 className="text-xs font-bold text-red-500 uppercase tracking-widest mb-4 ml-2">Archives</h3>
+                <SortableContext 
+                  items={renderArchived.map(n => n.id)} 
+                  strategy={viewMode === 'list' ? verticalListSortingStrategy : rectSortingStrategy}
+                >
+                  {viewMode === 'list' ? (
+                    <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+                      {renderArchived.map(note => {
+                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                        return (
+                          <SortableListRow
+                            key={`${note.id}-${note.is_pinned}-${animTick}`}
+                            note={note}
+                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                            sectionName={sectionName}
+                            onEdit={handleEditNote}
+                            onDelete={handleDeleteNote}
+                            onSendToNotes={handleSendToNotes}
+                            onDuplicate={handleDuplicateNote}
+                            onChangeColor={handleChangeColor}
+                            onTogglePin={handleTogglePin}
+                            showToolbar={prefs.toolbar}
+                            onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                          />
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className={isMasonry ? "columns-1 sm:columns-2 md:columns-3 xl:columns-4 2xl:columns-5 gap-8 space-y-8" : "grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 items-stretch"}>
+                      {renderArchived.map(note => {
+                        const sectionName = notesStore.sections.find(s => s.id === note.section_id)?.name;
+                        return (
+                          <SortableSticky 
+                            key={`${note.id}-${note.is_pinned}-${animTick}`} 
+                            note={note} 
+                            isMasonry={isMasonry}
+                            animClass={getAnimClass(prefs.anim, animStyle, neonBurst)}
+                            sectionName={sectionName}
+                            onEdit={handleEditNote} 
+                            onDelete={handleDeleteNote} 
+                            onSendToNotes={handleSendToNotes} 
+                            onDuplicate={handleDuplicateNote}
+                            onChangeColor={handleChangeColor}
+                            onToggleCheckboxes={handleToggleCheckboxes}
+                            onTogglePin={handleTogglePin}
+                            onImageClick={setLightboxImage}
+                            showTags={true}
+                            showToolbar={prefs.toolbar}
+                            onChangeLabels={(n) => { setEditingNote(n); setIsLabelModalOpen(true); }}
+                            onOpenSettings={() => setIsSettingsOpen(true)}
+                          />
                         );
                       })}
                     </div>
@@ -2532,7 +2599,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     <DropdownMenuItem onClick={() => {
                       const tags = editingNote.tags || [];
                       const isArchived = tags.includes('__archived__');
-                      setEditingNote({ ...editingNote, tags: isArchived ? tags.filter(t => t !== '__archived__') : [...tags, '__archived__'] });
+                      setEditingNote({ 
+                        ...editingNote, 
+                        tags: isArchived ? tags.filter(t => t !== '__archived__') : [...tags, '__archived__'],
+                        is_pinned: isArchived ? editingNote.is_pinned : false
+                      });
                     }}>
                       {editingNote.tags?.includes('__archived__') ? 'Unarchive note' : 'Archive note'}
                     </DropdownMenuItem>
