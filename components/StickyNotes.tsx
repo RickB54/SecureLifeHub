@@ -1257,14 +1257,28 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       const textarea = textareaRef.current;
       const cursorPos = textarea.selectionStart || editingNote.content.length;
       const timestamp = new Date().toLocaleString([], { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' });
-      const newSectionText = `\n\n---\n# New Section (${timestamp})\n\n`;
+      
+      let prefix = '\n\n';
+      if (cursorPos === 0) {
+        prefix = '';
+      } else if (editingNote.content[cursorPos - 1] === '\n') {
+        prefix = '\n';
+        if (cursorPos > 1 && editingNote.content[cursorPos - 2] === '\n') {
+          prefix = '';
+        }
+      }
+      
+      const newSectionText = `${prefix}---\n# New Section (${timestamp})\n\n`;
       
       const newContent = editingNote.content.slice(0, cursorPos) + newSectionText + editingNote.content.slice(cursorPos);
       setEditingNote({ ...editingNote, content: newContent });
       
       setTimeout(() => {
         textarea.focus();
-        textarea.setSelectionRange(cursorPos + newSectionText.length, cursorPos + newSectionText.length);
+        const newCursorPos = cursorPos + newSectionText.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+        textarea.blur();
+        textarea.focus();
       }, 0);
     }
   };
