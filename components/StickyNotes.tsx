@@ -1574,7 +1574,20 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8" title="Archive Filter">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-8 w-8 border ${
+                    archiveFilter === 'active' ? 'text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
+                    archiveFilter === 'archived' ? 'text-red-500 hover:text-red-400 bg-red-500/10 border-red-500/30' :
+                    'text-zinc-400 hover:text-white bg-zinc-900 border-zinc-800'
+                  }`} 
+                  title={
+                    archiveFilter === 'active' ? 'Showing Active Notes Only' :
+                    archiveFilter === 'archived' ? 'Showing Archived Notes Only' :
+                    'Showing Active & Archived Notes'
+                  }
+                >
                   <Archive className="w-3.5 h-3.5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -1717,7 +1730,20 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Archive Filter">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={`h-8 w-8 sm:h-10 sm:w-10 border ${
+                    archiveFilter === 'active' ? 'text-emerald-500 hover:text-emerald-400 bg-emerald-500/10 border-emerald-500/30' :
+                    archiveFilter === 'archived' ? 'text-red-500 hover:text-red-400 bg-red-500/10 border-red-500/30' :
+                    'text-zinc-400 hover:text-white bg-zinc-900 border-zinc-800'
+                  }`} 
+                  title={
+                    archiveFilter === 'active' ? 'Showing Active Notes Only' :
+                    archiveFilter === 'archived' ? 'Showing Archived Notes Only' :
+                    'Showing Active & Archived Notes'
+                  }
+                >
                   <Archive className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
