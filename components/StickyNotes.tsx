@@ -1675,6 +1675,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-yellow-400' : ''}>Both</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button variant="ghost" size="icon" onClick={cyclePinnedFilter} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Toggle Pinned View">
+              {pinnedFilter === 'all' ? <Eye className="w-4 h-4" /> : pinnedFilter === 'pinned' ? <Pin className="w-4 h-4" fill="currentColor" /> : <PinOff className="w-4 h-4" />}
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Settings">
               <Settings className="w-4 h-4" />
             </Button>
@@ -1717,15 +1720,30 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${!selectedSection && !selectedNotebook ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
               >
                 <div className="flex items-center gap-3"><LayoutDashboard className="w-4 h-4 shrink-0" /> All Stickies</div>
-                <span className="text-xs opacity-50 ml-2">{visibleNotes.filter(n => !prefs.isolate || n.tags?.includes('__sticky-notes__')).length}</span>
+                <div className="flex items-center gap-1 text-xs">
+                  {(() => {
+                    const allNotes = visibleNotes.filter(n => !prefs.isolate || n.tags?.includes('__sticky-notes__'));
+                    const activeCount = allNotes.filter(n => !n.tags?.includes('__archived__')).length;
+                    const archivedCount = allNotes.filter(n => n.tags?.includes('__archived__')).length;
+                    return (
+                      <>
+                        {activeCount > 0 && <span className="opacity-50">{activeCount}</span>}
+                        {archivedCount > 0 && <span className="text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded-md" title={`${archivedCount} Archived`}>{archivedCount}</span>}
+                        {activeCount === 0 && archivedCount === 0 && <span className="opacity-50">0</span>}
+                      </>
+                    );
+                  })()}
+                </div>
               </button>
               
               {notesStore.notebooks.filter(nb => !excludedNotebooks.includes(nb.id)).map(nb => {
-                const nbStickies = visibleNotes.filter(n => {
+                const nbNotes = visibleNotes.filter(n => {
                   if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
                   const sectionIds = notesStore.sections.filter(s => s.notebook_id === nb.id).map(s => s.id);
                   return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
-                }).length;
+                });
+                const nbActiveCount = nbNotes.filter(n => !n.tags?.includes('__archived__')).length;
+                const nbArchivedCount = nbNotes.filter(n => n.tags?.includes('__archived__')).length;
                 return (
                 <div key={nb.id} className="space-y-1">
                   <div className="flex items-center group">
@@ -1734,7 +1752,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       className={`flex-1 flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${selectedNotebook === nb.id && !selectedSection ? 'bg-blue-600/20 text-blue-400' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'}`}
                     >
                       <div className="flex items-center gap-3 truncate"><Folder className="w-4 h-4 shrink-0" /> <span className="truncate">{nb.name}</span></div>
-                      <span className="text-xs opacity-50 ml-2">{nbStickies}</span>
+                      <div className="flex items-center gap-1 text-xs">
+                        {nbActiveCount > 0 && <span className="opacity-50">{nbActiveCount}</span>}
+                        {nbArchivedCount > 0 && <span className="text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded-md" title={`${nbArchivedCount} Archived`}>{nbArchivedCount}</span>}
+                        {nbActiveCount === 0 && nbArchivedCount === 0 && <span className="opacity-50">0</span>}
+                      </div>
                     </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1757,7 +1779,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   {(expandedNotebook === nb.id || expandAll) && (
                     <div className="pl-6 pr-2 space-y-1">
                       {notesStore.sections.filter(s => s.notebook_id === nb.id && !excludedSections.includes(s.id)).map(sec => {
-                        const secStickies = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__sticky-notes__')) && (n.section_id === sec.id || n.tags?.includes(`__section:${sec.id}`))).length;
+                        const secNotes = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__sticky-notes__')) && (n.section_id === sec.id || n.tags?.includes(`__section:${sec.id}`)));
+                        const secActiveCount = secNotes.filter(n => !n.tags?.includes('__archived__')).length;
+                        const secArchivedCount = secNotes.filter(n => n.tags?.includes('__archived__')).length;
                         return (
                         <div key={sec.id} className="flex items-center group">
                           <button 
@@ -1765,7 +1789,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             className={`flex-1 flex items-center justify-between px-3 py-1.5 rounded-lg text-sm transition-colors ${selectedSection === sec.id ? 'bg-blue-600/20 text-blue-400 font-bold' : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/50 font-medium'}`}
                           >
                             <div className="flex items-center gap-3 truncate"><FileText className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{sec.name}</span></div>
-                            <span className="text-xs opacity-50 ml-2">{secStickies}</span>
+                            <div className="flex items-center gap-1 text-xs">
+                              {secActiveCount > 0 && <span className="opacity-50">{secActiveCount}</span>}
+                              {secArchivedCount > 0 && <span className="text-red-400 font-bold bg-red-500/10 px-1.5 py-0.5 rounded-md" title={`${secArchivedCount} Archived`}>{secArchivedCount}</span>}
+                              {secActiveCount === 0 && secArchivedCount === 0 && <span className="opacity-50">0</span>}
+                            </div>
                           </button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
