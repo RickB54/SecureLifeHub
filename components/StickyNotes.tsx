@@ -1706,10 +1706,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-widest">Tags</h2>
               <Button variant="outline" size="sm" onClick={() => setExpandAll(!expandAll)} className="h-5 px-1.5 text-[9px] bg-zinc-900 border-zinc-700 hover:bg-zinc-800 uppercase tracking-widest ml-1">{expandAll ? 'Collapse' : 'Expand'}</Button>
             </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="icon" onClick={() => setIsNotebookModalOpen(true)} className="h-6 w-6 text-emerald-500 hover:bg-emerald-500/20" title="New Tag Folder">
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
           <ScrollArea className="flex-1 min-w-[16rem]">
             <div className="p-3 space-y-2">
