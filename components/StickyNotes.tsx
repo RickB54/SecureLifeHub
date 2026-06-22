@@ -235,33 +235,31 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 </span>
               </div>
             )}
-            {showTags && (note.tags?.filter(t => !t.startsWith('__') || t === '__archived__').length > 0 || (uniqueCardSections.length === 0 && !note.section_id)) && (
-              <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap gap-1">
+            {(showTags && (note.tags?.filter(t => !t.startsWith('__') || t === '__archived__').length > 0 || (uniqueCardSections.length === 0 && !note.section_id))) || uniqueCardSections.length > 0 || sectionName ? (
+              <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap items-center gap-1">
                 {note.tags?.includes('__archived__') && (
                   <span className={`text-[9px] uppercase font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-sm`}>Archived</span>
                 )}
-                {note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 ? note.tags.filter(t => !t.startsWith('__')).map(t => (
+                {uniqueCardSections.length > 0 ? (
+                  uniqueCardSections.map(secId => {
+                    const sec = notesStore.sections.find(s => s.id === secId);
+                    if (!sec) return null;
+                    return (
+                      <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
+                        {sec.name}
+                      </span>
+                    );
+                  })
+                ) : sectionName ? (
+                  <span className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>{sectionName}</span>
+                ) : null}
+                {showTags && note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 && note.tags.filter(t => !t.startsWith('__')).map(t => (
                   <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
-                )) : (!note.tags?.includes('__archived__') && (
-                  <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
                 ))}
+                {showTags && (!note.tags || note.tags.filter(t => !t.startsWith('__')).length === 0) && !note.tags?.includes('__archived__') && uniqueCardSections.length === 0 && !sectionName && (
+                  <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
+                )}
               </div>
-            )}
-
-            {uniqueCardSections.length > 0 ? (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {uniqueCardSections.map(secId => {
-                  const sec = notesStore.sections.find(s => s.id === secId);
-                  if (!sec) return null;
-                  return (
-                    <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
-                      {sec.name}
-                    </span>
-                  );
-                })}
-              </div>
-            ) : sectionName ? (
-              <div className="mt-3 text-[10px] font-black opacity-60 uppercase tracking-widest truncate">{sectionName}</div>
             ) : null}
           </>
         );
@@ -1675,7 +1673,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 <DropdownMenuItem onClick={() => setArchiveFilter('both')} className={archiveFilter === 'both' ? 'text-yellow-400' : ''}>Both</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" size="icon" onClick={cyclePinnedFilter} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Toggle Pinned View">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={cyclePinnedFilter} 
+              className={`h-8 w-8 sm:h-10 sm:w-10 border ${pinnedFilter !== 'all' ? 'bg-red-500 text-white border-red-500 hover:bg-red-600' : 'text-zinc-400 hover:text-white bg-zinc-900 border-zinc-800'}`} 
+              title={pinnedFilter === 'all' ? "Showing All Notes" : pinnedFilter === 'pinned' ? "Showing Pinned Notes" : "Showing Un-pinned Notes"}
+            >
               {pinnedFilter === 'all' ? <Eye className="w-4 h-4" /> : pinnedFilter === 'pinned' ? <Pin className="w-4 h-4" fill="currentColor" /> : <PinOff className="w-4 h-4" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} className="text-zinc-400 hover:text-white bg-zinc-900 border border-zinc-800 h-8 w-8 sm:h-10 sm:w-10" title="Settings">
