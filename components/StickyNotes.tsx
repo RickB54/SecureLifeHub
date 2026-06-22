@@ -948,7 +948,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       if (!a.is_pinned && b.is_pinned) return 1;
       return 0;
     });
-  }, [orderedAllNotes, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
+  }, [orderedAllNotes, archiveFilter, prefs.isolate, searchQuery, selectedSection, selectedNotebook, notesStore.sections, dateFilter, dateFilterStart, dateFilterEnd, sortBy]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mirrorRef = useRef<HTMLDivElement>(null);
@@ -1353,7 +1353,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       return;
     }
     try {
-      const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
         toast({ title: "Speech recognition not supported in this browser.", variant: "destructive" });
         return;
