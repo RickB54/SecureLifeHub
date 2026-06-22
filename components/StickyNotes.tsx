@@ -100,6 +100,14 @@ export const getReminderData = (note: Note) => {
   return { date, time, repeat: repeat || 'none', sound: sound !== 'false', popup: popup !== 'false' };
 };
 
+export const getFullSectionName = (notesStore: any, secId: string) => {
+  const sec = notesStore.sections.find((s: any) => s.id === secId);
+  if (!sec) return "";
+  const nb = notesStore.notebooks.find((n: any) => n.id === sec.notebook_id);
+  if (!nb || nb.name === sec.name) return sec.name;
+  return `${nb.name} / ${sec.name}`;
+};
+
 const formatAmPm = (timeStr: string) => {
   if (!timeStr) return '';
   const [h, m] = timeStr.split(':');
@@ -246,7 +254,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                     if (!sec) return null;
                     return (
                       <span key={secId} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
-                        {getFullSectionName(secId)}
+                        {getFullSectionName(notesStore, secId)}
                       </span>
                     );
                   })
@@ -636,14 +644,6 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     noteCount: number;
   } | null;
   const [deletePrompt, setDeletePrompt] = useState<DeletePromptState>(null);
-
-  const getFullSectionName = (secId: string) => {
-    const sec = notesStore.sections.find(s => s.id === secId);
-    if (!sec) return "";
-    const nb = notesStore.notebooks.find(n => n.id === sec.notebook_id);
-    if (!nb || nb.name === sec.name) return sec.name;
-    return `${nb.name} / ${sec.name}`;
-  };
 
   const handleAddLabel = async () => {
     const trimmed = labelSearchText.trim();
@@ -2437,7 +2437,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           if (!sec) return null;
                           return (
                             <div key={secId} className="inline-flex items-center text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-black/25 bg-black/5 text-inherit select-none">
-                              {getFullSectionName(secId)}
+                              {getFullSectionName(notesStore, secId)}
                             </div>
                           );
                         })}
@@ -3157,7 +3157,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                               onChange={() => handleToggleLabel(sec.id)}
                               className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
                             />
-                            <span className="text-sm font-medium">{getFullSectionName(sec.id)}</span>
+                            <span className="text-sm font-medium">{getFullSectionName(notesStore, sec.id)}</span>
                           </label>
                           <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                             <Button 
