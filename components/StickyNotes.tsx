@@ -222,7 +222,17 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
             {new Date(note.created_at || '').toLocaleDateString()} {new Date(note.created_at || '').toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
         </h3>
-        <p className="text-base opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">{getBoardDisplayContent(note.content)}</p>
+        <div className="text-base opacity-80 whitespace-pre-wrap line-clamp-[12] max-h-[320px] overflow-hidden">
+          {getBoardDisplayContent(note.content).split('\n').map((line, i, arr) => {
+             const isNewSection = line.startsWith('# New Section');
+             return (
+               <React.Fragment key={i}>
+                 {isNewSection ? <span className="text-[#00008B] font-black bg-white/50 px-1 rounded-sm inline-block">{line}</span> : line}
+                 {i < arr.length - 1 && '\n'}
+               </React.Fragment>
+             );
+          })}
+        </div>
       </div>
       {(() => {
         const reminder = getReminderData(note);
@@ -2422,28 +2432,39 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       }
                     }}
                     onScroll={e => setScrollTop(e.currentTarget.scrollTop)}
-                    className={`flex-1 resize-none bg-transparent border-none text-inherit placeholder:text-inherit placeholder:opacity-50 focus-visible:ring-0 p-4 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
-                    style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight }}
+                    className={`flex-1 resize-none bg-transparent border-none !text-transparent !placeholder-transparent focus-visible:ring-0 p-4 z-10 relative ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight, caretColor: editColor.textRing || (editColor.text.includes('white') ? '#fff' : '#000') }}
                     placeholder="Write something (use # headers to create section links)..."
                   />
 
+                  {/* Placeholder overlay */}
+                  {!getCleanContent(editingNote.content) && (
+                    <div className={`absolute top-0 left-0 right-0 p-4 pointer-events-none opacity-50 z-0 ${editColor.text} ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                         style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight }}>
+                      Write something (use # headers to create section links)...
+                    </div>
+                  )}
 
-
-                  {/* Mirror Div for height calculations */}
+                  {/* Mirror Div for height calculations and syntax highlighting */}
                   <div 
                     ref={mirrorRef} 
-                    className={`absolute top-0 left-0 p-4 whitespace-pre-wrap break-words opacity-0 pointer-events-none -z-10 ${prefs.showCheckboxes ? 'pl-12' : ''}`}
-                    style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight }}
+                    className={`absolute top-0 left-0 right-0 p-4 whitespace-pre-wrap break-words pointer-events-none z-0 ${editColor.text} ${prefs.showCheckboxes ? 'pl-12' : ''}`}
+                    style={{ fontSize: `${prefs.textSize}px`, lineHeight: prefs.lineHeight, transform: `translateY(-${scrollTop}px)` }}
                     aria-hidden
                   >
-                    {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => (
-                      <div key={i} className="relative" style={{ minHeight: `${prefs.lineHeight}em` }}>
-                        {line || ' '}
-                        {prefs.showReturnMarkers && line && (
-                          <span className="text-[10px] opacity-30 select-none ml-0.5">¶</span>
-                        )}
-                      </div>
-                    ))}
+                    {getCleanContent(editingNote.content).split('\n').map((line: string, i: number) => {
+                      const isNewSection = line.startsWith('# New Section');
+                      return (
+                        <div key={i} className="relative" style={{ minHeight: `${prefs.lineHeight}em` }}>
+                          <span className={isNewSection ? 'text-[#00008B] font-black drop-shadow-md bg-white/50 px-1 rounded-sm inline-block' : ''}>
+                            {line || ' '}
+                          </span>
+                          {prefs.showReturnMarkers && line && (
+                            <span className="text-[10px] opacity-30 select-none ml-0.5">¶</span>
+                          )}
+                        </div>
+                      );
+                    })}
 
                   </div>
 
