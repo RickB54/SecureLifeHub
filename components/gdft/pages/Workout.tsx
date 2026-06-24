@@ -399,6 +399,7 @@ const Workout = () => {
         setShowAddExerciseDialog(false);
         return;
       }
+      const newIndex = currentWorkout.exercises.length;
       const updatedWorkout = {
         ...currentWorkout,
         exercises: [...currentWorkout.exercises, exerciseId]
@@ -409,7 +410,8 @@ const Workout = () => {
         addSet(exerciseId, null, exercise.settings);
         setShowAddExerciseDialog(false);
         setActiveExerciseId(exerciseId);
-        navigateToExercise(exerciseId);
+        setCurrentExerciseIndex(newIndex);
+        setCurrentExercise(exercise);
         toast.success(`${exercise.name} added to workout`);
       }
     }
