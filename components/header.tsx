@@ -97,10 +97,10 @@ export default function Header({
                 }
               }}
               className={`mr-3 flex items-center ${theme === "light" ? "text-gray-600 hover:text-gray-900" : "text-gray-300 hover:text-white"}`}
-              title="Go Back"
+              title={activePage === "gdft" ? "Back to SLH App" : "Go Back"}
             >
               <ArrowLeft className="h-5 w-5 mr-1" />
-              <span className="text-sm font-medium hidden sm:inline">Back</span>
+              <span className="text-sm font-medium hidden sm:inline">{activePage === "gdft" ? "Exit" : "Back"}</span>
             </button>
           )}
 
