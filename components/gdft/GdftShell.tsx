@@ -46,10 +46,10 @@ export default function GdftShell({ setActivePage, theme }: any) {
               <MemoryRouter>
                 <WorkoutReminderSystem />
                 <ScrollToTop />
-                <div className={`flex flex-col h-full rounded-2xl overflow-hidden shadow-2xl relative ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-[#111111] text-white border border-white/10'}`}>
+                <div className={`flex flex-col h-full rounded-2xl overflow-hidden shadow-2xl relative ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-gym-darker text-white border border-white/10'}`}>
                   
                   {/* Main GDFT App Container */}
-                  <div className="flex flex-col h-full bg-[#111827] text-white">
+                  <div className="flex flex-col h-full bg-gym-darker text-white">
                     <main className="flex-grow overflow-y-auto container mx-auto px-4 py-2 md:py-4 pb-20">
                       <Routes>
                         <Route path="/" element={<Index />} />

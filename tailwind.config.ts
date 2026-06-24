@@ -12,9 +12,9 @@ const config: Config = {
   	extend: {
   		colors: {
 			gym: {
-				darker: '#0a0a0c',
-				dark: '#111114',
-				card: '#18181c',
+				darker: '#050B14',
+				dark: '#0B111A',
+				card: '#1A1F2E',
 				blue: '#3b82f6',
 				purple: '#8b5cf6',
 				green: '#10b981',
