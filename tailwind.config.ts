@@ -11,6 +11,15 @@ const config: Config = {
   theme: {
   	extend: {
   		colors: {
+			gym: {
+				darker: '#0a0a0c',
+				dark: '#111114',
+				card: '#18181c',
+				blue: '#3b82f6',
+				purple: '#8b5cf6',
+				green: '#10b981',
+				red: '#ef4444',
+			},
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
   			card: {

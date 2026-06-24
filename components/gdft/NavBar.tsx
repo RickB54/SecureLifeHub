@@ -26,12 +26,7 @@ const NavBar = () => {
     { path: "/health-dashboard", icon: Activity, label: "Health" },
     { path: "/custom-plans", icon: ClipboardList, label: "Plans" },
     { path: "/my-calendar", icon: CalendarDays, label: "Calendar" },
-    // Show Settings if logged in, otherwise show Login
-    { 
-      path: user ? "/settings" : "/login", 
-      icon: user ? Settings : User, 
-      label: user ? "Settings" : "Login" 
-    }
+    { path: "/settings", icon: Settings, label: "Settings" }
   ];
 
   return (

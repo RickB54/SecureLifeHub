@@ -2,17 +2,15 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, ClipboardList, Plus, HelpCircle, LucideProps, Activity, Scale, Watch, Settings, Building2, LayoutDashboard } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/gdft/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/gdft/components/ui/tooltip';
 
-// --- MOCK STUBS FOR MISSING GDFT COMPONENTS ---
-const WorkoutCategoryCards = ({ onSelect, className }: any) => <div className={`p-4 border border-dashed border-gray-500 rounded text-center ${className}`}>[WorkoutCategoryCards Stub]</div>;
-const HomeHelpPopup = ({ isOpen, onClose }: any) => isOpen ? <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={onClose}><div className="bg-white p-4 text-black rounded">[HomeHelpPopup Stub]</div></div> : null;
-const SmartwatchSyncHelpPopup = ({ isOpen, onClose, onGoToSettings }: any) => isOpen ? <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={onClose}><div className="bg-white p-4 text-black rounded">[SmartwatchSyncHelpPopup Stub] <Button onClick={onGoToSettings}>Go To Settings</Button></div></div> : null;
-const HealthMeterCircle = (props: any) => <div className="h-10 w-10 rounded-full bg-red-500 flex items-center justify-center text-[8px]">[Meter]</div>;
-const TimelinePopup = ({ isOpen, onClose }: any) => isOpen ? <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" onClick={onClose}><div className="bg-white p-4 text-black rounded">[TimelinePopup Stub]</div></div> : null;
-const DashboardWidgets = () => <div className="p-4 border border-dashed border-gray-500 rounded text-center mb-4">[DashboardWidgets Stub]</div>;
-// ----------------------------------------------
+import { DashboardWidgets } from '@/components/gdft/components/dashboard/DashboardWidgets';
+import WorkoutCategoryCards from '@/components/gdft/components/WorkoutCategoryCards';
+import HomeHelpPopup from '@/components/gdft/components/ui/HomeHelpPopup';
+import SmartwatchSyncHelpPopup from '@/components/gdft/components/ui/SmartwatchSyncHelpPopup';
+import { HealthMeterCircle } from '@/components/gdft/components/ui/HealthMeterCircle';
+import { TimelinePopup } from '@/components/gdft/components/ui/TimelinePopup';
 
 interface HomeCardProps {
   icon: React.ComponentType<LucideProps>;
