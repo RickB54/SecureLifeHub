@@ -79,12 +79,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
         let currentLimit = getTimeoutDuration()
         let expiryTime = currentLimit ? Date.now() + currentLimit : null
+        let isSuspended = false
 
         const resetTimer = () => {
             if (inactivityTimer) clearTimeout(inactivityTimer)
             if (countdownInterval) clearInterval(countdownInterval)
             
-            if (currentLimit === null) {
+            if (currentLimit === null || isSuspended) {
                 setTimeLeft(null)
                 return
             }
@@ -156,8 +157,20 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             }
         }
 
+        const handleSuspend = () => {
+            isSuspended = true;
+            resetTimer();
+        }
+        
+        const handleResume = () => {
+            isSuspended = false;
+            resetTimer();
+        }
+
         events.forEach(event => window.addEventListener(event, handleActivity, { passive: true }))
         window.addEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
+        window.addEventListener('autoLockSuspend', handleSuspend)
+        window.addEventListener('autoLockResume', handleResume)
         
         // Initial timer start
         resetTimer()
@@ -167,6 +180,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
             if (countdownInterval) clearInterval(countdownInterval)
             events.forEach(event => window.removeEventListener(event, handleActivity))
             window.removeEventListener('autoLockTimeoutChanged', handleTimeoutChange as EventListener)
+            window.removeEventListener('autoLockSuspend', handleSuspend)
+            window.removeEventListener('autoLockResume', handleResume)
         }
     }, [isLocked, loading])
 

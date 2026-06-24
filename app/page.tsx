@@ -48,6 +48,7 @@ import HelpModal from "@/components/modals/help-modal"
 import SecureNotes from "@/components/secure-notes"
 import StickyNotes from "@/components/StickyNotes"
 import SecureDatabase from "@/components/secure-database/secure-database"
+import GdftShell from "@/components/gdft/GdftShell"
 import { Minimize } from "lucide-react"
 
 function HomeContent() {
@@ -272,6 +273,15 @@ function HomeContent() {
       window.history.replaceState({}, '', `/${newQuery ? '?' + newQuery : ''}`)
     }
   }, [user, isLocked, authLoading, searchParams, activePage, startupPage, navHistory.length])
+
+  // E. Auto-lock suspend/resume for GDFT
+  useEffect(() => {
+    if (activePage === "type-gdft") {
+      window.dispatchEvent(new Event('autoLockSuspend'))
+    } else {
+      window.dispatchEvent(new Event('autoLockResume'))
+    }
+  }, [activePage])
 
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
@@ -521,6 +531,8 @@ function HomeContent() {
         return <HealthPortals {...commonProps} />
       case "type-doctors":
         return <Doctors {...commonProps} />
+      case "type-gdft":
+        return <GdftShell {...commonProps} />
       case "type-medical":
         return (
           <HealthInsurance
