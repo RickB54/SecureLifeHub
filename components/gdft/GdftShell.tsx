@@ -58,8 +58,8 @@ export default function GdftShell({ setActivePage, theme }: any) {
         <SettingsProvider>
           <ExerciseProvider>
             <WorkoutProvider>
-              <WorkoutReminderSystem />
               <MemoryRouter>
+                <WorkoutReminderSystem />
                 <ScrollToTop />
                 <div className={`flex flex-col h-full rounded-2xl overflow-hidden shadow-2xl relative ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-[#111111] text-white border border-white/10'}`}>
                   
