@@ -4,10 +4,8 @@ import { cn } from '@/components/gdft/lib/utils';
 
 // High-quality fitness images (Pexels/Unsplash free-to-use URLs)
 const WEIGHTS_IMAGE = '/weights_bench_press.png';
-const CARDIO_IMAGE =
-  'https://images.pexels.com/photos/1954524/pexels-photo-1954524.jpeg?auto=compress&cs=tinysrgb&w=800';
-const NO_EQUIPMENT_IMAGE =
-  'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=800';
+const CARDIO_IMAGE = 'https://images.pexels.com/photos/1954524/pexels-photo-1954524.jpeg?auto=compress&cs=tinysrgb&w=800';
+const NO_EQUIPMENT_IMAGE = 'https://images.pexels.com/photos/416778/pexels-photo-416778.jpeg?auto=compress&cs=tinysrgb&w=800';
 // Slide Board: use local image; Supabase query may override if a better one exists
 const SLIDE_BOARD_FALLBACK = '/slide_board_rowing.png';
 

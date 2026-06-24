@@ -87,7 +87,15 @@ export default function Header({
 
           {activePage !== "dashboard" && (
             <button
-              onClick={onBack}
+              onClick={() => {
+                if (activePage === "gdft") {
+                  if (window.confirm("Are you sure you want to leave the GDFT app?")) {
+                    onBack()
+                  }
+                } else {
+                  onBack()
+                }
+              }}
               className={`mr-3 flex items-center ${theme === "light" ? "text-gray-600 hover:text-gray-900" : "text-gray-300 hover:text-white"}`}
               title="Go Back"
             >

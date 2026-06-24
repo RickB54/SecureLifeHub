@@ -12,7 +12,7 @@ export const AchievementsList = () => {
   const { exercises } = useExercise();
   const { unitSystem } = useSettings();
 
-  if (!achievedPrs || achievedPrs.length === 0) {
+  if (!achievedPrs || !Array.isArray(achievedPrs) || achievedPrs.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500 bg-gym-card/20 rounded-lg border border-dashed border-gray-700">
         <Trophy className="h-10 w-10 mx-auto mb-2 text-gray-600" />

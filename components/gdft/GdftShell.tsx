@@ -36,21 +36,6 @@ import ExercisePositionManager from "./pages/ExercisePositionManager"
 
 const queryClient = new QueryClient();
 
-function GdftBackButton() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  if (location.pathname === "/") return null;
-  return (
-    <button
-      onClick={() => navigate(-1)}
-      className="absolute top-2 left-2 z-50 flex items-center justify-center p-2 px-3 rounded-full bg-black/40 hover:bg-black/60 transition-colors text-white backdrop-blur-sm border border-white/10 text-xs font-bold"
-    >
-      <ArrowLeft className="h-4 w-4 mr-1" />
-      Back
-    </button>
-  );
-}
-
 export default function GdftShell({ setActivePage, theme }: any) {
   return (
     <QueryClientProvider client={queryClient}>
@@ -63,22 +48,6 @@ export default function GdftShell({ setActivePage, theme }: any) {
                 <ScrollToTop />
                 <div className={`flex flex-col h-full rounded-2xl overflow-hidden shadow-2xl relative ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-[#111111] text-white border border-white/10'}`}>
                   
-                  {/* Exit mechanism back to SLH. */}
-                  <button 
-                    onClick={() => {
-                      if (window.confirm("Are you sure you want to exit GDFT and return to Secure Life Hub?")) {
-                        setActivePage("dashboard");
-                      }
-                    }} 
-                    className="absolute top-2 right-2 z-50 flex items-center justify-center p-2 px-3 rounded-full bg-red-500/20 hover:bg-red-500/40 transition-colors text-red-500 backdrop-blur-sm border border-red-500/30 text-[10px] font-black tracking-widest uppercase"
-                    title="Exit to SLH Dashboard"
-                  >
-                    EXIT GDFT
-                  </button>
-
-                  {/* Internal Router Back Button */}
-                  <GdftBackButton />
-
                   {/* Main GDFT App Container */}
                   <div className="flex flex-col h-full bg-[#111827] text-white">
                     <main className="flex-grow overflow-y-auto container mx-auto px-4 py-2 md:py-4 pb-20">

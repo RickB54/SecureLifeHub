@@ -36,7 +36,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   const [unitSystem, setUnitSystemState] = useState<UnitSystem>(() => {
     if (typeof window !== 'undefined') {
-      const savedUnitSystem = localStorage.getItem('unitSystem') as UnitSystem | null;
+      const savedUnitSystem = localStorage.getItem('gdft_unitSystem') as UnitSystem | null;
       if (savedUnitSystem) return savedUnitSystem;
     }
     return 'imperial'; // Default to imperial
@@ -44,7 +44,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [timerSound, setTimerSoundState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('timerSound');
+      const saved = localStorage.getItem('gdft_timerSound');
       return saved !== 'false'; // Default to true
     }
     return true;
@@ -52,7 +52,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [timerVibration, setTimerVibrationState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('timerVibration');
+      const saved = localStorage.getItem('gdft_timerVibration');
       return saved !== 'false'; // Default to true
     }
     return true;
@@ -60,7 +60,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [notificationSound, setNotificationSoundState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('notificationSound');
+      const saved = localStorage.getItem('gdft_notificationSound');
       return saved !== 'false'; // Default to true
     }
     return true;
@@ -68,7 +68,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [notificationVibration, setNotificationVibrationState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('notificationVibration');
+      const saved = localStorage.getItem('gdft_notificationVibration');
       return saved !== 'false'; // Default to true
     }
     return true;
@@ -76,7 +76,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [defaultRestTime, setDefaultRestTimeState] = useState<number>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('defaultRestTime');
+      const saved = localStorage.getItem('gdft_defaultRestTime');
       return saved ? parseInt(saved, 10) : 60;
     }
     return 60;
@@ -84,7 +84,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [testingModeEnabled, setTestingModeEnabledState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const savedTestingMode = localStorage.getItem('testingModeEnabled');
+      const savedTestingMode = localStorage.getItem('gdft_testingModeEnabled');
       return savedTestingMode === 'true';
     }
     return false;
@@ -92,7 +92,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const [testOverrides, setTestOverridesState] = useState<TestOverrides>(() => {
     if (typeof window !== 'undefined') {
-      const savedOverrides = localStorage.getItem('testOverrides');
+      const savedOverrides = localStorage.getItem('gdft_testOverrides');
       if (savedOverrides) return JSON.parse(savedOverrides);
     }
     return {
@@ -104,46 +104,46 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
   
   const [voiceLoggingEnabled, setVoiceLoggingEnabledState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('voiceLoggingEnabled');
+      const saved = localStorage.getItem('gdft_voiceLoggingEnabled');
       return saved === 'true'; // Default to false
     }
     return false;
   });
 
   useEffect(() => {
-    localStorage.setItem('unitSystem', unitSystem);
+    localStorage.setItem('gdft_unitSystem', unitSystem);
   }, [unitSystem]);
 
   useEffect(() => {
-    localStorage.setItem('timerSound', timerSound.toString());
+    localStorage.setItem('gdft_timerSound', timerSound.toString());
   }, [timerSound]);
 
   useEffect(() => {
-    localStorage.setItem('timerVibration', timerVibration.toString());
+    localStorage.setItem('gdft_timerVibration', timerVibration.toString());
   }, [timerVibration]);
 
   useEffect(() => {
-    localStorage.setItem('notificationSound', notificationSound.toString());
+    localStorage.setItem('gdft_notificationSound', notificationSound.toString());
   }, [notificationSound]);
 
   useEffect(() => {
-    localStorage.setItem('notificationVibration', notificationVibration.toString());
+    localStorage.setItem('gdft_notificationVibration', notificationVibration.toString());
   }, [notificationVibration]);
 
   useEffect(() => {
-    localStorage.setItem('defaultRestTime', defaultRestTime.toString());
+    localStorage.setItem('gdft_defaultRestTime', defaultRestTime.toString());
   }, [defaultRestTime]);
 
   useEffect(() => {
-    localStorage.setItem('testingModeEnabled', testingModeEnabled.toString());
+    localStorage.setItem('gdft_testingModeEnabled', testingModeEnabled.toString());
   }, [testingModeEnabled]);
 
   useEffect(() => {
-    localStorage.setItem('testOverrides', JSON.stringify(testOverrides));
+    localStorage.setItem('gdft_testOverrides', JSON.stringify(testOverrides));
   }, [testOverrides]);
 
   useEffect(() => {
-    localStorage.setItem('voiceLoggingEnabled', voiceLoggingEnabled.toString());
+    localStorage.setItem('gdft_voiceLoggingEnabled', voiceLoggingEnabled.toString());
   }, [voiceLoggingEnabled]);
 
   const setUnitSystem = (system: UnitSystem) => {
