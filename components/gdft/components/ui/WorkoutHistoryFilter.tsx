@@ -75,8 +75,8 @@ export function WorkoutHistoryFilter({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[340px] p-5 bg-[#141416] border-white/10 rounded-2xl shadow-2xl z-50 text-white" align="end">
-        <div className="space-y-6">
+        <PopoverContent className="w-[340px] p-4 bg-[#141416] border-white/10 rounded-2xl shadow-2xl z-50 text-white max-h-[85vh] overflow-y-auto" align="end">
+        <div className="space-y-4">
           
           {/* Show Archived Toggle */}
           <div className="flex items-center justify-between">
@@ -88,9 +88,9 @@ export function WorkoutHistoryFilter({
           </div>
 
           {/* Quick Filters */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Quick Filters</span>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'all', label: 'All Time' },
                 { id: 'day', label: 'Today' },
@@ -106,7 +106,7 @@ export function WorkoutHistoryFilter({
                   variant="outline" 
                   size="sm"
                   onClick={() => setQuickFilter(qf.id as any)}
-                  className={`h-11 rounded-xl font-bold ${tempFilterType === qf.id && !tempDateRange ? 'bg-gym-card border-gym-blue text-white shadow-lg shadow-blue-900/20' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
+                  className={`h-9 text-xs rounded-xl font-bold ${tempFilterType === qf.id && !tempDateRange ? 'bg-gym-card border-gym-blue text-white shadow-lg shadow-blue-900/20' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'}`}
                 >
                   {qf.label}
                 </Button>
@@ -115,27 +115,29 @@ export function WorkoutHistoryFilter({
           </div>
 
           {/* Custom Range */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Custom Range</span>
-            <div className="bg-[#18181c] rounded-xl border border-white/5 overflow-hidden">
-              <Calendar
-                mode="range"
-                selected={tempDateRange}
-                onSelect={(range) => {
-                  setTempDateRange(range);
-                  if (range?.from) setTempFilterType('all');
-                }}
-                className="bg-transparent text-white flex justify-center p-3"
-              />
+            <div className="bg-[#18181c] rounded-xl border border-white/5 overflow-hidden flex justify-center py-2 px-1">
+              <div className="scale-90 origin-top flex justify-center w-full">
+                <Calendar
+                  mode="range"
+                  selected={tempDateRange}
+                  onSelect={(range) => {
+                    setTempDateRange(range);
+                    if (range?.from) setTempFilterType('all');
+                  }}
+                  className="bg-transparent text-white"
+                />
+              </div>
             </div>
           </div>
 
           {/* Apply Button */}
           <Button 
-            className="w-full bg-[#d9463e] hover:bg-[#b93830] text-white font-bold rounded-xl h-11 text-base mt-2 transition-colors"
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl h-10 text-sm mt-1 transition-colors shadow-lg shadow-purple-900/20"
             onClick={handleApply}
           >
-            <Filter className="h-5 w-5 mr-2" /> Filter
+            <Filter className="h-4 w-4 mr-2" /> Filter
           </Button>
         </div>
       </PopoverContent>

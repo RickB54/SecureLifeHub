@@ -706,7 +706,7 @@ const Workout = () => {
             completed: false 
           } as WorkoutSet;
           
-          const newSetId = addSet(activeExerciseId, templateSet, currentExercise?.settings);
+          const newSetId = addSet(activeExerciseId!, templateSet, currentExercise?.settings);
           
           toast.success(`Added ${action.weight} lbs × ${action.reps} reps`, {
             duration: 4000,
