@@ -46,7 +46,7 @@ import SmartWorkoutEntryDialog from '@/components/gdft/components/ui/SmartWorkou
 import StatsCard from '@/components/gdft/components/ui/StatsCard';
 import WorkoutStatsGraphPopup from '@/components/gdft/components/ui/WorkoutStatsGraphPopup';
 import AdvancedWorkoutMetricsChart from '@/components/gdft/components/ui/AdvancedWorkoutMetricsChart';
-import { DateRangePicker } from '@/components/gdft/components/ui/date-range-picker';
+import { WorkoutHistoryFilter } from '@/components/gdft/components/ui/WorkoutHistoryFilter';
 import { DateRange } from 'react-day-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/gdft/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/gdft/components/ui/alert-dialog";
@@ -442,20 +442,18 @@ const Stats = () => {
                 <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
                     <h2 className="text-xl font-semibold">Workout History</h2>
                     <div className="flex items-center gap-2 flex-wrap text-sm w-full sm:w-auto">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">Filter ({filterType}) <ChevronDown className="h-4 w-4 ml-1" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent>
-                                {['day', 'week', 'month', 'year', 'all'].map(t => (
-                                    <DropdownMenuItem key={t} onClick={() => handleFilterChange(t as any)}>{t.charAt(0).toUpperCase() + t.slice(1)}</DropdownMenuItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <WorkoutHistoryFilter 
+                            filterType={filterType}
+                            onFilterChange={setFilterType}
+                            showArchived={showArchived}
+                            onShowArchivedChange={setShowArchived}
+                            dateRange={dateRange}
+                            onDateRangeChange={setDateRange}
+                        />
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm">Type ({categoryFilter}) <ChevronDown className="h-4 w-4 ml-1" /></Button>
+                                <Button variant="outline" size="sm" className="bg-gym-card border-none hover:bg-white/5 h-10 rounded-xl font-bold">Type ({categoryFilter}) <ChevronDown className="h-4 w-4 ml-1" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="max-h-[300px] overflow-y-auto">
                                 {['All', 'Strength', 'Cardio', 'Hybrid', 'Weights', 'Single Exercise', 'Bodyweight', 'General', 'Mixed'].map(type => (
@@ -472,10 +470,6 @@ const Stats = () => {
                         >
                             {isAllExpanded ? <ChevronDown className="h-5 w-5 text-gym-blue rotate-180" /> : <ChevronDown className="h-5 w-5 text-gym-blue" />}
                         </Button>
-                        <Button variant={showArchived ? "secondary" : "outline"} size="sm" onClick={() => setShowArchived(!showArchived)} className="bg-gym-card border-none hover:bg-white/5 h-10 rounded-xl text-xs font-bold uppercase tracking-wider">
-                            <ArchiveRestore className="h-4 w-4 mr-2 text-amber-400" /> {showArchived ? "Hide Archived" : "Show Archived"}
-                        </Button>
-                        <DateRangePicker value={dateRange} onDateChange={setDateRange} />
                     </div>
                 </div>
 
