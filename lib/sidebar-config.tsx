@@ -41,7 +41,7 @@ export const sidebarSections = [
             { id: "type-health-portals", label: "Health Portals", icon: <Globe className="h-4 w-4" /> },
             { id: "type-doctors", label: "My Doctors", icon: <Users className="h-4 w-4" /> },
             { id: "type-medical", label: "Health Insurance", icon: <FileText className="h-4 w-4" /> },
-            { id: "type-gdft", label: "GDFT", icon: <Activity className="h-4 w-4" /> },
+            { id: "type-gdft", label: "Gym Day\nFit Tracker", icon: <Activity className="h-4 w-4" /> },
         ]
     },
     {

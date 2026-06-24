@@ -362,7 +362,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
                     className={`flex items-center w-full px-4 py-3 rounded-2xl text-sm font-bold transition-all ${isActive ? `${activeBg} text-white shadow-lg` : "text-gray-400 hover:bg-white/5 hover:text-white"}`}
                   >
                     <div className={`${isActive ? "text-white" : iconColor} transition-colors`}>{item.icon}</div>
-                    <span className="ml-3 font-black uppercase tracking-widest text-[10px]">{item.label}</span>
+                    <span className="ml-3 font-black uppercase tracking-widest text-[10px] whitespace-pre-line leading-tight">{item.label}</span>
                   </button>
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 z-[40]">
                     <button
