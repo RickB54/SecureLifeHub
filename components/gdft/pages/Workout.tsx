@@ -41,6 +41,7 @@ import ExerciseFilters from '@/components/gdft/components/ui/ExerciseFilters';
 import { Exercise, WorkoutSet } from '@/components/gdft/lib/data';
 import { Button } from '@/components/gdft/components/ui/button';
 import { Input } from '@/components/gdft/components/ui/input';
+import { Label } from '@/components/gdft/components/ui/label';
 import { toast } from 'sonner';
 import { formatTimeDisplay, parseTimeInput, formatNumber, calculateCaloriesPerSet } from '@/components/gdft/lib/formatters';
 import EditSetModal from '@/components/gdft/components/ui/EditSetModal';
@@ -987,7 +988,7 @@ const Workout = () => {
     return (
       <div className="flex flex-col min-h-full bg-gym-darker page-transition pb-24">
         {/* Fixed Top Section: Exercise Info & Media */}
-        <div className="flex-none px-4 pt-4 border-b border-white/5 bg-gym-darker z-20">
+        <div className="sticky top-0 flex-none px-4 pt-4 border-b border-white/5 bg-gym-darker z-40 shadow-xl pb-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => {
