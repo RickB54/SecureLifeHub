@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/components/gdft/hooks/use-mobile';
 import { 
@@ -1652,11 +1652,9 @@ const Workout = () => {
           <div className="space-y-3">
             {filteredPastWorkouts.slice(0, 5).map((workout) => {
               const isExpanded = expandedPastWorkout === workout.id;
-              // Resolve exercise names from IDs stored on the workout
-              const exerciseNames = workout.exercises
-                .map(id => getExerciseById(id))
-                .filter(Boolean)
-                .map(ex => ex!.name);
+              // Safely derive unique exercises directly from sets
+              const uniqueExerciseIds = Array.from(new Set(workout.sets?.map(s => s.exerciseId) || []));
+              const numExercises = uniqueExerciseIds.length;
 
               return (
                 <div
@@ -1671,7 +1669,7 @@ const Workout = () => {
                     >
                       <h3 className="font-medium">{workout.name}</h3>
                       <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
-                        <span>{workout.exercises.length} exercise{workout.exercises.length !== 1 ? 's' : ''}</span>
+                        <span>{numExercises} exercise{numExercises !== 1 ? 's' : ''}</span>
                         <span>•</span>
                         <span>{formatDate(workout.startTime)}</span>
                       </div>
@@ -1709,7 +1707,7 @@ const Workout = () => {
                   {isExpanded && (
                     <div className="border-t border-gray-700 px-4 py-3 bg-gym-dark/40">
                       {(() => {
-                        const workoutExercises = workout.exercises
+                        const workoutExercises = uniqueExerciseIds
                           .map(id => getExerciseById(id))
                           .filter(Boolean);
                         
