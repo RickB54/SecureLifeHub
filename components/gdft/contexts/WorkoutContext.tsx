@@ -66,6 +66,7 @@ interface WorkoutContextType {
   };
   navigateToExercise: (exerciseId: string) => void;
   currentExerciseIndex: number;
+  setCurrentExerciseIndex: (index: number) => void;
   navigateToNextExercise: () => void;
   navigateToPreviousExercise: () => void;
   saveCustomWorkout: (name: string) => void;
@@ -1437,6 +1438,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
         getWorkoutStats,
         navigateToExercise,
         currentExerciseIndex,
+        setCurrentExerciseIndex,
         navigateToNextExercise,
         navigateToPreviousExercise,
         saveCustomWorkout,

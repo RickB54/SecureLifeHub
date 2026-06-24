@@ -73,6 +73,7 @@ const Workout = () => {
     cancelWorkout,
     navigateToExercise,
     currentExerciseIndex,
+    setCurrentExerciseIndex,
     navigateToNextExercise,
     navigateToPreviousExercise,
     saveCustomWorkout,
