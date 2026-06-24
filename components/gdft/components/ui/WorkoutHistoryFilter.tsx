@@ -126,7 +126,7 @@ export function WorkoutHistoryFilter({
                   value={tempDateRange?.from ? format(tempDateRange.from, 'yyyy-MM-dd') : ''}
                   onChange={(e) => {
                     const newFrom = e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined;
-                    setTempDateRange({ ...tempDateRange, from: newFrom });
+                    setTempDateRange(prev => ({ from: newFrom, to: prev?.to }));
                     setTempFilterType('all');
                   }}
                   className="w-full bg-[#18181c] border border-white/10 rounded-xl h-9 pl-10 pr-2 text-xs text-white focus:outline-none focus:border-purple-500 css-date-input"
@@ -139,7 +139,7 @@ export function WorkoutHistoryFilter({
                   value={tempDateRange?.to ? format(tempDateRange.to, 'yyyy-MM-dd') : ''}
                   onChange={(e) => {
                     const newTo = e.target.value ? new Date(e.target.value + 'T23:59:59') : undefined;
-                    setTempDateRange({ ...tempDateRange, to: newTo });
+                    setTempDateRange(prev => ({ from: prev?.from, to: newTo }));
                     setTempFilterType('all');
                   }}
                   className="w-full bg-[#18181c] border border-white/10 rounded-xl h-9 pl-7 pr-2 text-xs text-white focus:outline-none focus:border-purple-500 css-date-input"
