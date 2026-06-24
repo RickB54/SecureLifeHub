@@ -76,7 +76,7 @@ const Stats = () => {
     const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
     const [selectedWorkout, setSelectedWorkout] = useState<Workout | null>(null);
     const [workoutToDelete, setWorkoutToDelete] = useState<string | null>(null);
-    const [filterType, setFilterType] = useState<'day' | 'week' | 'month' | 'year' | 'all'>('all');
+    const [filterType, setFilterType] = useState<string>('all');
     const [openWorkouts, setOpenWorkouts] = useState<Record<string, boolean>>({});
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
     const [selectedAdvancedWorkout, setSelectedAdvancedWorkout] = useState<Workout | null>(null);
@@ -119,19 +119,45 @@ const Stats = () => {
         if (filterType !== 'all') {
             const now = new Date();
             let fromDate = new Date();
-            if (filterType === 'day') fromDate.setHours(0, 0, 0, 0);
-            else if (filterType === 'week') {
+            let toDate = new Date();
+            
+            if (filterType === 'day') {
+                fromDate.setHours(0, 0, 0, 0);
+            } else if (filterType === 'week') {
                 const dayOfWeek = now.getDay();
                 fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
                 fromDate.setHours(0, 0, 0, 0);
+            } else if (filterType === 'last_week') {
+                const dayOfWeek = now.getDay();
+                fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek - 7);
+                fromDate.setHours(0, 0, 0, 0);
+                toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek - 1);
+                toDate.setHours(23, 59, 59, 999);
             } else if (filterType === 'month') {
                 fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
                 fromDate.setHours(0, 0, 0, 0);
+            } else if (filterType === 'last_month') {
+                fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                fromDate.setHours(0, 0, 0, 0);
+                toDate = new Date(now.getFullYear(), now.getMonth(), 0);
+                toDate.setHours(23, 59, 59, 999);
             } else if (filterType === 'year') {
                 fromDate = new Date(now.getFullYear(), 0, 1);
                 fromDate.setHours(0, 0, 0, 0);
+            } else if (filterType === 'last_year') {
+                fromDate = new Date(now.getFullYear() - 1, 0, 1);
+                fromDate.setHours(0, 0, 0, 0);
+                toDate = new Date(now.getFullYear() - 1, 11, 31);
+                toDate.setHours(23, 59, 59, 999);
             }
-            sorted = sorted.filter(workout => new Date(workout.startTime) >= fromDate);
+            
+            sorted = sorted.filter(workout => {
+                const wDate = new Date(workout.startTime);
+                if (filterType.startsWith('last_')) {
+                    return wDate >= fromDate && wDate <= toDate;
+                }
+                return wDate >= fromDate;
+            });
         }
 
         if (dateRange && dateRange.from) {
@@ -302,7 +328,7 @@ const Stats = () => {
         setSmartEntryDialog({ isOpen: true, workoutId: workout.id, existingData: existingExerciseData });
     };
 
-    const handleFilterChange = (type: 'day' | 'week' | 'month' | 'year' | 'all') => {
+    const handleFilterChange = (type: string) => {
         setFilterType(type);
         setDateRange(undefined);
     };
@@ -431,7 +457,7 @@ const Stats = () => {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <StatsCard title={`${filterType === 'all' ? 'Total' : filterType.charAt(0).toUpperCase() + filterType.slice(1)} Workouts`} value={totals.totalWorkouts} icon={Dumbbell} />
+                <StatsCard title={`${filterType === 'all' ? 'Total' : filterType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} Workouts`} value={totals.totalWorkouts} icon={Dumbbell} />
                 <StatsCard title="Active Duration" value={formatWorkoutDuration(totals.totalTime)} icon={Clock} />
                 <StatsCard title="Volume Sets" value={totals.totalSets} icon={ListChecks} />
                 <StatsCard title="Total Reps" value={totals.totalReps} icon={Repeat} />

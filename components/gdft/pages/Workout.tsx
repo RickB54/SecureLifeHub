@@ -33,6 +33,8 @@ import {
 import { Zap } from 'lucide-react';
 import WorkoutCategoryCards from '@/components/gdft/components/WorkoutCategoryCards';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/gdft/components/ui/dialog';
+import { WorkoutHistoryFilter } from '@/components/gdft/components/ui/WorkoutHistoryFilter';
+import { DateRange } from 'react-day-picker';
 import { useWorkout } from '@/components/gdft/contexts/WorkoutContext';
 import { useExercise } from '@/components/gdft/contexts/ExerciseContext';
 import { useSettings } from '@/components/gdft/contexts/SettingsContext';
@@ -54,7 +56,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/gdft/components/ui/dropdown-menu';
 import CustomGymBuilder from '@/components/gdft/components/ui/CustomGymBuilder';
-import { Building2, Home } from 'lucide-react';
+import { Building2, Home, Archive, ArchiveRestore } from 'lucide-react';
 
 const Workout = () => {
   const navigate = useNavigate();
@@ -83,6 +85,7 @@ const Workout = () => {
     updateCurrentWorkoutNotes,
     updateWorkout,
     addExerciseToCurrentWorkout,
+    archiveWorkout,
     bodyMeasurements
   } = useWorkout();
   
@@ -154,17 +157,91 @@ const Workout = () => {
     }
   }, [currentWorkout?.id]);
 
+  const [filterType, setFilterType] = useState<string>('all');
+  const [showArchived, setShowArchived] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+
+  const filteredPastWorkouts = useMemo(() => {
+    let sorted = [...workouts].sort((a, b) => b.startTime - a.startTime);
+    if (showArchived) {
+      sorted = sorted.filter(w => w.isArchived);
+    } else {
+      sorted = sorted.filter(w => !w.isArchived && !(w as any).cancelled);
+    }
+
+    if (filterType !== 'all') {
+      const now = new Date();
+      let fromDate = new Date();
+      let toDate = new Date();
+      
+      if (filterType === 'day') {
+          fromDate.setHours(0, 0, 0, 0);
+      } else if (filterType === 'week') {
+          const dayOfWeek = now.getDay();
+          fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+          fromDate.setHours(0, 0, 0, 0);
+      } else if (filterType === 'last_week') {
+          const dayOfWeek = now.getDay();
+          fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek - 7);
+          fromDate.setHours(0, 0, 0, 0);
+          toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek - 1);
+          toDate.setHours(23, 59, 59, 999);
+      } else if (filterType === 'month') {
+          fromDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          fromDate.setHours(0, 0, 0, 0);
+      } else if (filterType === 'last_month') {
+          fromDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          fromDate.setHours(0, 0, 0, 0);
+          toDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          toDate.setHours(23, 59, 59, 999);
+      } else if (filterType === 'year') {
+          fromDate = new Date(now.getFullYear(), 0, 1);
+          fromDate.setHours(0, 0, 0, 0);
+      } else if (filterType === 'last_year') {
+          fromDate = new Date(now.getFullYear() - 1, 0, 1);
+          fromDate.setHours(0, 0, 0, 0);
+          toDate = new Date(now.getFullYear() - 1, 11, 31);
+          toDate.setHours(23, 59, 59, 999);
+      }
+      
+      sorted = sorted.filter(workout => {
+          const wDate = new Date(workout.startTime);
+          if (filterType.startsWith('last_')) {
+              return wDate >= fromDate && wDate <= toDate;
+          }
+          return wDate >= fromDate;
+      });
+    }
+
+    if (dateRange && dateRange.from) {
+        const fromDate = new Date(dateRange.from);
+        fromDate.setHours(0, 0, 0, 0);
+        const toDate = dateRange.to ? new Date(dateRange.to) : new Date(dateRange.from);
+        toDate.setHours(23, 59, 59, 999);
+        sorted = sorted.filter(workout => {
+            const workoutDate = new Date(workout.startTime);
+            return workoutDate >= fromDate && workoutDate <= toDate;
+        });
+    }
+
+    return sorted.filter(w => (w.exercises || []).length > 0);
+  }, [workouts, dateRange, filterType, showArchived]);
+
   // Reset workout time when currentWorkout changes
   useEffect(() => {
     console.log("Current workout changed:", currentWorkout);
     console.log("Show active workout:", showActiveWorkout);
     
     if (currentWorkout) {
-      console.log("Setting show active workout to true because currentWorkout exists");
-      setShowActiveWorkout(true);
-      setWorkoutTime(0); // Reset timer for new workout
+      console.log("Setting show active workout to true if new");
+      const isNew = (Date.now() - currentWorkout.startTime) < 5000;
+      if (isNew) setShowActiveWorkout(true);
+      
+      const elapsed = Math.floor((Date.now() - currentWorkout.startTime) / 1000);
+      setWorkoutTime(elapsed > 0 ? elapsed : 0);
     } else {
-      console.log("No current workout, keeping showActiveWorkout as is");
+      console.log("No current workout, hiding active workout view");
+      setShowActiveWorkout(false);
     }
   }, [currentWorkout?.id]);
 
@@ -1559,11 +1636,21 @@ const Workout = () => {
         </div>
       )}
       
-       {workouts.filter(w => !(w as any).cancelled && (w.exercises || []).length > 0).length > 0 && (
+       {filteredPastWorkouts.length > 0 && (
         <div className="mb-6">
-          <h2 className="text-lg font-semibold mb-3">Past Workouts</h2>
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <h2 className="text-lg font-semibold">Past Workouts</h2>
+            <WorkoutHistoryFilter 
+                filterType={filterType}
+                onFilterChange={setFilterType}
+                showArchived={showArchived}
+                onShowArchivedChange={setShowArchived}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+            />
+          </div>
           <div className="space-y-3">
-            {workouts.filter(w => !(w as any).cancelled && (w.exercises || []).length > 0).slice(0, 5).map((workout) => {
+            {filteredPastWorkouts.slice(0, 5).map((workout) => {
               const isExpanded = expandedPastWorkout === workout.id;
               // Resolve exercise names from IDs stored on the workout
               const exerciseNames = workout.exercises
@@ -1589,19 +1676,33 @@ const Workout = () => {
                         <span>{formatDate(workout.startTime)}</span>
                       </div>
                     </div>
-                    {/* Expand/collapse chevron — separate from stats navigation */}
-                    <button
-                      className="ml-3 p-2 rounded-full hover:bg-gray-700 transition-colors flex-shrink-0"
-                      aria-label={isExpanded ? 'Collapse exercises' : 'Expand exercises'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedPastWorkout(isExpanded ? null : workout.id);
-                      }}
-                    >
-                      <ChevronDown
-                        className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                      />
-                    </button>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-8 w-8 hover:bg-gray-700" 
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          if (archiveWorkout) archiveWorkout(workout.id, !workout.isArchived);
+                        }} 
+                        title={workout.isArchived ? "Restore Workout" : "Archive Workout"}
+                      >
+                        {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-amber-500" />}
+                      </Button>
+                      <button
+                        className="p-2 rounded-full hover:bg-gray-700 transition-colors flex-shrink-0"
+                        aria-label={isExpanded ? 'Collapse exercises' : 'Expand exercises'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedPastWorkout(isExpanded ? null : workout.id);
+                        }}
+                      >
+                        <ChevronDown
+                          className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Expandable exercise list */}
@@ -1645,7 +1746,7 @@ const Workout = () => {
                 </div>
               );
             })}
-            {workouts.length > 5 && (
+            {filteredPastWorkouts.length > 5 && (
               <Button 
                 variant="outline" 
                 className="w-full"
