@@ -5,6 +5,7 @@ import { Calendar } from '@/components/gdft/components/ui/calendar';
 import { Switch } from '@/components/gdft/components/ui/switch';
 import { Filter } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
+import { format } from 'date-fns';
 
 interface WorkoutHistoryFilterProps {
   filterType: string;
@@ -117,16 +118,31 @@ export function WorkoutHistoryFilter({
           {/* Custom Range */}
           <div className="space-y-2">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Custom Range</span>
-            <div className="bg-[#18181c] rounded-xl border border-white/5 overflow-hidden flex justify-center py-2 px-1">
-              <div className="scale-90 origin-top flex justify-center w-full">
-                <Calendar
-                  mode="range"
-                  selected={tempDateRange}
-                  onSelect={(range) => {
-                    setTempDateRange(range);
-                    if (range?.from) setTempFilterType('all');
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold uppercase">From</span>
+                <input
+                  type="date"
+                  value={tempDateRange?.from ? format(tempDateRange.from, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const newFrom = e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined;
+                    setTempDateRange({ ...tempDateRange, from: newFrom });
+                    setTempFilterType('all');
                   }}
-                  className="bg-transparent text-white"
+                  className="w-full bg-[#18181c] border border-white/10 rounded-xl h-9 pl-10 pr-2 text-xs text-white focus:outline-none focus:border-purple-500 css-date-input"
+                />
+              </div>
+              <div className="relative">
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-gray-500 font-bold uppercase">To</span>
+                <input
+                  type="date"
+                  value={tempDateRange?.to ? format(tempDateRange.to, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const newTo = e.target.value ? new Date(e.target.value + 'T23:59:59') : undefined;
+                    setTempDateRange({ ...tempDateRange, to: newTo });
+                    setTempFilterType('all');
+                  }}
+                  className="w-full bg-[#18181c] border border-white/10 rounded-xl h-9 pl-7 pr-2 text-xs text-white focus:outline-none focus:border-purple-500 css-date-input"
                 />
               </div>
             </div>

@@ -131,3 +131,7 @@
     @apply bg-gym-card backdrop-blur-md border border-white/5 shadow-lg;
   }
 }
+
+/* Date Input Icons */
+.css-date-input::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.6; transition: opacity 0.2s; }
+.css-date-input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
