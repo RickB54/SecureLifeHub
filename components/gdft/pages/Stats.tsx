@@ -195,13 +195,9 @@ const Stats = () => {
             if (workout) {
                 const isManualHighlight = !!highlightId;
                 if (!isManualHighlight) setHasInitiallyExpanded(true);
-                // Ensure the highlight bypasses any filters (by setting filter to 'all')
-                if (filterType !== 'all') setFilterType('all');
-                
                 const groupName = format(new Date(workout.startTime), 'EEEE, MMM d, yyyy');
-                
                 // Exclusively open the highlighted workout and its group, collapse others
-                const workoutUpdates: Record<string, boolean> = { [highlightId]: true };
+                const workoutUpdates: Record<string, boolean> = { [workout.id]: true };
                 const groupUpdates: Record<string, boolean> = { [groupName]: true };
                 
                 setOpenWorkouts(workoutUpdates);
@@ -209,6 +205,11 @@ const Stats = () => {
 
                 // Scroll only if manually highlighted
                 if (isManualHighlight) {
+                    // Clear the highlight param from URL so it doesn't break filters later
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('highlight');
+                    window.history.replaceState({}, '', url.toString());
+
                     setTimeout(() => {
                         const element = workoutRefs.current[workout.id];
                         if (element) {
@@ -304,7 +305,6 @@ const Stats = () => {
     const handleFilterChange = (type: 'day' | 'week' | 'month' | 'year' | 'all') => {
         setFilterType(type);
         setDateRange(undefined);
-        if (type === 'all') handleToggleAll(false);
     };
 
     const formatDuration = (seconds: number) => {

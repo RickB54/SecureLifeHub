@@ -306,6 +306,7 @@ export const api = {
       if (workout.sets && workout.sets.length > 0) {
         const setsData = workout.sets.map(s => ({
           workout_id: wData.id,
+          user_id: userId,
           exercise_id: s.exerciseId,
           weight: s.weight,
           reps: s.reps,
@@ -335,7 +336,6 @@ export const api = {
       if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
       if (updates.completed !== undefined) dbUpdates.completed = updates.completed;
       if (updates.type) dbUpdates.type = updates.type;
-      if (updates.exercises) dbUpdates.exercises = updates.exercises;
       
       // Handle smartwatch data if updated
       const smartwatchKeys = ['avgHeartRate', 'maxHeartRate', 'steps', 'avgSpeed', 'smartwatchDistance', 'caloriesBurned', 'isArchived'];
@@ -383,8 +383,12 @@ export const api = {
         // Simple strategy: delete and re-insert for the active workout
         await supabase.from('workout_sets').delete().eq('workout_id', workoutId);
         
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+
         const setsData = sets.map(s => ({
             workout_id: workoutId,
+            user_id: userId,
             exercise_id: s.exerciseId,
             weight: s.weight,
             reps: s.reps,

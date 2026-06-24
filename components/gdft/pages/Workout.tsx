@@ -350,9 +350,15 @@ const Workout = () => {
       
       // Auto-scroll to the new set
       setTimeout(() => {
-        if (setsContainerRef.current) {
-          setsContainerRef.current.scrollTo({
-            top: setsContainerRef.current.scrollHeight,
+        const mainScrollContainer = document.querySelector('main');
+        if (mainScrollContainer) {
+          mainScrollContainer.scrollTo({
+            top: mainScrollContainer.scrollHeight,
+            behavior: 'smooth'
+          });
+        } else {
+          window.scrollTo({
+            top: document.body.scrollHeight,
             behavior: 'smooth'
           });
         }
@@ -979,7 +985,7 @@ const Workout = () => {
   
   if (showActiveWorkout && currentWorkout && currentExercise) {
     return (
-      <div className="flex flex-col h-[100dvh] bg-gym-darker overflow-hidden overscroll-none page-transition">
+      <div className="flex flex-col min-h-full bg-gym-darker page-transition pb-24">
         {/* Fixed Top Section: Exercise Info & Media */}
         <div className="flex-none px-4 pt-4 border-b border-white/5 bg-gym-darker z-20">
           <div className="flex items-center justify-between mb-4">
@@ -1061,7 +1067,7 @@ const Workout = () => {
 
               return (
                 <div
-                  className="relative w-full aspect-video rounded-lg bg-gym-dark flex items-center justify-center overflow-hidden mb-4 cursor-pointer hover:opacity-95 transition-opacity border border-white/5 shadow-inner"
+                  className="relative w-full max-h-[30vh] md:max-h-[300px] aspect-video rounded-lg bg-gym-dark flex items-center justify-center overflow-hidden mb-4 cursor-pointer hover:opacity-95 transition-opacity border border-white/5 shadow-inner"
                 >
                   <img
                     src={activeSrc}
@@ -1149,43 +1155,49 @@ const Workout = () => {
               </div>
             )}
 
-            <div className="flex justify-between items-center bg-gym-dark px-4 py-2 rounded-lg mb-4">
-              <div className="flex items-center">
-                <span className="text-sm mr-2">Rest:</span>
-                <span className={`text-sm font-mono flex items-center gap-1 ${isRestTimerActive ? "text-gym-green" : ""}`}>
-                  <input
-                    type="number"
-                    className="bg-transparent border-b border-white/20 w-8 text-center focus:border-gym-blue outline-none"
-                    value={defaultRestTime}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10) || 0;
-                      setDefaultRestTime(val);
-                      setRestTime(val); 
+            <div className="flex justify-center mb-4">
+              <div className="flex items-center bg-gym-dark border border-white/5 rounded-full px-4 py-1.5 shadow-sm">
+                <span className="text-xs text-muted-foreground mr-2 font-medium">Rest:</span>
+                
+                {isRestTimerActive ? (
+                  <span className="text-sm font-mono font-bold mr-3 text-gym-green w-8 text-center">
+                    {restTime}s
+                  </span>
+                ) : (
+                  <div className="flex items-center gap-0.5 mr-3">
+                    <input
+                      type="number"
+                      className="bg-transparent text-sm font-mono font-bold text-white w-8 text-center focus:border-gym-blue outline-none border-b border-transparent hover:border-white/20"
+                      value={defaultRestTime}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10) || 0;
+                        setDefaultRestTime(val);
+                        setRestTime(val); 
+                      }}
+                    />
+                    <span className="text-sm font-mono font-bold text-white">s</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center border-l border-white/10 pl-3 gap-2">
+                  <button
+                    className={`text-[10px] px-2.5 py-1 rounded font-black uppercase tracking-widest transition-all ${
+                      isRestTimerActive ? "bg-gym-red text-white" : "bg-gym-green text-white"
+                    }`}
+                    onClick={() => setIsRestTimerActive(!isRestTimerActive)}
+                  >
+                    {isRestTimerActive ? "Pause" : "Start"}
+                  </button>
+                  <button
+                    className="text-gray-400 hover:text-white p-1 rounded-full hover:bg-white/5 transition-all"
+                    onClick={() => {
+                       setRestTime(defaultRestTime);
+                       setIsRestTimerActive(false);
                     }}
-                  />
-                  <span>s</span>
-                </span>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  className="p-1 hover:bg-gym-card rounded transition-colors"
-                  onClick={() => setIsRestTimerActive(!isRestTimerActive)}
-                >
-                  {isRestTimerActive ? (
-                    <span className="text-xs bg-gym-red px-2 py-1 rounded text-white font-bold uppercase transition-all hover:brightness-110">Pause</span>
-                  ) : (
-                    <span className="text-xs bg-gym-green px-2 py-1 rounded text-white font-bold uppercase transition-all hover:brightness-110">Start</span>
-                  )}
-                </button>
-                <button
-                  className="p-1 hover:bg-gym-card rounded transition-colors text-gym-blue hover:text-white"
-                  onClick={() => {
-                     setRestTime(defaultRestTime);
-                     toast.success(`Refreshed to ${defaultRestTime}s`);
-                  }}
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </button>
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1216,7 +1228,7 @@ const Workout = () => {
         </div>
 
         {/* Scrollable Context & Sets Section */}
-        <div ref={setsContainerRef} className="flex-1 overflow-y-auto pt-4 px-4 pb-48 scroll-smooth">
+        <div ref={setsContainerRef} className="flex-1 pt-4 px-4 pb-48 scroll-smooth">
           {showDescription && (
             <div className="mb-6 p-4 bg-gym-card rounded-lg">
               <h3 className="text-sm font-medium mb-1 uppercase text-[10px] tracking-widest text-gray-500">Exercise Description</h3>
@@ -1373,6 +1385,33 @@ const Workout = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={saveModalOpen} onOpenChange={setSaveModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Save as Template</DialogTitle>
+              <DialogDescription>
+                Save this workout routine to use it again later.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="workout-name">Template Name</Label>
+                <Input
+                  id="workout-name"
+                  placeholder="e.g. Leg Day Focus, Upper Body Power..."
+                  value={customWorkoutName}
+                  onChange={(e) => setCustomWorkoutName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveCustomWorkout()}
+                  autoFocus
+                />
+              </div>
+              <Button onClick={handleSaveCustomWorkout} className="w-full bg-gym-blue hover:bg-blue-600">
+                Save Workout Template
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

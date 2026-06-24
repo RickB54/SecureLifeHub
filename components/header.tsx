@@ -88,7 +88,7 @@ export default function Header({
           {activePage !== "dashboard" && (
             <button
               onClick={() => {
-                if (activePage === "gdft") {
+                if (activePage === "type-gdft") {
                   if (window.confirm("Are you sure you want to leave the GDFT app?")) {
                     onBack()
                   }
@@ -97,10 +97,10 @@ export default function Header({
                 }
               }}
               className={`mr-3 flex items-center ${theme === "light" ? "text-gray-600 hover:text-gray-900" : "text-gray-300 hover:text-white"}`}
-              title={activePage === "gdft" ? "Back to SLH App" : "Go Back"}
+              title={activePage === "type-gdft" ? "Back to SLH App" : "Go Back"}
             >
               <ArrowLeft className="h-5 w-5 mr-1" />
-              <span className="text-sm font-medium hidden sm:inline">{activePage === "gdft" ? "Exit" : "Back"}</span>
+              <span className={`text-sm font-medium ${activePage === "type-gdft" ? "inline text-red-400 font-bold" : "hidden sm:inline"}`}>{activePage === "type-gdft" ? "EXIT GDFT" : "Back"}</span>
             </button>
           )}
 

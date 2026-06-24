@@ -13,6 +13,7 @@ import ExercisesHelpPopup from "@/components/gdft/components/ui/ExercisesHelpPop
 import { ExerciseProgressModal } from "@/components/gdft/components/ui/ExerciseProgressModal";
 import { ExerciseVisualFilter } from "@/components/gdft/components/ui/ExerciseVisualFilter";
 import { GymFilterPanel } from "@/components/gdft/components/ui/GymFilterPanel";
+import { toast } from "sonner";
 
 const FILTER_STORAGE_KEY = "exerciseFilters";
 
@@ -247,7 +248,7 @@ const Exercises = () => {
                     // Small delay to let the UI show the loading state
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
-                    const element = document.querySelector('.print-section');
+                    const element = document.querySelector('.print-section') as HTMLElement;
                     if (!element) {
                       setIsGeneratingPDF(false);
                       return;
@@ -257,13 +258,14 @@ const Exercises = () => {
                     const opt = {
                       margin: 0,
                       filename: 'GymDay_Exercise_Catalog.pdf',
-                      image: { type: 'jpeg', quality: 0.98 },
+                      image: { type: 'jpeg' as const, quality: 0.98 },
                       html2canvas: { scale: 2, useCORS: true, logging: false },
-                      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
                     };
                     
-                    // @ts-expect-error - html2pdf is loaded via CDN
-                    await html2pdf().set(opt).from(element).save();
+                    // Dynamically import to avoid SSR issues
+                    const html2pdfModule = (await import('html2pdf.js')).default;
+                    await html2pdfModule().set(opt).from(element).save();
                     
                     element.classList.add('hidden');
                     toast.success("PDF Library Created!");
