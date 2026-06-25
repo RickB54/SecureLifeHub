@@ -591,9 +591,9 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
         try {
             // Use update instead of create because workout was pre-created in startWorkout
             await api.workouts.update(finalWorkout.id, {
-                completed: true, // Redundant but safe
+                ...finalWorkout,
                 endTime: finalWorkout.endTime,
-                ...finalWorkout 
+                completed: true // Redundant but safe
             });
             // Sync final sets
             await api.workouts.syncSets(finalWorkout.id, finalWorkout.sets);

@@ -268,13 +268,22 @@ const Workout = () => {
 
   useEffect(() => {
     if (currentWorkout && currentWorkout.exercises.length > 0) {
-      const currentExerciseId = currentWorkout.exercises[currentExerciseIndex];
-      const exercise = getExerciseById(currentExerciseId);
+      let exerciseId = currentWorkout.exercises[currentExerciseIndex];
+      let exercise = getExerciseById(exerciseId);
+      
+      // Fallback: If exercise is missing (e.g. invalid ID), use first available exercise in workout
+      if (!exercise && currentWorkout.exercises.length > 0) {
+        exerciseId = currentWorkout.exercises[0];
+        exercise = getExerciseById(exerciseId);
+      }
       
       if (exercise) {
         setCurrentExercise(exercise);
-        setActiveExerciseId(currentExerciseId);
-        setShowActiveWorkout(true);
+        setActiveExerciseId(exerciseId);
+        
+        // Only force show active workout if it was just created (within 5s)
+        const isNew = (Date.now() - currentWorkout.startTime) < 5000;
+        if (isNew) setShowActiveWorkout(true);
       }
     }
   }, [currentWorkout, currentExerciseIndex, getExerciseById]);
@@ -335,13 +344,7 @@ const Workout = () => {
     };
   }, [isImageCycling]);
 
-  useEffect(() => {
-    if (currentWorkout && currentWorkout.exercises.length > 0) {
-      const exerciseId = currentWorkout.exercises[currentExerciseIndex];
-      setActiveExerciseId(exerciseId);
-      setCurrentExercise(getExerciseById(exerciseId) || null);
-    }
-  }, [currentExerciseIndex, currentWorkout, getExerciseById]);
+
 
   useEffect(() => {
     const filtered = filterExercises(
@@ -1654,8 +1657,11 @@ const Workout = () => {
           <div className="space-y-3">
             {filteredPastWorkouts.slice(0, 5).map((workout) => {
               const isExpanded = expandedPastWorkout === workout.id;
-              // Safely derive unique exercises directly from sets
-              const uniqueExerciseIds = Array.from(new Set(workout.sets?.map(s => s.exerciseId) || []));
+              // Safely derive unique exercises directly from sets and original exercises
+              const uniqueExerciseIds = Array.from(new Set([
+                ...(workout.exercises || []),
+                ...(workout.sets?.map(s => s.exerciseId) || [])
+              ])).filter(id => typeof id === 'string' && id.trim() !== '');
               const numExercises = uniqueExerciseIds.length;
 
               return (
@@ -1688,7 +1694,7 @@ const Workout = () => {
                         }} 
                         title={workout.isArchived ? "Restore Workout" : "Archive Workout"}
                       >
-                        {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-amber-500" />}
+                        {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-white" />}
                       </Button>
                       <button
                         className="p-2 rounded-full hover:bg-gray-700 transition-colors flex-shrink-0"

@@ -573,7 +573,7 @@ const Stats = () => {
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
                                                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); archiveWorkout(workout.id, !workout.isArchived); }} title={workout.isArchived ? "Restore Workout" : "Archive Workout"}>
-                                                        {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-amber-500" />}
+                                                        {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-white" />}
                                                     </Button>
                                                     <Button size="icon" variant="ghost" className="h-8 w-8" onClick={(e) => handleDelete(e, workout.id)}>
                                                         <Trash2 className="h-4 w-4 text-red-500" />

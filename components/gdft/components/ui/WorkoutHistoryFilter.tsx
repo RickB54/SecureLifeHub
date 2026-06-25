@@ -64,15 +64,30 @@ export function WorkoutHistoryFilter({
 
   const hasActiveFilters = filterType !== 'all' || dateRange?.from || showArchived !== 'live';
 
+  const getFilterSummary = () => {
+    let summary = "";
+    if (filterType === 'all') summary = "All Time";
+    else if (filterType === 'week') summary = "Past Week";
+    else if (filterType === 'month') summary = "Past Month";
+    else if (filterType === 'year') summary = "Past Year";
+    else if (filterType === 'custom' && dateRange?.from) {
+      summary = format(dateRange.from, 'MMM d');
+      if (dateRange.to) summary += ` - ${format(dateRange.to, 'MMM d')}`;
+    } else summary = "Filter Data";
+    
+    const visibility = showArchived === 'both' ? 'All' : showArchived === 'archived' ? 'Archived' : 'Live';
+    return `${summary} (${visibility})`;
+  };
+
   return (
     <div className="flex items-center gap-2">
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button variant="outline" className={`bg-gym-card border-none hover:bg-white/5 h-10 rounded-xl text-xs font-bold uppercase tracking-wider ${className || ''}`}>
-            <Filter className="h-4 w-4 mr-2 text-gym-blue" />
-            Filter Data
+            <Filter className="h-4 w-4 mr-2 text-gym-blue flex-shrink-0" />
+            <span className="truncate max-w-[150px] sm:max-w-[200px]">{getFilterSummary()}</span>
             {hasActiveFilters && (
-              <span className="ml-2 bg-gym-blue text-white rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-black">!</span>
+              <span className="ml-2 flex-shrink-0 bg-gym-blue text-white rounded-full h-5 w-5 flex items-center justify-center text-[10px] font-black">!</span>
             )}
           </Button>
         </PopoverTrigger>
