@@ -10,8 +10,8 @@ import { format } from 'date-fns';
 interface WorkoutHistoryFilterProps {
   filterType: string;
   onFilterChange: (type: string) => void;
-  showArchived: boolean;
-  onShowArchivedChange: (val: boolean) => void;
+  showArchived: 'live' | 'archived' | 'both';
+  onShowArchivedChange: (val: 'live' | 'archived' | 'both') => void;
   dateRange: DateRange | undefined;
   onDateRangeChange: (range: DateRange | undefined) => void;
   className?: string;
@@ -55,14 +55,14 @@ export function WorkoutHistoryFilter({
   const handleClearAll = (e: React.MouseEvent) => {
     e.stopPropagation();
     onFilterChange('all');
-    onShowArchivedChange(false);
+    onShowArchivedChange('live');
     onDateRangeChange(undefined);
     setTempFilterType('all');
-    setTempShowArchived(false);
+    setTempShowArchived('live');
     setTempDateRange(undefined);
   };
 
-  const hasActiveFilters = filterType !== 'all' || dateRange?.from || showArchived;
+  const hasActiveFilters = filterType !== 'all' || dateRange?.from || showArchived !== 'live';
 
   return (
     <div className="flex items-center gap-2">
@@ -79,13 +79,22 @@ export function WorkoutHistoryFilter({
         <PopoverContent className="w-[340px] p-4 bg-[#141416] border-white/10 rounded-2xl shadow-2xl z-50 text-white max-h-[85vh] overflow-y-auto" align="end">
         <div className="space-y-4">
           
-          {/* Show Archived Toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-base font-bold">Show Archived</span>
-            <Switch 
-              checked={tempShowArchived} 
-              onCheckedChange={setTempShowArchived} 
-            />
+          {/* Visibility Toggle */}
+          <div className="space-y-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Visibility</span>
+            <div className="flex bg-[#18181c] rounded-xl p-1 border border-white/5">
+              {(['live', 'archived', 'both'] as const).map(type => (
+                <Button
+                  key={type}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setTempShowArchived(type)}
+                  className={`flex-1 h-8 rounded-lg text-xs font-bold capitalize transition-colors ${tempShowArchived === type ? 'bg-gym-card shadow-md text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                >
+                  {type}
+                </Button>
+              ))}
+            </div>
           </div>
 
           {/* Quick Filters */}

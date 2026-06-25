@@ -86,7 +86,7 @@ const Stats = () => {
         existingData?: any[];
     }>({ isOpen: false, workoutId: '' });
     const [isManualSyncing, setIsManualSyncing] = useState(false);
-    const [showArchived, setShowArchived] = useState(false);
+    const [showArchived, setShowArchived] = useState<'live' | 'archived' | 'both'>('live');
     const [categoryFilter, setCategoryFilter] = useState<string>('All');
     const { archiveWorkout } = useWorkout();
 
@@ -110,10 +110,12 @@ const Stats = () => {
 
     const filteredAndSortedWorkouts = useMemo(() => {
         let sorted = [...(workouts as WorkoutWithNotes[])].sort((a, b) => b.startTime - a.startTime);
-        if (showArchived) {
+        if (showArchived === 'archived') {
             sorted = sorted.filter(w => w.isArchived);
-        } else {
+        } else if (showArchived === 'live') {
             sorted = sorted.filter(w => !w.isArchived && !(w as any).cancelled);
+        } else {
+            sorted = sorted.filter(w => !(w as any).cancelled);
         }
 
         if (filterType !== 'all') {

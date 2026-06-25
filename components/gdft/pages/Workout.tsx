@@ -158,15 +158,17 @@ const Workout = () => {
   }, [currentWorkout?.id]);
 
   const [filterType, setFilterType] = useState<string>('all');
-  const [showArchived, setShowArchived] = useState(false);
+  const [showArchived, setShowArchived] = useState<'live' | 'archived' | 'both'>('live');
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   const filteredPastWorkouts = useMemo(() => {
     let sorted = [...workouts].sort((a, b) => b.startTime - a.startTime);
-    if (showArchived) {
+    if (showArchived === 'archived') {
       sorted = sorted.filter(w => w.isArchived);
-    } else {
+    } else if (showArchived === 'live') {
       sorted = sorted.filter(w => !w.isArchived && !(w as any).cancelled);
+    } else {
+      sorted = sorted.filter(w => !(w as any).cancelled);
     }
 
     if (filterType !== 'all') {
