@@ -1641,7 +1641,7 @@ const Workout = () => {
         </div>
       )}
       
-       {filteredPastWorkouts.length > 0 && (
+      {workouts.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h2 className="text-lg font-semibold">Past Workouts</h2>
@@ -1654,114 +1654,121 @@ const Workout = () => {
                 onDateRangeChange={setDateRange}
             />
           </div>
-          <div className="space-y-3">
-            {filteredPastWorkouts.slice(0, 5).map((workout) => {
-              const isExpanded = expandedPastWorkout === workout.id;
-              // Safely derive unique exercises directly from sets and original exercises
-              const uniqueExerciseIds = Array.from(new Set([
-                ...(workout.exercises || []),
-                ...(workout.sets?.map(s => s.exerciseId) || [])
-              ])).filter(id => typeof id === 'string' && id.trim() !== '');
-              const numExercises = uniqueExerciseIds.length;
+          
+          {filteredPastWorkouts.length === 0 ? (
+            <div className="text-center py-8 bg-gym-card rounded-xl border border-white/5">
+              <p className="text-muted-foreground">No workouts found matching filters.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredPastWorkouts.slice(0, 5).map((workout) => {
+                const isExpanded = expandedPastWorkout === workout.id;
+                // Safely derive unique exercises directly from sets and original exercises
+                const uniqueExerciseIds = Array.from(new Set([
+                  ...(workout.exercises || []),
+                  ...(workout.sets?.map(s => s.exerciseId) || [])
+                ])).filter(id => typeof id === 'string' && id.trim() !== '');
+                const numExercises = uniqueExerciseIds.length;
 
-              return (
-                <div
-                  key={workout.id}
-                  className="rounded-lg border border-gray-700 bg-gym-card overflow-hidden transition-colors"
-                >
-                  {/* Main row — click anywhere except the chevron to go to stats */}
-                  <div className="p-4 flex items-center justify-between">
-                    <div
-                      className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate(`/stats?workout=${workout.id}`)}
-                    >
-                      <h3 className="font-medium">{workout.name}</h3>
-                      <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
-                        <span>{numExercises} exercise{numExercises !== 1 ? 's' : ''}</span>
-                        <span>•</span>
-                        <span>{formatDate(workout.startTime)}</span>
+                return (
+                  <div
+                    key={workout.id}
+                    className="rounded-lg border border-gray-700 bg-gym-card overflow-hidden transition-colors"
+                  >
+                    {/* Main row — click anywhere except the chevron to go to stats */}
+                    <div className="p-4 flex items-center justify-between">
+                      <div
+                        className="flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => navigate(`/stats?workout=${workout.id}`)}
+                      >
+                        <h3 className="font-medium">{workout.name}</h3>
+                        <div className="flex text-xs text-muted-foreground space-x-3 mt-1">
+                          <span>{numExercises} exercise{numExercises !== 1 ? 's' : ''}</span>
+                          <span>•</span>
+                          <span>{formatDate(workout.startTime)}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8 hover:bg-gray-700" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (archiveWorkout) archiveWorkout(workout.id, !workout.isArchived);
+                          }} 
+                          title={workout.isArchived ? "Restore Workout" : "Archive Workout"}
+                        >
+                          {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-white" />}
+                        </Button>
+                        <button
+                          className="p-2 rounded-full hover:bg-gray-700 transition-colors flex-shrink-0"
+                          aria-label={isExpanded ? 'Collapse exercises' : 'Expand exercises'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedPastWorkout(isExpanded ? null : workout.id);
+                          }}
+                        >
+                          <ChevronDown
+                            className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                          />
+                        </button>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        size="icon" 
-                        variant="ghost" 
-                        className="h-8 w-8 hover:bg-gray-700" 
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          if (archiveWorkout) archiveWorkout(workout.id, !workout.isArchived);
-                        }} 
-                        title={workout.isArchived ? "Restore Workout" : "Archive Workout"}
-                      >
-                        {workout.isArchived ? <ArchiveRestore className="h-4 w-4 text-green-500" /> : <Archive className="h-4 w-4 text-white" />}
-                      </Button>
-                      <button
-                        className="p-2 rounded-full hover:bg-gray-700 transition-colors flex-shrink-0"
-                        aria-label={isExpanded ? 'Collapse exercises' : 'Expand exercises'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedPastWorkout(isExpanded ? null : workout.id);
-                        }}
-                      >
-                        <ChevronDown
-                          className={`h-5 w-5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                        />
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Expandable exercise list */}
-                  {isExpanded && (
-                    <div className="border-t border-gray-700 px-4 py-3 bg-gym-dark/40">
-                      {(() => {
-                        const workoutExercises = uniqueExerciseIds
-                          .map(id => getExerciseById(id))
-                          .filter(Boolean);
-                        
-                        return workoutExercises.length > 0 ? (
-                          <div className="space-y-2">
-                            {workoutExercises.map((ex, idx) => (
-                              <div key={idx} className="flex items-center gap-3 bg-gym-card/50 p-2 rounded-xl border border-white/5 group transition-all duration-300">
-                                {ex?.thumbnailUrl || ex?.pictureUrl ? (
-                                  <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
-                                    <img 
-                                      src={ex.thumbnailUrl || ex.pictureUrl} 
-                                      alt="" 
-                                      className="w-full h-full object-cover"
-                                    />
+                    {/* Expandable exercise list */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-700 px-4 py-3 bg-gym-dark/40">
+                        {(() => {
+                          const workoutExercises = uniqueExerciseIds
+                            .map(id => getExerciseById(id))
+                            .filter(Boolean);
+                          
+                          return workoutExercises.length > 0 ? (
+                            <div className="space-y-2">
+                              {workoutExercises.map((ex, idx) => (
+                                <div key={idx} className="flex items-center gap-3 bg-gym-card/50 p-2 rounded-xl border border-white/5 group transition-all duration-300">
+                                  {ex?.thumbnailUrl || ex?.pictureUrl ? (
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
+                                      <img 
+                                        src={ex.thumbnailUrl || ex.pictureUrl} 
+                                        alt="" 
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-lg bg-gym-dark flex items-center justify-center flex-shrink-0">
+                                      <DumbbellIcon className="h-5 w-5 text-gray-500" />
+                                    </div>
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-white truncate">{ex?.name}</p>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest">{ex?.category}</p>
                                   </div>
-                                ) : (
-                                  <div className="w-10 h-10 rounded-lg bg-gym-dark flex items-center justify-center flex-shrink-0">
-                                    <DumbbellIcon className="h-5 w-5 text-gray-500" />
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-bold text-white truncate">{ex?.name}</p>
-                                  <p className="text-[10px] text-gray-500 uppercase tracking-widest">{ex?.category}</p>
                                 </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">No exercise details available</p>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {filteredPastWorkouts.length > 5 && (
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => navigate('/stats')}
-              >
-                View All Workouts
-              </Button>
-            )}
-          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No exercise details available</p>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {filteredPastWorkouts.length > 5 && (
+                <Button 
+                  variant="outline" 
+                  className="w-full"
+                  onClick={() => navigate('/stats')}
+                >
+                  View All Workouts
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       )}
 
