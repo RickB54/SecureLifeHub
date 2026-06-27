@@ -643,6 +643,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
   const [isRemindersModalOpen, setIsRemindersModalOpen] = useState(false);
   const [labelSearchText, setLabelSearchText] = useState("");
+  const [labelTargetNb, setLabelTargetNb] = useState("new_folder");
 
   const notesWithReminders = useMemo(() => notesStore.notes.filter(n => getReminderData(n) !== null), [notesStore.notes]);
 
@@ -659,25 +660,65 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     const trimmed = labelSearchText.trim();
     if (!trimmed || !editingNote) return;
 
-    const existing = notesStore.sections.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
-    if (existing) {
-      const newTags = [...(editingNote.tags || [])];
-      if (!newTags.includes(`__section:${existing.id}`)) {
-        newTags.push(`__section:${existing.id}`);
+    if (labelTargetNb === 'none') {
+      const existing = notesStore.sections.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
+      if (existing) {
+        const newTags = [...(editingNote.tags || [])];
+        if (!newTags.includes(`__section:${existing.id}`)) {
+          newTags.push(`__section:${existing.id}`);
+        }
+        const newSectionId = editingNote.section_id || existing.id;
+        setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
+        setLabelSearchText("");
+        toast({ title: `Added to submenu "${trimmed}"` });
+        return;
       }
-      const newSectionId = editingNote.section_id || existing.id;
-      setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
+      const newTags = [...(editingNote.tags || [])];
+      if (!newTags.includes(trimmed)) {
+        newTags.push(trimmed);
+      }
+      setEditingNote({ ...editingNote, tags: newTags });
       setLabelSearchText("");
+      toast({ title: `Tag "${trimmed}" added` });
       return;
     }
 
-    try {
-      let targetNbId = notesStore.notebooks[0]?.id;
-      if (!targetNbId) {
-        const newNb = await notesStore.createNotebook("General");
-        targetNbId = newNb.id;
+    if (labelTargetNb === 'new_folder') {
+      try {
+        const newNb = await notesStore.createNotebook(trimmed);
+        const newSec = await notesStore.createSection(newNb.id, trimmed);
+        if (newSec) {
+          const newTags = [...(editingNote.tags || [])];
+          if (!newTags.includes(`__section:${newSec.id}`)) {
+            newTags.push(`__section:${newSec.id}`);
+          }
+          const newSectionId = editingNote.section_id || newSec.id;
+          setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
+        }
+        setLabelSearchText("");
+        toast({ title: `New Category "${trimmed}" created` });
+      } catch (err) {
+        toast({ title: "Failed to create Category", variant: "destructive" });
       }
-      const newSec = await notesStore.createSection(targetNbId, trimmed);
+      return;
+    }
+
+    // Otherwise, create section under selected notebook
+    try {
+      const existingInNb = notesStore.sections.find(s => s.notebook_id === labelTargetNb && s.name.toLowerCase() === trimmed.toLowerCase());
+      if (existingInNb) {
+        const newTags = [...(editingNote.tags || [])];
+        if (!newTags.includes(`__section:${existingInNb.id}`)) {
+          newTags.push(`__section:${existingInNb.id}`);
+        }
+        const newSectionId = editingNote.section_id || existingInNb.id;
+        setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
+        setLabelSearchText("");
+        toast({ title: `Added to existing submenu "${trimmed}"` });
+        return;
+      }
+      
+      const newSec = await notesStore.createSection(labelTargetNb, trimmed);
       if (newSec) {
         const newTags = [...(editingNote.tags || [])];
         if (!newTags.includes(`__section:${newSec.id}`)) {
@@ -687,9 +728,9 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
       }
       setLabelSearchText("");
-      toast({ title: `Label "${trimmed}" created` });
+      toast({ title: `Submenu "${trimmed}" created` });
     } catch (err) {
-      toast({ title: "Failed to create label", variant: "destructive" });
+      toast({ title: "Failed to create submenu", variant: "destructive" });
     }
   };
 
@@ -764,7 +805,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     matchColor: localStorage.getItem('sticky_notes_match_color') === 'true',
     darkTheme: localStorage.getItem('sticky_notes_dark_theme') === null ? true : localStorage.getItem('sticky_notes_dark_theme') !== 'false',
     showReturnMarkers: localStorage.getItem('sticky_notes_return_markers') === 'true',
-    autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') === 'true',
+    autoLineNumbers: localStorage.getItem('sticky_notes_auto_line_numbers') !== 'false',
     showCheckboxes: localStorage.getItem('sticky_notes_show_checkboxes') !== 'false',
     textSize: localStorage.getItem('sticky_notes_text_size') ? parseInt(localStorage.getItem('sticky_notes_text_size')!) : 20,
     lineHeight: localStorage.getItem('sticky_notes_line_height') ? parseFloat(localStorage.getItem('sticky_notes_line_height')!) : 1.625,
@@ -1200,6 +1241,10 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         const newId = await notesStore.createNote(sectionId, editingNote.title, editingNote.content, finalTags);
         if (editingNote.is_pinned) {
           await notesStore.updateNote(newId, { is_pinned: true });
+          setLocalNoteOrder(prev => {
+            const base = prev.length > 0 ? [...prev] : notesStore.notes.map(n => n.id);
+            return [newId, ...base.filter(id => id !== newId)];
+          });
         }
         toast({ title: "Note Created" });
       } else {
@@ -1220,6 +1265,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
           toast({ title: "Note Updated" });
         } else {
           toast({ title: "No changes" });
+        }
+
+        if (editingNote.is_pinned) {
+          setLocalNoteOrder(prev => {
+            const base = prev.length > 0 ? [...prev] : notesStore.notes.map(n => n.id);
+            return [editingNote.id, ...base.filter(id => id !== editingNote.id)];
+          });
         }
       }
       setIsNoteModalOpen(false);
@@ -1347,14 +1399,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     const sectionIds = notesStore.sections.filter(s => s.notebook_id === id).map(s => s.id);
     const notesInNb = notesStore.notes.filter(n => sectionIds.includes(n.section_id!) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))));
     
-    if (notesInNb.length > 0) {
-      setDeletePrompt({ isOpen: true, type: 'notebook', id, name: nb.name, noteCount: notesInNb.length });
-    } else {
-      if (confirm(`Are you sure you want to delete the category "${nb.name}"?`)) {
-        await notesStore.deleteNotebook(id);
-        toast({ title: "Category deleted successfully" });
-      }
-    }
+    setDeletePrompt({ isOpen: true, type: 'notebook', id, name: nb.name, noteCount: notesInNb.length });
   };
 
   const handleEditNotebook = async (nb: Notebook) => {
@@ -1369,14 +1414,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     if (!sec) return;
     const notesInSec = notesStore.notes.filter(n => n.section_id === id || n.tags?.includes(`__section:${id}`));
     
-    if (notesInSec.length > 0) {
-      setDeletePrompt({ isOpen: true, type: 'section', id, name: sec.name, noteCount: notesInSec.length });
-    } else {
-      if (confirm(`Are you sure you want to delete the submenu "${sec.name}"?`)) {
-        await notesStore.deleteSection(id);
-        toast({ title: "Submenu deleted successfully" });
-      }
-    }
+    setDeletePrompt({ isOpen: true, type: 'section', id, name: sec.name, noteCount: notesInSec.length });
   };
 
   const handleEditSection = async (sec: Section) => {
@@ -2390,14 +2428,19 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                         const currentLine = val.substring(lineStart, pos);
                         const trimmed = currentLine.trimStart();
 
-                        // Auto line numbers: only if pref enabled AND line starts with N.
+                        const preserveImages = (text: string) => {
+                          const splitIndex = editingNote.content.search(/!\[.*?\]\(https?:\/\/[^\)]+\)/);
+                          if (splitIndex === -1) return text;
+                          return text + editingNote.content.substring(splitIndex);
+                        };
+
                         if (prefs.autoLineNumbers && /^\d+\.\s+/.test(trimmed)) {
                           const restOfLine = trimmed.replace(/^\d+\.\s*/, '');
                           if (!restOfLine.trim()) {
                             // Empty numbered line — stop numbering, clear prefix
                             e.preventDefault();
                             const newContent = val.substring(0, lineStart) + val.substring(pos);
-                            setEditingNote({ ...editingNote, content: newContent });
+                            setEditingNote({ ...editingNote, content: preserveImages(newContent) });
                             setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart; }, 0);
                             return;
                           }
@@ -2405,7 +2448,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           const num = parseInt(trimmed.match(/^(\d+)\./)?.[1] || '0', 10);
                           const nextLine = `${num + 1}. `;
                           const newContent = val.substring(0, pos) + '\n' + nextLine + val.substring(pos);
-                          setEditingNote({ ...editingNote, content: newContent });
+                          setEditingNote({ ...editingNote, content: preserveImages(newContent) });
                           setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 1 + nextLine.length; }, 0);
                           return;
                         }
@@ -2417,12 +2460,12 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                           if (!restOfLine.trim()) {
                             // Empty checkbox line → exit checkbox mode (clear prefix)
                             const newContent = val.substring(0, lineStart) + val.substring(pos);
-                            setEditingNote({ ...editingNote, content: newContent });
+                            setEditingNote({ ...editingNote, content: preserveImages(newContent) });
                             setTimeout(() => { ta.selectionStart = ta.selectionEnd = lineStart; }, 0);
                           } else {
                             // Continue checkbox on next line
                             const newContent = val.substring(0, pos) + '\n☐ ' + val.substring(pos);
-                            setEditingNote({ ...editingNote, content: newContent });
+                            setEditingNote({ ...editingNote, content: preserveImages(newContent) });
                             setTimeout(() => { ta.selectionStart = ta.selectionEnd = pos + 3; }, 0);
                           }
                           return;
@@ -3162,26 +3205,42 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
             </div>
             
             <div className="p-4 space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Enter label name"
-                  value={labelSearchText}
-                  onChange={(e) => setLabelSearchText(e.target.value)}
-                  onKeyDown={async (e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      await handleAddLabel();
-                    }
-                  }}
-                  className="flex-1 px-3 py-2 bg-zinc-800 text-white rounded-lg border border-zinc-700 text-sm focus:outline-none focus:border-blue-500 placeholder:text-zinc-500"
-                />
-                <Button 
-                  onClick={handleAddLabel}
-                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 rounded-lg font-semibold h-9 shrink-0"
-                >
-                  Add
-                </Button>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Enter label name"
+                    value={labelSearchText}
+                    onChange={(e) => setLabelSearchText(e.target.value)}
+                    onKeyDown={async (e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        await handleAddLabel();
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-zinc-800 text-white rounded-lg border border-zinc-700 text-sm focus:outline-none focus:border-blue-500 placeholder:text-zinc-500"
+                  />
+                  <Button 
+                    onClick={handleAddLabel}
+                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 rounded-lg font-semibold h-9 shrink-0"
+                  >
+                    Add
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400">Save as:</span>
+                  <select 
+                    value={labelTargetNb} 
+                    onChange={e => setLabelTargetNb(e.target.value)}
+                    className="flex-1 bg-zinc-800 text-white text-xs rounded border border-zinc-700 p-1.5 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="new_folder">NEW Category Folder</option>
+                    <option value="none">Just a text tag</option>
+                    {notesStore.notebooks.map(nb => (
+                      <option key={nb.id} value={nb.id}>Submenu under: {nb.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
@@ -3253,7 +3312,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               <span className="text-red-500">⚠️</span> Warning
             </h2>
             <p className="text-zinc-300 text-sm mb-6 leading-relaxed">
-              You are deleting the {deletePrompt.type === 'notebook' ? 'Category' : 'Submenu'} <strong>"{deletePrompt.name}"</strong>, which contains <strong>{deletePrompt.noteCount}</strong> sticky note{deletePrompt.noteCount > 1 ? 's' : ''}.<br/><br/>
+              You are deleting the {deletePrompt.type === 'notebook' ? 'Category' : 'Submenu'} <strong>"{deletePrompt.name}"</strong>, which contains <strong>{deletePrompt.noteCount}</strong> sticky note{deletePrompt.noteCount !== 1 ? 's' : ''}.<br/><br/>
               What would you like to do with these notes?
             </p>
             <div className="flex flex-col gap-3">

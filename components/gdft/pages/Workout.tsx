@@ -18,6 +18,7 @@ import {
   Timer,
   Footprints,
   Heart,
+  X,
   ArrowUpDown,
   ChevronDown,
   Dumbbell as DumbbellIcon,
@@ -1556,9 +1557,9 @@ const Workout = () => {
       </div>
       
       {currentWorkout && currentWorkout.id && !currentWorkout.completed && (currentWorkout.exercises?.length || 0) > 0 && isCurrentWorkoutRecent() && (
-        <div className="mb-6">
+        <div className="mb-6 flex gap-2">
           <Button 
-            className="w-full bg-gym-blue hover:bg-blue-600 shadow-lg shadow-blue-500/10 active:scale-95 font-bold uppercase tracking-widest" 
+            className="flex-1 bg-gym-blue hover:bg-blue-600 shadow-lg shadow-blue-500/10 active:scale-95 font-bold uppercase tracking-widest" 
             onClick={() => {
                 setShowActiveWorkout(true);
                 toast.info("Resuming workout...");
@@ -1566,6 +1567,19 @@ const Workout = () => {
           >
             <Clock className="h-5 w-5 mr-2" />
             Continue Current Workout
+          </Button>
+          <Button
+            variant="destructive"
+            className="w-12 flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm("Are you sure you want to discard this uncompleted workout?")) {
+                cancelWorkout();
+              }
+            }}
+            title="Discard Workout"
+          >
+            <X className="h-5 w-5" />
           </Button>
         </div>
       )}
