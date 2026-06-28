@@ -2133,6 +2133,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Pushups",
+    startPositionUrl: "/icons/no-equipment/animated/pushups-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/pushups-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Chest", "Arms"],
     equipment: "None",
@@ -2143,6 +2145,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Plank Shoulder Taps",
+    startPositionUrl: "/icons/no-equipment/animated/plank-shoulder-taps-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/plank-shoulder-taps-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Shoulders"],
     equipment: "None",
@@ -2153,6 +2157,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Jumping Jacks",
+    startPositionUrl: "/icons/no-equipment/animated/jumping-jacks-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/jumping-jacks-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "None",
@@ -2163,6 +2169,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Bodyweight Squats",
+    startPositionUrl: "/icons/no-equipment/animated/bodyweight-squats-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/bodyweight-squats-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "None",
@@ -2183,6 +2191,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Plank",
+    startPositionUrl: "/icons/no-equipment/animated/plank-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/plank-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Full Body"],
     equipment: "None",
@@ -2193,6 +2203,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Bicycle Crunches",
+    startPositionUrl: "/icons/no-equipment/animated/bicycle-crunches-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/bicycle-crunches-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core"],
     equipment: "None",
@@ -2203,6 +2215,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Wall Sit",
+    startPositionUrl: "/icons/no-equipment/animated/wall-sit-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/wall-sit-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "None",
@@ -2213,6 +2227,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Tricep Dips (Chair)",
+    startPositionUrl: "/icons/no-equipment/animated/tricep-dips-chair-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/tricep-dips-chair-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "None",
@@ -2223,6 +2239,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Side Plank (Left)",
+    startPositionUrl: "/icons/no-equipment/animated/side-plank-left-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/side-plank-left-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Obliques"],
     equipment: "None",
@@ -2233,6 +2251,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Side Plank (Right)",
+    startPositionUrl: "/icons/no-equipment/animated/side-plank-right-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/side-plank-right-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Obliques"],
     equipment: "None",
@@ -2243,6 +2263,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Russian Twists",
+    startPositionUrl: "/icons/no-equipment/animated/russian-twists-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/russian-twists-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Obliques"],
     equipment: "None",
@@ -2253,6 +2275,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Leg Raises",
+    startPositionUrl: "/icons/no-equipment/animated/leg-raises-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/leg-raises-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Legs"],
     equipment: "None",
@@ -2263,6 +2287,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Superman Hold",
+    startPositionUrl: "/icons/no-equipment/animated/superman-hold-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/superman-hold-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Back", "Core"],
     equipment: "None",
@@ -2293,6 +2319,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Glute Bridges",
+    startPositionUrl: "/icons/no-equipment/animated/glute-bridges-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/glute-bridges-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Glutes", "Core"],
     equipment: "None",
@@ -2303,6 +2331,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Donkey Kicks (Left)",
+    startPositionUrl: "/icons/no-equipment/animated/donkey-kicks-left-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/donkey-kicks-left-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Glutes", "Legs"],
     equipment: "None",
@@ -2313,6 +2343,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Donkey Kicks (Right)",
+    startPositionUrl: "/icons/no-equipment/animated/donkey-kicks-right-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/donkey-kicks-right-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Glutes", "Legs"],
     equipment: "None",
@@ -2323,6 +2355,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Fire Hydrants (Left)",
+    startPositionUrl: "/icons/no-equipment/animated/fire-hydrants-left-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/fire-hydrants-left-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Glutes", "Legs"],
     equipment: "None",
@@ -2333,6 +2367,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Fire Hydrants (Right)",
+    startPositionUrl: "/icons/no-equipment/animated/fire-hydrants-right-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/fire-hydrants-right-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Glutes", "Legs"],
     equipment: "None",
@@ -2343,6 +2379,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Bird Dog",
+    startPositionUrl: "/icons/no-equipment/animated/bird-dog-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/bird-dog-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Back"],
     equipment: "None",
@@ -2353,6 +2391,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Sit-Ups",
+    startPositionUrl: "/icons/no-equipment/animated/sit-ups-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/sit-ups-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core"],
     equipment: "None",
@@ -2363,6 +2403,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Inchworms",
+    startPositionUrl: "/icons/no-equipment/animated/inchworms-pos1.svg",
+    endPositionUrl: "/icons/no-equipment/animated/inchworms-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Core", "Full Body"],
     equipment: "None",
