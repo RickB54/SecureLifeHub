@@ -35,6 +35,7 @@ import { Zap } from 'lucide-react';
 import WorkoutCategoryCards from '@/components/gdft/components/WorkoutCategoryCards';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/gdft/components/ui/dialog';
 import { WorkoutHistoryFilter } from '@/components/gdft/components/ui/WorkoutHistoryFilter';
+import { AnimatedExerciseIcon } from '@/components/gdft/components/ui/AnimatedExerciseIcon';
 import { DateRange } from 'react-day-picker';
 import { useWorkout } from '@/components/gdft/contexts/WorkoutContext';
 import { useExercise } from '@/components/gdft/contexts/ExerciseContext';
@@ -653,7 +654,16 @@ const Workout = () => {
                   exercisesInWorkout.map((exercise) =>
                     exercise ? (
                       <DropdownMenuItem key={exercise.id} disabled className="flex items-center gap-3">
-                        {exercise.thumbnailUrl || exercise.pictureUrl ? (
+                        {exercise.startPositionUrl ? (
+                           <div className="w-10 h-10 flex-shrink-0">
+                             <AnimatedExerciseIcon 
+                               startPositionUrl={exercise.startPositionUrl}
+                               endPositionUrl={exercise.endPositionUrl}
+                               alt={exercise.name}
+                               fallbackUrl={exercise.thumbnailUrl || exercise.pictureUrl}
+                             />
+                           </div>
+                        ) : exercise.thumbnailUrl || exercise.pictureUrl ? (
                           <img 
                             src={exercise.thumbnailUrl || exercise.pictureUrl} 
                             alt="" 
@@ -714,13 +724,15 @@ const Workout = () => {
           
           const newSetId = addSet(activeExerciseId!, templateSet, currentExercise?.settings);
           
-          toast.success(`Added ${action.weight} lbs × ${action.reps} reps`, {
-            duration: 4000,
-            action: {
-              label: "Undo",
-              onClick: () => skipSet(newSetId)
-            }
-          });
+          if (newSetId) {
+            toast.success(`Added ${action.weight} lbs × ${action.reps} reps`, {
+              duration: 4000,
+              action: {
+                label: "Undo",
+                onClick: () => skipSet(newSetId as string)
+              }
+            });
+          }
         }
         break;
       case 'START_REST':
@@ -1155,19 +1167,28 @@ const Workout = () => {
               return (
                 <div
                   className="relative w-full max-h-[30vh] md:max-h-[300px] aspect-video rounded-lg bg-gym-dark flex items-center justify-center overflow-hidden mb-4 cursor-pointer hover:opacity-95 transition-opacity border border-white/5 shadow-inner"
+                  onClick={() => setShowImagePopup(true)}
                 >
-                  <img
-                    src={activeSrc}
-                    alt={currentExercise.name}
-                    className="h-full w-full object-contain"
-                    onClick={() => setShowImagePopup(true)}
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src = '/placeholder.svg';
-                    }}
-                  />
+                  {currentExercise.startPositionUrl ? (
+                    <AnimatedExerciseIcon 
+                      startPositionUrl={currentExercise.startPositionUrl}
+                      endPositionUrl={currentExercise.endPositionUrl}
+                      alt={currentExercise.name}
+                      fallbackUrl={mainImg || undefined}
+                    />
+                  ) : (
+                    <img
+                      src={activeSrc}
+                      alt={currentExercise.name}
+                      className="h-full w-full object-contain"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
+                    />
+                  )}
 
-                  {hasPosition && (
+                  {hasPosition && !currentExercise.startPositionUrl && (
                     <div
                       className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5"
                       onClick={(e) => e.stopPropagation()}
@@ -1442,7 +1463,16 @@ const Workout = () => {
                   className="p-3 rounded-xl border border-gray-700 bg-gym-card hover:bg-gym-card-hover cursor-pointer transition-all flex items-center gap-4 group"
                   onClick={() => handleAddExercise(exercise.id)}
                 >
-                  {exercise.thumbnailUrl || exercise.pictureUrl ? (
+                  {exercise.startPositionUrl ? (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
+                      <AnimatedExerciseIcon 
+                        startPositionUrl={exercise.startPositionUrl}
+                        endPositionUrl={exercise.endPositionUrl}
+                        alt={exercise.name}
+                        fallbackUrl={exercise.thumbnailUrl || exercise.pictureUrl}
+                      />
+                    </div>
+                  ) : exercise.thumbnailUrl || exercise.pictureUrl ? (
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
                       <img 
                         src={exercise.thumbnailUrl || exercise.pictureUrl} 

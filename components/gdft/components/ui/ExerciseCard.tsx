@@ -4,12 +4,16 @@ import { convertGoogleDriveUrl } from "@/components/gdft/lib/formatters";
 import { AspectRatio } from "@/components/gdft/components/ui/aspect-ratio";
 import { getExerciseImageUrl } from "@/components/gdft/lib/utils";
 
+import { AnimatedExerciseIcon } from "@/components/gdft/components/ui/AnimatedExerciseIcon";
+
 // Update the props interface to include addToWorkout
 interface ExerciseCardProps {
   name: string;
   category: string;
   thumbnailUrl?: string;
   pictureUrl?: string;
+  startPositionUrl?: string;
+  endPositionUrl?: string;
   onStart: () => void;
   onEdit: () => void;
   onToggleFavorite: () => void;
@@ -27,6 +31,8 @@ const ExerciseCard = ({
   category,
   thumbnailUrl,
   pictureUrl,
+  startPositionUrl,
+  endPositionUrl,
   onStart,
   onEdit,
   onToggleFavorite,
@@ -98,7 +104,14 @@ const ExerciseCard = ({
               }
             }}
           >
-            {imageUrl && !imageError ? (
+            {startPositionUrl ? (
+              <AnimatedExerciseIcon 
+                startPositionUrl={startPositionUrl}
+                endPositionUrl={endPositionUrl}
+                alt={name}
+                fallbackUrl={imageUrl}
+              />
+            ) : imageUrl && !imageError ? (
               <img 
                 src={imageUrl.includes('drive.google.com') ? convertGoogleDriveUrl(imageUrl) : imageUrl} 
                 alt={name} 

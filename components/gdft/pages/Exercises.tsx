@@ -555,6 +555,8 @@ const Exercises = () => {
             category={exercise.category}
             thumbnailUrl={exercise.thumbnailUrl}
             pictureUrl={exercise.pictureUrl}
+            startPositionUrl={exercise.startPositionUrl}
+            endPositionUrl={exercise.endPositionUrl}
             onStart={() => handleStartExercise(exercise.id)}
             onEdit={() => navigate(`/create-exercise?id=${exercise.id}`)}
             onToggleFavorite={() => toggleFavorite(exercise.id)}
