@@ -10,7 +10,7 @@ export function cn(...inputs: ClassValue[]) {
 
 export function getValidImageUrl(exercise: Exercise): string | undefined {
   // Return the pictureUrl or thumbnailUrl if either exists
-  return exercise.pictureUrl || exercise.thumbnailUrl;
+  return exercise.startPositionUrl || exercise.pictureUrl || exercise.thumbnailUrl;
 }
 
 /**
@@ -18,6 +18,8 @@ export function getValidImageUrl(exercise: Exercise): string | undefined {
  * Returns the exercise image if available, or empty string if no image
  */
 export function getExerciseImageUrl(exercise: Exercise): string {
+  if (exercise.startPositionUrl) return exercise.startPositionUrl;
+  
   // If the exercise has a valid image URL, use it
   if (exercise.pictureUrl || exercise.thumbnailUrl) {
     return exercise.pictureUrl || exercise.thumbnailUrl || "";

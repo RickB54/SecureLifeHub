@@ -484,21 +484,8 @@ const Workout = () => {
         setShowAddExerciseDialog(false);
         return;
       }
-      const newIndex = currentWorkout.exercises.length;
-      const updatedWorkout = {
-        ...currentWorkout,
-        exercises: [...currentWorkout.exercises, exerciseId]
-      };
-      updateWorkout(updatedWorkout);
-      const exercise = getExerciseById(exerciseId);
-      if (exercise) {
-        addSet(exerciseId, null, exercise.settings);
-        setShowAddExerciseDialog(false);
-        setActiveExerciseId(exerciseId);
-        setCurrentExerciseIndex(newIndex);
-        setCurrentExercise(exercise);
-        toast.success(`${exercise.name} added to workout`);
-      }
+      addExerciseToCurrentWorkout(exerciseId);
+      setShowAddExerciseDialog(false);
     }
   };
 
@@ -656,12 +643,7 @@ const Workout = () => {
                       <DropdownMenuItem key={exercise.id} disabled className="flex items-center gap-3">
                         {exercise.startPositionUrl ? (
                            <div className="w-10 h-10 flex-shrink-0">
-                             <AnimatedExerciseIcon 
-                               startPositionUrl={exercise.startPositionUrl}
-                               endPositionUrl={exercise.endPositionUrl}
-                               alt={exercise.name}
-                               fallbackUrl={exercise.thumbnailUrl || exercise.pictureUrl}
-                             />
+                             <img src={exercise.startPositionUrl} alt={exercise.name} className="w-full h-full object-contain rounded-md" />
                            </div>
                         ) : exercise.thumbnailUrl || exercise.pictureUrl ? (
                           <img 
@@ -1465,12 +1447,7 @@ const Workout = () => {
                 >
                   {exercise.startPositionUrl ? (
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
-                      <AnimatedExerciseIcon 
-                        startPositionUrl={exercise.startPositionUrl}
-                        endPositionUrl={exercise.endPositionUrl}
-                        alt={exercise.name}
-                        fallbackUrl={exercise.thumbnailUrl || exercise.pictureUrl}
-                      />
+                      <img src={exercise.startPositionUrl} alt={exercise.name} className="w-full h-full object-contain bg-gym-dark" />
                     </div>
                   ) : exercise.thumbnailUrl || exercise.pictureUrl ? (
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
@@ -1502,6 +1479,21 @@ const Workout = () => {
                   </div>
                 </div>
               ))}
+              {filteredExercises.length === 0 && (
+                <div className="text-center py-6">
+                   <p className="text-gray-400 mb-4">No exercises found matching your filters.</p>
+                   <Button onClick={() => { setShowAddExerciseDialog(false); navigate('/create-exercise?addToWorkout=true'); }} className="bg-gym-blue">
+                     Create Custom Exercise
+                   </Button>
+                </div>
+              )}
+              {filteredExercises.length > 0 && (
+                <div className="pt-2 text-center">
+                   <Button variant="ghost" className="text-gym-blue w-full hover:bg-white/5" onClick={() => { setShowAddExerciseDialog(false); navigate('/create-exercise?addToWorkout=true'); }}>
+                      <Plus className="h-4 w-4 mr-2" /> Create Custom Exercise
+                   </Button>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>

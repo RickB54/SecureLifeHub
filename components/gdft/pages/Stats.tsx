@@ -525,7 +525,7 @@ const Stats = () => {
                                     return (
                                         <Collapsible 
                                             key={workout.id} 
-                                            ref={el => workoutRefs.current[workout.id] = el}
+                                            ref={el => { workoutRefs.current[workout.id] = el; }}
                                             className="group bg-gym-darker rounded-lg border border-gray-700 hover:border-gym-blue"
                                             open={openWorkouts[workout.id]}
                                             onOpenChange={(isOpen) => setOpenWorkouts(prev => ({ ...prev, [workout.id]: isOpen }))}
@@ -604,6 +604,9 @@ const Stats = () => {
                                                                     <div className="flex items-center gap-3 mb-2">
                                                                         {(() => {
                                                                             const exercise = getExerciseById(ex.exerciseId);
+                                                                            if (exercise?.startPositionUrl) {
+                                                                                return <img src={exercise.startPositionUrl} alt="" className="w-10 h-10 rounded-lg object-contain bg-gym-dark flex-shrink-0" />;
+                                                                            }
                                                                             const thumb = exercise?.thumbnailUrl || exercise?.pictureUrl;
                                                                             if (thumb) {
                                                                                 return <img src={thumb} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />;

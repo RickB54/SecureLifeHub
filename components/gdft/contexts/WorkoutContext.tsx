@@ -727,76 +727,73 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
 
   const addSet = useCallback((exerciseId: string, previousSet: WorkoutSet | null = null, exerciseSettings: any = null): string | null | undefined => {
      let newSetId: string | null = null;
-    setCurrentWorkout((prev) => {
-      if (!prev) {
-        console.error("Cannot add set: No current workout");
-        return null;
-      }
+    const prev = currentWorkoutRef.current;
+    if (!prev) {
+      console.error("Cannot add set: No current workout");
+      return null;
+    }
 
-      const newSet: WorkoutSet = {
-        id: generateId(),
-        exerciseId,
-        completed: false,
-        timestamp: Date.now(),
-      };
-      newSetId = newSet.id;
+    const newSet: WorkoutSet = {
+      id: generateId(),
+      exerciseId,
+      completed: false,
+      timestamp: Date.now(),
+    };
+    newSetId = newSet.id;
 
-      const planOverride = workoutPlanOverrides?.find(p => p.exerciseId === exerciseId);
+    const planOverride = workoutPlanOverrides?.find(p => p.exerciseId === exerciseId);
+    const lastSameExerciseSet = [...prev.sets].reverse().find(s => s.exerciseId === exerciseId);
+    const historySet = getLatestSetFromHistory(exerciseId);
 
-      // Task 4 Implementation: Sticky Set Data
-      // Find the most recent set of the same exercise in current workout
-      const lastSameExerciseSet = [...prev.sets].reverse().find(s => s.exerciseId === exerciseId);
-      // Find the most recent set in history
-      const historySet = getLatestSetFromHistory(exerciseId);
+    if (previousSet) {
+      applySetData(newSet, previousSet);
+    } else if (lastSameExerciseSet) {
+      applySetData(newSet, lastSameExerciseSet);
+    } else if (planOverride) {
+      if (planOverride.weight) newSet.weight = Number(planOverride.weight);
+      if (planOverride.reps) newSet.reps = Number(planOverride.reps);
+      if (planOverride.time) newSet.time = Number(planOverride.time);
+      if (planOverride.distance) newSet.distance = Number(planOverride.distance);
+      if (planOverride.incline) newSet.incline = Number(planOverride.incline);
+    } else if (isSpecified(exerciseSettings)) {
+      applySetData(newSet, exerciseSettings);
+    } else if (historySet) {
+      applySetData(newSet, historySet);
+    } else if (exerciseSettings) {
+      applySetData(newSet, exerciseSettings);
+    }
 
-      if (previousSet) {
-        applySetData(newSet, previousSet);
-      } else if (lastSameExerciseSet) {
-        applySetData(newSet, lastSameExerciseSet);
-      } else if (planOverride) {
-        if (planOverride.weight) newSet.weight = Number(planOverride.weight);
-        if (planOverride.reps) newSet.reps = Number(planOverride.reps);
-        if (planOverride.time) newSet.time = Number(planOverride.time);
-        if (planOverride.distance) newSet.distance = Number(planOverride.distance);
-        if (planOverride.incline) newSet.incline = Number(planOverride.incline);
-      } else if (isSpecified(exerciseSettings)) {
-        applySetData(newSet, exerciseSettings);
-      } else if (historySet) {
-        applySetData(newSet, historySet);
-      } else if (exerciseSettings) {
-        applySetData(newSet, exerciseSettings);
-      }
+    const updatedWorkout = {
+      ...prev,
+      sets: [...prev.sets, newSet],
+    };
+    
+    setCurrentWorkout(updatedWorkout);
+    currentWorkoutRef.current = updatedWorkout;
 
-      const updatedWorkout = {
-        ...prev,
-        sets: [...prev.sets, newSet],
-      };
-      
-      // Cloud sync
-      if (user) {
-          api.workouts.syncSets(prev.id, updatedWorkout.sets).catch(console.error);
-          
-          // ALSO Update Benchmark Data (Exercise Settings) immediately on add if values were carried over
-          const benchmarkData: any = {};
-          if (newSet.weight !== undefined) benchmarkData.weight = newSet.weight;
-          if (newSet.reps !== undefined) benchmarkData.reps = newSet.reps;
-          if (newSet.time !== undefined) benchmarkData.time = newSet.time;
-          if (newSet.distance !== undefined) benchmarkData.distance = newSet.distance;
-          if (newSet.incline !== undefined) benchmarkData.incline = newSet.incline;
-          if (newSet.duration !== undefined) benchmarkData.duration = newSet.duration;
-          
-          if (Object.keys(benchmarkData).length > 0) {
-              const exercise = allExercises.find(e => e.id === exerciseId);
-              if (exercise) {
-                  api.exercises.update(exerciseId, { 
-                      settings: { ...exercise.settings, ...benchmarkData } 
-                  }).catch(console.error);
-              }
-          }
-      }
-
-      return updatedWorkout;
-    });
+    // Cloud sync outside of state updater
+    if (user) {
+        api.workouts.syncSets(prev.id, updatedWorkout.sets).catch(console.error);
+        
+        // Update Benchmark Data
+        const benchmarkData: any = {};
+        if (newSet.weight !== undefined) benchmarkData.weight = newSet.weight;
+        if (newSet.reps !== undefined) benchmarkData.reps = newSet.reps;
+        if (newSet.time !== undefined) benchmarkData.time = newSet.time;
+        if (newSet.distance !== undefined) benchmarkData.distance = newSet.distance;
+        if (newSet.incline !== undefined) benchmarkData.incline = newSet.incline;
+        if (newSet.duration !== undefined) benchmarkData.duration = newSet.duration;
+        
+        if (Object.keys(benchmarkData).length > 0) {
+            const exercise = allExercises.find(e => e.id === exerciseId);
+            if (exercise) {
+                // Avoid rewriting fields to default by sending only updates if possible, 
+                // but since api.exercises.update overwrites, we'll patch settings only safely.
+                // Note: api.exercises.update has a bug with mapExerciseToDB, so we'll bypass it for now
+                // to avoid data loss on exercises until api.exercises.update is fixed for partials.
+            }
+        }
+    }
     return newSetId;
   }, [workoutPlanOverrides, user, allExercises, getLatestSetFromHistory]);
 
@@ -816,6 +813,10 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
           }
       }
       setWorkouts(prev => prev.map(w => w.id === updatedWorkout.id ? updatedWorkout : w));
+      if (currentWorkoutRef.current && currentWorkoutRef.current.id === updatedWorkout.id) {
+          setCurrentWorkout(updatedWorkout);
+          currentWorkoutRef.current = updatedWorkout;
+      }
   }, [user]);
 
   // ... sets logic ...
@@ -824,7 +825,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     if (!user || !workoutSet.weight || workoutSet.weight === 0 || !workoutSet.completed) return;
     
     setAchievedPrs(prevPrs => {
-        const newPrs = [...(prevPrs || [])];
+        const newPrs = Array.isArray(prevPrs) ? [...prevPrs] : [];
         let hasNewPr = false;
         const exerciseId = workoutSet.exerciseId;
         const exerciseName = allExercises.find(e => e.id === exerciseId)?.name || 'Exercise';
@@ -910,25 +911,22 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
   }, [user, allExercises, unitSystem]);
 
   const completeSet = useCallback((setId: string) => {
-    const workout = currentWorkoutRef.current;
-    if (workout) {
-      const targetSet = workout.sets.find(s => s.id === setId);
-
-      setCurrentWorkout((prev) => {
-        if (!prev) return null;
-        
-        const updated = {
-          ...prev,
-          sets: prev.sets.map((set) =>
-            set.id === setId ? { ...set, completed: true } : set
-          ),
-        };
-        
-        if (user) {
-            api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
-        }
-        return updated;
-      });
+    const prev = currentWorkoutRef.current;
+    if (prev) {
+      const targetSet = prev.sets.find(s => s.id === setId);
+      const updated = {
+        ...prev,
+        sets: prev.sets.map((set) =>
+          set.id === setId ? { ...set, completed: true } : set
+        ),
+      };
+      
+      setCurrentWorkout(updated);
+      currentWorkoutRef.current = updated;
+      
+      if (user) {
+          api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
+      }
       
       if (targetSet) {
            // checkPR handles the toast for PR, otherwise we standard toast
@@ -942,59 +940,43 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
   }, [user, checkPR]);
 
   const skipSet = useCallback((setId: string) => {
-    if (currentWorkoutRef.current) {
-        setCurrentWorkout((prev) => {
-            if (!prev) return null;
-            const updated = {
-                ...prev,
-                sets: prev.sets.filter((set) => set.id !== setId),
-            };
-            if (user) {
-                api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
-            }
-            return updated;
-        });
+    const prev = currentWorkoutRef.current;
+    if (prev) {
+        const updated = {
+            ...prev,
+            sets: prev.sets.filter((set) => set.id !== setId),
+        };
+        
+        setCurrentWorkout(updated);
+        currentWorkoutRef.current = updated;
+        
+        if (user) {
+            api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
+        }
         toast.info("Set skipped");
     }
   }, [user]);
 
   const updateSet = useCallback((setId: string, updates: Partial<WorkoutSet>) => {
-    if (currentWorkoutRef.current) {
-        setCurrentWorkout((prev) => {
-            if (!prev) return null;
-            
-            const targetSet = prev.sets.find(s => s.id === setId);
-            if (!targetSet) return prev;
+    const prev = currentWorkoutRef.current;
+    if (prev) {
+        const targetSet = prev.sets.find(s => s.id === setId);
+        if (!targetSet) return;
 
-            const updated = {
-                ...prev,
-                sets: prev.sets.map((set) =>
-                set.id === setId ? { ...set, ...updates } : set
-                ),
-            };
-            
-            if (user) {
-                api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
-                
-                // UPDATE BENCHMARK DATA: If reps, weight, incline etc changed, update exercise settings
-                const benchmarkFields = ['weight', 'reps', 'time', 'distance', 'incline', 'duration', 'avgHeartRate', 'steps'];
-                const changedFields: any = {};
-                benchmarkFields.forEach(f => {
-                    if ((updates as any)[f] !== undefined) changedFields[f] = (updates as any)[f];
-                });
-
-                if (Object.keys(changedFields).length > 0) {
-                    const exerciseId = targetSet.exerciseId;
-                    const exercise = allExercises.find(e => e.id === exerciseId);
-                    if (exercise) {
-                        api.exercises.update(exerciseId, { 
-                            settings: { ...exercise.settings, ...changedFields } 
-                        }).catch(e => console.error("Failed to update benchmark data via updateSet", e));
-                    }
-                }
-            }
-            return updated;
-        });
+        const updated = {
+            ...prev,
+            sets: prev.sets.map((set) =>
+            set.id === setId ? { ...set, ...updates } : set
+            ),
+        };
+        
+        setCurrentWorkout(updated);
+        currentWorkoutRef.current = updated;
+        
+        if (user) {
+            api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
+            // benchmark update bypassed for now to prevent exercise data loss
+        }
     }
   }, [user, allExercises]);
 
@@ -1016,29 +998,43 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     }
   }, [currentExerciseIndex]);
   const addExerciseToCurrentWorkout = useCallback((exerciseId: string) => {
-     if (currentWorkoutRef.current) {
-         setCurrentWorkout(prev => {
-             if (!prev) return null;
-             const newSet: WorkoutSet = {
-                 id: generateId(),
-                 exerciseId,
-                 completed: false,
-                 timestamp: Date.now(),
-             };
-             const updated = { 
-                 ...prev, 
-                 exercises: [...prev.exercises, exerciseId],
-                 sets: [...prev.sets, newSet]
-             };
-             if (user) {
-                 api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
-                 api.workouts.update(prev.id, { exercises: updated.exercises }).catch(console.error);
-             }
-             return updated;
-         });
+     const prev = currentWorkoutRef.current;
+     if (prev) {
+         const newSet: WorkoutSet = {
+             id: generateId(),
+             exerciseId,
+             completed: false,
+             timestamp: Date.now(),
+         };
+
+         const exercise = allExercises.find(e => e.id === exerciseId);
+         const historySet = getLatestSetFromHistory(exerciseId);
+         
+         if (exercise && exercise.settings) {
+             applySetData(newSet, exercise.settings);
+         } else if (historySet) {
+             applySetData(newSet, historySet);
+         }
+
+         const updated = { 
+             ...prev, 
+             exercises: [...prev.exercises, exerciseId],
+             sets: [...prev.sets, newSet]
+         };
+         
+         setCurrentWorkout(updated);
+         currentWorkoutRef.current = updated;
+         
+         if (user) {
+             api.workouts.syncSets(prev.id, updated.sets).catch(console.error);
+         }
+         
+         const newIndex = updated.exercises.length - 1;
+         setCurrentExerciseIndex(newIndex);
+         
          toast.success("Exercise added to current workout");
      }
-  }, [user]);
+  }, [user, allExercises, getLatestSetFromHistory]);
 
   const saveCustomWorkout = useCallback(async (name: string) => {
      if (!currentWorkoutRef.current || !user) return;

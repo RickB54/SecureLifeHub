@@ -67,7 +67,7 @@ const CreateWorkout = () => {
         <img
           src={displayUrl}
           alt={exercise.name}
-          className="h-full w-full object-cover"
+          className={`h-full w-full ${displayUrl.endsWith('.svg') ? 'object-contain' : 'object-cover'}`}
           onError={(e) => {
             e.currentTarget.style.display = 'none';
             e.currentTarget.parentElement?.classList.add('flex', 'items-center', 'justify-center');

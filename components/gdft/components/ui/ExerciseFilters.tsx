@@ -61,7 +61,24 @@ const ExerciseFilters: React.FC<ExerciseFiltersProps> = ({
   ].filter(Boolean).length;
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-3 ${className}`}>
+      {/* ── Quick Category Buttons ── */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {["Weights", "Cardio", "Slide Board", "No Equipment"].map((cat) => (
+          <button
+            key={cat}
+            onClick={() => onCategoryFilterChange(cat)}
+            className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+              categoryFilter === cat 
+                ? "bg-gym-blue text-white border-gym-blue shadow-lg shadow-blue-500/20" 
+                : "bg-gym-dark text-gray-400 border-border hover:border-gray-500 hover:text-white"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
       {/* ── Search bar — always visible ── */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">

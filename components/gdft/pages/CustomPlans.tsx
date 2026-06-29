@@ -93,11 +93,13 @@ const ExercisePicker: React.FC<{
   onCancel: () => void;
 }> = ({ allExercises, onSelect, onCancel }) => {
   const [q, setQ] = useState('');
+  const [category, setCategory] = useState('All');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const filtered = allExercises
+    .filter(ex => category === 'All' || ex.category === category)
     .filter(ex => ex.name?.toLowerCase().includes(q.toLowerCase()))
     .slice(0, 30);
 
@@ -115,6 +117,21 @@ const ExercisePicker: React.FC<{
         <button onClick={onCancel} className="text-gray-500 hover:text-white transition-colors">
           <X className="h-4 w-4" />
         </button>
+      </div>
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-1 scrollbar-hide">
+        {["All", "Weights", "Cardio", "Slide Board", "No Equipment"].map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategory(cat)}
+            className={`whitespace-nowrap px-3 py-1 text-[11px] font-bold uppercase tracking-widest rounded-full transition-colors ${
+              category === cat
+                ? "bg-cyan-500 text-white"
+                : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
       <div style={{ maxHeight: 220, overflowY: 'auto' }} className="space-y-1 pr-1">
         {filtered.length === 0 ? (

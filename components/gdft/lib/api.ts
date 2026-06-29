@@ -354,6 +354,14 @@ export const api = {
           console.error(`[api] workouts.update: Invalid UUID format: ${id}`);
           throw new Error(`Invalid UUID: ${id}`);
       }
+      
+      // Prevent Supabase crash on empty update object
+      if (Object.keys(dbUpdates).length === 0) {
+          console.log(`[api] workouts.update: No valid db columns to update for ID ${id}. Returning existing.`);
+          const { data } = await supabase.from('workouts').select(`*, workout_sets (*)`).eq('id', id).maybeSingle();
+          if (data) return mapWorkoutFromDB(data, data.workout_sets);
+          throw new Error("Record not found");
+      }
 
       const { data, error } = await supabase
         .from('workouts')

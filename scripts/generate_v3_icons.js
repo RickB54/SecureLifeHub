@@ -27,6 +27,7 @@ function shouldTouch(name) {
 function getTemplate(name) {
   name = name.toLowerCase();
 
+  // No Equipment specific requests
   if (name.includes('leg raise')) return 'leg_raise';
   if (name.includes('plank shoulder tap')) return 'plank_shoulder_taps';
   if (name.includes('side plank (left)')) return 'side_plank_left';
@@ -48,6 +49,7 @@ function getTemplate(name) {
   if (name.includes('bird dog')) return 'all_fours_reach';
   if (name.includes('bicycle crunch')) return 'bicycle_crunch';
   
+  // Cardio
   if (name.includes('treadmill') || name.includes('walk') || name.includes('sprint') || name.includes('run') || name.includes('high knees') || name.includes('fast feet')) return 'running_treadmill';
   if (name.includes('elliptical')) return 'elliptical';
   if (name.includes('jump rope')) return 'jump_rope';
@@ -69,6 +71,7 @@ function getTemplate(name) {
   if (name.includes('step aerobic')) return 'step_aerobics';
   if (name.includes('zumba')) return 'zumba';
   
+  // Weights
   if (name.includes('woodchop')) return 'woodchop';
   if (name.includes('torso rotation')) return 'machine_torso_rotation';
   if (name.includes('face pull')) return 'cable_face_pull';
@@ -287,129 +290,231 @@ function getSVGForTemplate(template, isPos2, baseColor, darkColor) {
           nearArm = drawLimb(60, 25, 45, 45, 45, 65, 8, 6, baseColor);
       }
   }
-  else if (template === 'running_treadmill' || template === 'treadmill') {
-      bgEquip = `<line x1="10" y1="95" x2="90" y2="95" ${eqStyle} stroke-width="8"/> <line x1="20" y1="95" x2="40" y2="60" ${eqStyle}/> <line x1="40" y1="60" x2="50" y2="60" ${eqStyle}/>`;
-      head = `<circle cx="55" cy="25" r="7" fill="${baseColor}"/>`;
-      torso = `<path d="M50 25 L60 25 L55 55 L45 55 Z" fill="${baseColor}"/>`;
-      if (isPos2) {
-          farLeg = drawLimb(45, 55, 30, 65, 35, 95, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 55, 70, 75, 75, 85, 10, 8, baseColor);
-          farArm = drawLimb(50, 25, 65, 35, 70, 20, 8, 6, darkColor);
-          nearArm = drawLimb(60, 25, 45, 35, 40, 20, 8, 6, baseColor);
-      } else {
-          farLeg = drawLimb(45, 55, 60, 75, 65, 85, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 55, 40, 65, 45, 95, 10, 8, baseColor);
-          farArm = drawLimb(50, 25, 35, 35, 30, 20, 8, 6, darkColor);
-          nearArm = drawLimb(60, 25, 75, 35, 80, 20, 8, 6, baseColor);
+  
+  // Weights + Missing templates!
+  else if (template === 'all_fours_kick' || template === 'all_fours_side' || template === 'all_fours_reach') {
+    head = `<circle cx="75" cy="55" r="7" fill="${baseColor}"/>`;
+    torso = `<path d="M65 60 L60 70 L30 70 L35 60 Z" fill="${baseColor}"/>`;
+    farArm = drawLimb(60, 60, 60, 75, 60, 95, 8, 6, darkColor);
+    nearArm = drawLimb(60, 70, 65, 80, 65, 95, 8, 6, baseColor);
+    if (isPos2) {
+      if (template === 'all_fours_kick') {
+        farLeg = drawLimb(35, 60, 20, 50, 10, 30, 10, 8, darkColor); 
+        nearLeg = drawLimb(30, 70, 30, 85, 30, 95, 10, 8, baseColor); 
+      } else if (template === 'all_fours_side') {
+        farLeg = drawLimb(35, 60, 35, 80, 35, 95, 10, 8, darkColor); 
+        nearLeg = drawLimb(30, 70, 45, 70, 55, 85, 10, 8, baseColor); 
+      } else { 
+        nearArm = drawLimb(60, 70, 75, 60, 90, 50, 8, 6, baseColor); 
+        farLeg = drawLimb(35, 60, 20, 60, 10, 60, 10, 8, darkColor); 
+        nearLeg = drawLimb(30, 70, 30, 85, 30, 95, 10, 8, baseColor);
       }
+    } else {
+      farLeg = drawLimb(35, 60, 35, 80, 35, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(30, 70, 30, 85, 30, 95, 10, 8, baseColor);
+    }
   }
-  else if (template === 'elliptical') {
-      bgEquip = `<ellipse cx="50" cy="85" rx="30" ry="10" stroke="#94a3b8" fill="none" stroke-width="4"/> <line x1="40" y1="85" x2="30" y2="30" ${eqStyle}/> <line x1="60" y1="85" x2="70" y2="30" ${eqStyle}/>`;
-      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
-      torso = `<path d="M45 20 L55 20 L55 50 L45 50 Z" fill="${baseColor}"/>`;
-      if (isPos2) {
-          farLeg = drawLimb(45, 50, 40, 65, 20, 85, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 50, 60, 65, 80, 85, 10, 8, baseColor);
-          farArm = drawLimb(45, 20, 35, 35, 30, 30, 8, 6, darkColor);
-          nearArm = drawLimb(55, 20, 65, 35, 70, 30, 8, 6, baseColor);
-      } else {
-          farLeg = drawLimb(45, 50, 60, 65, 80, 85, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 50, 40, 65, 20, 85, 10, 8, baseColor);
-          farArm = drawLimb(45, 20, 65, 35, 70, 30, 8, 6, darkColor);
-          nearArm = drawLimb(55, 20, 35, 35, 30, 30, 8, 6, baseColor);
-      }
+  else if (template === 'glute_bridge') {
+    head = `<circle cx="20" cy="85" r="7" fill="${baseColor}"/>`;
+    if (isPos2) {
+      torso = `<path d="M25 85 L30 90 L55 70 L50 65 Z" fill="${baseColor}"/>`;
+      farLeg = drawLimb(50, 65, 75, 65, 75, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(55, 70, 80, 70, 80, 95, 10, 8, baseColor);
+    } else {
+      torso = `<path d="M25 85 L30 90 L55 90 L50 85 Z" fill="${baseColor}"/>`;
+      farLeg = drawLimb(50, 85, 75, 75, 75, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(55, 90, 80, 80, 80, 95, 10, 8, baseColor);
+    }
+    farArm = drawLimb(30, 85, 45, 85, 60, 85, 8, 6, darkColor);
+    nearArm = drawLimb(35, 90, 50, 90, 65, 90, 8, 6, baseColor);
   }
-  else if (template === 'cycling') {
-      bgEquip = `<circle cx="30" cy="80" r="15" fill="none" stroke="#94a3b8" stroke-width="4"/> <circle cx="70" cy="80" r="15" fill="none" stroke="#94a3b8" stroke-width="4"/> <line x1="30" y1="80" x2="50" y2="80" ${eqStyle}/> <line x1="50" y1="80" x2="40" y2="50" ${eqStyle}/> <line x1="50" y1="80" x2="60" y2="50" ${eqStyle}/> <line x1="60" y1="50" x2="70" y2="80" ${eqStyle}/> <circle cx="50" cy="80" r="4" ${eqStyle}/>`;
-      head = `<circle cx="45" cy="30" r="7" fill="${baseColor}"/>`;
-      torso = `<path d="M40 30 L50 30 L45 50 L35 50 Z" fill="${baseColor}"/>`;
-      farArm = drawLimb(40, 30, 50, 40, 60, 50, 8, 6, darkColor);
-      nearArm = drawLimb(50, 30, 60, 40, 60, 50, 8, 6, baseColor);
-      if (isPos2) {
-          farLeg = drawLimb(35, 50, 45, 65, 50, 75, 10, 8, darkColor);
-          nearLeg = drawLimb(45, 50, 55, 60, 50, 70, 10, 8, baseColor);
-      } else {
-          farLeg = drawLimb(35, 50, 45, 60, 50, 70, 10, 8, darkColor);
-          nearLeg = drawLimb(45, 50, 55, 65, 50, 75, 10, 8, baseColor);
-      }
+  else if (template === 'inchworm') {
+    if (isPos2) { 
+      head = `<circle cx="85" cy="70" r="7" fill="${baseColor}"/>`;
+      torso = `<path d="M75 70 L70 80 L35 80 L40 70 Z" fill="${baseColor}"/>`;
+      farLeg = drawLimb(40, 70, 20, 85, 15, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(35, 80, 15, 90, 10, 95, 10, 8, baseColor);
+      farArm = drawLimb(70, 70, 75, 85, 75, 95, 8, 6, darkColor);
+      nearArm = drawLimb(70, 80, 70, 90, 70, 95, 8, 6, baseColor);
+    } else { 
+      head = `<circle cx="30" cy="50" r="7" fill="${baseColor}"/>`;
+      torso = `<path d="M25 60 L45 70 L50 60 L30 50 Z" fill="${baseColor}"/>`;
+      farLeg = drawLimb(45, 70, 45, 85, 45, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(50, 60, 50, 80, 50, 95, 10, 8, baseColor);
+      farArm = drawLimb(30, 50, 35, 75, 40, 95, 8, 6, darkColor);
+      nearArm = drawLimb(25, 60, 30, 85, 35, 95, 8, 6, baseColor);
+    }
   }
-  else if (template === 'rowing_erg') {
-      bgEquip = `<line x1="10" y1="95" x2="90" y2="95" ${floorStyle}/> <line x1="20" y1="95" x2="30" y2="85" ${eqStyle}/> <line x1="30" y1="85" x2="70" y2="85" ${eqStyle}/> <rect x="70" y="70" width="10" height="25" fill="#94a3b8"/>`;
-      head = `<circle cx="${isPos2 ? 35 : 55}" cy="50" r="7" fill="${baseColor}"/>`;
-      if (isPos2) {
-          torso = `<path d="M30 50 L40 50 L45 80 L35 80 Z" fill="${baseColor}"/>`;
-          farLeg = drawLimb(35, 80, 55, 80, 75, 85, 10, 8, darkColor);
-          nearLeg = drawLimb(45, 80, 65, 80, 75, 85, 10, 8, baseColor);
-          farArm = drawLimb(30, 50, 40, 60, 50, 65, 8, 6, darkColor);
-          nearArm = drawLimb(40, 50, 50, 60, 60, 65, 8, 6, baseColor);
-          fgEquip = `<line x1="60" y1="65" x2="70" y2="75" ${eqStyle}/>`;
-      } else {
-          torso = `<path d="M50 50 L60 50 L45 80 L35 80 Z" fill="${baseColor}"/>`;
-          farLeg = drawLimb(35, 80, 60, 70, 75, 85, 10, 8, darkColor);
-          nearLeg = drawLimb(45, 80, 70, 70, 75, 85, 10, 8, baseColor);
-          farArm = drawLimb(50, 50, 60, 50, 70, 65, 8, 6, darkColor);
-          nearArm = drawLimb(60, 50, 70, 50, 75, 65, 8, 6, baseColor);
-          fgEquip = `<line x1="75" y1="65" x2="75" y2="75" ${eqStyle}/>`;
-      }
+  else if (template === 'jumping_jack') {
+    head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+    torso = drawTorso(50, 30, 16, 12, 25);
+    if (isPos2) { 
+      farLeg = drawLimb(45, 55, 30, 75, 25, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(55, 55, 70, 75, 75, 95, 10, 8, baseColor);
+      farArm = drawLimb(45, 32, 25, 20, 15, 10, 8, 6, darkColor);
+      nearArm = drawLimb(55, 32, 75, 20, 85, 10, 8, 6, baseColor);
+    } else { 
+      farLeg = drawLimb(45, 55, 45, 75, 45, 95, 10, 8, darkColor);
+      nearLeg = drawLimb(55, 55, 55, 75, 55, 95, 10, 8, baseColor);
+      farArm = drawLimb(45, 32, 40, 55, 35, 75, 8, 6, darkColor);
+      nearArm = drawLimb(55, 32, 60, 55, 65, 75, 8, 6, baseColor);
+    }
   }
-  else if (template === 'jump_rope') {
-      head = `<circle cx="50" cy="${isPos2 ? 15 : 25}" r="7" fill="${baseColor}"/>`;
-      torso = drawTorso(50, isPos2 ? 15 : 25, 16, 12, 25);
-      if (isPos2) {
-          farLeg = drawLimb(45, 40, 45, 55, 40, 75, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 40, 55, 55, 60, 75, 10, 8, baseColor);
-          farArm = drawLimb(45, 15, 30, 30, 35, 45, 8, 6, darkColor);
-          nearArm = drawLimb(55, 15, 70, 30, 65, 45, 8, 6, baseColor);
-          fgEquip = `<path d="M35 45 Q50 95 65 45" fill="none" stroke="#94a3b8" stroke-width="2"/>`;
-      } else {
-          farLeg = drawLimb(45, 50, 45, 70, 45, 95, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 50, 55, 70, 55, 95, 10, 8, baseColor);
-          farArm = drawLimb(45, 25, 30, 40, 35, 55, 8, 6, darkColor);
-          nearArm = drawLimb(55, 25, 70, 40, 65, 55, 8, 6, baseColor);
-          fgEquip = `<path d="M35 55 Q50 10 65 55" fill="none" stroke="#94a3b8" stroke-width="2"/>`;
-      }
-  }
-  else if (template === 'burpee') {
-      if (isPos2) {
-          head = `<circle cx="50" cy="15" r="7" fill="${baseColor}"/>`;
-          torso = drawTorso(50, 20, 16, 12, 25);
-          farLeg = drawLimb(45, 45, 45, 60, 45, 75, 10, 8, darkColor);
-          nearLeg = drawLimb(55, 45, 55, 60, 55, 75, 10, 8, baseColor);
-          farArm = drawLimb(45, 20, 45, 5, 45, 0, 8, 6, darkColor);
-          nearArm = drawLimb(55, 20, 55, 5, 55, 0, 8, 6, baseColor);
-      } else {
-          head = `<circle cx="85" cy="75" r="7" fill="${baseColor}"/>`;
-          torso = `<path d="M75 75 L70 85 L35 85 L40 75 Z" fill="${baseColor}"/>`;
-          farLeg = drawLimb(40, 75, 20, 90, 15, 95, 10, 8, darkColor);
-          nearLeg = drawLimb(35, 85, 15, 95, 10, 95, 10, 8, baseColor);
-          farArm = drawLimb(70, 75, 75, 90, 75, 95, 8, 6, darkColor); 
-          nearArm = drawLimb(70, 85, 75, 95, 75, 95, 8, 6, baseColor);
-      }
-  }
-  else if (template === 'stair_climber') {
-      bgEquip = `<line x1="10" y1="95" x2="90" y2="95" ${floorStyle}/> <line x1="20" y1="95" x2="50" y2="60" ${eqStyle}/> <line x1="50" y1="60" x2="60" y2="60" ${eqStyle}/>`;
-      head = `<circle cx="65" cy="25" r="7" fill="${baseColor}"/>`;
-      torso = `<path d="M60 25 L70 25 L65 55 L55 55 Z" fill="${baseColor}"/>`;
-      if (isPos2) {
-          farLeg = drawLimb(55, 55, 40, 65, 45, 95, 10, 8, darkColor);
-          nearLeg = drawLimb(65, 55, 50, 70, 50, 85, 10, 8, baseColor); // knee high stepping up
-          farArm = drawLimb(60, 25, 75, 35, 80, 20, 8, 6, darkColor);
-          nearArm = drawLimb(70, 25, 55, 35, 50, 20, 8, 6, baseColor);
-      } else {
-          farLeg = drawLimb(55, 55, 50, 70, 50, 85, 10, 8, darkColor);
-          nearLeg = drawLimb(65, 55, 40, 65, 45, 95, 10, 8, baseColor);
-          farArm = drawLimb(60, 25, 55, 35, 50, 20, 8, 6, darkColor);
-          nearArm = drawLimb(70, 25, 75, 35, 80, 20, 8, 6, baseColor);
-      }
+  else if (template === 'squat_barbell') {
+    head = `<circle cx="50" cy="${isPos2 ? 20 : 35}" r="7" fill="${baseColor}"/> <line x1="50" y1="${isPos2 ? 20 : 35}" x2="50" y2="${isPos2 ? 30 : 45}" stroke="${baseColor}" stroke-width="6"/>`;
+    torso = drawTorso(50, isPos2 ? 30 : 45, 16, 14, 25);
+    farLeg = drawLimb(45, isPos2 ? 55 : 70, 35, isPos2 ? 75 : 75, 40, 95, 11, 9, darkColor);
+    nearLeg = drawLimb(55, isPos2 ? 55 : 70, 65, isPos2 ? 75 : 75, 60, 95, 11, 9, baseColor);
+    farArm = drawLimb(42, isPos2 ? 32 : 47, 35, isPos2 ? 45 : 60, 42, isPos2 ? 55 : 70, 8, 6, darkColor);
+    nearArm = drawLimb(58, isPos2 ? 32 : 47, 65, isPos2 ? 45 : 60, 58, isPos2 ? 55 : 70, 8, 6, baseColor);
+    fgEquip = `<line x1="30" y1="${isPos2 ? 30 : 45}" x2="70" y2="${isPos2 ? 30 : 45}" ${eqStyle} stroke-width="5"/>`; 
   }
   else if (template === 'squat_dumbbell') {
       head = `<circle cx="50" cy="${isPos2 ? 20 : 35}" r="7" fill="${baseColor}"/>`;
       torso = drawTorso(50, isPos2 ? 30 : 45, 16, 14, 25);
       farLeg = drawLimb(45, isPos2 ? 55 : 70, 35, isPos2 ? 75 : 75, 40, 95, 11, 9, darkColor);
       nearLeg = drawLimb(55, isPos2 ? 55 : 70, 65, isPos2 ? 75 : 75, 60, 95, 11, 9, baseColor);
-      farArm = drawLimb(42, isPos2 ? 32 : 47, 42, isPos2 ? 50 : 65, 42, isPos2 ? 65 : 80, 8, 6, darkColor); // arms down
+      farArm = drawLimb(42, isPos2 ? 32 : 47, 42, isPos2 ? 50 : 65, 42, isPos2 ? 65 : 80, 8, 6, darkColor);
       nearArm = drawLimb(58, isPos2 ? 32 : 47, 58, isPos2 ? 50 : 65, 58, isPos2 ? 65 : 80, 8, 6, baseColor);
-      fgEquip = `<circle cx="42" cy="${isPos2 ? 65 : 80}" r="4" ${eqStyle}/> <circle cx="58" cy="${isPos2 ? 65 : 80}" r="4" ${eqStyle}/>`; // Dumbbells in hands
+      fgEquip = `<circle cx="42" cy="${isPos2 ? 65 : 80}" r="4" ${eqStyle}/> <circle cx="58" cy="${isPos2 ? 65 : 80}" r="4" ${eqStyle}/>`;
+  }
+  else if (template === 'press_barbell_bench') {
+    head = `<circle cx="75" cy="50" r="7" fill="${baseColor}"/>`;
+    torso = `<path d="M45 50 L70 50 L70 56 L45 56 Z" fill="${baseColor}"/>`; 
+    farLeg = drawLimb(45, 50, 35, 65, 35, 95, 11, 9, darkColor); 
+    nearLeg = drawLimb(45, 56, 45, 75, 45, 95, 11, 9, baseColor);
+    bgEquip = `<line x1="30" y1="60" x2="80" y2="60" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round"/>` + bgEquip;
+    if (isPos2) { 
+      farArm = drawLimb(65, 50, 65, 30, 65, 15, 8, 6, darkColor);
+      nearArm = drawLimb(60, 56, 60, 35, 60, 15, 8, 6, baseColor);
+      fgEquip = `<line x1="40" y1="15" x2="80" y2="15" ${eqStyle} stroke-width="5"/>`; 
+    } else { 
+      farArm = drawLimb(65, 50, 60, 70, 65, 45, 8, 6, darkColor);
+      nearArm = drawLimb(60, 56, 55, 75, 60, 45, 8, 6, baseColor);
+      fgEquip = `<line x1="40" y1="45" x2="80" y2="45" ${eqStyle} stroke-width="5"/>`; 
+    }
+  }
+  else if (template === 'press_dumbbell_bench') {
+    head = `<circle cx="75" cy="50" r="7" fill="${baseColor}"/>`;
+    torso = `<path d="M45 50 L70 50 L70 56 L45 56 Z" fill="${baseColor}"/>`;
+    farLeg = drawLimb(45, 50, 35, 65, 35, 95, 11, 9, darkColor);
+    nearLeg = drawLimb(45, 56, 45, 75, 45, 95, 11, 9, baseColor);
+    bgEquip = `<line x1="30" y1="60" x2="80" y2="60" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round"/>` + bgEquip;
+    if (isPos2) { 
+      farArm = drawLimb(65, 50, 65, 30, 65, 15, 8, 6, darkColor);
+      nearArm = drawLimb(60, 56, 60, 35, 60, 15, 8, 6, baseColor);
+      fgEquip = `<circle cx="65" cy="15" r="4" ${eqStyle}/> <circle cx="60" cy="15" r="4" ${eqStyle}/>`; 
+    } else {
+      farArm = drawLimb(65, 50, 60, 70, 65, 45, 8, 6, darkColor);
+      nearArm = drawLimb(60, 56, 55, 75, 60, 45, 8, 6, baseColor);
+      fgEquip = `<circle cx="65" cy="45" r="4" ${eqStyle}/> <circle cx="60" cy="45" r="4" ${eqStyle}/>`;
+    }
+  }
+  else if (template === 'press_barbell_overhead') {
+      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, 30, 16, 14, 25);
+      farLeg = drawLimb(45, 55, 45, 75, 45, 95, 11, 9, darkColor);
+      nearLeg = drawLimb(55, 55, 55, 75, 55, 95, 11, 9, baseColor);
+      if (isPos2) {
+          farArm = drawLimb(42, 32, 42, 15, 42, 5, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 58, 15, 58, 5, 8, 6, baseColor);
+          fgEquip = `<line x1="30" y1="5" x2="70" y2="5" ${eqStyle}/>`;
+      } else {
+          farArm = drawLimb(42, 32, 35, 45, 42, 35, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 65, 45, 58, 35, 8, 6, baseColor);
+          fgEquip = `<line x1="30" y1="35" x2="70" y2="35" ${eqStyle}/>`;
+      }
+  }
+  else if (template === 'press_dumbbell_overhead') {
+      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, 30, 16, 14, 25);
+      farLeg = drawLimb(45, 55, 45, 75, 45, 95, 11, 9, darkColor);
+      nearLeg = drawLimb(55, 55, 55, 75, 55, 95, 11, 9, baseColor);
+      if (isPos2) {
+          farArm = drawLimb(42, 32, 42, 15, 42, 5, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 58, 15, 58, 5, 8, 6, baseColor);
+          fgEquip = `<circle cx="42" cy="5" r="4" ${eqStyle}/> <circle cx="58" cy="5" r="4" ${eqStyle}/>`;
+      } else {
+          farArm = drawLimb(42, 32, 35, 45, 42, 35, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 65, 45, 58, 35, 8, 6, baseColor);
+          fgEquip = `<circle cx="42" cy="35" r="4" ${eqStyle}/> <circle cx="58" cy="35" r="4" ${eqStyle}/>`;
+      }
+  }
+  else if (template === 'machine_seated_push' || template === 'machine_seated_pull') {
+    head = `<circle cx="40" cy="30" r="7" fill="${baseColor}"/>`;
+    torso = drawTorso(40, 40, 16, 16, 25);
+    farLeg = drawLimb(40, 65, 55, 75, 55, 95, 11, 9, darkColor);
+    nearLeg = drawLimb(40, 65, 65, 75, 65, 95, 11, 9, baseColor);
+    bgEquip = `<rect x="25" y="40" width="10" height="40" fill="#cbd5e1" rx="2"/> <rect x="35" y="65" width="20" height="10" fill="#94a3b8" rx="2"/>` + bgEquip; 
+    if (isPos2) { 
+      farArm = drawLimb(40, 45, 65, 45, 85, 45, 8, 6, darkColor);
+      nearArm = drawLimb(40, 45, 70, 45, 90, 45, 8, 6, baseColor);
+      fgEquip = `<rect x="85" y="40" width="5" height="10" fill="#64748b"/>`; 
+    } else { 
+      farArm = drawLimb(40, 45, 30, 55, 50, 50, 8, 6, darkColor);
+      nearArm = drawLimb(40, 45, 35, 60, 55, 55, 8, 6, baseColor);
+      fgEquip = `<rect x="50" y="45" width="5" height="10" fill="#64748b"/>`;
+    }
+  }
+  else if (template === 'curl_dumbbell') {
+      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, 30, 16, 14, 25);
+      farLeg = drawLimb(45, 55, 45, 75, 45, 95, 11, 9, darkColor);
+      nearLeg = drawLimb(55, 55, 55, 75, 55, 95, 11, 9, baseColor);
+      if (isPos2) { // Curled up
+          farArm = drawLimb(42, 32, 42, 50, 42, 35, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 58, 50, 58, 35, 8, 6, baseColor);
+          fgEquip = `<circle cx="42" cy="35" r="4" ${eqStyle}/> <circle cx="58" cy="35" r="4" ${eqStyle}/>`;
+      } else { // Down
+          farArm = drawLimb(42, 32, 42, 50, 42, 65, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 58, 50, 58, 65, 8, 6, baseColor);
+          fgEquip = `<circle cx="42" cy="65" r="4" ${eqStyle}/> <circle cx="58" cy="65" r="4" ${eqStyle}/>`;
+      }
+  }
+  else if (template === 'curl_barbell') {
+      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, 30, 16, 14, 25);
+      farLeg = drawLimb(45, 55, 45, 75, 45, 95, 11, 9, darkColor);
+      nearLeg = drawLimb(55, 55, 55, 75, 55, 95, 11, 9, baseColor);
+      if (isPos2) { 
+          farArm = drawLimb(42, 32, 42, 50, 42, 35, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 58, 50, 58, 35, 8, 6, baseColor);
+          fgEquip = `<line x1="30" y1="35" x2="70" y2="35" ${eqStyle}/>`;
+      } else { 
+          farArm = drawLimb(42, 32, 42, 50, 42, 65, 8, 6, darkColor);
+          nearArm = drawLimb(58, 32, 58, 50, 58, 65, 8, 6, baseColor);
+          fgEquip = `<line x1="30" y1="65" x2="70" y2="65" ${eqStyle}/>`;
+      }
+  }
+  else if (template === 'row_barbell' || template === 'deadlift_barbell') {
+    head = `<circle cx="70" cy="${isPos2 ? 30 : 40}" r="7" fill="${baseColor}"/>`;
+    torso = `<path d="M65 ${isPos2 ? 40 : 50} L45 55 L45 65 L65 ${isPos2 ? 50 : 60} Z" fill="${baseColor}"/>`; 
+    farLeg = drawLimb(45, 55, 45, 75, 45, 95, 11, 9, darkColor);
+    nearLeg = drawLimb(45, 65, 50, 80, 50, 95, 11, 9, baseColor);
+    if (isPos2) { 
+      farArm = drawLimb(65, 40, 55, 60, 50, 55, 8, 6, darkColor);
+      nearArm = drawLimb(65, 50, 60, 70, 55, 65, 8, 6, baseColor);
+      fgEquip = `<line x1="30" y1="60" x2="70" y2="60" ${eqStyle} stroke-width="5"/>`; 
+    } else { 
+      farArm = drawLimb(65, 50, 55, 70, 50, 85, 8, 6, darkColor);
+      nearArm = drawLimb(65, 60, 60, 80, 55, 90, 8, 6, baseColor);
+      fgEquip = `<line x1="30" y1="88" x2="70" y2="88" ${eqStyle} stroke-width="5"/>`;
+    }
+  }
+  else if (template === 'row_dumbbell' || template === 'deadlift_dumbbell') {
+    head = `<circle cx="70" cy="${isPos2 ? 30 : 40}" r="7" fill="${baseColor}"/>`;
+    torso = `<path d="M65 ${isPos2 ? 40 : 50} L45 55 L45 65 L65 ${isPos2 ? 50 : 60} Z" fill="${baseColor}"/>`; 
+    farLeg = drawLimb(45, 55, 45, 75, 45, 95, 11, 9, darkColor);
+    nearLeg = drawLimb(45, 65, 50, 80, 50, 95, 11, 9, baseColor);
+    if (isPos2) {
+      farArm = drawLimb(65, 40, 55, 60, 50, 55, 8, 6, darkColor);
+      nearArm = drawLimb(65, 50, 60, 70, 55, 65, 8, 6, baseColor);
+      fgEquip = `<circle cx="50" cy="55" r="4" ${eqStyle}/> <circle cx="55" cy="65" r="4" ${eqStyle}/>`; 
+    } else {
+      farArm = drawLimb(65, 50, 55, 70, 50, 85, 8, 6, darkColor);
+      nearArm = drawLimb(65, 60, 60, 80, 55, 90, 8, 6, baseColor);
+      fgEquip = `<circle cx="50" cy="85" r="4" ${eqStyle}/> <circle cx="55" cy="90" r="4" ${eqStyle}/>`;
+    }
   }
   else if (template === 'machine_leg_press') {
       head = `<circle cx="20" cy="70" r="7" fill="${baseColor}"/>`;
@@ -443,7 +548,162 @@ function getSVGForTemplate(template, isPos2, baseColor, darkColor) {
           fgEquip = `<circle cx="50" cy="90" r="8" fill="#64748b"/> <line x1="50" y1="65" x2="50" y2="90" ${eqStyle}/>`;
       }
   }
+  else if (template === 'fly_dumbbell') {
+      head = `<circle cx="75" cy="50" r="7" fill="${baseColor}"/>`;
+      torso = `<path d="M45 50 L70 50 L70 56 L45 56 Z" fill="${baseColor}"/>`;
+      farLeg = drawLimb(45, 50, 35, 65, 35, 95, 11, 9, darkColor);
+      nearLeg = drawLimb(45, 56, 45, 75, 45, 95, 11, 9, baseColor);
+      bgEquip = `<line x1="30" y1="60" x2="80" y2="60" stroke="#cbd5e1" stroke-width="8" stroke-linecap="round"/>` + bgEquip;
+      if (isPos2) {
+          farArm = drawLimb(65, 50, 65, 30, 65, 15, 8, 6, darkColor);
+          nearArm = drawLimb(60, 56, 60, 35, 60, 15, 8, 6, baseColor);
+          fgEquip = `<circle cx="65" cy="15" r="4" ${eqStyle}/> <circle cx="60" cy="15" r="4" ${eqStyle}/>`; 
+      } else { // arms out wide
+          farArm = drawLimb(65, 50, 70, 70, 75, 85, 8, 6, darkColor);
+          nearArm = drawLimb(60, 56, 45, 75, 40, 90, 8, 6, baseColor);
+          fgEquip = `<circle cx="75" cy="85" r="4" ${eqStyle}/> <circle cx="40" cy="90" r="4" ${eqStyle}/>`;
+      }
+  }
+  else if (template === 'pullup') {
+      bgEquip = `<line x1="30" y1="10" x2="70" y2="10" ${eqStyle}/>` + bgEquip; // bar
+      head = `<circle cx="50" cy="${isPos2 ? 15 : 30}" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, isPos2 ? 25 : 40, 16, 12, 25);
+      farLeg = drawLimb(45, isPos2 ? 50 : 65, 45, isPos2 ? 70 : 85, 45, isPos2 ? 80 : 95, 10, 8, darkColor);
+      nearLeg = drawLimb(55, isPos2 ? 50 : 65, 55, isPos2 ? 70 : 85, 55, isPos2 ? 80 : 95, 10, 8, baseColor);
+      if (isPos2) { // up
+          farArm = drawLimb(42, 25, 35, 20, 42, 10, 8, 6, darkColor);
+          nearArm = drawLimb(58, 25, 65, 20, 58, 10, 8, 6, baseColor);
+      } else { // hanging down
+          farArm = drawLimb(42, 40, 35, 25, 42, 10, 8, 6, darkColor);
+          nearArm = drawLimb(58, 40, 65, 25, 58, 10, 8, 6, baseColor);
+      }
+  }
+  else if (template === 'running_treadmill' || template === 'mountain_climbers' || template === 'stair_climber' || template === 'power_skip') {
+      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, 30, 16, 12, 25);
+      if (isPos2) { 
+        farLeg = drawLimb(45, 55, 30, 75, 30, 95, 11, 9, darkColor);
+        nearLeg = drawLimb(55, 55, 65, 75, 50, 95, 11, 9, baseColor);
+        farArm = drawLimb(42, 32, 30, 45, 35, 60, 8, 6, darkColor);
+        nearArm = drawLimb(58, 32, 70, 40, 65, 30, 8, 6, baseColor);
+      } else { 
+        farLeg = drawLimb(45, 55, 65, 75, 50, 95, 11, 9, darkColor);
+        nearLeg = drawLimb(55, 55, 30, 75, 30, 95, 11, 9, baseColor);
+        farArm = drawLimb(42, 32, 70, 40, 65, 30, 8, 6, darkColor);
+        nearArm = drawLimb(58, 32, 30, 45, 35, 60, 8, 6, baseColor);
+      }
+      if (template === 'stair_climber') {
+          bgEquip = `<path d="M10 95 L40 95 L40 75 L70 75 L70 55" fill="none" stroke="#cbd5e1" stroke-width="8"/>` + bgEquip;
+      }
+  }
+  else if (template === 'elliptical') {
+      head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, 30, 16, 12, 25);
+      if (isPos2) { 
+        farLeg = drawLimb(45, 55, 35, 75, 35, 90, 11, 9, darkColor);
+        nearLeg = drawLimb(55, 55, 65, 75, 65, 90, 11, 9, baseColor);
+        farArm = drawLimb(42, 32, 35, 50, 35, 75, 8, 6, darkColor);
+        nearArm = drawLimb(58, 32, 65, 50, 65, 75, 8, 6, baseColor);
+      } else { 
+        farLeg = drawLimb(45, 55, 65, 75, 65, 90, 11, 9, darkColor);
+        nearLeg = drawLimb(55, 55, 35, 75, 35, 90, 11, 9, baseColor);
+        farArm = drawLimb(42, 32, 65, 50, 65, 75, 8, 6, darkColor);
+        nearArm = drawLimb(58, 32, 35, 50, 35, 75, 8, 6, baseColor);
+      }
+      bgEquip = `<circle cx="50" cy="90" r="20" fill="none" stroke="#cbd5e1" stroke-width="5"/>` + bgEquip;
+  }
+  else if (template === 'cycling') {
+      head = `<circle cx="45" cy="30" r="7" fill="${baseColor}"/>`;
+      torso = `<path d="M40 40 L50 40 L55 60 L45 60 Z" fill="${baseColor}"/>`;
+      farArm = drawLimb(40, 40, 25, 50, 25, 50, 8, 6, darkColor);
+      nearArm = drawLimb(50, 40, 30, 50, 30, 50, 8, 6, baseColor);
+      if (isPos2) { 
+        farLeg = drawLimb(45, 60, 45, 80, 50, 90, 11, 9, darkColor);
+        nearLeg = drawLimb(55, 60, 65, 70, 70, 75, 11, 9, baseColor);
+      } else { 
+        farLeg = drawLimb(45, 60, 60, 70, 65, 75, 11, 9, darkColor);
+        nearLeg = drawLimb(55, 60, 50, 80, 55, 90, 11, 9, baseColor);
+      }
+      bgEquip = `<circle cx="50" cy="80" r="15" fill="none" stroke="#cbd5e1" stroke-width="4"/> <line x1="25" y1="50" x2="35" y2="80" stroke="#cbd5e1" stroke-width="6"/>` + bgEquip;
+  }
+  else if (template === 'rowing_erg') {
+      head = `<circle cx="${isPos2 ? 35 : 65}" cy="50" r="7" fill="${baseColor}"/>`;
+      if (isPos2) {
+          torso = `<path d="M30 60 L40 60 L45 80 L35 80 Z" fill="${baseColor}"/>`;
+          farLeg = drawLimb(35, 80, 55, 80, 75, 80, 11, 9, darkColor);
+          nearLeg = drawLimb(45, 80, 65, 80, 85, 80, 11, 9, baseColor);
+          farArm = drawLimb(30, 60, 50, 65, 65, 65, 8, 6, darkColor);
+          nearArm = drawLimb(40, 60, 60, 65, 75, 65, 8, 6, baseColor);
+      } else {
+          torso = `<path d="M60 60 L70 60 L60 80 L50 80 Z" fill="${baseColor}"/>`;
+          farLeg = drawLimb(50, 80, 60, 70, 75, 80, 11, 9, darkColor);
+          nearLeg = drawLimb(60, 80, 70, 70, 85, 80, 11, 9, baseColor);
+          farArm = drawLimb(60, 60, 75, 65, 85, 65, 8, 6, darkColor);
+          nearArm = drawLimb(70, 60, 85, 65, 95, 65, 8, 6, baseColor);
+      }
+      bgEquip = `<line x1="10" y1="85" x2="90" y2="85" stroke="#cbd5e1" stroke-width="6"/> <rect x="75" y="75" width="10" height="10" fill="#94a3b8"/>` + bgEquip;
+  }
+  else if (template === 'jump_rope') {
+      head = `<circle cx="50" cy="${isPos2 ? 15 : 20}" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, isPos2 ? 25 : 30, 16, 12, 25);
+      farLeg = drawLimb(45, isPos2 ? 50 : 55, 45, isPos2 ? 70 : 75, 45, isPos2 ? 85 : 95, 11, 9, darkColor);
+      nearLeg = drawLimb(55, isPos2 ? 50 : 55, 55, isPos2 ? 70 : 75, 55, isPos2 ? 85 : 95, 11, 9, baseColor);
+      farArm = drawLimb(42, isPos2 ? 27 : 32, 35, isPos2 ? 45 : 50, 25, isPos2 ? 55 : 60, 8, 6, darkColor);
+      nearArm = drawLimb(58, isPos2 ? 27 : 32, 65, isPos2 ? 45 : 50, 75, isPos2 ? 55 : 60, 8, 6, baseColor);
+      if (isPos2) {
+          fgEquip = `<path d="M25 55 Q50 -10 75 55" fill="none" stroke="#94a3b8" stroke-width="2"/>`;
+      } else {
+          fgEquip = `<path d="M25 60 Q50 110 75 60" fill="none" stroke="#94a3b8" stroke-width="2"/>`;
+      }
+  }
+  else if (template === 'boxing' || template === 'battle_ropes' || template === 'med_ball_slam') {
+      head = `<circle cx="45" cy="25" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(45, 35, 16, 12, 25);
+      farLeg = drawLimb(40, 60, 35, 75, 30, 95, 11, 9, darkColor);
+      nearLeg = drawLimb(50, 60, 60, 75, 65, 95, 11, 9, baseColor);
+      if (isPos2) { 
+        farArm = drawLimb(37, 37, 30, 40, 20, 35, 8, 6, darkColor);
+        nearArm = drawLimb(53, 37, 75, 35, 90, 35, 8, 6, baseColor);
+      } else { 
+        farArm = drawLimb(37, 37, 25, 35, 15, 35, 8, 6, darkColor);
+        nearArm = drawLimb(53, 37, 60, 45, 50, 35, 8, 6, baseColor);
+      }
+  }
+  else if (template === 'squat_jump' || template === 'box_jump' || template === 'broad_jump' || template === 'tuck_jump') {
+      head = `<circle cx="50" cy="${isPos2 ? 15 : 35}" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(50, isPos2 ? 25 : 45, 16, 14, 25);
+      if (isPos2) {
+          farLeg = drawLimb(45, 50, 45, 60, 45, 70, 11, 9, darkColor);
+          nearLeg = drawLimb(55, 50, 55, 60, 55, 70, 11, 9, baseColor);
+          farArm = drawLimb(42, 27, 42, 10, 42, 5, 8, 6, darkColor);
+          nearArm = drawLimb(58, 27, 58, 10, 58, 5, 8, 6, baseColor);
+      } else {
+          farLeg = drawLimb(45, 70, 35, 80, 40, 95, 11, 9, darkColor);
+          nearLeg = drawLimb(55, 70, 65, 80, 60, 95, 11, 9, baseColor);
+          farArm = drawLimb(42, 47, 35, 60, 25, 70, 8, 6, darkColor);
+          nearArm = drawLimb(58, 47, 65, 60, 75, 70, 8, 6, baseColor);
+      }
+      if (template === 'box_jump') {
+          bgEquip = `<rect x="60" y="70" width="30" height="25" fill="#cbd5e1"/>` + bgEquip;
+      }
+  }
+  else if (template === 'lateral_shuffle' || template === 'skater_jumps' || template === 'jumping_lunge' || template === 'step_aerobics' || template === 'zumba') {
+      head = `<circle cx="${isPos2 ? 60 : 40}" cy="25" r="7" fill="${baseColor}"/>`;
+      torso = drawTorso(isPos2 ? 60 : 40, 35, 16, 14, 25);
+      if (isPos2) {
+          farLeg = drawLimb(55, 60, 45, 75, 55, 95, 11, 9, darkColor);
+          nearLeg = drawLimb(65, 60, 85, 75, 95, 95, 11, 9, baseColor);
+          farArm = drawLimb(52, 37, 40, 45, 30, 40, 8, 6, darkColor);
+          nearArm = drawLimb(68, 37, 80, 45, 90, 40, 8, 6, baseColor);
+      } else {
+          farLeg = drawLimb(35, 60, 15, 75, 5, 95, 11, 9, darkColor);
+          nearLeg = drawLimb(45, 60, 55, 75, 45, 95, 11, 9, baseColor);
+          farArm = drawLimb(32, 37, 20, 45, 10, 40, 8, 6, darkColor);
+          nearArm = drawLimb(48, 37, 60, 45, 70, 40, 8, 6, baseColor);
+      }
+  }
   else {
+      // Very robust fallback that looks like generic standing or moving.
       head = `<circle cx="50" cy="20" r="7" fill="${baseColor}"/> <line x1="50" y1="20" x2="50" y2="30" stroke="${baseColor}" stroke-width="6"/>`;
       torso = drawTorso(50, 30, 16, 12, 25);
       if (isPos2) { 
