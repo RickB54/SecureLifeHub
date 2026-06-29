@@ -824,7 +824,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     if (!user || !workoutSet.weight || workoutSet.weight === 0 || !workoutSet.completed) return;
     
     setAchievedPrs(prevPrs => {
-        const newPrs = [...prevPrs];
+        const newPrs = [...(prevPrs || [])];
         let hasNewPr = false;
         const exerciseId = workoutSet.exerciseId;
         const exerciseName = allExercises.find(e => e.id === exerciseId)?.name || 'Exercise';
