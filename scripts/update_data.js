@@ -34,13 +34,13 @@ function slugify(name) {
 exercises.forEach(ex => {
   // Regex to match the block for this exercise. We look for 'name: "ex"' or 'name: 'ex''
   // and insert the urls after the name line if they don't already exist.
-  const regex = new RegExp("(name:\\\\s*[\\'\\\"]" + ex + "[\\'\\\"],)", "g");
+  const regex = new RegExp("(name:\\s*[\"']" + ex.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "[\"'],)", "g");
   const slug = slugify(ex);
   const startUrl = '/icons/weights/animated/' + slug + '-pos1.svg';
   const endUrl = '/icons/weights/animated/' + slug + '-pos2.svg';
   
   if (!content.includes(startUrl)) {
-    content = content.replace(regex, '$1\\n    startPositionUrl: "' + startUrl + '",\\n    endPositionUrl: "' + endUrl + '",');
+    content = content.replace(regex, '$1\n    startPositionUrl: "' + startUrl + '",\n    endPositionUrl: "' + endUrl + '",');
   }
 });
 

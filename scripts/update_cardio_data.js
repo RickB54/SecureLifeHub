@@ -17,13 +17,13 @@ function slugify(name) {
 }
 
 exercises.forEach(ex => {
-  const regex = new RegExp("(name:\\\\s*[\\'\\\"]" + ex + "[\\'\\\"],)", "g");
+  const regex = new RegExp("(name:\\s*[\"']" + ex.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "[\"'],)", "g");
   const slug = slugify(ex);
   const startUrl = '/icons/cardio/animated/' + slug + '-pos1.svg';
   const endUrl = '/icons/cardio/animated/' + slug + '-pos2.svg';
   
   if (!content.includes(startUrl)) {
-    content = content.replace(regex, '$1\\n    startPositionUrl: "' + startUrl + '",\\n    endPositionUrl: "' + endUrl + '",');
+    content = content.replace(regex, '$1\n    startPositionUrl: "' + startUrl + '",\n    endPositionUrl: "' + endUrl + '",');
   }
 });
 

@@ -687,6 +687,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Bench Press",
+    startPositionUrl: "/icons/weights/animated/bench-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/bench-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Arms"],
     equipment: "Barbell",
@@ -697,6 +699,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Curls",
+    startPositionUrl: "/icons/weights/animated/dumbbell-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Arms"],
     equipment: "Dumbbells",
@@ -707,6 +711,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Deadlifts",
+    startPositionUrl: "/icons/weights/animated/deadlifts-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/deadlifts-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Legs", "Core"],
     equipment: "Barbell",
@@ -717,6 +723,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Squats",
+    startPositionUrl: "/icons/weights/animated/squats-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/squats-pos2.svg",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Barbell",
@@ -727,6 +735,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Overhead Press",
+    startPositionUrl: "/icons/weights/animated/overhead-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/overhead-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Arms"],
     equipment: "Barbell",
@@ -737,6 +747,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Bent-Over Rows",
+    startPositionUrl: "/icons/weights/animated/bent-over-rows-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/bent-over-rows-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Arms"],
     equipment: "Barbell",
@@ -747,6 +759,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Lunges",
+    startPositionUrl: "/icons/weights/animated/lunges-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/lunges-pos2.svg",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Dumbbells",
@@ -757,6 +771,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Tricep Dips",
+    startPositionUrl: "/icons/weights/animated/tricep-dips-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/tricep-dips-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "Bench",
@@ -767,6 +783,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Kettlebell Swings",
+    startPositionUrl: "/icons/weights/animated/kettlebell-swings-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/kettlebell-swings-pos2.svg",
     category: "Weights",
     muscleGroups: ["Glutes", "Core"],
     equipment: "Kettlebells",
@@ -777,6 +795,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Shoulder Press",
+    startPositionUrl: "/icons/weights/animated/dumbbell-shoulder-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-shoulder-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Arms"],
     equipment: "Dumbbells",
@@ -787,6 +807,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Barbell Hip Thrusts",
+    startPositionUrl: "/icons/weights/animated/barbell-hip-thrusts-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/barbell-hip-thrusts-pos2.svg",
     category: "Weights",
     muscleGroups: ["Glutes", "Hamstrings"],
     equipment: "Barbell",
@@ -797,6 +819,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Lat Pulldowns",
+    startPositionUrl: "/icons/weights/animated/lat-pulldowns-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/lat-pulldowns-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Arms"],
     equipment: "Pull-Up Bar",
@@ -807,6 +831,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Rows",
+    startPositionUrl: "/icons/weights/animated/dumbbell-rows-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-rows-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Arms"],
     equipment: "Dumbbells",
@@ -817,6 +843,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Chest Flys",
+    startPositionUrl: "/icons/weights/animated/chest-flys-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/chest-flys-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Arms"],
     equipment: "Dumbbells",
@@ -827,6 +855,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Goblet Squats",
+    startPositionUrl: "/icons/weights/animated/goblet-squats-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/goblet-squats-pos2.svg",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Dumbbells",
@@ -837,6 +867,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Romanian Deadlifts",
+    startPositionUrl: "/icons/weights/animated/romanian-deadlifts-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/romanian-deadlifts-pos2.svg",
     category: "Weights",
     muscleGroups: ["Hamstrings", "Glutes"],
     equipment: "Barbell",
@@ -847,6 +879,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Pull-Ups",
+    startPositionUrl: "/icons/weights/animated/pull-ups-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/pull-ups-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Arms"],
     equipment: "Pull-Up Bar",
@@ -857,6 +891,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Lateral Raises",
+    startPositionUrl: "/icons/weights/animated/dumbbell-lateral-raises-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-lateral-raises-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders"],
     equipment: "Dumbbells",
@@ -867,6 +903,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Barbell Shrugs",
+    startPositionUrl: "/icons/weights/animated/barbell-shrugs-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/barbell-shrugs-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Back"],
     equipment: "Barbell",
@@ -877,6 +915,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Incline Bench Press",
+    startPositionUrl: "/icons/weights/animated/incline-bench-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/incline-bench-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Arms"],
     equipment: "Barbell",
@@ -887,6 +927,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Kettlebell Goblet Clean",
+    startPositionUrl: "/icons/weights/animated/kettlebell-goblet-clean-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/kettlebell-goblet-clean-pos2.svg",
     category: "Weights",
     muscleGroups: ["Full Body", "Core"],
     equipment: "Kettlebells",
@@ -897,6 +939,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Front Raises",
+    startPositionUrl: "/icons/weights/animated/dumbbell-front-raises-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-front-raises-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders"],
     equipment: "Dumbbells",
@@ -907,6 +951,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Seated Cable Rows",
+    startPositionUrl: "/icons/weights/animated/seated-cable-rows-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/seated-cable-rows-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Arms"],
     equipment: "Resistance Bands",
@@ -917,6 +963,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Step-Ups",
+    startPositionUrl: "/icons/weights/animated/dumbbell-step-ups-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-step-ups-pos2.svg",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Dumbbells",
@@ -927,6 +975,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Arnold Press",
+    startPositionUrl: "/icons/weights/animated/arnold-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/arnold-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Arms"],
     equipment: "Dumbbells",
@@ -937,6 +987,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Barbell Lunges",
+    startPositionUrl: "/icons/weights/animated/barbell-lunges-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/barbell-lunges-pos2.svg",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Barbell",
@@ -947,6 +999,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Pullover",
+    startPositionUrl: "/icons/weights/animated/dumbbell-pullover-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-pullover-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Back"],
     equipment: "Dumbbells",
@@ -957,6 +1011,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Farmer's Carry",
+    startPositionUrl: "/icons/weights/animated/farmer-s-carry-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/farmer-s-carry-pos2.svg",
     category: "Weights",
     muscleGroups: ["Full Body", "Core"],
     equipment: "Dumbbells",
@@ -967,6 +1023,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Thrusters",
+    startPositionUrl: "/icons/weights/animated/dumbbell-thrusters-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-thrusters-pos2.svg",
     category: "Weights",
     muscleGroups: ["Full Body", "Legs"],
     equipment: "Dumbbells",
@@ -977,6 +1035,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Weighted Plank",
+    startPositionUrl: "/icons/weights/animated/weighted-plank-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/weighted-plank-pos2.svg",
     category: "Weights",
     muscleGroups: ["Core", "Full Body"],
     equipment: "Medicine Ball",
@@ -988,6 +1048,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Tricep Overhead Extension",
+    startPositionUrl: "/icons/weights/animated/dumbbell-tricep-overhead-extension-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-tricep-overhead-extension-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "Dumbbells",
@@ -998,6 +1060,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Tricep Kickbacks",
+    startPositionUrl: "/icons/weights/animated/dumbbell-tricep-kickbacks-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-tricep-kickbacks-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "Dumbbells",
@@ -1008,6 +1072,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Skull Crushers",
+    startPositionUrl: "/icons/weights/animated/dumbbell-skull-crushers-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-skull-crushers-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "Dumbbells",
@@ -1018,6 +1084,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Close-Grip Dumbbell Press",
+    startPositionUrl: "/icons/weights/animated/close-grip-dumbbell-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/close-grip-dumbbell-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Chest", "Arms"],
     equipment: "Dumbbells",
@@ -1029,6 +1097,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cable Tricep Pushdown",
+    startPositionUrl: "/icons/weights/animated/cable-tricep-pushdown-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-tricep-pushdown-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "Cable",
@@ -1039,6 +1109,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cable Overhead Tricep Extension",
+    startPositionUrl: "/icons/weights/animated/cable-overhead-tricep-extension-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-overhead-tricep-extension-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Arms"],
     equipment: "Cable",
@@ -1050,6 +1122,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Hammer Curls",
+    startPositionUrl: "/icons/weights/animated/hammer-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Forearms", "Arms"],
     equipment: "Dumbbells",
@@ -1060,6 +1134,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Concentration Curls",
+    startPositionUrl: "/icons/weights/animated/concentration-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/concentration-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Arms"],
     equipment: "Dumbbells",
@@ -1070,6 +1146,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Incline Dumbbell Curls",
+    startPositionUrl: "/icons/weights/animated/incline-dumbbell-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/incline-dumbbell-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Arms"],
     equipment: "Dumbbells",
@@ -1080,6 +1158,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Preacher Curls",
+    startPositionUrl: "/icons/weights/animated/preacher-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/preacher-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Arms"],
     equipment: "Barbell",
@@ -1090,6 +1170,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Reverse Curls",
+    startPositionUrl: "/icons/weights/animated/reverse-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/reverse-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Forearms", "Arms"],
     equipment: "Barbell",
@@ -1100,6 +1182,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cable Bicep Curls",
+    startPositionUrl: "/icons/weights/animated/cable-bicep-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-bicep-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Biceps", "Arms"],
     equipment: "Cable",
@@ -1111,6 +1195,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Incline Dumbbell Press",
+    startPositionUrl: "/icons/weights/animated/incline-dumbbell-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/incline-dumbbell-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Shoulders", "Triceps"],
     equipment: "Dumbbells",
@@ -1121,6 +1207,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Decline Dumbbell Press",
+    startPositionUrl: "/icons/weights/animated/decline-dumbbell-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/decline-dumbbell-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Triceps"],
     equipment: "Dumbbells",
@@ -1131,6 +1219,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Pec Deck / Machine Chest Fly",
+    startPositionUrl: "/icons/weights/animated/pec-deck-machine-chest-fly-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/pec-deck-machine-chest-fly-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest"],
     equipment: "Machine",
@@ -1141,6 +1231,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cable Chest Fly",
+    startPositionUrl: "/icons/weights/animated/cable-chest-fly-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-chest-fly-pos2.svg",
     category: "Weights",
     muscleGroups: ["Chest", "Shoulders"],
     equipment: "Cable",
@@ -1151,6 +1243,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Close-Grip Bench Press",
+    startPositionUrl: "/icons/weights/animated/close-grip-bench-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/close-grip-bench-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Triceps", "Chest", "Arms"],
     equipment: "Barbell",
@@ -1162,6 +1256,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "T-Bar Row",
+    startPositionUrl: "/icons/weights/animated/t-bar-row-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/t-bar-row-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Lats", "Arms"],
     equipment: "Barbell",
@@ -1172,6 +1268,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Chest-Supported Rows",
+    startPositionUrl: "/icons/weights/animated/chest-supported-rows-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/chest-supported-rows-pos2.svg",
     category: "Weights",
     muscleGroups: ["Back", "Lats", "Biceps"],
     equipment: "Dumbbells",
@@ -1182,6 +1280,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cable Lat Pulldown",
+    startPositionUrl: "/icons/weights/animated/cable-lat-pulldown-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-lat-pulldown-pos2.svg",
     category: "Weights",
     muscleGroups: ["Lats", "Back", "Biceps"],
     equipment: "Cable",
@@ -1192,6 +1292,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Straight-Arm Cable Pulldown",
+    startPositionUrl: "/icons/weights/animated/straight-arm-cable-pulldown-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/straight-arm-cable-pulldown-pos2.svg",
     category: "Weights",
     muscleGroups: ["Lats", "Back"],
     equipment: "Cable",
@@ -1203,6 +1305,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Upright Rows",
+    startPositionUrl: "/icons/weights/animated/upright-rows-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/upright-rows-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Traps"],
     equipment: "Barbell",
@@ -1213,6 +1317,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Face Pulls",
+    startPositionUrl: "/icons/weights/animated/face-pulls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/face-pulls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Rear Deltoids", "Traps"],
     equipment: "Cable",
@@ -1223,6 +1329,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Rear Delt Flys",
+    startPositionUrl: "/icons/weights/animated/dumbbell-rear-delt-flys-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-rear-delt-flys-pos2.svg",
     category: "Weights",
     muscleGroups: ["Rear Deltoids", "Shoulders", "Back"],
     equipment: "Dumbbells",
@@ -1233,6 +1341,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Machine Shoulder Press",
+    startPositionUrl: "/icons/weights/animated/machine-shoulder-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/machine-shoulder-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Shoulders", "Triceps"],
     equipment: "Machine",
@@ -1244,6 +1354,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Leg Press",
+    startPositionUrl: "/icons/weights/animated/leg-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/leg-press-pos2.svg",
     category: "Weights",
     muscleGroups: ["Legs", "Quadriceps", "Glutes"],
     equipment: "Machine",
@@ -1254,6 +1366,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Leg Extensions",
+    startPositionUrl: "/icons/weights/animated/leg-extensions-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/leg-extensions-pos2.svg",
     category: "Weights",
     muscleGroups: ["Quadriceps", "Legs"],
     equipment: "Machine",
@@ -1264,6 +1378,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Leg Curls",
+    startPositionUrl: "/icons/weights/animated/leg-curls-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/leg-curls-pos2.svg",
     category: "Weights",
     muscleGroups: ["Hamstrings", "Legs"],
     equipment: "Machine",
@@ -1274,6 +1390,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Calf Raises",
+    startPositionUrl: "/icons/weights/animated/calf-raises-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/calf-raises-pos2.svg",
     category: "Weights",
     muscleGroups: ["Calves", "Legs"],
     equipment: "Machine",
@@ -1284,6 +1402,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Hip Abduction Machine",
+    startPositionUrl: "/icons/weights/animated/hip-abduction-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hip-abduction-machine-pos2.svg",
     category: "Weights",
     muscleGroups: ["Glutes", "Outer Thigh"],
     equipment: "Machine",
@@ -1294,6 +1414,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Hip Adduction Machine",
+    startPositionUrl: "/icons/weights/animated/hip-adduction-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hip-adduction-machine-pos2.svg",
     category: "Weights",
     muscleGroups: ["Inner Thigh", "Adductors"],
     equipment: "Machine",
@@ -1304,6 +1426,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Bulgarian Split Squats",
+    startPositionUrl: "/icons/weights/animated/bulgarian-split-squats-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/bulgarian-split-squats-pos2.svg",
     category: "Weights",
     muscleGroups: ["Quadriceps", "Glutes", "Legs"],
     equipment: "Dumbbells",
@@ -1314,6 +1438,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Sumo Deadlift",
+    startPositionUrl: "/icons/weights/animated/sumo-deadlift-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/sumo-deadlift-pos2.svg",
     category: "Weights",
     muscleGroups: ["Glutes", "Hamstrings", "Back", "Legs"],
     equipment: "Barbell",
@@ -1325,6 +1451,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Side Bends",
+    startPositionUrl: "/icons/weights/animated/dumbbell-side-bends-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/dumbbell-side-bends-pos2.svg",
     category: "Weights",
     muscleGroups: ["Obliques", "Core"],
     equipment: "Dumbbells",
@@ -1335,6 +1463,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cable Woodchops",
+    startPositionUrl: "/icons/weights/animated/cable-woodchops-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-woodchops-pos2.svg",
     category: "Weights",
     muscleGroups: ["Obliques", "Core", "Shoulders"],
     equipment: "Cable",
@@ -1577,6 +1707,8 @@ export const weightExercises: Exercise[] = [
   {
   id: "machine-1",
   name: "Hammer Strength MTS Row",
+    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-row-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-row-pos2.svg",
   category: "Weights",
   muscleGroups: ["Back", "Biceps"],
   equipment: "Machine",
@@ -1587,6 +1719,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-2",
   name: "Hammer Strength MTS Pull",
+    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-pull-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-pull-pos2.svg",
   category: "Weights",
   muscleGroups: ["Back", "Biceps"],
   equipment: "Machine",
@@ -1597,6 +1731,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-3",
   name: "Matrix Cable Machine",
+    startPositionUrl: "/icons/weights/animated/matrix-cable-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/matrix-cable-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Full Body"],
   equipment: "Machine",
@@ -1607,6 +1743,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-4",
   name: "Hammer Strength MTS Biceps Curl",
+    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-biceps-curl-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-biceps-curl-pos2.svg",
   category: "Weights",
   muscleGroups: ["Biceps"],
   equipment: "Machine",
@@ -1617,6 +1755,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-5",
   name: "Hammer Strength MTS Shoulder Press",
+    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-shoulder-press-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-shoulder-press-pos2.svg",
   category: "Weights",
   muscleGroups: ["Shoulders", "Triceps"],
   equipment: "Machine",
@@ -1627,6 +1767,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-6",
   name: "Hammer Strength MTS Triceps Extension",
+    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-triceps-extension-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-triceps-extension-pos2.svg",
   category: "Weights",
   muscleGroups: ["Triceps"],
   equipment: "Machine",
@@ -1637,6 +1779,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-7",
   name: "Hammer Strength MTS High Row",
+    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-high-row-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-high-row-pos2.svg",
   category: "Weights",
   muscleGroups: ["Back", "Biceps"],
   equipment: "Machine",
@@ -1647,6 +1791,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-8",
   name: "Chest Press Machine",
+    startPositionUrl: "/icons/weights/animated/chest-press-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/chest-press-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Chest", "Shoulders", "Triceps"],
   equipment: "Machine",
@@ -1657,6 +1803,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-9",
   name: "Pectoral Fly Machine",
+    startPositionUrl: "/icons/weights/animated/pectoral-fly-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/pectoral-fly-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Chest"],
   equipment: "Machine",
@@ -1667,6 +1815,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-10",
   name: "Rear Delt Fly Machine",
+    startPositionUrl: "/icons/weights/animated/rear-delt-fly-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/rear-delt-fly-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Shoulders", "Back"],
   equipment: "Machine",
@@ -1677,6 +1827,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-11",
   name: "Lat Pulldown Machine",
+    startPositionUrl: "/icons/weights/animated/lat-pulldown-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/lat-pulldown-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Back", "Biceps"],
   equipment: "Machine",
@@ -1687,6 +1839,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-12",
   name: "Seated Row Machine",
+    startPositionUrl: "/icons/weights/animated/seated-row-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/seated-row-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Back", "Biceps"],
   equipment: "Machine",
@@ -1697,6 +1851,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-13",
   name: "Leg Extension Machine",
+    startPositionUrl: "/icons/weights/animated/leg-extension-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/leg-extension-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Quadriceps"],
   equipment: "Machine",
@@ -1707,6 +1863,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-14",
   name: "Seated Leg Curl Machine",
+    startPositionUrl: "/icons/weights/animated/seated-leg-curl-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/seated-leg-curl-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Hamstrings"],
   equipment: "Machine",
@@ -1717,6 +1875,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-15",
   name: "Leg Press Machine",
+    startPositionUrl: "/icons/weights/animated/leg-press-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/leg-press-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Quadriceps", "Glutes", "Hamstrings"],
   equipment: "Machine",
@@ -1727,6 +1887,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-16",
   name: "Hip Adduction Machine",
+    startPositionUrl: "/icons/weights/animated/hip-adduction-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hip-adduction-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Inner Thighs"],
   equipment: "Machine",
@@ -1737,6 +1899,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-17",
   name: "Hip Abduction Machine",
+    startPositionUrl: "/icons/weights/animated/hip-abduction-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/hip-abduction-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Outer Thighs", "Glutes"],
   equipment: "Machine",
@@ -1747,6 +1911,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-18",
   name: "Torso Rotation Machine",
+    startPositionUrl: "/icons/weights/animated/torso-rotation-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/torso-rotation-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Obliques", "Core"],
   equipment: "Machine",
@@ -1757,6 +1923,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-19",
   name: "Back Extension Machine",
+    startPositionUrl: "/icons/weights/animated/back-extension-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/back-extension-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Lower Back", "Glutes", "Hamstrings"],
   equipment: "Machine",
@@ -1767,6 +1935,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-20",
   name: "Assisted Pull-up Machine",
+    startPositionUrl: "/icons/weights/animated/assisted-pull-up-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/assisted-pull-up-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Back", "Biceps", "Shoulders"],
   equipment: "Machine",
@@ -1777,6 +1947,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-21",
   name: "Assisted Dip Machine",
+    startPositionUrl: "/icons/weights/animated/assisted-dip-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/assisted-dip-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Triceps", "Chest", "Shoulders"],
   equipment: "Machine",
@@ -1787,6 +1959,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-22",
   name: "Abdominal Crunch Machine",
+    startPositionUrl: "/icons/weights/animated/abdominal-crunch-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/abdominal-crunch-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Abs", "Core"],
   equipment: "Machine",
@@ -1797,6 +1971,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-23",
   name: "Cable Triceps Pushdown",
+    startPositionUrl: "/icons/weights/animated/cable-triceps-pushdown-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-triceps-pushdown-pos2.svg",
   category: "Weights",
   muscleGroups: ["Triceps"],
   equipment: "Machine",
@@ -1807,6 +1983,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-24",
   name: "Cable Biceps Curl",
+    startPositionUrl: "/icons/weights/animated/cable-biceps-curl-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/cable-biceps-curl-pos2.svg",
   category: "Weights",
   muscleGroups: ["Biceps", "Forearms"],
   equipment: "Machine",
@@ -1817,6 +1995,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-25",
   name: "Standing Calf Raise Machine",
+    startPositionUrl: "/icons/weights/animated/standing-calf-raise-machine-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/standing-calf-raise-machine-pos2.svg",
   category: "Weights",
   muscleGroups: ["Calves"],
   equipment: "Machine",
@@ -1830,6 +2010,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Treadmill Run",
+    startPositionUrl: "/icons/cardio/animated/treadmill-run-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/treadmill-run-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Treadmill",
@@ -1840,6 +2022,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Brisk Walking",
+    startPositionUrl: "/icons/cardio/animated/brisk-walking-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/brisk-walking-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -1850,6 +2034,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Elliptical Training",
+    startPositionUrl: "/icons/cardio/animated/elliptical-training-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/elliptical-training-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "Elliptical",
@@ -1860,6 +2046,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Jump Rope",
+    startPositionUrl: "/icons/cardio/animated/jump-rope-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/jump-rope-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Jump Rope",
@@ -1870,6 +2058,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cycling",
+    startPositionUrl: "/icons/cardio/animated/cycling-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/cycling-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Stationary Bike",
@@ -1880,6 +2070,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Rowing",
+    startPositionUrl: "/icons/cardio/animated/rowing-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/rowing-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "Rowing Machine",
@@ -1890,6 +2082,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Stair Climbing",
+    startPositionUrl: "/icons/cardio/animated/stair-climbing-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/stair-climbing-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Stair Climber",
@@ -1900,6 +2094,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "High Knees",
+    startPositionUrl: "/icons/cardio/animated/high-knees-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/high-knees-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -1910,6 +2106,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Burpees",
+    startPositionUrl: "/icons/cardio/animated/burpees-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/burpees-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "None",
@@ -1920,6 +2118,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Mountain Climbers",
+    startPositionUrl: "/icons/cardio/animated/mountain-climbers-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/mountain-climbers-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Core"],
     equipment: "None",
@@ -1930,6 +2130,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Sprint Intervals",
+    startPositionUrl: "/icons/cardio/animated/sprint-intervals-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/sprint-intervals-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -1940,6 +2142,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Box Jumps",
+    startPositionUrl: "/icons/cardio/animated/box-jumps-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/box-jumps-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Box",
@@ -1950,6 +2154,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Skater Jumps",
+    startPositionUrl: "/icons/cardio/animated/skater-jumps-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/skater-jumps-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -1960,6 +2166,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Battle Ropes",
+    startPositionUrl: "/icons/cardio/animated/battle-ropes-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/battle-ropes-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Arms"],
     equipment: "Resistance Bands",
@@ -1970,6 +2178,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Shadow Boxing",
+    startPositionUrl: "/icons/cardio/animated/shadow-boxing-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/shadow-boxing-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Arms"],
     equipment: "None",
@@ -1980,6 +2190,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Tuck Jumps",
+    startPositionUrl: "/icons/cardio/animated/tuck-jumps-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/tuck-jumps-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -1990,6 +2202,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Lateral Shuffles",
+    startPositionUrl: "/icons/cardio/animated/lateral-shuffles-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/lateral-shuffles-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2000,6 +2214,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Kickboxing Drills",
+    startPositionUrl: "/icons/cardio/animated/kickboxing-drills-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/kickboxing-drills-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "None",
@@ -2010,6 +2226,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Fast Feet",
+    startPositionUrl: "/icons/cardio/animated/fast-feet-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/fast-feet-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2020,6 +2238,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Power Skips",
+    startPositionUrl: "/icons/cardio/animated/power-skips-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/power-skips-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2030,6 +2250,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Medicine Ball Slams",
+    startPositionUrl: "/icons/cardio/animated/medicine-ball-slams-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/medicine-ball-slams-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "Medicine Ball",
@@ -2040,6 +2262,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Incline Treadmill Walk",
+    startPositionUrl: "/icons/cardio/animated/incline-treadmill-walk-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/incline-treadmill-walk-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Treadmill",
@@ -2050,6 +2274,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Side-to-Side Hops",
+    startPositionUrl: "/icons/cardio/animated/side-to-side-hops-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/side-to-side-hops-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2060,6 +2286,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Rowing Sprints",
+    startPositionUrl: "/icons/cardio/animated/rowing-sprints-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/rowing-sprints-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "Rowing Machine",
@@ -2070,6 +2298,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Cycle Sprints",
+    startPositionUrl: "/icons/cardio/animated/cycle-sprints-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/cycle-sprints-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Stationary Bike",
@@ -2080,6 +2310,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Jumping Lunges",
+    startPositionUrl: "/icons/cardio/animated/jumping-lunges-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/jumping-lunges-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2090,6 +2322,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Broad Jumps",
+    startPositionUrl: "/icons/cardio/animated/broad-jumps-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/broad-jumps-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2100,6 +2334,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Squat Jumps",
+    startPositionUrl: "/icons/cardio/animated/squat-jumps-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/squat-jumps-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2110,6 +2346,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Step Aerobics",
+    startPositionUrl: "/icons/cardio/animated/step-aerobics-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/step-aerobics-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "Box",
@@ -2120,6 +2358,8 @@ export const cardioExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Zumba Dance",
+    startPositionUrl: "/icons/cardio/animated/zumba-dance-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/zumba-dance-pos2.svg",
     category: "Cardio",
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "None",
@@ -2181,6 +2421,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Lunges",
+    startPositionUrl: "/icons/weights/animated/lunges-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/lunges-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "None",
@@ -2299,6 +2541,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Squat Jumps",
+    startPositionUrl: "/icons/cardio/animated/squat-jumps-pos1.svg",
+    endPositionUrl: "/icons/cardio/animated/squat-jumps-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Cardiovascular", "Legs"],
     equipment: "None",
@@ -2309,6 +2553,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Calf Raises",
+    startPositionUrl: "/icons/weights/animated/calf-raises-pos1.svg",
+    endPositionUrl: "/icons/weights/animated/calf-raises-pos2.svg",
     category: "No Equipment",
     muscleGroups: ["Calves"],
     equipment: "None",
