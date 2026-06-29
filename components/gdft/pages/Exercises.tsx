@@ -631,13 +631,23 @@ const Exercises = () => {
       <div className="hidden print:block print-section">
         <style>{`
           @media print {
-            /* Hide the main app content */
-            body { 
-              visibility: hidden;
-              background: white !important;
+            /* Hide the main app content robustly to fix pagination */
+            .page-container > *:not(.print-section) {
+              display: none !important;
+            }
+            nav, header, aside, .sidebar { 
+              display: none !important; 
             }
             
-            /* Show ONLY our printable section */
+            /* Allow the document to expand to multiple pages */
+            html, body, #root, #__next, .page-container, main {
+              height: auto !important;
+              min-height: auto !important;
+              overflow: visible !important;
+              background: white !important;
+              position: static !important;
+            }
+            
             .print-section, .print-section * {
               visibility: visible;
               -webkit-print-color-adjust: exact !important; 
@@ -645,11 +655,10 @@ const Exercises = () => {
             }
             
             .print-section {
-              position: absolute;
-              left: 0;
-              top: 0;
+              position: static !important;
               width: 100%;
-              padding: 2cm;
+              padding: 0;
+              margin: 0;
               background: white !important;
               color: black !important;
               display: block !important;
@@ -710,8 +719,8 @@ const Exercises = () => {
                                  />
                               </div>
                            ) : ex.thumbnailUrl || ex.pictureUrl ? (
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100">
-                                 <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50">
+                                 <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" />
                               </div>
                            ) : (
                               <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold text-center">NO PIC</div>
