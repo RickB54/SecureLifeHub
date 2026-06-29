@@ -59,6 +59,7 @@ interface Exercise {
   distance?: string;
   time?: string;
   incline?: string;
+  startPositionUrl?: string;
 }
 
 interface Day {
@@ -142,12 +143,17 @@ const ExercisePicker: React.FC<{
             onClick={() => onSelect(ex)}
             className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-left group"
           >
-            {ex.thumbnailUrl || ex.pictureUrl
-              ? <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0 opacity-90" />
-              : <div className="w-9 h-9 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
-                  <Dumbbell className="h-4 w-4 text-gray-500" />
-                </div>
-            }
+            {ex.startPositionUrl ? (
+              <img src={ex.startPositionUrl} alt="" className="w-9 h-9 rounded-md object-contain bg-gym-dark flex-shrink-0 opacity-90" />
+            ) : ex.thumbnailUrl || ex.pictureUrl ? (
+              <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0 opacity-90" 
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} 
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
+                <Dumbbell className="h-4 w-4 text-gray-500" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-white truncate">{ex.name}</div>
               <div className="text-[10px] text-gray-500 truncate">{ex.category}{ex.muscleGroups?.length ? ` · ${ex.muscleGroups.slice(0,2).join(', ')}` : ''}</div>
@@ -264,6 +270,7 @@ const CustomPlans = () => {
             name: ex.name,
             category: ex.category,
             thumbnailUrl: ex.thumbnailUrl || ex.pictureUrl,
+            startPositionUrl: ex.startPositionUrl,
             sets: ex.defaultSets?.toString() ?? '',
             reps: ex.defaultReps?.toString() ?? '',
             weight: ex.defaultWeight?.toString() ?? '',
@@ -602,9 +609,13 @@ const CustomPlans = () => {
                               </span>
 
                               {/* Thumbnail if selected */}
-                              {exercise.thumbnailUrl && (
-                                <img src={exercise.thumbnailUrl} alt="" className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
-                              )}
+                              {exercise.startPositionUrl ? (
+                                <img src={exercise.startPositionUrl} alt="" className="w-8 h-8 rounded-md object-contain bg-gym-dark flex-shrink-0" />
+                              ) : exercise.thumbnailUrl ? (
+                                <img src={exercise.thumbnailUrl} alt="" className="w-8 h-8 rounded-md object-cover flex-shrink-0" 
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} 
+                                />
+                              ) : null}
 
                               {/* Exercise name button */}
                               <button
@@ -821,12 +832,17 @@ const CustomPlans = () => {
                                       {String(i + 1).padStart(2, '0')}
                                     </span>
                                     {/* Thumbnail */}
-                                    {ex.thumbnailUrl
-                                      ? <img src={ex.thumbnailUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
-                                      : <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                                          <Dumbbell className="h-3.5 w-3.5 text-gray-600" />
-                                        </div>
-                                    }
+                                    {ex.startPositionUrl ? (
+                                      <img src={ex.startPositionUrl} alt="" className="w-9 h-9 rounded-lg object-contain bg-gym-dark flex-shrink-0" />
+                                    ) : ex.thumbnailUrl ? (
+                                      <img src={ex.thumbnailUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" 
+                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} 
+                                      />
+                                    ) : (
+                                      <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                                        <Dumbbell className="h-3.5 w-3.5 text-gray-600" />
+                                      </div>
+                                    )}
                                     {/* Name + metrics */}
                                     <div className="flex-1 min-w-0">
                                       <div 
@@ -882,12 +898,17 @@ const CustomPlans = () => {
             <div className="space-y-3 py-3">
               {selectedDay.exercises.length > 0 ? selectedDay.exercises.map((ex, i) => (
                 <div key={ex.id} className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
-                  {ex.thumbnailUrl
-                    ? <img src={ex.thumbnailUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                    : <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                        <Dumbbell className="h-4 w-4 text-gray-500" />
-                      </div>
-                  }
+                  {ex.startPositionUrl ? (
+                    <img src={ex.startPositionUrl} alt="" className="w-10 h-10 rounded-lg object-contain bg-gym-dark flex-shrink-0" />
+                  ) : ex.thumbnailUrl ? (
+                    <img src={ex.thumbnailUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" 
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} 
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                      <Dumbbell className="h-4 w-4 text-gray-500" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div 
                       className="font-semibold text-white text-sm whitespace-normal break-words"

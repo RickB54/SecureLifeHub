@@ -1455,6 +1455,7 @@ const Workout = () => {
                         src={exercise.thumbnailUrl || exercise.pictureUrl} 
                         alt="" 
                         className="w-full h-full object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                       />
                     </div>
                   ) : (
@@ -1765,12 +1766,17 @@ const Workout = () => {
                             <div className="space-y-2">
                               {workoutExercises.map((ex, idx) => (
                                 <div key={idx} className="flex items-center gap-3 bg-gym-card/50 p-2 rounded-xl border border-white/5 group transition-all duration-300">
-                                  {ex?.thumbnailUrl || ex?.pictureUrl ? (
+                                  {ex?.startPositionUrl ? (
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
+                                      <img src={ex.startPositionUrl} alt="" className="w-full h-full object-contain bg-gym-dark" />
+                                    </div>
+                                  ) : ex?.thumbnailUrl || ex?.pictureUrl ? (
                                     <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
                                       <img 
                                         src={ex.thumbnailUrl || ex.pictureUrl} 
                                         alt="" 
                                         className="w-full h-full object-cover"
+                                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
                                       />
                                     </div>
                                   ) : (
