@@ -713,11 +713,11 @@ const Exercises = () => {
                       <tr key={ex.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-2">
                            {ex.startPositionUrl ? (
-                              <div className={`w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center ${ex.startPositionUrl.endsWith('.svg') ? 'bg-gray-800' : 'bg-white'}`}>
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-white">
                                  <img 
                                    src={ex.startPositionUrl} 
                                    alt="" 
-                                   className="w-full h-full object-contain" 
+                                   className={`w-full h-full object-contain ${ex.startPositionUrl.endsWith('.svg') ? 'filter invert opacity-80' : ''}`} 
                                  />
                               </div>
                            ) : ex.thumbnailUrl || ex.pictureUrl ? (
@@ -730,7 +730,7 @@ const Exercises = () => {
                         </td>
                         <td className="px-6 py-4">
                            <div className="font-extrabold text-gray-900 text-sm">{ex.name}</div>
-                           {ex.description && <div className="text-[10px] text-gray-400 mt-1 line-clamp-1 italic">{ex.description}</div>}
+                           {ex.description && <div className="text-[10px] text-gray-400 mt-1 italic leading-relaxed">{ex.description}</div>}
                         </td>
                         <td className="px-6 py-4">
                           <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-black uppercase">
