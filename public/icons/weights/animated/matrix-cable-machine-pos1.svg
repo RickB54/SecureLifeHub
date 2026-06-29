@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="color: #3b82f6">
-    <g stroke-linejoin="round"><line x1="20" y1="95" x2="80" y2="95" stroke="#e2e8f0" stroke-width="4" stroke-linecap="round"/>
+    <g stroke-linejoin="round"><line x1="10" y1="95" x2="90" y2="95" stroke="#e2e8f0" stroke-width="4" stroke-linecap="round"/>
     <line x1="45" y1="55" x2="40" y2="75" stroke="#1e40af" stroke-width="10" stroke-linecap="round"/>
     <circle cx="40" cy="75" r="4.5" fill="#1e40af"/>
     <line x1="40" y1="75" x2="40" y2="95" stroke="#1e40af" stroke-width="8" stroke-linecap="round"/>
