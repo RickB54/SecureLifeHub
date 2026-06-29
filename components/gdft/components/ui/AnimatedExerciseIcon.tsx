@@ -14,7 +14,7 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
   endPositionUrl,
   alt,
   fallbackUrl,
-  className = "h-full w-full object-cover"
+  className = "h-full w-full object-contain"
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(false);

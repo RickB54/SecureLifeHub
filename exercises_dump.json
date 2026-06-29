@@ -1,0 +1,722 @@
+[
+  {
+    "name": "#1 Leg Pull",
+    "category": "weights",
+    "url": "/icons/weights/animated/bench-press-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-curls-pos1.svg"
+  },
+  {
+    "name": "Deadlifts",
+    "category": "weights",
+    "url": "/icons/weights/animated/deadlifts-pos1.svg"
+  },
+  {
+    "name": "Squats",
+    "category": "weights",
+    "url": "/icons/weights/animated/squats-pos1.svg"
+  },
+  {
+    "name": "Overhead Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/overhead-press-pos1.svg"
+  },
+  {
+    "name": "Bent-Over Rows",
+    "category": "weights",
+    "url": "/icons/weights/animated/bent-over-rows-pos1.svg"
+  },
+  {
+    "name": "Lunges",
+    "category": "weights",
+    "url": "/icons/weights/animated/lunges-pos1.svg"
+  },
+  {
+    "name": "Tricep Dips",
+    "category": "weights",
+    "url": "/icons/weights/animated/tricep-dips-pos1.svg"
+  },
+  {
+    "name": "Kettlebell Swings",
+    "category": "weights",
+    "url": "/icons/weights/animated/kettlebell-swings-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Shoulder Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-shoulder-press-pos1.svg"
+  },
+  {
+    "name": "Barbell Hip Thrusts",
+    "category": "weights",
+    "url": "/icons/weights/animated/barbell-hip-thrusts-pos1.svg"
+  },
+  {
+    "name": "Lat Pulldowns",
+    "category": "weights",
+    "url": "/icons/weights/animated/lat-pulldowns-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Rows",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-rows-pos1.svg"
+  },
+  {
+    "name": "Chest Flys",
+    "category": "weights",
+    "url": "/icons/weights/animated/chest-flys-pos1.svg"
+  },
+  {
+    "name": "Goblet Squats",
+    "category": "weights",
+    "url": "/icons/weights/animated/goblet-squats-pos1.svg"
+  },
+  {
+    "name": "Romanian Deadlifts",
+    "category": "weights",
+    "url": "/icons/weights/animated/romanian-deadlifts-pos1.svg"
+  },
+  {
+    "name": "Pull-Ups",
+    "category": "weights",
+    "url": "/icons/weights/animated/pull-ups-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Lateral Raises",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-lateral-raises-pos1.svg"
+  },
+  {
+    "name": "Barbell Shrugs",
+    "category": "weights",
+    "url": "/icons/weights/animated/barbell-shrugs-pos1.svg"
+  },
+  {
+    "name": "Incline Bench Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/incline-bench-press-pos1.svg"
+  },
+  {
+    "name": "Kettlebell Goblet Clean",
+    "category": "weights",
+    "url": "/icons/weights/animated/kettlebell-goblet-clean-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Front Raises",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-front-raises-pos1.svg"
+  },
+  {
+    "name": "Seated Cable Rows",
+    "category": "weights",
+    "url": "/icons/weights/animated/seated-cable-rows-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Step-Ups",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-step-ups-pos1.svg"
+  },
+  {
+    "name": "Arnold Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/arnold-press-pos1.svg"
+  },
+  {
+    "name": "Barbell Lunges",
+    "category": "weights",
+    "url": "/icons/weights/animated/barbell-lunges-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Pullover",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-pullover-pos1.svg"
+  },
+  {
+    "name": "Farmer's Carry",
+    "category": "weights",
+    "url": "/icons/weights/animated/farmer-s-carry-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Thrusters",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-thrusters-pos1.svg"
+  },
+  {
+    "name": "Weighted Plank",
+    "category": "weights",
+    "url": "/icons/weights/animated/weighted-plank-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Tricep Overhead Extension",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-tricep-overhead-extension-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Tricep Kickbacks",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-tricep-kickbacks-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Skull Crushers",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-skull-crushers-pos1.svg"
+  },
+  {
+    "name": "Close-Grip Dumbbell Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/close-grip-dumbbell-press-pos1.svg"
+  },
+  {
+    "name": "Cable Tricep Pushdown",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-tricep-pushdown-pos1.svg"
+  },
+  {
+    "name": "Cable Overhead Tricep Extension",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-overhead-tricep-extension-pos1.svg"
+  },
+  {
+    "name": "Hammer Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-curls-pos1.svg"
+  },
+  {
+    "name": "Concentration Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/concentration-curls-pos1.svg"
+  },
+  {
+    "name": "Incline Dumbbell Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/incline-dumbbell-curls-pos1.svg"
+  },
+  {
+    "name": "Preacher Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/preacher-curls-pos1.svg"
+  },
+  {
+    "name": "Reverse Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/reverse-curls-pos1.svg"
+  },
+  {
+    "name": "Cable Bicep Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-bicep-curls-pos1.svg"
+  },
+  {
+    "name": "Incline Dumbbell Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/incline-dumbbell-press-pos1.svg"
+  },
+  {
+    "name": "Decline Dumbbell Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/decline-dumbbell-press-pos1.svg"
+  },
+  {
+    "name": "Pec Deck / Machine Chest Fly",
+    "category": "weights",
+    "url": "/icons/weights/animated/pec-deck-machine-chest-fly-pos1.svg"
+  },
+  {
+    "name": "Cable Chest Fly",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-chest-fly-pos1.svg"
+  },
+  {
+    "name": "Close-Grip Bench Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/close-grip-bench-press-pos1.svg"
+  },
+  {
+    "name": "T-Bar Row",
+    "category": "weights",
+    "url": "/icons/weights/animated/t-bar-row-pos1.svg"
+  },
+  {
+    "name": "Chest-Supported Rows",
+    "category": "weights",
+    "url": "/icons/weights/animated/chest-supported-rows-pos1.svg"
+  },
+  {
+    "name": "Cable Lat Pulldown",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-lat-pulldown-pos1.svg"
+  },
+  {
+    "name": "Straight-Arm Cable Pulldown",
+    "category": "weights",
+    "url": "/icons/weights/animated/straight-arm-cable-pulldown-pos1.svg"
+  },
+  {
+    "name": "Upright Rows",
+    "category": "weights",
+    "url": "/icons/weights/animated/upright-rows-pos1.svg"
+  },
+  {
+    "name": "Face Pulls",
+    "category": "weights",
+    "url": "/icons/weights/animated/face-pulls-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Rear Delt Flys",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-rear-delt-flys-pos1.svg"
+  },
+  {
+    "name": "Machine Shoulder Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/machine-shoulder-press-pos1.svg"
+  },
+  {
+    "name": "Leg Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/leg-press-pos1.svg"
+  },
+  {
+    "name": "Leg Extensions",
+    "category": "weights",
+    "url": "/icons/weights/animated/leg-extensions-pos1.svg"
+  },
+  {
+    "name": "Leg Curls",
+    "category": "weights",
+    "url": "/icons/weights/animated/leg-curls-pos1.svg"
+  },
+  {
+    "name": "Calf Raises",
+    "category": "weights",
+    "url": "/icons/weights/animated/calf-raises-pos1.svg"
+  },
+  {
+    "name": "Hip Abduction Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/hip-abduction-machine-pos1.svg"
+  },
+  {
+    "name": "Hip Adduction Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/hip-adduction-machine-pos1.svg"
+  },
+  {
+    "name": "Bulgarian Split Squats",
+    "category": "weights",
+    "url": "/icons/weights/animated/bulgarian-split-squats-pos1.svg"
+  },
+  {
+    "name": "Sumo Deadlift",
+    "category": "weights",
+    "url": "/icons/weights/animated/sumo-deadlift-pos1.svg"
+  },
+  {
+    "name": "Dumbbell Side Bends",
+    "category": "weights",
+    "url": "/icons/weights/animated/dumbbell-side-bends-pos1.svg"
+  },
+  {
+    "name": "Cable Woodchops",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-woodchops-pos1.svg"
+  },
+  {
+    "name": "CFA MTS Triceps Extension",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-strength-mts-row-pos1.svg"
+  },
+  {
+    "name": "Hammer Strength MTS Pull",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-strength-mts-pull-pos1.svg"
+  },
+  {
+    "name": "Matrix Cable Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/matrix-cable-machine-pos1.svg"
+  },
+  {
+    "name": "Hammer Strength MTS Biceps Curl",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-strength-mts-biceps-curl-pos1.svg"
+  },
+  {
+    "name": "Hammer Strength MTS Shoulder Press",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-strength-mts-shoulder-press-pos1.svg"
+  },
+  {
+    "name": "Hammer Strength MTS Triceps Extension",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-strength-mts-triceps-extension-pos1.svg"
+  },
+  {
+    "name": "Hammer Strength MTS High Row",
+    "category": "weights",
+    "url": "/icons/weights/animated/hammer-strength-mts-high-row-pos1.svg"
+  },
+  {
+    "name": "Chest Press Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/chest-press-machine-pos1.svg"
+  },
+  {
+    "name": "Pectoral Fly Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/pectoral-fly-machine-pos1.svg"
+  },
+  {
+    "name": "Rear Delt Fly Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/rear-delt-fly-machine-pos1.svg"
+  },
+  {
+    "name": "Lat Pulldown Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/lat-pulldown-machine-pos1.svg"
+  },
+  {
+    "name": "Seated Row Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/seated-row-machine-pos1.svg"
+  },
+  {
+    "name": "Leg Extension Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/leg-extension-machine-pos1.svg"
+  },
+  {
+    "name": "Seated Leg Curl Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/seated-leg-curl-machine-pos1.svg"
+  },
+  {
+    "name": "Leg Press Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/leg-press-machine-pos1.svg"
+  },
+  {
+    "name": "Hip Adduction Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/hip-adduction-machine-pos1.svg"
+  },
+  {
+    "name": "Hip Abduction Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/hip-abduction-machine-pos1.svg"
+  },
+  {
+    "name": "Torso Rotation Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/torso-rotation-machine-pos1.svg"
+  },
+  {
+    "name": "Back Extension Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/back-extension-machine-pos1.svg"
+  },
+  {
+    "name": "Assisted Pull-up Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/assisted-pull-up-machine-pos1.svg"
+  },
+  {
+    "name": "Assisted Dip Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/assisted-dip-machine-pos1.svg"
+  },
+  {
+    "name": "Abdominal Crunch Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/abdominal-crunch-machine-pos1.svg"
+  },
+  {
+    "name": "Cable Triceps Pushdown",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-triceps-pushdown-pos1.svg"
+  },
+  {
+    "name": "Cable Biceps Curl",
+    "category": "weights",
+    "url": "/icons/weights/animated/cable-biceps-curl-pos1.svg"
+  },
+  {
+    "name": "Standing Calf Raise Machine",
+    "category": "weights",
+    "url": "/icons/weights/animated/standing-calf-raise-machine-pos1.svg"
+  },
+  {
+    "name": "Treadmill Run",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/treadmill-run-pos1.svg"
+  },
+  {
+    "name": "Brisk Walking",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/brisk-walking-pos1.svg"
+  },
+  {
+    "name": "Elliptical Training",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/elliptical-training-pos1.svg"
+  },
+  {
+    "name": "Jump Rope",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/jump-rope-pos1.svg"
+  },
+  {
+    "name": "Cycling",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/cycling-pos1.svg"
+  },
+  {
+    "name": "Rowing",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/rowing-pos1.svg"
+  },
+  {
+    "name": "Stair Climbing",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/stair-climbing-pos1.svg"
+  },
+  {
+    "name": "High Knees",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/high-knees-pos1.svg"
+  },
+  {
+    "name": "Burpees",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/burpees-pos1.svg"
+  },
+  {
+    "name": "Mountain Climbers",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/mountain-climbers-pos1.svg"
+  },
+  {
+    "name": "Sprint Intervals",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/sprint-intervals-pos1.svg"
+  },
+  {
+    "name": "Box Jumps",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/box-jumps-pos1.svg"
+  },
+  {
+    "name": "Skater Jumps",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/skater-jumps-pos1.svg"
+  },
+  {
+    "name": "Battle Ropes",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/battle-ropes-pos1.svg"
+  },
+  {
+    "name": "Shadow Boxing",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/shadow-boxing-pos1.svg"
+  },
+  {
+    "name": "Tuck Jumps",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/tuck-jumps-pos1.svg"
+  },
+  {
+    "name": "Lateral Shuffles",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/lateral-shuffles-pos1.svg"
+  },
+  {
+    "name": "Kickboxing Drills",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/kickboxing-drills-pos1.svg"
+  },
+  {
+    "name": "Fast Feet",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/fast-feet-pos1.svg"
+  },
+  {
+    "name": "Power Skips",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/power-skips-pos1.svg"
+  },
+  {
+    "name": "Medicine Ball Slams",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/medicine-ball-slams-pos1.svg"
+  },
+  {
+    "name": "Incline Treadmill Walk",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/incline-treadmill-walk-pos1.svg"
+  },
+  {
+    "name": "Side-to-Side Hops",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/side-to-side-hops-pos1.svg"
+  },
+  {
+    "name": "Rowing Sprints",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/rowing-sprints-pos1.svg"
+  },
+  {
+    "name": "Cycle Sprints",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/cycle-sprints-pos1.svg"
+  },
+  {
+    "name": "Jumping Lunges",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/jumping-lunges-pos1.svg"
+  },
+  {
+    "name": "Broad Jumps",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/broad-jumps-pos1.svg"
+  },
+  {
+    "name": "Squat Jumps",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/squat-jumps-pos1.svg"
+  },
+  {
+    "name": "Step Aerobics",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/step-aerobics-pos1.svg"
+  },
+  {
+    "name": "Zumba Dance",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/zumba-dance-pos1.svg"
+  },
+  {
+    "name": "Pushups",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/pushups-pos1.svg"
+  },
+  {
+    "name": "Plank Shoulder Taps",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/plank-shoulder-taps-pos1.svg"
+  },
+  {
+    "name": "Jumping Jacks",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/jumping-jacks-pos1.svg"
+  },
+  {
+    "name": "Bodyweight Squats",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/bodyweight-squats-pos1.svg"
+  },
+  {
+    "name": "Lunges",
+    "category": "weights",
+    "url": "/icons/weights/animated/lunges-pos1.svg"
+  },
+  {
+    "name": "Plank",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/plank-pos1.svg"
+  },
+  {
+    "name": "Bicycle Crunches",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/bicycle-crunches-pos1.svg"
+  },
+  {
+    "name": "Wall Sit",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/wall-sit-pos1.svg"
+  },
+  {
+    "name": "Tricep Dips (Chair)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/tricep-dips-chair-pos1.svg"
+  },
+  {
+    "name": "Side Plank (Left)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/side-plank-left-pos1.svg"
+  },
+  {
+    "name": "Side Plank (Right)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/side-plank-right-pos1.svg"
+  },
+  {
+    "name": "Russian Twists",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/russian-twists-pos1.svg"
+  },
+  {
+    "name": "Leg Raises",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/leg-raises-pos1.svg"
+  },
+  {
+    "name": "Superman Hold",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/superman-hold-pos1.svg"
+  },
+  {
+    "name": "Squat Jumps",
+    "category": "cardio",
+    "url": "/icons/cardio/animated/squat-jumps-pos1.svg"
+  },
+  {
+    "name": "Calf Raises",
+    "category": "weights",
+    "url": "/icons/weights/animated/calf-raises-pos1.svg"
+  },
+  {
+    "name": "Glute Bridges",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/glute-bridges-pos1.svg"
+  },
+  {
+    "name": "Donkey Kicks (Left)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/donkey-kicks-left-pos1.svg"
+  },
+  {
+    "name": "Donkey Kicks (Right)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/donkey-kicks-right-pos1.svg"
+  },
+  {
+    "name": "Fire Hydrants (Left)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/fire-hydrants-left-pos1.svg"
+  },
+  {
+    "name": "Fire Hydrants (Right)",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/fire-hydrants-right-pos1.svg"
+  },
+  {
+    "name": "Bird Dog",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/bird-dog-pos1.svg"
+  },
+  {
+    "name": "Sit-Ups",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/sit-ups-pos1.svg"
+  },
+  {
+    "name": "Inchworms",
+    "category": "no-equipment",
+    "url": "/icons/no-equipment/animated/inchworms-pos1.svg"
+  }
+]
