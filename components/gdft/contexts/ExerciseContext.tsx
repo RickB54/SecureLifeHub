@@ -65,7 +65,25 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             console.log("DB empty, seeding defaults...");
             seedDefaults();
           } else {
-            setExercises(unique);
+            // Hot-swap image URLs for default exercises so new assets show up instantly
+            const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+            const defaultMap = new Map(allDefaults.map(d => [d.name.toLowerCase().trim(), d]));
+            
+            const upToDate = unique.map(ex => {
+              const defaultEx = defaultMap.get(ex.name.toLowerCase().trim());
+              if (defaultEx) {
+                return { 
+                  ...ex, 
+                  startPositionUrl: defaultEx.startPositionUrl, 
+                  endPositionUrl: defaultEx.endPositionUrl,
+                  thumbnailUrl: defaultEx.thumbnailUrl,
+                  pictureUrl: defaultEx.pictureUrl
+                };
+              }
+              return ex;
+            });
+            
+            setExercises(upToDate);
             // Automatic deduplication removed to avoid breaking past workout history links
           }
       }
