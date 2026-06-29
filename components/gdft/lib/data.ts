@@ -711,8 +711,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Deadlifts",
-    startPositionUrl: "/icons/weights/animated/deadlifts-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/deadlifts-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/deadlifts-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/deadlifts-pos2.png",
     category: "Weights",
     muscleGroups: ["Back", "Legs", "Core"],
     equipment: "Barbell",
@@ -723,8 +723,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Squats",
-    startPositionUrl: "/icons/weights/animated/squats-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/squats-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/squats-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/squats-pos2.png",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Barbell",
@@ -735,8 +735,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Overhead Press",
-    startPositionUrl: "/icons/weights/animated/overhead-press-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/overhead-press-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/overhead-press-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/overhead-press-pos2.png",
     category: "Weights",
     muscleGroups: ["Shoulders", "Arms"],
     equipment: "Barbell",
@@ -1195,8 +1195,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Incline Dumbbell Press",
-    startPositionUrl: "/icons/weights/animated/incline-dumbbell-press-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/incline-dumbbell-press-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/incline-dumbbell-press-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/incline-dumbbell-press-pos2.png",
     category: "Weights",
     muscleGroups: ["Chest", "Shoulders", "Triceps"],
     equipment: "Dumbbells",
