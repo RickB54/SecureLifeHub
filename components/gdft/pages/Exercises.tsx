@@ -701,12 +701,20 @@ const Exercises = () => {
                     {catEx.map((ex) => (
                       <tr key={ex.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-2">
-                           {ex.thumbnailUrl || ex.pictureUrl ? (
+                           {ex.startPositionUrl ? (
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-white">
+                                 <img 
+                                   src={ex.startPositionUrl} 
+                                   alt="" 
+                                   className={`w-full h-full object-contain ${ex.startPositionUrl.endsWith('.svg') ? 'filter invert opacity-80' : ''}`} 
+                                 />
+                              </div>
+                           ) : ex.thumbnailUrl || ex.pictureUrl ? (
                               <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100">
-                                 <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" />
+                                 <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
                               </div>
                            ) : (
-                              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-300 font-bold">NO PIC</div>
+                              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold text-center">NO PIC</div>
                            )}
                         </td>
                         <td className="px-6 py-4">
