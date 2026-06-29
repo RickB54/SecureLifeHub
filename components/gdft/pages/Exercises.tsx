@@ -639,13 +639,15 @@ const Exercises = () => {
               display: none !important; 
             }
             
-            /* Allow the document to expand to multiple pages */
-            html, body, #root, #__next, .page-container, main {
-              height: auto !important;
-              min-height: auto !important;
+            /* Universal override to break all scroll-locks and fixed heights in NextJS layouts */
+            * {
               overflow: visible !important;
+              height: auto !important;
+              max-height: none !important;
+            }
+            
+            html, body {
               background: white !important;
-              position: static !important;
             }
             
             .print-section, .print-section * {
@@ -711,11 +713,11 @@ const Exercises = () => {
                       <tr key={ex.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-2">
                            {ex.startPositionUrl ? (
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-white">
+                              <div className={`w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center ${ex.startPositionUrl.endsWith('.svg') ? 'bg-gray-800' : 'bg-white'}`}>
                                  <img 
                                    src={ex.startPositionUrl} 
                                    alt="" 
-                                   className={`w-full h-full object-contain ${ex.startPositionUrl.endsWith('.svg') ? 'filter invert opacity-80' : ''}`} 
+                                   className="w-full h-full object-contain" 
                                  />
                               </div>
                            ) : ex.thumbnailUrl || ex.pictureUrl ? (
