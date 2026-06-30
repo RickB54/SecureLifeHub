@@ -688,7 +688,6 @@ export const weightExercises: Exercise[] = [
     id: generateId(),
     name: "Bench Press",
     startPositionUrl: "/icons/weights/realistic/bench-press-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/bench-press-pos2.png",
     category: "Weights",
     muscleGroups: ["Chest", "Arms"],
     equipment: "Barbell",
@@ -1463,18 +1462,7 @@ export const weightExercises: Exercise[] = [
     pictureUrl: "https://i.imgur.com/7Hptjkc.png",
     settings: { sets: 3, reps: 15, weight: 50 } as WeightSettings,
   },
-  {
-    id: generateId(),
-    name: "Bulgarian Split Squats",
-    startPositionUrl: "/icons/weights/animated/bulgarian-split-squats-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/bulgarian-split-squats-pos2.svg",
-    category: "Weights",
-    muscleGroups: ["Quadriceps", "Glutes", "Legs"],
-    equipment: "Dumbbells",
-    description: "Hold a dumbbell in each hand, place rear foot on a bench behind you. Lunge down until your front thigh is parallel to the floor, inhaling. Push through your front heel to stand, exhaling. Powerful unilateral leg exercise for quad and glute development.",
-    pictureUrl: "https://i.imgur.com/7Hptjkc.png",
-    settings: { sets: 3, reps: 10, weight: 30 } as WeightSettings,
-  },
+  
   {
     id: generateId(),
     name: "Sumo Deadlift",
@@ -2461,8 +2449,8 @@ export const noEquipmentExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Lunges",
-    startPositionUrl: "/icons/weights/animated/lunges-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/lunges-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/lunges-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/lunges-pos2.png",
     category: "No Equipment",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "None",
