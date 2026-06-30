@@ -26,6 +26,7 @@ interface ExerciseContextType {
   migrateImagesToSupabase: () => Promise<void>;
   refreshExercises: () => Promise<void>;
   purgeCustomExercisesOnly: () => Promise<void>;
+  deduplicateDatabase: () => Promise<void>;
 }
 
 
@@ -164,28 +165,37 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const deduplicateDatabase = async (allData: Exercise[]) => {
+  const deduplicateDatabase = async () => {
     if (!user) return;
-    
-    const seen = new Map<string, string>(); // name -> firstIdFound
-    const toDeleteIds: string[] = [];
-    
-    for (const ex of allData) {
-      const nameKey = ex.name.toLowerCase().trim();
-      if (seen.has(nameKey)) {
-        toDeleteIds.push(ex.id);
-      } else {
-        seen.set(nameKey, ex.id);
-      }
-    }
-    
-    if (toDeleteIds.length > 0) {
-      console.log(`Cleaning up ${toDeleteIds.length} duplicates from database...`);
-      // Delete in parallel
-      await Promise.all(toDeleteIds.map(id => api.exercises.delete(id)));
-      // Refresh local state to match DB
-      const freshData = await api.exercises.list();
-      setExercises(freshData);
+    try {
+        setLoading(true);
+        const allData = await api.exercises.list();
+        const seen = new Map<string, string>(); // name -> firstIdFound
+        const toDeleteIds: string[] = [];
+        
+        for (const ex of allData) {
+          const nameKey = ex.name.toLowerCase().trim();
+          if (seen.has(nameKey)) {
+            toDeleteIds.push(ex.id);
+          } else {
+            seen.set(nameKey, ex.id);
+          }
+        }
+        
+        if (toDeleteIds.length > 0) {
+          console.log(`Cleaning up ${toDeleteIds.length} duplicates from database...`);
+          await Promise.all(toDeleteIds.map(id => api.exercises.delete(id)));
+          const freshData = await api.exercises.list();
+          setExercises(freshData);
+          toast.success(`Removed ${toDeleteIds.length} duplicate exercises!`);
+        } else {
+          toast.info("No duplicates found.");
+        }
+    } catch (e) {
+        console.error(e);
+        toast.error("Failed to clean duplicates");
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -343,17 +353,8 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (byId) return byId;
 
     // 2. Fallback: Lookup by Name if ID fails (heals broken history links caused by deduplication)
-    // This is useful if an exercise was deleted/re-seeded but its name is the same.
-    // Use the ID to try to find metadata if we had it, but mostly we just want the current version of that name.
-    // Note: This relies on the workout history having the name, but usually it only has the ID.
-    // However, if we are mapping from a list of 'unique' exercises, we should check if the ID
-    // matches any of the ones we filtered out by name? No, we don't have them in state.
-    
-    // Actually, if we don't have the ID, we can't easily find the name unless we store a map.
-    // But we can check if any exercise in the current list has an ID that starts with the same characters? No.
-    
-    // For now, return undefined if ID not found, but we've stopped the DELETION from DB,
-    // so new breakages won't happen.
+    // We cannot efficiently do this here unless we know the name associated with the old ID.
+    // However, if the caller needs it by ID, they are stuck.
     return undefined;
   }, [exercises]);
 
@@ -513,6 +514,7 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         migrateImagesToSupabase,
         refreshExercises,
         purgeCustomExercisesOnly,
+        deduplicateDatabase,
       }}
     >
       {children}

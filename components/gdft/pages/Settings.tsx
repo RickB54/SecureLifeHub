@@ -72,7 +72,7 @@ const Settings = () => {
     setVoiceLoggingEnabled
   } = useSettings();
   const navigate = useNavigate();
-  const { exercises, exportToCSV, importFromCSV, deleteAllExercises, reinstallAllExercises, migrateImagesToSupabase, refreshExercises, purgeCustomExercisesOnly } = useExercise();
+  const { exercises, exportToCSV, importFromCSV, deleteAllExercises, reinstallAllExercises, migrateImagesToSupabase, refreshExercises, purgeCustomExercisesOnly, deduplicateDatabase } = useExercise();
   const { migrateLocalData, refreshWorkoutData, deleteStatsData, purgeWorkoutsOnly, purgeAnalyticsOnly, purgePersonalStatsOnly, purgeCustomPlansOnly } = useWorkout();
   const [isLoading, setIsLoading] = useState(false);
   const [helpPageIndex, setHelpPageIndex] = useState<number | null>(null);
@@ -1554,6 +1554,19 @@ const Settings = () => {
                 disabled={isLoading}
               >
                 <Dumbbell className="mr-2 h-3.5 w-3.5" /> Purge Custom Exercises
+              </Button>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                className="w-full h-10 border-yellow-500/10 bg-yellow-500/5 hover:bg-yellow-500/20 text-yellow-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                onClick={() => {
+                  if (confirm("Remove all duplicate exercises from your library? (Keeps only one of each)")) deduplicateDatabase();
+                }}
+                disabled={isLoading}
+              >
+                <Sparkles className="mr-2 h-3.5 w-3.5" /> Clean Duplicate Exercises
               </Button>
             </div>
 
