@@ -1121,39 +1121,41 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">1</div>
               <div>
                 <p className="font-bold text-white mb-1">Create or Edit a Gym</p>
-                <p className="text-sm text-gray-400">On the very first screen, click "Add New Gym" or click "Edit" on an existing one. Give it a name and type.</p>
+                <p className="text-sm text-gray-400">On the first screen, click "Add New Gym" or click "Edit" on an existing one to modify its details. You can easily delete a gym from this screen as well.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">2</div>
               <div>
-                <p className="font-bold text-white mb-1">Map Your Zones</p>
-                <p className="text-sm text-gray-400">Add sections (e.g. "Level 1", "Cardio Wing"). These act as your filters later in the main app.</p>
+                <p className="font-bold text-white mb-1">Map Your Zones (Optional)</p>
+                <p className="text-sm text-gray-400">Create areas like "Main Area" or "Cardio Wing". These become filtering chips later. You can skip this if you just want to track workouts to a general location.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">3</div>
               <div>
-                <p className="font-bold text-white mb-1">Add Equipment & Link Exercises</p>
+                <p className="font-bold text-white mb-1">Add Equipment & Bulk Import</p>
                 <p className="text-sm text-gray-400">
-                  This is how you get exercises to show up in "My Gym". Add a machine slot, then <strong>click the Search Icon 🔍</strong> next to the Type dropdown. Search for an exercise in the library (like Bench Press) and link it.
+                  On the Equipment tab, click <strong>Bulk Import from Library</strong> to open a multi-select list of all your exercises. Check off as many exercises as you want to instantly map them to your active zone. You can also manually search for single exercises using the 🔍 icon.
                 </p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-blue-500 border border-blue-400 flex items-center justify-center text-white font-black">!</div>
               <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
-                <p className="font-bold text-blue-400 mb-1">Important: Save to Sync!</p>
+                <p className="font-bold text-blue-400 mb-1">Important: Save Your Gym!</p>
                 <p className="text-sm text-gray-300">
-                  When you are done linking exercises, you <strong>must click "Create Custom Plan"</strong> at the bottom of the Equipment tab. This automatically copies all your linked equipment directly into your Exercise Library, assigned to your Custom Gym and specific Zones!
+                  When you are finished adding equipment, click the <strong>Finish & Save Gym</strong> button at the bottom. This securely saves your setup and ensures your exercise counts accurately reflect what you added!
                 </p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">4</div>
               <div>
-                <p className="font-bold text-white mb-1">Filtering Your Library</p>
-                <p className="text-sm text-gray-400">Exit the Gym Builder and go to the <strong>Exercises</strong> tab. Open the "My Gyms" drawer. You will see bright yellow chips for the zones you just mapped. Turn them on to see the exercises you just synced!</p>
+                <p className="font-bold text-white mb-1">How the Gym Filter Works</p>
+                <p className="text-sm text-gray-400">
+                  On the Exercises page, selecting a gym from the dropdown <strong>does not hide your exercises</strong>—it simply tags your workout to that location for your stats history. You always have access to your full library. <strong>However</strong>, if you explicitly click a Zone chip (e.g. "CF-A"), the library will strictly filter to show only exercises assigned to that zone. Un-click the zone to see everything again!
+                </p>
               </div>
             </div>
           </div>
