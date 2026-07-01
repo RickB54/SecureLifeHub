@@ -61,7 +61,7 @@ type WizardStep = 'intro' | 'gym-info' | 'sections' | 'equipment' | 'builder' | 
 
 const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const { exercises, addExercise } = useExercise();
+  const { exercises, refreshExercises } = useExercise();
   const { saveWorkoutTemplate } = useWorkout();
   
   const [step, setStep] = useState<WizardStep>('intro');
@@ -258,18 +258,76 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
         sections: gymSections
       };
 
-      if (selectedGym) {
-        await api.gyms.update(selectedGym.id, gymData);
+      let activeGymId = selectedGym?.id;
+      if (activeGymId) {
+        await api.gyms.update(activeGymId, gymData);
         toast.success("Gym updated!");
       } else {
-        await api.gyms.create(gymData, user!.id);
+        const createdGym = await api.gyms.create(gymData, user!.id);
+        activeGymId = createdGym.id;
         toast.success("Gym created!");
       }
-      loadGyms();
+      
+      // Auto-sync mapped equipment to Exercise Library
+      let newExercisesAdded = 0;
+      for (const section of gymSections) {
+        for (const eq of section.equipment) {
+          if (!eq.name.trim()) continue;
+          
+          const existing = exercises.find(ex => ex.gymId === activeGymId && ex.name === eq.name);
+          if (!existing) {
+            const newEx: Omit<Exercise, 'id'> = {
+              name: eq.name,
+              category: eq.type === "Weights" ? "Weights" : eq.type === "Cardio" ? "Cardio" : "No Equipment",
+              muscleGroups: ["Full Body"],
+              equipment: "Machine",
+              thumbnailUrl: eq.photoUrl,
+              pictureUrl: eq.photoUrl,
+              gymId: activeGymId,
+              gymSectionId: section.id,
+              settings: { sets: 3, reps: 10, weight: 0 } as any
+            };
+            await api.exercises.create(newEx as any, user!.id);
+            newExercisesAdded++;
+          } else if (existing.gymSectionId !== section.id || existing.thumbnailUrl !== eq.photoUrl) {
+            await api.exercises.update(existing.id, {
+                gymSectionId: section.id,
+                thumbnailUrl: eq.photoUrl,
+                pictureUrl: eq.photoUrl
+            });
+          }
+        }
+      }
+      
+      if (newExercisesAdded > 0) {
+        toast.success(`Synced ${newExercisesAdded} mapped machines to your library!`);
+      }
+      
+      await loadGyms();
+      await refreshExercises();
       setStep('equipment');
     } catch (error: any) {
       console.error("Save failed", error);
       toast.error(`Save failed: ${error.message || 'Unknown error'}. Check if the 'gyms' table exists in Supabase.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteGym = async (gymId: string) => {
+    if (!window.confirm("Are you sure you want to delete this gym mapping? This cannot be undone.")) return;
+    try {
+      setLoading(true);
+      await api.gyms.delete(gymId);
+      toast.success("Gym deleted");
+      await loadGyms();
+      if (selectedGym?.id === gymId) {
+        setSelectedGym(null);
+        setStep('intro');
+      }
+    } catch (error) {
+      console.error("Failed to delete gym", error);
+      toast.error("Failed to delete gym");
     } finally {
       setLoading(false);
     }
@@ -443,10 +501,14 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <Button size="sm" variant="ghost" className="h-8 text-xs text-gray-400" onClick={(e) => {
+                                  <Button size="sm" variant="ghost" className="h-8 text-xs text-gray-400 hover:text-blue-400" onClick={(e) => {
                                     e.stopPropagation();
                                     handleEditGym(gym);
                                   }}>Edit</Button>
+                                  <Button size="sm" variant="ghost" className="h-8 text-xs text-rose-400/50 hover:text-rose-400" onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteGym(gym.id);
+                                  }}>Delete</Button>
                                   <ChevronRight className={`h-5 w-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-90 text-blue-400' : ''}`} />
                                 </div>
                               </div>
@@ -958,14 +1020,14 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
 
       {/* Help Modal */}
       <Dialog open={showHelp} onOpenChange={setShowHelp}>
-        <DialogContent className="max-w-md bg-gym-darker border-white/10 rounded-3xl p-8">
+        <DialogContent className="max-w-md bg-gym-darker border-white/10 rounded-3xl p-8 max-h-[85vh] overflow-y-auto custom-scrollbar">
           <DialogHeader>
             <div className="h-16 w-16 rounded-3xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30 mb-6">
               <HelpCircle className="h-8 w-8 text-blue-400" />
             </div>
             <DialogTitle className="text-3xl font-black text-white leading-tight">Gym Builder Guide</DialogTitle>
             <CardDescription className="text-lg font-medium text-gray-400 pt-2">
-              Learn how to map your sanctuary.
+              Learn how to map your sanctuary and add exercises.
             </CardDescription>
           </DialogHeader>
 
@@ -973,29 +1035,40 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">1</div>
               <div>
-                <p className="font-bold text-white mb-1">Enter Gym Details</p>
-                <p className="text-sm text-gray-400">Choose between an Official Gym or a Home Setup. Add names and locations to manage multiple training grounds.</p>
+                <p className="font-bold text-white mb-1">Create or Edit a Gym</p>
+                <p className="text-sm text-gray-400">On the very first screen, click "Add New Gym" or click "Edit" on an existing one. Give it a name and type.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">2</div>
               <div>
-                <p className="font-bold text-white mb-1">Map Zones & Sections</p>
-                <p className="text-sm text-gray-400">Organize by room or floor. Use names like "Level 2" or "Cardio Wing" to filter later.</p>
+                <p className="font-bold text-white mb-1">Map Your Zones</p>
+                <p className="text-sm text-gray-400">Add sections (e.g. "Level 1", "Cardio Wing"). These act as your filters later in the main app.</p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">3</div>
               <div>
-                <p className="font-bold text-white mb-1">Catalog Equipment & Pics</p>
-                <p className="text-sm text-gray-400">Use the <Search className="inline h-3 w-3 mx-1"/> icon to link to our library, or snap your own pics of the machines. You can even link a machine and then replace its picture with your own!</p>
+                <p className="font-bold text-white mb-1">Add Equipment & Link Exercises</p>
+                <p className="text-sm text-gray-400">
+                  This is how you get exercises to show up in "My Gym". Add a machine slot, then <strong>click the Search Icon 🔍</strong> next to the Type dropdown. Search for an exercise in the library (like Bench Press) and link it.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-blue-500 border border-blue-400 flex items-center justify-center text-white font-black">!</div>
+              <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
+                <p className="font-bold text-blue-400 mb-1">Important: Save to Sync!</p>
+                <p className="text-sm text-gray-300">
+                  When you are done linking exercises, you <strong>must click "Create Custom Plan"</strong> at the bottom of the Equipment tab. This automatically copies all your linked equipment directly into your Exercise Library, assigned to your Custom Gym and specific Zones!
+                </p>
               </div>
             </div>
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">4</div>
               <div>
-                <p className="font-bold text-white mb-1">Build Your Routine</p>
-                <p className="text-sm text-gray-400 italic">Drag and drop mapped equipment into a sequence. We'll auto-create custom exercises for you based on your mapped machines.</p>
+                <p className="font-bold text-white mb-1">Filtering Your Library</p>
+                <p className="text-sm text-gray-400">Exit the Gym Builder and go to the <strong>Exercises</strong> tab. Open the "My Gyms" drawer. You will see bright yellow chips for the zones you just mapped. Turn them on to see the exercises you just synced!</p>
               </div>
             </div>
           </div>
