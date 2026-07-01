@@ -89,6 +89,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   const [linkingEquipmentId, setLinkingEquipmentId] = useState<string | null>(null);
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [searchCategoryFilter, setSearchCategoryFilter] = useState("All");
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImage, setUploadingImage] = useState<{sectionId: string, equipmentId: string} | null>(null);
@@ -114,6 +115,38 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
       setLinkingEquipmentId(null);
       toast.success(`Linked to ${exercise.name}`);
     }
+  };
+
+  const handleBulkImport = () => {
+    if (!linkingSectionId) return;
+    
+    if (filteredExistingExercises.length === 0) {
+      toast.error("No exercises found for this search.");
+      return;
+    }
+
+    setGymSections(gymSections.map(s => {
+      if (s.id === linkingSectionId) {
+        const newEquipment = filteredExistingExercises.map(ex => ({
+          id: uuidv4(),
+          name: ex.name,
+          type: (ex.category === "Weights" || ex.category === "Cardio" || ex.category === "Slide Board" || ex.category === "No Equipment") ? ex.category : 'Weights' as any,
+          description: ex.description || "",
+          photoUrl: ex.thumbnailUrl || ex.pictureUrl
+        }));
+        
+        return {
+          ...s,
+          equipment: [...s.equipment, ...newEquipment]
+        };
+      }
+      return s;
+    }));
+    
+    toast.success(`Imported ${filteredExistingExercises.length} machines!`);
+    setBulkImportOpen(false);
+    setExerciseSearchQuery("");
+    setLinkingSectionId(null);
   };
 
   useEffect(() => {
@@ -828,14 +861,27 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                         </Card>
                       ))}
                       
-                      <Button 
-                        variant="outline" 
-                        className="h-[128px] rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
-                        onClick={() => handleAddEquipment(section.id)}
-                      >
-                        <Plus className="h-6 w-6" />
-                        Add Machine to {section.name}
-                      </Button>
+                      <div className="grid grid-cols-2 gap-4 h-[128px]">
+                        <Button 
+                          variant="outline" 
+                          className="h-full rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
+                          onClick={() => handleAddEquipment(section.id)}
+                        >
+                          <Plus className="h-6 w-6" />
+                          Add Single Machine
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
+                          onClick={() => {
+                            setLinkingSectionId(section.id);
+                            setBulkImportOpen(true);
+                          }}
+                        >
+                          <Search className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                          Bulk Import from Library
+                        </Button>
+                      </div>
                     </div>
                   </TabsContent>
                 ))}
@@ -1079,6 +1125,69 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
           >
             Got it!
           </Button>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Import Dialog */}
+      <Dialog open={bulkImportOpen} onOpenChange={setBulkImportOpen}>
+        <DialogContent className="max-w-md bg-gym-darker border-white/10 rounded-3xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white mb-1">Bulk Import Exercises</DialogTitle>
+            <p className="text-sm text-gray-400 mb-3">Search for a prefix (e.g. "CF-A") to instantly import all matching exercises into this zone.</p>
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input
+                  placeholder="Search prefix (e.g. CF-A)"
+                  className="pl-9 bg-white/5 border-white/10 h-11"
+                  value={exerciseSearchQuery}
+                  onChange={(e) => setExerciseSearchQuery(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {exerciseSearchQuery.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 italic text-sm">Type a prefix to find exercises...</p>
+              </div>
+            ) : filteredExistingExercises.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500 italic text-sm">No exercises match "{exerciseSearchQuery}".</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">
+                  {filteredExistingExercises.length} Exercises Ready to Import
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {filteredExistingExercises.slice(0, 8).map(ex => (
+                    <div key={ex.id} className="text-xs truncate bg-white/5 px-2 py-1.5 rounded-md text-gray-300">
+                      {ex.name}
+                    </div>
+                  ))}
+                  {filteredExistingExercises.length > 8 && (
+                    <div className="text-xs text-gray-500 italic px-2 py-1.5">
+                      + {filteredExistingExercises.length - 8} more...
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <DialogFooter className="mt-6 border-t border-white/10 pt-4 flex gap-3">
+            <Button variant="ghost" onClick={() => setBulkImportOpen(false)} className="flex-1">Cancel</Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 flex-1 font-bold shadow-lg shadow-blue-500/20" 
+              onClick={handleBulkImport}
+              disabled={filteredExistingExercises.length === 0 || exerciseSearchQuery.length === 0}
+            >
+              Import {filteredExistingExercises.length > 0 ? filteredExistingExercises.length : ''} Exercises
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
