@@ -47,7 +47,7 @@ interface WorkoutContextType {
   healthMetrics: HealthMetric[];
   scheduledWorkouts: ScheduledWorkout[];
   achievedPrs: PR[];
-  startWorkout: (type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[], workoutName?: string) => void;
+  startWorkout: (type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[], workoutName?: string, gymId?: string) => void;
   startSavedWorkout: (templateId: string) => void;
   endWorkout: () => void;
   cancelWorkout: () => void;
@@ -484,7 +484,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
            (s.duration && s.duration > 0);
   };
 
-  const startWorkout = useCallback((type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[], workoutName?: string) => {
+  const startWorkout = useCallback((type: string, exerciseIds: string[], planOverrides?: WorkoutPlanOverride[], workoutName?: string, gymId?: string) => {
     if (currentWorkoutRef.current) {
       const isGhostWorkout = (currentWorkoutRef.current.exercises?.length || 0) === 0;
       
@@ -516,6 +516,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
       startTime: Date.now(),
       type: type as ExerciseCategory | "Custom",
       workoutPlanOverrides: planOverrides,
+      gymId: gymId || undefined,
     };
 
     // Prefill one set for EVERY exercise suggested by user

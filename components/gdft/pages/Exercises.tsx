@@ -168,7 +168,7 @@ const Exercises = () => {
       // Navigate back to workout page - the navigation will be handled in the workout context
       navigate('/workout');
     } else {
-      startWorkout("Custom", [exerciseId]);
+      startWorkout("Custom", [exerciseId], undefined, undefined, gymFilter.gymId || undefined);
       navigate("/workout");
     }
   };
@@ -525,7 +525,7 @@ const Exercises = () => {
           <Button 
             onClick={() => {
               if (selectedExerciseIds.length > 0) {
-                startWorkout("Custom", selectedExerciseIds);
+                startWorkout("Custom", selectedExerciseIds, undefined, undefined, gymFilter.gymId || undefined);
                 navigate("/workout");
               }
             }}

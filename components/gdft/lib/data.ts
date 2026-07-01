@@ -144,6 +144,7 @@ export interface Workout {
   completed?: boolean;
   isArchived?: boolean;
   cancelled?: boolean;
+  gymId?: string | null;
 }
 
 export interface SavedWorkoutTemplate {
@@ -2685,3 +2686,4 @@ export const noEquipmentExercises: Exercise[] = [
     settings: { time: 60, sets: 3, reps: 10 } as NoEquipmentSettings,
   }
 ];
+
