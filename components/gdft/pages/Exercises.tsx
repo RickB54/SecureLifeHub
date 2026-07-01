@@ -12,7 +12,7 @@ import { Button } from "@/components/gdft/components/ui/button";
 import ExercisesHelpPopup from "@/components/gdft/components/ui/ExercisesHelpPopup";
 import { ExerciseProgressModal } from "@/components/gdft/components/ui/ExerciseProgressModal";
 import { ExerciseVisualFilter } from "@/components/gdft/components/ui/ExerciseVisualFilter";
-import { GymFilterPanel } from "@/components/gdft/components/ui/GymFilterPanel";
+import { GymFilterPanel, GymFilterState } from "@/components/gdft/components/ui/GymFilterPanel";
 import { AnimatedExerciseIcon } from '@/components/gdft/components/ui/AnimatedExerciseIcon';
 import { toast } from "sonner";
 
@@ -58,8 +58,7 @@ const Exercises = () => {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
   const [viewProgressExercise, setViewProgressExercise] = useState<Exercise | null>(null);
-  const [selectedGymId, setSelectedGymId] = useState<string | null>(null);
-  const [selectedGymSectionId, setSelectedGymSectionId] = useState<string | null>(null);
+  const [gymFilter, setGymFilter] = useState<GymFilterState>({ gymId: null, sectionIds: [] });
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   
   const categories: ("All" | "Favorites" | RelaxedExerciseCategory)[] = ["All", "Favorites", "Weights", "Cardio", "Slide Board", "No Equipment"];
@@ -90,14 +89,13 @@ const Exercises = () => {
       ).filter(ex => {
         // Must be in the exercisesToShow set
         if (!exercisesToShow.some(e => e.id === ex.id)) return false;
-        // Gym section filter:
-        // Always keep already-selected exercises visible so switching zones
-        // doesn't erase the user's picks from a previous zone.
-        if (selectedGymId) {
+        // Gym filter: multi-section support
+        if (gymFilter.gymId) {
           const isAlreadySelected = selectedExerciseIds.includes(ex.id);
-          if (isAlreadySelected) return true;           // ← keep it visible
-          if (ex.gymId !== selectedGymId) return false;
-          if (selectedGymSectionId && ex.gymSectionId !== selectedGymSectionId) return false;
+          if (isAlreadySelected) return true;
+          if (ex.gymId !== gymFilter.gymId) return false;
+          // If specific sections are selected, only show exercises from those sections
+          if (gymFilter.sectionIds.length > 0 && !gymFilter.sectionIds.includes(ex.gymSectionId ?? "")) return false;
         }
         return true;
       });
@@ -150,7 +148,7 @@ const Exercises = () => {
       console.error("Error filtering exercises:", error);
       setFilteredExercises([]);
     }
-  }, [exercises, equipmentFilter, categoryFilter, muscleGroupFilter, searchQuery, filterExercises, favoriteExercises, selectedGymId, selectedGymSectionId, selectedExerciseIds]);
+  }, [exercises, equipmentFilter, categoryFilter, muscleGroupFilter, searchQuery, filterExercises, favoriteExercises, gymFilter, selectedExerciseIds]);
 
   const handleStartExercise = (exerciseId: string) => {
     if (addToWorkout && currentWorkout) {
@@ -477,12 +475,8 @@ const Exercises = () => {
       </div>
       
       <GymFilterPanel
-        selectedGymId={selectedGymId}
-        selectedSectionId={selectedGymSectionId}
-        onGymSelect={(gymId, sectionId) => {
-          setSelectedGymId(gymId);
-          setSelectedGymSectionId(sectionId);
-        }}
+        filterState={gymFilter}
+        onFilterChange={setGymFilter}
       />
 
       <ExerciseVisualFilter

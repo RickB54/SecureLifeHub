@@ -1012,59 +1012,75 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
       <Dialog open={searchInExistingOpen} onOpenChange={setSearchInExistingOpen}>
         <DialogContent className="max-w-md bg-gym-darker border-white/10 rounded-3xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white mb-2">Link Existing Exercise</DialogTitle>
-            <div className="space-y-4">
+            <DialogTitle className="text-xl font-bold text-white mb-1">Search Your Exercise Library</DialogTitle>
+            <p className="text-sm text-gray-400 mb-3">Find an existing exercise to link to this machine slot.</p>
+            <div className="space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                <Input 
-                  placeholder="Type to search..." 
-                  className="pl-9 bg-white/5 border-white/10"
+                <Input
+                  placeholder="Search by name (e.g. CFA, CFB, bench...)"
+                  className="pl-9 bg-white/5 border-white/10 h-11"
                   value={exerciseSearchQuery}
                   onChange={(e) => setExerciseSearchQuery(e.target.value)}
                   autoFocus
                 />
               </div>
-              <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                {["All", "Weights", "Cardio", "No Equipment"].map(cat => (
-                  <Badge 
+              <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                {["All", "Weights", "Cardio", "Slide Board", "No Equipment"].map(cat => (
+                  <button
                     key={cat}
-                    variant={searchCategoryFilter === cat ? "default" : "outline"}
-                    className="cursor-pointer whitespace-nowrap"
+                    className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                      searchCategoryFilter === cat
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white/5 text-gray-400 border-border hover:border-blue-500/50 hover:text-white"
+                    }`}
                     onClick={() => setSearchCategoryFilter(cat)}
                   >
                     {cat}
-                  </Badge>
+                  </button>
                 ))}
               </div>
             </div>
           </DialogHeader>
 
-          <div className="mt-4 max-h-[400px] overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+          <div className="mt-4 max-h-[400px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
             {filteredExistingExercises.length === 0 ? (
-              <p className="text-center py-8 text-gray-500 italic">No exercises found.</p>
+              <div className="text-center py-10 space-y-2">
+                <Dumbbell className="h-10 w-10 text-gray-700 mx-auto" />
+                <p className="text-gray-500 italic text-sm">No exercises found.</p>
+              </div>
             ) : (
-              filteredExistingExercises.slice(0, 20).map(ex => (
-                <div 
-                  key={ex.id}
-                  className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:border-blue-500/30 cursor-pointer transition-all flex items-center gap-3"
-                  onClick={() => handleSelectExistingExercise(ex)}
-                >
-                  <div className="h-10 w-10 rounded-lg bg-gym-darker overflow-hidden shrink-0 border border-white/5">
-                    {(ex.thumbnailUrl || ex.pictureUrl) ? (
-                      <img src={ex.thumbnailUrl || ex.pictureUrl} alt={ex.name} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center">
-                        <Dumbbell className="h-4 w-4 text-gray-700" />
-                      </div>
-                    )}
+              <>
+                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest mb-2">
+                  {filteredExistingExercises.length} exercise{filteredExistingExercises.length !== 1 ? "s" : ""} found — tap to link
+                </p>
+                {filteredExistingExercises.map(ex => (
+                  <div
+                    key={ex.id}
+                    className="p-3 rounded-xl bg-white/5 border border-white/10 hover:bg-blue-500/10 hover:border-blue-500/30 cursor-pointer transition-all flex items-center gap-3 group"
+                    onClick={() => handleSelectExistingExercise(ex)}
+                  >
+                    <div className="h-12 w-12 rounded-lg bg-gym-darker overflow-hidden shrink-0 border border-white/5">
+                      {(ex.startPositionUrl || ex.thumbnailUrl || ex.pictureUrl) ? (
+                        <img
+                          src={ex.startPositionUrl || ex.thumbnailUrl || ex.pictureUrl}
+                          alt={ex.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Dumbbell className="h-4 w-4 text-gray-700" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-white text-sm truncate">{ex.name}</p>
+                      <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider">{ex.category} · {ex.equipment || "—"}</p>
+                    </div>
+                    <Plus className="h-5 w-5 text-blue-400 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-white text-sm truncate">{ex.name}</p>
-                    <p className="text-[10px] text-gray-500 uppercase font-black">{ex.category}</p>
-                  </div>
-                  <Plus className="h-4 w-4 text-blue-400 opacity-0 group-hover:opacity-100" />
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         </DialogContent>
