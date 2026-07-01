@@ -1169,13 +1169,28 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                   autoFocus
                 />
               </div>
+              <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
+                {["All", "Weights", "Cardio", "Slide Board", "No Equipment"].map(cat => (
+                  <button
+                    key={cat}
+                    className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                      searchCategoryFilter === cat
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white/5 text-gray-400 border-border hover:border-blue-500/50 hover:text-white"
+                    }`}
+                    onClick={() => setSearchCategoryFilter(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
             </div>
           </DialogHeader>
 
           <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {exerciseSearchQuery.length === 0 ? (
+            {exerciseSearchQuery.length === 0 && searchCategoryFilter === "All" ? (
               <div className="text-center py-8">
-                <p className="text-gray-500 italic text-sm">Type a prefix to find exercises...</p>
+                <p className="text-gray-500 italic text-sm">Type a prefix or select a category...</p>
               </div>
             ) : filteredExistingExercises.length === 0 ? (
               <div className="text-center py-8">
@@ -1207,7 +1222,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
             <Button 
               className="bg-blue-600 hover:bg-blue-700 flex-1 font-bold shadow-lg shadow-blue-500/20" 
               onClick={handleBulkImport}
-              disabled={filteredExistingExercises.length === 0 || exerciseSearchQuery.length === 0}
+              disabled={filteredExistingExercises.length === 0 || (exerciseSearchQuery.length === 0 && searchCategoryFilter === "All")}
             >
               Import {filteredExistingExercises.length > 0 ? filteredExistingExercises.length : ''} Exercises
             </Button>
