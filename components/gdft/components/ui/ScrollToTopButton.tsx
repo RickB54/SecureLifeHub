@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/gdft/components/ui/button";
+import { useSettings } from "@/components/gdft/contexts/SettingsContext";
 
 const ScrollToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const { showScrollToTopButton } = useSettings();
+  
+  // Dragging state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const buttonPos = useRef({ x: 0, y: 0 });
+  const hasMoved = useRef(false);
 
   // Show button when page is scrolled down
   const toggleVisibility = () => {
@@ -23,9 +32,42 @@ const ScrollToTopButton = () => {
     setIsVisible(false);
   };
 
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    hasMoved.current = false;
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    buttonPos.current = { ...position };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    hasMoved.current = true;
+    const dx = e.clientX - dragStartPos.current.x;
+    const dy = e.clientY - dragStartPos.current.y;
+    setPosition({
+      x: buttonPos.current.x + dx,
+      y: buttonPos.current.y + dy
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  const handlePointerCancel = () => {
+    setIsDragging(false);
+  };
+
   // Set the top cordinate to 0
   // make scrolling smooth
-  const scrollToTop = () => {
+  const scrollToTop = (e: React.MouseEvent) => {
+    if (hasMoved.current) {
+        e.preventDefault();
+        return; // Don't scroll if we just dragged it
+    }
     // Scroll window
     window.scrollTo({
       top: 0,
@@ -59,18 +101,25 @@ const ScrollToTopButton = () => {
     };
   }, []);
 
-  if (!isVisible) {
+  if (!isVisible || !showScrollToTopButton) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-24 right-4 z-[100]">
+    <div 
+      className="fixed bottom-24 right-4 z-[100]"
+      style={{ transform: `translate(${position.x}px, ${position.y}px)`, touchAction: 'none' }}
+    >
       <Button
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
         onClick={scrollToTop}
-        className="rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center p-0 transition-all animate-in fade-in slide-in-from-bottom-5"
+        className="rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center p-0 transition-opacity animate-in fade-in cursor-grab active:cursor-grabbing"
         aria-label="Scroll to top"
       >
-        <ArrowUp className="h-6 w-6" />
+        <ArrowUp className="h-6 w-6 pointer-events-none" />
       </Button>
     </div>
   );

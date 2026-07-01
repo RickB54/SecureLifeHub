@@ -642,8 +642,13 @@ const Workout = () => {
                     exercise ? (
                       <DropdownMenuItem key={exercise.id} disabled className="flex items-center gap-3">
                         {exercise.startPositionUrl ? (
-                           <div className="w-10 h-10 flex-shrink-0">
-                             <img src={exercise.startPositionUrl} alt={exercise.name} className="w-full h-full object-contain rounded-md" />
+                           <div className="w-10 h-10 flex-shrink-0 overflow-hidden rounded-md bg-gym-dark">
+                             <AnimatedExerciseIcon 
+                                startPositionUrl={exercise.startPositionUrl}
+                                endPositionUrl={exercise.endPositionUrl}
+                                alt={exercise.name}
+                                className="w-full h-full object-contain rounded-md"
+                             />
                            </div>
                         ) : exercise.thumbnailUrl || exercise.pictureUrl ? (
                           <img 
@@ -1446,8 +1451,13 @@ const Workout = () => {
                   onClick={() => handleAddExercise(exercise.id)}
                 >
                   {exercise.startPositionUrl ? (
-                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
-                      <img src={exercise.startPositionUrl} alt={exercise.name} className="w-full h-full object-contain bg-gym-dark" />
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0] bg-gym-dark">
+                      <AnimatedExerciseIcon 
+                         startPositionUrl={exercise.startPositionUrl}
+                         endPositionUrl={exercise.endPositionUrl}
+                         alt={exercise.name}
+                         className="w-full h-full object-contain bg-gym-dark"
+                      />
                     </div>
                   ) : exercise.thumbnailUrl || exercise.pictureUrl ? (
                     <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
@@ -1765,7 +1775,16 @@ const Workout = () => {
                             <div className="space-y-2">
                               {workoutExercises.map((ex, idx) => (
                                 <div key={idx} className="flex items-center gap-3 bg-gym-card/50 p-2 rounded-xl border border-white/5 group transition-all duration-300">
-                                  {ex?.thumbnailUrl || ex?.pictureUrl ? (
+                                  {ex?.startPositionUrl ? (
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0] bg-gym-dark">
+                                      <AnimatedExerciseIcon 
+                                        startPositionUrl={ex.startPositionUrl}
+                                        endPositionUrl={ex.endPositionUrl}
+                                        alt={ex.name}
+                                        className="w-full h-full object-contain bg-gym-dark"
+                                      />
+                                    </div>
+                                  ) : ex?.thumbnailUrl || ex?.pictureUrl ? (
                                     <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 relative transition-transform duration-200 will-change-transform group-hover:scale-[2.0] group-hover:z-50 group-hover:shadow-2xl active:scale-[2.0]">
                                       <img 
                                         src={ex.thumbnailUrl || ex.pictureUrl} 

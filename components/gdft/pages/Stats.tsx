@@ -46,6 +46,7 @@ import SmartWorkoutEntryDialog from '@/components/gdft/components/ui/SmartWorkou
 import StatsCard from '@/components/gdft/components/ui/StatsCard';
 import WorkoutStatsGraphPopup from '@/components/gdft/components/ui/WorkoutStatsGraphPopup';
 import AdvancedWorkoutMetricsChart from '@/components/gdft/components/ui/AdvancedWorkoutMetricsChart';
+import { AnimatedExerciseIcon } from '@/components/gdft/components/ui/AnimatedExerciseIcon';
 import { WorkoutHistoryFilter } from '@/components/gdft/components/ui/WorkoutHistoryFilter';
 import { DateRange } from 'react-day-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/gdft/components/ui/dropdown-menu";
@@ -605,7 +606,16 @@ const Stats = () => {
                                                                         {(() => {
                                                                             const exercise = getExerciseById(ex.exerciseId);
                                                                             if (exercise?.startPositionUrl) {
-                                                                                return <img src={exercise.startPositionUrl} alt="" className="w-10 h-10 rounded-lg object-contain bg-gym-dark flex-shrink-0" />;
+                                                                                return (
+                                                                                    <div className="w-10 h-10 flex-shrink-0 rounded-lg overflow-hidden bg-gym-dark">
+                                                                                        <AnimatedExerciseIcon 
+                                                                                            startPositionUrl={exercise.startPositionUrl}
+                                                                                            endPositionUrl={exercise.endPositionUrl}
+                                                                                            alt={exercise.name}
+                                                                                            className="w-full h-full object-contain"
+                                                                                        />
+                                                                                    </div>
+                                                                                );
                                                                             }
                                                                             const thumb = exercise?.thumbnailUrl || exercise?.pictureUrl;
                                                                             if (thumb) {

@@ -23,6 +23,7 @@ import {
   ArrowLeft
 } from "lucide-react";
 import CustomGymBuilder from "@/components/gdft/components/ui/CustomGymBuilder";
+import { AnimatedExerciseIcon } from '@/components/gdft/components/ui/AnimatedExerciseIcon';
 import { Button } from "@/components/gdft/components/ui/button";
 import { Input } from "@/components/gdft/components/ui/input";
 import { toast } from "sonner";
@@ -142,7 +143,16 @@ const ExercisePicker: React.FC<{
             onClick={() => onSelect(ex)}
             className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/10 transition-colors text-left group"
           >
-            {ex.thumbnailUrl || ex.pictureUrl
+            {ex.startPositionUrl ? (
+              <div className="w-9 h-9 flex-shrink-0 overflow-hidden rounded-md bg-gym-dark opacity-90">
+                <AnimatedExerciseIcon 
+                  startPositionUrl={ex.startPositionUrl}
+                  endPositionUrl={ex.endPositionUrl}
+                  alt={ex.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : ex.thumbnailUrl || ex.pictureUrl
               ? <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-9 h-9 rounded-md object-cover flex-shrink-0 opacity-90" />
               : <div className="w-9 h-9 rounded-md bg-white/5 flex items-center justify-center flex-shrink-0">
                   <Dumbbell className="h-4 w-4 text-gray-500" />
@@ -602,7 +612,16 @@ const CustomPlans = () => {
                               </span>
 
                               {/* Thumbnail if selected */}
-                              {exercise.thumbnailUrl && (
+                              {exercise.startPositionUrl ? (
+                                <div className="w-8 h-8 flex-shrink-0 overflow-hidden rounded-md bg-gym-dark">
+                                  <AnimatedExerciseIcon 
+                                    startPositionUrl={exercise.startPositionUrl}
+                                    endPositionUrl={exercise.endPositionUrl}
+                                    alt={exercise.name}
+                                    className="w-full h-full object-contain"
+                                  />
+                                </div>
+                              ) : exercise.thumbnailUrl && (
                                 <img src={exercise.thumbnailUrl} alt="" className="w-8 h-8 rounded-md object-cover flex-shrink-0" />
                               )}
 
@@ -821,7 +840,16 @@ const CustomPlans = () => {
                                       {String(i + 1).padStart(2, '0')}
                                     </span>
                                     {/* Thumbnail */}
-                                    {ex.thumbnailUrl
+                                    {ex.startPositionUrl ? (
+                                      <div className="w-9 h-9 flex-shrink-0 overflow-hidden rounded-lg bg-gym-dark">
+                                        <AnimatedExerciseIcon 
+                                          startPositionUrl={ex.startPositionUrl}
+                                          endPositionUrl={ex.endPositionUrl}
+                                          alt={ex.name}
+                                          className="w-full h-full object-contain"
+                                        />
+                                      </div>
+                                    ) : ex.thumbnailUrl
                                       ? <img src={ex.thumbnailUrl} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
                                       : <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                                           <Dumbbell className="h-3.5 w-3.5 text-gray-600" />
@@ -882,7 +910,16 @@ const CustomPlans = () => {
             <div className="space-y-3 py-3">
               {selectedDay.exercises.length > 0 ? selectedDay.exercises.map((ex, i) => (
                 <div key={ex.id} className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
-                  {ex.thumbnailUrl
+                  {ex.startPositionUrl ? (
+                    <div className="w-10 h-10 flex-shrink-0 overflow-hidden rounded-lg bg-gym-dark">
+                      <AnimatedExerciseIcon 
+                        startPositionUrl={ex.startPositionUrl}
+                        endPositionUrl={ex.endPositionUrl}
+                        alt={ex.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : ex.thumbnailUrl
                     ? <img src={ex.thumbnailUrl} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                     : <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
                         <Dumbbell className="h-4 w-4 text-gray-500" />

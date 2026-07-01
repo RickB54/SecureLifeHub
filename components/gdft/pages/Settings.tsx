@@ -7,7 +7,7 @@ import {
   MapPin, Cloud, CloudOff, Database, HardDrive, RotateCcw, ClipboardList, Eraser,
   Mail, MousePointerClick, Edit3, ExternalLink,
   Users, Crown, ChevronDown, MessageSquare,
-  Archive, Calendar, Filter, Mic
+  Archive, Calendar, Filter, Mic, ArrowUp
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useExercise } from "@/components/gdft/contexts/ExerciseContext";
@@ -69,7 +69,9 @@ const Settings = () => {
     setTestOverrides, 
     clearAllOverrides,
     voiceLoggingEnabled,
-    setVoiceLoggingEnabled
+    setVoiceLoggingEnabled,
+    showScrollToTopButton,
+    setShowScrollToTopButton
   } = useSettings();
   const navigate = useNavigate();
   const { exercises, exportToCSV, importFromCSV, deleteAllExercises, reinstallAllExercises, migrateImagesToSupabase, refreshExercises, purgeCustomExercisesOnly, deduplicateDatabase } = useExercise();
@@ -1403,6 +1405,33 @@ const Settings = () => {
                   }}
                 />
               </div>
+
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-gym-card/50 border border-white/5 flex items-center justify-center">
+                    <ArrowUp className="h-5 w-5 text-gym-red" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                       <Label htmlFor="scroll-to-top" className="text-base font-medium">Scroll to Top Button</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Show a floating arrow to easily scroll to the top</p>
+                  </div>
+                </div>
+                <Switch 
+                  id="scroll-to-top"
+                  checked={showScrollToTopButton}
+                  onCheckedChange={(checked) => {
+                    setShowScrollToTopButton(checked);
+                    if (checked) {
+                      toast.success("Scroll to top button enabled!");
+                    } else {
+                      toast.info("Scroll to top button disabled.");
+                    }
+                  }}
+                />
+              </div>
+
             </div>
           </div>
         </div>
