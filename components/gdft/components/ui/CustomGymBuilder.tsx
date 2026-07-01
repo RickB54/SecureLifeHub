@@ -152,8 +152,9 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   };
 
   useEffect(() => {
-    if (isOpen && user) {
-      loadGyms();
+    if (isOpen) {
+      if (user) loadGyms();
+      setStep('intro');
     }
   }, [isOpen, user]);
 
@@ -731,16 +732,14 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                         </div>
                       </div>
                     </div>
-                    {gymSections.length > 1 && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="absolute -right-2 -top-2 rounded-full bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all scale-0 group-hover:scale-100 shadow-lg z-10"
-                        onClick={() => handleRemoveSection(section.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute -right-2 -top-2 rounded-full bg-rose-500/20 text-rose-400 hover:bg-rose-500 hover:text-white transition-all scale-0 group-hover:scale-100 shadow-lg z-10"
+                      onClick={() => handleRemoveSection(section.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
                 
@@ -779,21 +778,30 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                 </div>
               </div>
 
-              <Tabs defaultValue={gymSections[0]?.id} className="w-full">
-                <TabsList className="bg-white/5 p-1 rounded-2xl h-14 w-full justify-start overflow-x-auto overflow-y-hidden custom-scrollbar mb-6">
-                  {gymSections.map(section => (
-                    <TabsTrigger 
-                      key={section.id} 
-                      value={section.id}
-                      className="rounded-xl px-12 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold"
-                    >
-                      {section.name || "Unnamed"}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+              {gymSections.length === 0 ? (
+                <div className="py-12 text-center space-y-3">
+                  <div className="h-16 w-16 bg-white/5 rounded-full flex items-center justify-center mx-auto">
+                    <Box className="h-8 w-8 text-gray-600" />
+                  </div>
+                  <p className="text-gray-400 text-sm">You haven't added any zones to this gym.</p>
+                  <p className="text-gray-500 text-xs italic">You can skip tracking specific equipment or go back and add a zone.</p>
+                </div>
+              ) : (
+                <Tabs defaultValue={gymSections[0]?.id} className="w-full">
+                  <TabsList className="bg-white/5 p-1 rounded-2xl h-14 w-full justify-start overflow-x-auto overflow-y-hidden custom-scrollbar mb-6">
+                    {gymSections.map(section => (
+                      <TabsTrigger 
+                        key={section.id} 
+                        value={section.id}
+                        className="rounded-xl px-12 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all font-bold"
+                      >
+                        {section.name || "Unnamed"}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
 
-                {gymSections.map(section => (
-                  <TabsContent key={section.id} value={section.id} className="mt-0 space-y-4">
+                  {gymSections.map(section => (
+                    <TabsContent key={section.id} value={section.id} className="mt-0 space-y-4">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {section.equipment.map(eq => (
                         <Card key={eq.id} className="bg-white/[0.03] border-white/5 overflow-hidden animate-in zoom-in-95">
@@ -887,7 +895,8 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                     </div>
                   </TabsContent>
                 ))}
-              </Tabs>
+                </Tabs>
+              )}
 
               <div className="pt-8 flex justify-end">
                 <Button 
@@ -896,7 +905,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                     await saveGym(); // Ensure everything is synced to DB
                     setStep('builder');
                   }}
-                  disabled={gymSections.every(s => s.equipment.length === 0)}
+                  disabled={gymSections.length > 0 && gymSections.every(s => s.equipment.length === 0)}
                 >
                   Create Custom Plan <ChevronRight className="h-5 w-5" />
                 </Button>
