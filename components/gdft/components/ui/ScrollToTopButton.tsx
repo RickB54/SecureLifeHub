@@ -58,33 +58,21 @@ const ScrollToTopButton = () => {
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     e.currentTarget.releasePointerCapture(e.pointerId);
+    
+    if (!hasMoved.current) {
+      // Trigger scroll
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      const mainContainer = document.querySelector('main');
+      if (mainContainer) {
+        mainContainer.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      // Also try to scroll document element just in case
+      document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   const handlePointerCancel = () => {
     setIsDragging(false);
-  };
-
-  // Set the top cordinate to 0
-  // make scrolling smooth
-  const scrollToTop = (e: React.MouseEvent) => {
-    if (hasMoved.current) {
-        e.preventDefault();
-        return; // Don't scroll if we just dragged it
-    }
-    // Scroll window
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-
-    // Scroll main container
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      mainContainer.scrollTo({
-        top: 0,
-        behavior: "smooth"
-      });
-    }
   };
 
   useEffect(() => {
@@ -109,7 +97,6 @@ const ScrollToTopButton = () => {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
-        onClick={scrollToTop}
         className="rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center p-0 transition-opacity animate-in fade-in cursor-grab active:cursor-grabbing"
         aria-label="Scroll to top"
       >

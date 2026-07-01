@@ -73,11 +73,13 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden">
       {/* Start Position Image */}
-      {(!showPos2 || pos2Error) && !pos1Error && (
+      {!pos1Error && (
         <img
           src={parsedStartUrl}
           alt={alt + " start position"}
-          className={"absolute inset-0 transition-opacity duration-300 " + className}
+          className={`absolute inset-0 transition-opacity duration-300 ${
+            showPos2 && !pos2Error ? 'opacity-0' : 'opacity-100'
+          } ${className}`}
           onError={() => {
             console.warn(`AnimatedExerciseIcon: Failed to load start pos for ${alt}`);
             setPos1Error(true);
@@ -86,11 +88,13 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
       )}
 
       {/* End Position Image */}
-      {(showPos2 || pos1Error) && parsedEndUrl && !pos2Error && (
+      {parsedEndUrl && !pos2Error && (
         <img
           src={parsedEndUrl}
           alt={alt + " end position"}
-          className={"absolute inset-0 transition-opacity duration-300 " + className}
+          className={`absolute inset-0 transition-opacity duration-300 ${
+            !showPos2 && !pos1Error ? 'opacity-0' : 'opacity-100'
+          } ${className}`}
           onError={() => {
             console.warn(`AnimatedExerciseIcon: Failed to load end pos for ${alt}`);
             setPos2Error(true);
