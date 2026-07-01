@@ -45,6 +45,7 @@ function getExercisesForSection(
 
 function getTotalExercisesForGym(gym: Gym, allExercises: Exercise[]): number {
   const uniqueExerciseIds = new Set<string>();
+  let equipmentCount = 0;
   
   // 1. Add all exercises explicitly mapped to this gym
   allExercises.forEach(ex => {
@@ -54,12 +55,15 @@ function getTotalExercisesForGym(gym: Gym, allExercises: Exercise[]): number {
   // 2. Add all exercises matching section prefixes (for legacy/bulk mapped)
   if (gym.sections) {
     gym.sections.forEach(section => {
+      if (section.equipment) {
+        equipmentCount += section.equipment.length;
+      }
       const sectionExercises = getExercisesForSection(section, gym.id, allExercises);
       sectionExercises.forEach(ex => uniqueExerciseIds.add(ex.id));
     });
   }
   
-  return uniqueExerciseIds.size;
+  return Math.max(uniqueExerciseIds.size, equipmentCount);
 }
 
 export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({

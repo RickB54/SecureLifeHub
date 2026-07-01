@@ -94,17 +94,23 @@ const Exercises = () => {
           const isAlreadySelected = selectedExerciseIds.includes(ex.id);
           if (isAlreadySelected) return true;
           
-          // 1. If explicit zones are selected, strictly filter by them
+          // 1. If explicit zones are selected, filter strictly
           if (gymFilter.sectionIds.length > 0) {
             const isStrictGym = ex.gymId === gymFilter.gymId;
             const isStrictSection = gymFilter.sectionIds.includes(ex.gymSectionId ?? "");
-            return isStrictGym && isStrictSection;
+            if (isStrictGym && isStrictSection) return true;
+            
+            // Allow legacy exercises that match the prefix of the selected zone(s)
+            if (gymFilter.sectionPrefixes && gymFilter.sectionPrefixes.length > 0) {
+              const exNameRaw = ex.name.toUpperCase().replace(/-/g, '');
+              const hasPrefixMatch = gymFilter.sectionPrefixes.some(prefix => exNameRaw.startsWith(prefix.replace(/-/g, '')));
+              if (hasPrefixMatch) return true;
+            }
+            
+            return false;
           }
           
-          // 2. If 'Show All Zones' prefix filtering is active, we can prioritize them 
-          // (but since they want ALL exercises visible, we don't hide the others anymore).
-          // To fulfill the user's request: "I should always be able to use any exercises in the exercise library for any gym"
-          // We simply let ALL exercises pass through when no strict zone is selected.
+          // 2. No strict zones selected. We allow ALL exercises to pass through.
           return true;
         }
         return true;
