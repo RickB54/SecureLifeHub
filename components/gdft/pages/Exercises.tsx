@@ -13,6 +13,7 @@ import ExercisesHelpPopup from "@/components/gdft/components/ui/ExercisesHelpPop
 import { ExerciseProgressModal } from "@/components/gdft/components/ui/ExerciseProgressModal";
 import { ExerciseVisualFilter } from "@/components/gdft/components/ui/ExerciseVisualFilter";
 import { GymFilterPanel } from "@/components/gdft/components/ui/GymFilterPanel";
+import { AnimatedExerciseIcon } from '@/components/gdft/components/ui/AnimatedExerciseIcon';
 import { toast } from "sonner";
 
 const FILTER_STORAGE_KEY = "exerciseFilters";
@@ -713,15 +714,16 @@ const Exercises = () => {
                       <tr key={ex.id} className="hover:bg-gray-50 transition-colors">
                         <td className="p-2">
                            {ex.startPositionUrl ? (
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-white">
-                                 <img 
-                                   src={ex.startPositionUrl} 
-                                   alt="" 
-                                   className={`w-full h-full object-contain ${ex.startPositionUrl.endsWith('.svg') ? 'filter invert opacity-80' : ''}`} 
-                                 />
+                              <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
+                                <AnimatedExerciseIcon 
+                                  startPositionUrl={ex.startPositionUrl}
+                                  endPositionUrl={ex.endPositionUrl}
+                                  alt={ex.name}
+                                  className="w-full h-full object-contain"
+                                />
                               </div>
                            ) : ex.thumbnailUrl || ex.pictureUrl ? (
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50 flex-shrink-0">
                                  <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" />
                               </div>
                            ) : (

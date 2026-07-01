@@ -60,6 +60,8 @@ interface Exercise {
   distance?: string;
   time?: string;
   incline?: string;
+  startPositionUrl?: string;
+  endPositionUrl?: string;
 }
 
 interface Day {

@@ -15,16 +15,16 @@ const ScrollToTopButton = () => {
   const hasMoved = useRef(false);
 
   // Show button when page is scrolled down
-  const toggleVisibility = () => {
-    // Check window scroll
-    if (window.scrollY > 300) {
-      setIsVisible(true);
-      return;
+  const toggleVisibility = (e: any) => {
+    const target = e.target as HTMLElement;
+    if (target && target.scrollTop !== undefined) {
+      if (target.scrollTop > 300) {
+        setIsVisible(true);
+        return;
+      }
     }
-
-    // Check main scroll container in GdftShell
-    const mainContainer = document.querySelector('main');
-    if (mainContainer && mainContainer.scrollTop > 300) {
+    
+    if (window.scrollY > 300) {
       setIsVisible(true);
       return;
     }
@@ -85,19 +85,10 @@ const ScrollToTopButton = () => {
   };
 
   useEffect(() => {
-    window.addEventListener("scroll", toggleVisibility);
+    window.addEventListener("scroll", toggleVisibility, true);
     
-    // Also listen to the main container's scroll event since GdftShell uses overflow-y-auto on main
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      mainContainer.addEventListener("scroll", toggleVisibility);
-    }
-
     return () => {
-      window.removeEventListener("scroll", toggleVisibility);
-      if (mainContainer) {
-        mainContainer.removeEventListener("scroll", toggleVisibility);
-      }
+      window.removeEventListener("scroll", toggleVisibility, true);
     };
   }, []);
 

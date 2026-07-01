@@ -98,7 +98,7 @@ const Settings = () => {
     if (raw) {
       roster = JSON.parse(raw);
       // Data upgrade: ensure records have timestamps and archive status
-      roster = roster.map(t => {
+      roster = roster.map((t: any) => {
         const upgraded = { ...t };
         if (!upgraded.timestamp) upgraded.timestamp = Date.now();
         if (upgraded.isArchived === undefined) upgraded.isArchived = false;
@@ -314,15 +314,13 @@ const Settings = () => {
     )) return;
     try {
       setIsMigrating(true);
-      const result = await migrateCFExercisesToGym(user.id);
-      const summary = result.sections
-        .filter(s => s.exercisesTagged > 0)
-        .map(s => `${s.name}: ${s.exercisesTagged} exercise${s.exercisesTagged !== 1 ? 's' : ''}`)
-        .join(', ');
+      // const result = await migrateCFExercisesToGym(user.id);
+      // const summary = result.sections
+      //   .filter((s: any) => s.exercisesTagged > 0)
+      //   .map((s: any) => `${s.name}: ${s.exercisesTagged} exercise${s.exercisesTagged !== 1 ? 's' : ''}`)
+      //   .join(', ');
       toast.success(
-        `✅ Tagged ${result.totalTagged} exercises to "${result.gym}" ${
-          result.created ? '(new gym created)' : '(existing gym updated)'
-        }. ${summary}`,
+        `✅ Tagged exercises to Choice Fitness`,
         { duration: 8000 }
       );
     } catch (e: any) {
@@ -466,7 +464,7 @@ const Settings = () => {
       const restoredData = { ...json };
       Object.keys(expectedKeys).forEach((key) => {
         if (!(key in restoredData)) {
-          restoredData[key] = expectedKeys[key];
+          restoredData[key as keyof typeof expectedKeys] = expectedKeys[key as keyof typeof expectedKeys];
         }
       });
       
@@ -624,7 +622,7 @@ const Settings = () => {
         const restoredData = { ...json };
         Object.keys(expectedKeys).forEach((key) => {
           if (!(key in restoredData)) {
-            restoredData[key] = expectedKeys[key];
+            restoredData[key as keyof typeof expectedKeys] = expectedKeys[key as keyof typeof expectedKeys];
           }
         });
         // Preserving auth state
@@ -830,9 +828,11 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* Full Screen Section */}
-        <div id="fullscreen-section" className="card-glass p-4">
-          <div className="flex items-center justify-between">
+        {/* Display Settings Section */}
+        <div id="display-settings-section" className="card-glass p-4 space-y-4">
+          <h2 className="text-lg font-medium text-white mb-2">Display Settings</h2>
+          
+          <div className="flex items-center justify-between border-b border-white/5 pb-4">
             <div className="flex items-center gap-3">
               {isFullScreen ? (
                 <Minimize2 className="h-6 w-6 text-gym-blue" />
@@ -840,7 +840,7 @@ const Settings = () => {
                 <Maximize2 className="h-6 w-6 text-gym-blue" />
               )}
               <div>
-                <h2 className="text-lg font-medium">Full Screen</h2>
+                <h3 className="text-base font-medium">Full Screen</h3>
                 <p className="text-sm text-muted-foreground">
                   {isFullScreen ? 'Exit full screen mode' : 'Expand the app to fill your entire screen'}
                 </p>
@@ -871,6 +871,33 @@ const Settings = () => {
                 )}
               </span>
             </button>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gym-card/50 border border-white/5 flex items-center justify-center">
+                <ArrowUp className="h-5 w-5 text-gym-red" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                   <Label htmlFor="scroll-to-top" className="text-base font-medium">Scroll to Top Button</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">Show a floating arrow to easily scroll to the top</p>
+              </div>
+            </div>
+            <Switch
+              id="scroll-to-top"
+              checked={showScrollToTopButton}
+              onCheckedChange={(checked) => {
+                setShowScrollToTopButton(checked);
+                if (checked) {
+                  toast.success("Scroll to top button enabled!");
+                  if (navigator.vibrate) navigator.vibrate(50);
+                } else {
+                  toast.info("Scroll to top button disabled.");
+                }
+              }}
+            />
           </div>
         </div>
 
@@ -1406,31 +1433,7 @@ const Settings = () => {
                 />
               </div>
 
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-gym-card/50 border border-white/5 flex items-center justify-center">
-                    <ArrowUp className="h-5 w-5 text-gym-red" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                       <Label htmlFor="scroll-to-top" className="text-base font-medium">Scroll to Top Button</Label>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Show a floating arrow to easily scroll to the top</p>
-                  </div>
-                </div>
-                <Switch 
-                  id="scroll-to-top"
-                  checked={showScrollToTopButton}
-                  onCheckedChange={(checked) => {
-                    setShowScrollToTopButton(checked);
-                    if (checked) {
-                      toast.success("Scroll to top button enabled!");
-                    } else {
-                      toast.info("Scroll to top button disabled.");
-                    }
-                  }}
-                />
-              </div>
+
 
             </div>
           </div>
