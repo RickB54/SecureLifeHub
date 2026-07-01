@@ -289,7 +289,8 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onFilterChange({ gymId: filterState.gymId, sectionIds: [] });
+                                const prefixes = gym.sections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
+                                onFilterChange({ gymId: filterState.gymId, sectionIds: [], sectionPrefixes: prefixes });
                               }}
                               className="mt-2 text-[10px] text-amber-500/60 hover:text-amber-300 underline underline-offset-2"
                             >
@@ -301,6 +302,12 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
                     </div>
                   );
                 })}
+                <button
+                  onClick={() => setBuilderOpen(true)}
+                  className="w-full mt-2 py-3 rounded-xl border border-dashed border-white/20 text-gray-400 hover:text-white hover:bg-white/5 transition-all text-sm font-bold flex items-center justify-center gap-2"
+                >
+                  <Settings2 className="h-4 w-4" /> Add / Manage Gyms
+                </button>
               </div>
             )}
           </div>
