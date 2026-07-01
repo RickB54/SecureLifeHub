@@ -96,7 +96,9 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   const [uploadingSectionImage, setUploadingSectionImage] = useState<string | null>(null);
 
   const filteredExistingExercises = exercises.filter(ex => {
-    const matchesSearch = ex.name.toLowerCase().includes(exerciseSearchQuery.toLowerCase());
+    const query = exerciseSearchQuery.toLowerCase().replace(/-/g, '');
+    const exName = ex.name.toLowerCase().replace(/-/g, '');
+    const matchesSearch = exName.includes(query);
     const matchesCategory = searchCategoryFilter === "All" || ex.category === searchCategoryFilter;
     return matchesSearch && matchesCategory;
   });
