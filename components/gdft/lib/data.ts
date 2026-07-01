@@ -955,8 +955,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Incline Bench Press",
-    startPositionUrl: "/icons/weights/animated/incline-bench-press-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/incline-bench-press-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/incline-bench-press-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/incline-bench-press-pos2.png",
     category: "Weights",
     muscleGroups: ["Chest", "Arms"],
     equipment: "Barbell",
@@ -979,8 +979,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Front Raises",
-    startPositionUrl: "/icons/weights/animated/dumbbell-front-raises-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/dumbbell-front-raises-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/dumbbell-front-raises-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/dumbbell-front-raises-pos2.png",
     category: "Weights",
     muscleGroups: ["Shoulders"],
     equipment: "Dumbbells",

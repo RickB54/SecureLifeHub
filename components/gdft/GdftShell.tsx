@@ -19,6 +19,7 @@ import { WorkoutReminderSystem } from "@/components/gdft/components/WorkoutRemin
 import ScrollToTop from "@/components/gdft/components/layout/ScrollToTop"
 import { Toaster } from "@/components/gdft/components/ui/toaster"
 import { Toaster as Sonner } from "@/components/gdft/components/ui/sonner"
+import ScrollToTopButton from "@/components/gdft/components/ui/ScrollToTopButton"
 
 import CreateExercise from "./pages/CreateExercise"
 import CreateWorkout from "./pages/CreateWorkout"
@@ -81,6 +82,7 @@ export default function GdftShell({ setActivePage, theme }: any) {
                 </div>
                 <Toaster />
                 <Sonner />
+                <ScrollToTopButton />
               </MemoryRouter>
             </WorkoutProvider>
           </ExerciseProvider>
