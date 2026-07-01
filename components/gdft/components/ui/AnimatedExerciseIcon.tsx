@@ -17,7 +17,6 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
   className = "h-full w-full object-contain"
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isInView, setIsInView] = useState(false);
   const [showPos2, setShowPos2] = useState(false);
   const [pos1Error, setPos1Error] = useState(false);
   const [pos2Error, setPos2Error] = useState(false);
@@ -34,29 +33,13 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
     ? (fallbackUrl.includes('drive.google.com') ? convertGoogleDriveUrl(fallbackUrl) : fallbackUrl)
     : undefined;
 
-  // Use IntersectionObserver to track if icon is in view
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          setIsInView(entry.isIntersecting);
-        });
-      },
-      { threshold: 0.1 }
-    );
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
 
-    return () => observer.disconnect();
-  }, []);
-
-  // Loop animation when in view and both images are valid
+  // Loop animation when both images are valid
   useEffect(() => {
     let interval: number;
 
-    if (isInView && parsedEndUrl && !pos1Error && !pos2Error) {
+    if (parsedEndUrl && !pos1Error && !pos2Error) {
       interval = window.setInterval(() => {
         setShowPos2((prev) => !prev);
       }, 2000);
@@ -67,7 +50,7 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [isInView, parsedEndUrl, pos1Error, pos2Error]);
+  }, [parsedEndUrl, pos1Error, pos2Error]);
 
   if (pos1Error && (!parsedEndUrl || pos2Error) && parsedFallback) {
     return (

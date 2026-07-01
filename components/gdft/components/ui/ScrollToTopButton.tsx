@@ -43,9 +43,12 @@ const ScrollToTopButton = () => {
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
-    hasMoved.current = true;
     const dx = e.clientX - dragStartPos.current.x;
     const dy = e.clientY - dragStartPos.current.y;
+    
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasMoved.current = true;
+    }
     setPosition({
       x: buttonPos.current.x + dx,
       y: buttonPos.current.y + dy
