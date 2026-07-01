@@ -10,6 +10,7 @@ export interface GymFilterState {
   gymId: string | null;
   /** empty array = all sections of the gym; non-empty = only those sections */
   sectionIds: string[];
+  sectionPrefixes?: string[];
 }
 
 interface GymFilterPanelProps {
@@ -82,9 +83,10 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
   const handleSelectGym = (gym: Gym) => {
     if (filterState.gymId === gym.id) {
       // Clicking the active gym clears it
-      onFilterChange({ gymId: null, sectionIds: [] });
+      onFilterChange({ gymId: null, sectionIds: [], sectionPrefixes: [] });
     } else {
-      onFilterChange({ gymId: gym.id, sectionIds: [] });
+      const prefixes = gym.sections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
+      onFilterChange({ gymId: gym.id, sectionIds: [], sectionPrefixes: prefixes });
     }
   };
 
@@ -94,7 +96,15 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
     const next = current.includes(sectionId)
       ? current.filter((id) => id !== sectionId)
       : [...current, sectionId];
-    onFilterChange({ gymId: filterState.gymId, sectionIds: next });
+      
+    const gym = gyms.find(g => g.id === filterState.gymId);
+    let prefixes: string[] = [];
+    if (gym) {
+       const activeSections = next.length > 0 ? gym.sections?.filter(s => next.includes(s.id)) : gym.sections;
+       prefixes = activeSections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
+    }
+    
+    onFilterChange({ gymId: filterState.gymId, sectionIds: next, sectionPrefixes: prefixes });
   };
 
   const isActive = !!filterState.gymId;

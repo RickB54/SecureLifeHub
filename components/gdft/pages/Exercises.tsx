@@ -93,9 +93,20 @@ const Exercises = () => {
         if (gymFilter.gymId) {
           const isAlreadySelected = selectedExerciseIds.includes(ex.id);
           if (isAlreadySelected) return true;
-          if (ex.gymId !== gymFilter.gymId) return false;
-          // If specific sections are selected, only show exercises from those sections
-          if (gymFilter.sectionIds.length > 0 && !gymFilter.sectionIds.includes(ex.gymSectionId ?? "")) return false;
+          
+          const isStrictGym = ex.gymId === gymFilter.gymId;
+          const isStrictSection = gymFilter.sectionIds.length === 0 || gymFilter.sectionIds.includes(ex.gymSectionId ?? "");
+          
+          if (isStrictGym && isStrictSection) return true;
+          
+          // Fallback prefix match (for bulk imported or legacy named exercises without strict gymId)
+          if (gymFilter.sectionPrefixes && gymFilter.sectionPrefixes.length > 0) {
+             const exNameRaw = ex.name.toUpperCase().replace(/-/g, '');
+             const hasPrefixMatch = gymFilter.sectionPrefixes.some(prefix => exNameRaw.startsWith(prefix.replace(/-/g, '')));
+             if (hasPrefixMatch) return true;
+          }
+          
+          return false;
         }
         return true;
       });
