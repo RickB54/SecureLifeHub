@@ -90,6 +90,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState("");
   const [searchCategoryFilter, setSearchCategoryFilter] = useState("All");
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [bulkImportSelectedIds, setBulkImportSelectedIds] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingImage, setUploadingImage] = useState<{sectionId: string, equipmentId: string} | null>(null);
@@ -122,14 +123,16 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   const handleBulkImport = () => {
     if (!linkingSectionId) return;
     
-    if (filteredExistingExercises.length === 0) {
-      toast.error("No exercises found for this search.");
+    if (bulkImportSelectedIds.length === 0) {
+      toast.error("No exercises selected.");
       return;
     }
 
+    const exercisesToImport = exercises.filter(ex => bulkImportSelectedIds.includes(ex.id));
+
     setGymSections(gymSections.map(s => {
       if (s.id === linkingSectionId) {
-        const newEquipment = filteredExistingExercises.map(ex => ({
+        const newEquipment = exercisesToImport.map(ex => ({
           id: uuidv4(),
           name: ex.name,
           type: (ex.category === "Weights" || ex.category === "Cardio" || ex.category === "Slide Board" || ex.category === "No Equipment") ? ex.category : 'Weights' as any,
@@ -145,10 +148,11 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
       return s;
     }));
     
-    toast.success(`Imported ${filteredExistingExercises.length} machines!`);
+    toast.success(`Imported ${bulkImportSelectedIds.length} machines!`);
     setBulkImportOpen(false);
     setExerciseSearchQuery("");
     setLinkingSectionId(null);
+    setBulkImportSelectedIds([]);
   };
 
   useEffect(() => {
@@ -898,6 +902,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                           className="h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
                           onClick={() => {
                             setLinkingSectionId(section.id);
+                            setBulkImportSelectedIds([]);
                             setBulkImportOpen(true);
                           }}
                         >
@@ -1187,31 +1192,55 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
             </div>
           </DialogHeader>
 
-          <div className="mt-4 max-h-[300px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-            {exerciseSearchQuery.length === 0 && searchCategoryFilter === "All" ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500 italic text-sm">Type a prefix or select a category...</p>
-              </div>
-            ) : filteredExistingExercises.length === 0 ? (
+          <div className="mt-4 max-h-[400px] overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            {filteredExistingExercises.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-500 italic text-sm">No exercises match "{exerciseSearchQuery}".</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest mb-2">
-                  {filteredExistingExercises.length} Exercises Ready to Import
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {filteredExistingExercises.slice(0, 8).map(ex => (
-                    <div key={ex.id} className="text-xs truncate bg-white/5 px-2 py-1.5 rounded-md text-gray-300">
-                      {ex.name}
-                    </div>
-                  ))}
-                  {filteredExistingExercises.length > 8 && (
-                    <div className="text-xs text-gray-500 italic px-2 py-1.5">
-                      + {filteredExistingExercises.length - 8} more...
-                    </div>
-                  )}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    {filteredExistingExercises.length} Exercises Found
+                  </p>
+                  <div className="flex gap-2">
+                    <button 
+                      className="text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-wider"
+                      onClick={() => setBulkImportSelectedIds(filteredExistingExercises.map(e => e.id))}
+                    >Select All</button>
+                    <button 
+                      className="text-[10px] font-bold text-gray-500 hover:text-gray-400 uppercase tracking-wider"
+                      onClick={() => setBulkImportSelectedIds([])}
+                    >Clear</button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                  {filteredExistingExercises.map(ex => {
+                    const isSelected = bulkImportSelectedIds.includes(ex.id);
+                    return (
+                      <div 
+                        key={ex.id} 
+                        className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all border ${
+                          isSelected ? 'bg-blue-600/20 border-blue-500/50' : 'bg-white/5 border-white/5 hover:bg-white/10'
+                        }`}
+                        onClick={() => {
+                          setBulkImportSelectedIds(prev => 
+                            prev.includes(ex.id) ? prev.filter(id => id !== ex.id) : [...prev, ex.id]
+                          );
+                        }}
+                      >
+                        <div className={`h-5 w-5 rounded-md flex items-center justify-center shrink-0 border transition-colors ${
+                          isSelected ? 'bg-blue-500 border-blue-400' : 'bg-gym-darker border-white/20'
+                        }`}>
+                          {isSelected && <Check className="h-3 w-3 text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-bold truncate ${isSelected ? 'text-white' : 'text-gray-300'}`}>{ex.name}</p>
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{ex.category}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1222,9 +1251,9 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
             <Button 
               className="bg-blue-600 hover:bg-blue-700 flex-1 font-bold shadow-lg shadow-blue-500/20" 
               onClick={handleBulkImport}
-              disabled={filteredExistingExercises.length === 0 || (exerciseSearchQuery.length === 0 && searchCategoryFilter === "All")}
+              disabled={bulkImportSelectedIds.length === 0}
             >
-              Import {filteredExistingExercises.length > 0 ? filteredExistingExercises.length : ''} Exercises
+              Import {bulkImportSelectedIds.length > 0 ? bulkImportSelectedIds.length : ''} Selected
             </Button>
           </DialogFooter>
         </DialogContent>
