@@ -137,15 +137,8 @@ const ExerciseFilters: React.FC<ExerciseFiltersProps> = ({
       </div>
 
       {/* ── Collapsible dropdown filters ── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: filtersOpen ? "1fr" : "0fr",
-          transition: "grid-template-rows 0.25s ease",
-        }}
-      >
-        <div style={{ overflow: "hidden" }}>
-          <div className="flex flex-col md:flex-row gap-2 pt-2">
+      {filtersOpen && (
+        <div className="flex flex-col md:flex-row gap-2 pt-2">
             <Select value={equipmentFilter} onValueChange={onEquipmentFilterChange}>
               <SelectTrigger className="w-full bg-gym-dark border-border">
                 <SelectValue placeholder="Equipment" />
@@ -185,8 +178,7 @@ const ExerciseFilters: React.FC<ExerciseFiltersProps> = ({
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
