@@ -21,8 +21,9 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/gdft/components/ui/dropdown-menu"; // Added DropdownMenu imports
-import IconButton from "@/components/gdft/components/ui/IconButton"; // Make sure IconButton is imported
+} from "@/components/gdft/components/ui/dropdown-menu";
+import IconButton from "@/components/gdft/components/ui/IconButton";
+import { AnimatedExerciseIcon } from "@/components/gdft/components/ui/AnimatedExerciseIcon";
 
 const CreateWorkout = () => {
   const navigate = useNavigate();
@@ -56,6 +57,17 @@ const CreateWorkout = () => {
   ];
 
   const getExerciseImage = (exercise: Exercise) => {
+    if (exercise.startPositionUrl) {
+      return (
+        <AnimatedExerciseIcon
+          startPositionUrl={exercise.startPositionUrl}
+          endPositionUrl={exercise.endPositionUrl}
+          alt={exercise.name}
+          fallbackUrl={getExerciseImageUrl(exercise)}
+        />
+      );
+    }
+
     const imageUrl = getExerciseImageUrl(exercise);
     
     if (imageUrl) {
@@ -81,7 +93,7 @@ const CreateWorkout = () => {
     } else {
       // Simple text placeholder for exercises without images
       return (
-        <span className="text-xs text-muted-foreground">No image</span>
+        <span className="text-xs text-muted-foreground">No img</span>
       );
     }
   };
