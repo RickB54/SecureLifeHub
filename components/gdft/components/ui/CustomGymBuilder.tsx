@@ -916,7 +916,17 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                 </Tabs>
               )}
 
-              <div className="pt-8 flex justify-end">
+              <div className="pt-8 flex flex-col-reverse sm:flex-row justify-between gap-4">
+                <Button 
+                  variant="outline"
+                  className="h-14 px-8 rounded-2xl font-black text-lg gap-2 border-white/10 hover:bg-white/5 text-gray-300 shadow-lg"
+                  onClick={async () => {
+                    await saveGym();
+                    onClose();
+                  }}
+                >
+                  <Save className="h-5 w-5" /> Finish & Save Gym
+                </Button>
                 <Button 
                   className="bg-blue-600 hover:bg-blue-700 h-14 px-8 rounded-2xl font-black text-lg gap-2 shadow-xl shadow-blue-500/20"
                   onClick={async () => {
