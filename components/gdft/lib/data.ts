@@ -824,10 +824,7 @@ export const weightExercises: Exercise[] = [
     category: "Weights",
     muscleGroups: ["Shoulders", "Arms"],
     equipment: "Dumbbells",
-    endPositionUrl: "/icons/weights/realistic/dumbbell-shoulder-press-pos2.png",
-    category: "Weights",
-    muscleGroups: ["Shoulders", "Arms"],
-    equipment: "Dumbbells",
+
     description: "Sit or stand with a dumbbell in each hand at shoulder height. Press the weights overhead until your arms are extended, exhaling as you push. Lower back to shoulder height, inhaling as you go. Keep your core engaged to avoid arching your back. This strengthens your shoulders and arms.",
     pictureUrl: "https://i.imgur.com/7Hptjkc.png",
     settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,

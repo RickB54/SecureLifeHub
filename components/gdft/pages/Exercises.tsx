@@ -532,14 +532,15 @@ const Exercises = () => {
         // When filtering by a specific gym section, split the list:
         //   - carryover: exercises that are selected but from a DIFFERENT section
         //   - current:   exercises that belong to the active section (+ untagged previews)
-        const carryover = selectedGymSectionId
+        const activeSectionIds = gymFilter.sectionIds;
+        const carryover = activeSectionIds.length > 0
           ? filteredExercises.filter(ex =>
-              selectedExerciseIds.includes(ex.id) && ex.gymSectionId !== selectedGymSectionId
+              selectedExerciseIds.includes(ex.id) && !activeSectionIds.includes(ex.gymSectionId ?? "")
             )
           : [];
-        const currentZone = selectedGymSectionId
+        const currentZone = activeSectionIds.length > 0
           ? filteredExercises.filter(ex =>
-              !(selectedExerciseIds.includes(ex.id) && ex.gymSectionId !== selectedGymSectionId)
+              !(selectedExerciseIds.includes(ex.id) && !activeSectionIds.includes(ex.gymSectionId ?? ""))
             )
           : filteredExercises;
 
