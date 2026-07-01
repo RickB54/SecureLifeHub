@@ -51,7 +51,7 @@ export default function GdftShell({ setActivePage, theme }: any) {
                   
                   {/* Main GDFT App Container */}
                   <div className="flex flex-col h-full bg-gym-darker text-white">
-                    <main className="flex-grow overflow-y-auto container mx-auto px-4 py-2 md:py-4 pb-20">
+                    <main id="gdft-main-scroll" className="flex-grow overflow-y-auto container mx-auto px-4 py-2 md:py-4 pb-20">
                       <Routes>
                         <Route path="/" element={<Index />} />
                         <Route path="/exercises" element={<Exercises />} />

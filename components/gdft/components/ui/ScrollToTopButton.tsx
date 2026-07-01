@@ -1,55 +1,49 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/gdft/components/ui/button";
 import { useSettings } from "@/components/gdft/contexts/SettingsContext";
 
+const SCROLL_CONTAINER_ID = "gdft-main-scroll";
+
 const ScrollToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
   const { showScrollToTopButton } = useSettings();
-  
-  // Show button when page is scrolled down
-  const toggleVisibility = (e: any) => {
-    const target = e.target as HTMLElement;
-    if (target && target.scrollTop !== undefined) {
-      if (target.scrollTop > 300) {
-        setIsVisible(true);
-        return;
-      }
-    }
-    
-    if (window.scrollY > 300) {
-      setIsVisible(true);
-      return;
-    }
 
-    setIsVisible(false);
-  };
-
-  const scrollToTop = () => {
-    // Scroll window
-    window.scrollTo({ top: 0, behavior: "smooth" });
-    
-    // Scroll main container
-    const mainContainer = document.querySelector('main');
-    if (mainContainer) {
-      mainContainer.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
-  useEffect(() => {
-    window.addEventListener("scroll", toggleVisibility, true);
-    
-    return () => {
-      window.removeEventListener("scroll", toggleVisibility, true);
-    };
+  const getContainer = useCallback((): HTMLElement | null => {
+    return document.getElementById(SCROLL_CONTAINER_ID);
   }, []);
 
-  if (!isVisible || !showScrollToTopButton) {
+  // Listen to the actual scrolling container
+  useEffect(() => {
+    const container = getContainer();
+    if (!container) return;
+
+    const handleScroll = () => {
+      setIsVisible(container.scrollTop > 200);
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    // Run once immediately in case already scrolled
+    handleScroll();
+
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [getContainer]);
+
+  const scrollToTop = () => {
+    const container = getContainer();
+    if (container) {
+      container.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  if (!showScrollToTopButton || !isVisible) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-24 right-4 z-[100]">
+    <div className="fixed bottom-24 right-4 z-[9999]">
       <Button
         onClick={scrollToTop}
         className="rounded-full w-12 h-12 shadow-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center p-0 transition-opacity animate-in fade-in cursor-pointer"
