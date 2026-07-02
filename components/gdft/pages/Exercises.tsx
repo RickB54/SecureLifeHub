@@ -639,21 +639,31 @@ const Exercises = () => {
         exercise={viewProgressExercise} 
       />
 
-      {/* PRINT-ONLY SECTION: Neat and colorful exercise catalog */}
-      <div id="print-catalog" style={{ display: 'none' }}>
+      {/* PRINT-ONLY SECTION — rendered off-screen so visibility trick works */}
+      <div
+        id="print-catalog"
+        style={{ position: 'absolute', left: '-9999px', top: 0, width: '190mm', pointerEvents: 'none' }}
+        aria-hidden="true"
+      >
         <style>{`
           @media print {
-            /* Hide everything except the print catalog */
-            body > * { display: none !important; }
-            #print-catalog { display: block !important; }
+            /* Visibility trick: hides entire page, then reveals only this catalog */
+            body { visibility: hidden !important; }
+            #print-catalog {
+              visibility: visible !important;
+              position: absolute !important;
+              top: 0 !important;
+              left: 0 !important;
+              width: 100% !important;
+              background: white !important;
+            }
+            #print-catalog * { visibility: visible !important; }
 
-            /* Page settings */
-            @page { 
+            @page {
               margin: 15mm 10mm;
-              size: portrait; 
+              size: portrait;
             }
 
-            /* Ensure colors print */
             * {
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
@@ -665,7 +675,7 @@ const Exercises = () => {
               break-inside: avoid !important;
             }
 
-            /* Category header should stay with first row */
+            /* Category header stays with its first row */
             .cat-header {
               page-break-after: avoid !important;
               break-after: avoid !important;
