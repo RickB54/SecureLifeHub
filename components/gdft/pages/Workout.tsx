@@ -1415,7 +1415,13 @@ const Workout = () => {
             <DialogTitle className="sr-only">Exercise Image</DialogTitle>
             <div className="relative w-full h-full flex items-center justify-center">
               <img 
-                src={currentExercise?.pictureUrl || currentExercise?.thumbnailUrl || '/placeholder.svg'} 
+                src={
+                  (currentExercise?.startPositionUrl || currentExercise?.endPositionUrl)
+                    ? (positionView === 'start' 
+                        ? (currentExercise?.startPositionUrl || currentExercise?.endPositionUrl)
+                        : (currentExercise?.endPositionUrl || currentExercise?.startPositionUrl))
+                    : (currentExercise?.pictureUrl || currentExercise?.thumbnailUrl || '/placeholder.svg')
+                } 
                 alt={currentExercise?.name} 
                 className="max-h-[90vh] max-w-[90vw] object-contain"
                 style={{ imageRendering: 'crisp-edges' as any }}
