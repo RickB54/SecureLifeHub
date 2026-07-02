@@ -721,26 +721,31 @@ const Exercises = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {catEx.map((ex) => (
-                      <tr key={ex.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="p-2">
-                           {ex.startPositionUrl ? (
-                              <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
-                                <AnimatedExerciseIcon 
-                                  startPositionUrl={ex.startPositionUrl}
-                                  endPositionUrl={ex.endPositionUrl}
-                                  alt={ex.name}
-                                  className="w-full h-full object-contain"
-                                />
-                              </div>
-                           ) : ex.thumbnailUrl || ex.pictureUrl ? (
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50 flex-shrink-0">
-                                 <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" />
-                              </div>
-                           ) : (
-                              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold text-center">NO PIC</div>
-                           )}
-                        </td>
+                    {catEx.map((ex) => {
+                      const isManualImage = ex.pictureUrl && !ex.pictureUrl.includes('imgur.com');
+                      const shouldUseStartPos = ex.startPositionUrl && category !== "Slide Board" && !isManualImage;
+
+                      return (
+                        <tr key={ex.id} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
+                          <td className="p-2">
+                             {shouldUseStartPos ? (
+                                <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
+                                  <AnimatedExerciseIcon 
+                                    startPositionUrl={ex.startPositionUrl!}
+                                    endPositionUrl={ex.endPositionUrl}
+                                    alt={ex.name}
+                                    className="w-full h-full object-contain"
+                                    fallbackUrl={ex.thumbnailUrl || ex.pictureUrl}
+                                  />
+                                </div>
+                             ) : ex.thumbnailUrl || ex.pictureUrl ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50 flex-shrink-0">
+                                   <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" />
+                                </div>
+                             ) : (
+                                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold text-center print:bg-transparent print:text-transparent">NO PIC</div>
+                             )}
+                          </td>
                         <td className="px-6 py-4">
                            <div className="font-extrabold text-gray-900 text-sm">{ex.name}</div>
                            {ex.description && <div className="text-[10px] text-gray-400 mt-1 italic leading-relaxed">{ex.description}</div>}

@@ -105,7 +105,7 @@ export const AnimatedExerciseIcon: React.FC<AnimatedExerciseIconProps> = ({
       
       {/* Static text fallback if everything fails */}
       {pos1Error && (pos2Error || !parsedEndUrl) && !parsedFallback && (
-        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-gym-dark">
+        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-gym-dark print:bg-white print:text-transparent">
           <span className="text-xs">No img</span>
         </div>
       )}
