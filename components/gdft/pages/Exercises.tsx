@@ -640,64 +640,35 @@ const Exercises = () => {
       />
 
       {/* PRINT-ONLY SECTION: Neat and colorful exercise catalog */}
-      <div className="hidden print:block print-section">
+      <div id="print-catalog" style={{ display: 'none' }}>
         <style>{`
           @media print {
-            /* Hide the main app content robustly to fix pagination */
-            .page-container > *:not(.print-section) {
-              display: none !important;
+            /* Hide everything except the print catalog */
+            body > * { display: none !important; }
+            #print-catalog { display: block !important; }
+
+            /* Page settings */
+            @page { 
+              margin: 15mm 10mm;
+              size: portrait; 
             }
-            nav, header, aside, .sidebar { 
-              display: none !important; 
-            }
-            
-            /* Universal override to break all scroll-locks and fixed heights in NextJS layouts */
+
+            /* Ensure colors print */
             * {
-              overflow: visible !important;
-              height: auto !important;
-              max-height: none !important;
-            }
-            
-            html, body {
-              background: white !important;
-            }
-            
-            .print-section, .print-section * {
-              visibility: visible;
-              -webkit-print-color-adjust: exact !important; 
+              -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
             }
-            
-            .print-section {
-              position: static !important;
-              width: 100%;
-              padding: 0;
-              margin: 0;
-              background: white !important;
-              color: black !important;
-              display: block !important;
-            }
-            
-            /* Clean up table formatting for print */
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-            th, td { border: 1px solid #eee; padding: 10px; text-align: left; color: black !important; }
-            th { background-color: #f9fafb !important; color: #111 !important; font-weight: 800; }
-            
-            @page { margin: 0; size: portrait; }
-            .avoid-break { break-inside: avoid; page-break-inside: avoid; }
-            .no-print { display: none !important; }
-          }
-        `}</style>
-        <style>{`
-          @media print {
-            tr {
+
+            /* Prevent exercise rows from splitting across pages */
+            .ex-row {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              -webkit-region-break-inside: avoid !important;
             }
-            td {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
+
+            /* Category header should stay with first row */
+            .cat-header {
+              page-break-after: avoid !important;
+              break-after: avoid !important;
             }
           }
         `}</style>
@@ -718,60 +689,58 @@ const Exercises = () => {
                             category === "Slide Board" ? "bg-purple-600" : "bg-green-600";
 
           return (
-            <div key={category} style={{ marginBottom: '48px', pageBreakInside: 'auto' }}>
-              <div className={`${colorClass} text-white px-6 py-4 rounded-t-2xl flex justify-between items-center shadow-lg`} style={{ pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
+            <div key={category} style={{ marginBottom: '48px' }}>
+              <div className={`cat-header ${colorClass} text-white px-6 py-4 rounded-t-2xl flex justify-between items-center shadow-lg`}>
                 <h2 className="text-2xl font-black uppercase tracking-tight">{category}</h2>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">{catEx.length} Exercises</div>
               </div>
-              {/* Column headers */}
               <div className="border-2 border-t-0 border-gray-100 rounded-b-2xl overflow-visible">
-                <div className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest grid grid-cols-[64px_1fr_140px_160px] gap-0 px-2 py-2" style={{ pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
+                {/* Column headers */}
+                <div className="cat-header bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest px-2 py-2" style={{ display: 'grid', gridTemplateColumns: '64px 1fr 140px 160px' }}>
                   <span>Preview</span>
                   <span>Exercise Name</span>
                   <span>Equipment</span>
                   <span>Focus Areas</span>
                 </div>
                 {catEx.map((ex, idx) => {
-                  // Slide Board: always use its specific pictureUrl (manually entered)
-                  // Weights, Cardio, No Equipment: use startPositionUrl (3D/SVG) if available
                   const useStartPos = category !== "Slide Board" && !!ex.startPositionUrl;
                   const imgSrc = useStartPos ? ex.startPositionUrl! : (ex.thumbnailUrl || ex.pictureUrl || null);
 
                   return (
                     <div
                       key={ex.id}
-                      style={{ pageBreakInside: 'avoid', breakInside: 'avoid', display: 'block' }}
-                      className={`grid grid-cols-[64px_1fr_140px_160px] gap-0 px-2 py-3 ${idx !== catEx.length - 1 ? 'border-b border-gray-100' : ''}`}
+                      className={`ex-row ${idx !== catEx.length - 1 ? 'border-b border-gray-100' : ''}`}
+                      style={{ display: 'grid', gridTemplateColumns: '64px 1fr 140px 160px', padding: '10px 8px' }}
                     >
                       {/* Image */}
-                      <div className="flex items-center">
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
                         {imgSrc ? (
-                          <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
+                          <div style={{ width: '48px', height: '48px', overflow: 'hidden', borderRadius: '8px', border: '1px solid #f0f0f0', background: 'white', flexShrink: 0 }}>
                             <img
                               src={imgSrc}
                               alt={ex.name}
-                              className="w-full h-full object-contain"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                             />
                           </div>
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-transparent" />
+                          <div style={{ width: '48px', height: '48px' }} />
                         )}
                       </div>
                       {/* Name + description */}
-                      <div className="flex flex-col justify-center pr-4">
-                        <div className="font-extrabold text-gray-900 text-sm">{ex.name}</div>
-                        {ex.description && <div className="text-[10px] text-gray-400 mt-1 italic leading-relaxed">{ex.description}</div>}
+                      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingRight: '16px' }}>
+                        <div style={{ fontWeight: 800, color: '#111', fontSize: '13px' }}>{ex.name}</div>
+                        {ex.description && <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px', fontStyle: 'italic', lineHeight: '1.5' }}>{ex.description}</div>}
                       </div>
                       {/* Equipment */}
-                      <div className="flex items-center">
-                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-black uppercase">{ex.equipment || 'Standard'}</span>
+                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                        <span style={{ background: '#f3f4f6', color: '#4b5563', padding: '2px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 800, textTransform: 'uppercase' }}>{ex.equipment || 'Standard'}</span>
                       </div>
                       {/* Muscle groups */}
-                      <div className="flex flex-wrap gap-1 items-center">
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
                         {ex.muscleGroups?.map(m => (
-                          <span key={m} className="text-[9px] font-bold bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-500 uppercase">{m}</span>
-                        )) || <span className="text-gray-300">--</span>}
+                          <span key={m} style={{ fontSize: '9px', fontWeight: 700, background: 'white', border: '1px solid #e5e7eb', padding: '2px 6px', borderRadius: '9999px', color: '#6b7280', textTransform: 'uppercase' }}>{m}</span>
+                        ))}
                       </div>
                     </div>
                   );
