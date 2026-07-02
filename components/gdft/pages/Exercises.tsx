@@ -718,83 +718,64 @@ const Exercises = () => {
                             category === "Slide Board" ? "bg-purple-600" : "bg-green-600";
 
           return (
-            <div key={category} className="mb-12 avoid-break">
-              <div className={`${colorClass} text-white px-6 py-4 rounded-t-2xl flex justify-between items-center shadow-lg`}>
+            <div key={category} style={{ marginBottom: '48px', pageBreakInside: 'auto' }}>
+              <div className={`${colorClass} text-white px-6 py-4 rounded-t-2xl flex justify-between items-center shadow-lg`} style={{ pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
                 <h2 className="text-2xl font-black uppercase tracking-tight">{category}</h2>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">{catEx.length} Exercises</div>
               </div>
-              <div className="border-2 border-t-0 border-gray-100 rounded-b-2xl overflow-hidden">
-                <table className="w-full text-left" style={{ pageBreakInside: 'auto' }}>
-                  <thead className="print:table-header-group">
-                    <tr className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest">
-                      <th className="w-16">Preview</th>
-                      <th>Exercise Name</th>
-                      <th>Equipment</th>
-                      <th>Focus Areas</th>
-                    </tr>
-                  </thead>
-                  <tfoot className="hidden print:table-footer-group">
-                    <tr>
-                      <td colSpan={4} className="pt-4 text-center text-[8px] text-gray-300">
-                        — GDFT Exercise Library —
-                      </td>
-                    </tr>
-                  </tfoot>
-                  <tbody className="divide-y divide-gray-100">
-                    {catEx.map((ex) => {
-                      const isWeights = category === "Weights";
-                      const isManualImage = ex.pictureUrl && !ex.pictureUrl.includes('imgur.com');
-                      // ONLY use startPositionUrl (3D models/SVGs) for the Weights category.
-                      // For Cardio, No Equipment, and Slide Board, always show their specific pictureUrl.
-                      const shouldUseStartPos = ex.startPositionUrl && isWeights && !isManualImage;
+              {/* Column headers */}
+              <div className="border-2 border-t-0 border-gray-100 rounded-b-2xl overflow-visible">
+                <div className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest grid grid-cols-[64px_1fr_140px_160px] gap-0 px-2 py-2" style={{ pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
+                  <span>Preview</span>
+                  <span>Exercise Name</span>
+                  <span>Equipment</span>
+                  <span>Focus Areas</span>
+                </div>
+                {catEx.map((ex, idx) => {
+                  // Slide Board: always use its specific pictureUrl (manually entered)
+                  // Weights, Cardio, No Equipment: use startPositionUrl (3D/SVG) if available
+                  const useStartPos = category !== "Slide Board" && !!ex.startPositionUrl;
+                  const imgSrc = useStartPos ? ex.startPositionUrl! : (ex.thumbnailUrl || ex.pictureUrl || null);
 
-                      return (
-                        <tr key={ex.id} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
-                          <td className="p-2">
-                             {shouldUseStartPos ? (
-                                <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
-                                  <img 
-                                    src={ex.startPositionUrl!}
-                                    alt={ex.name}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                      if (ex.thumbnailUrl || ex.pictureUrl) {
-                                        (e.target as HTMLImageElement).src = ex.thumbnailUrl || ex.pictureUrl || "";
-                                      } else {
-                                        (e.target as HTMLImageElement).style.display = 'none';
-                                      }
-                                    }}
-                                  />
-                                </div>
-                             ) : ex.thumbnailUrl || ex.pictureUrl ? (
-                                <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 flex items-center justify-center bg-gray-50 flex-shrink-0">
-                                   <img src={ex.thumbnailUrl || ex.pictureUrl} alt="" className="w-full h-full object-cover" />
-                                </div>
-                             ) : (
-                                <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 font-bold text-center print:bg-transparent print:text-transparent">NO PIC</div>
-                             )}
-                          </td>
-                        <td className="px-6 py-4">
-                           <div className="font-extrabold text-gray-900 text-sm">{ex.name}</div>
-                           {ex.description && <div className="text-[10px] text-gray-400 mt-1 italic leading-relaxed">{ex.description}</div>}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-black uppercase">
-                             {ex.equipment || 'Standard'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {ex.muscleGroups?.map(m => (
-                              <span key={m} className="text-[9px] font-bold bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-500 uppercase">{m}</span>
-                            )) || <span className="text-gray-300">--</span>}
+                  return (
+                    <div
+                      key={ex.id}
+                      style={{ pageBreakInside: 'avoid', breakInside: 'avoid', display: 'block' }}
+                      className={`grid grid-cols-[64px_1fr_140px_160px] gap-0 px-2 py-3 ${idx !== catEx.length - 1 ? 'border-b border-gray-100' : ''}`}
+                    >
+                      {/* Image */}
+                      <div className="flex items-center">
+                        {imgSrc ? (
+                          <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
+                            <img
+                              src={imgSrc}
+                              alt={ex.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  </tbody>
-                </table>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-transparent" />
+                        )}
+                      </div>
+                      {/* Name + description */}
+                      <div className="flex flex-col justify-center pr-4">
+                        <div className="font-extrabold text-gray-900 text-sm">{ex.name}</div>
+                        {ex.description && <div className="text-[10px] text-gray-400 mt-1 italic leading-relaxed">{ex.description}</div>}
+                      </div>
+                      {/* Equipment */}
+                      <div className="flex items-center">
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded text-[10px] font-black uppercase">{ex.equipment || 'Standard'}</span>
+                      </div>
+                      {/* Muscle groups */}
+                      <div className="flex flex-wrap gap-1 items-center">
+                        {ex.muscleGroups?.map(m => (
+                          <span key={m} className="text-[9px] font-bold bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-500 uppercase">{m}</span>
+                        )) || <span className="text-gray-300">--</span>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
