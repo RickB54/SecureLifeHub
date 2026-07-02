@@ -489,7 +489,7 @@ const MyCalendar = () => {
                       <CollapsibleContent className="pl-4 pr-2 pb-2">
                           {exerciseList.length > 0 ? (
                               <ul className="list-disc list-inside text-sm text-gray-400 space-y-1 text-left">
-                                  {exerciseList.map(ex => <li key={ex.id}>{ex.name}</li>)}
+                                  {exerciseList.map((ex, idx) => <li key={`${ex.id}-${idx}`}>{ex.name}</li>)}
                               </ul>
                           ) : (
                               <p className="text-xs text-gray-500 text-left">No specific exercises for this scheduled workout.</p>
@@ -529,7 +529,7 @@ const MyCalendar = () => {
                             <CollapsibleContent className="pl-4 pr-2 pb-2">
                                 {exerciseList.length > 0 && (
                                     <ul className="list-disc list-inside text-sm text-gray-400 space-y-1 text-left">
-                                        {exerciseList.map(ex => <li key={ex.id}>{ex.name}</li>)}
+                                        {exerciseList.map((ex, idx) => <li key={`${ex.id}-${idx}`}>{ex.name}</li>)}
                                     </ul>
                                 )}
                             </CollapsibleContent>
@@ -1424,7 +1424,7 @@ const MyCalendar = () => {
                           </div>
                           {exerciseList.length > 0 ? (
                               <ul className="list-disc list-inside text-sm text-gray-300 space-y-1 text-left bg-white/5 p-2 rounded border border-white/5">
-                                  {exerciseList.map(ex => <li key={ex.id}>{ex.name}</li>)}
+                                  {exerciseList.map((ex, idx) => <li key={`${ex.id}-${idx}`}>{ex.name}</li>)}
                               </ul>
                           ) : (
                               <p className="text-xs text-gray-500 text-left italic">No specific exercises listed.</p>
@@ -1508,7 +1508,7 @@ const MyCalendar = () => {
                   <CollapsibleContent className="pl-4 pr-2 pb-2">
                     {exerciseList.length > 0 ? (
                       <ul className="list-disc list-inside text-sm text-gray-400 space-y-1 text-left">
-                        {exerciseList.map(ex => <li key={ex.id} className="break-words leading-snug">{ex.name}</li>)}
+                        {exerciseList.map((ex, idx) => <li key={`${ex.id}-${idx}`} className="break-words leading-snug">{ex.name}</li>)}
                       </ul>
                     ) : (
                       <p className="text-xs text-gray-500 text-left">No exercise details found.</p>
