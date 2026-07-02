@@ -688,6 +688,19 @@ const Exercises = () => {
             .no-print { display: none !important; }
           }
         `}</style>
+        <style>{`
+          @media print {
+            tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              -webkit-region-break-inside: avoid !important;
+            }
+            td {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+          }
+        `}</style>
         
         <div className="text-center mb-10 border-b-2 border-gym-blue pb-6">
           <h1 className="text-4xl font-black text-gray-900 mb-2 uppercase tracking-tighter">GymDay Fit Catalog</h1>
@@ -730,12 +743,17 @@ const Exercises = () => {
                           <td className="p-2">
                              {shouldUseStartPos ? (
                                 <div className="w-12 h-12 flex-shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-white">
-                                  <AnimatedExerciseIcon 
-                                    startPositionUrl={ex.startPositionUrl!}
-                                    endPositionUrl={ex.endPositionUrl}
+                                  <img 
+                                    src={ex.startPositionUrl!}
                                     alt={ex.name}
                                     className="w-full h-full object-contain"
-                                    fallbackUrl={ex.thumbnailUrl || ex.pictureUrl}
+                                    onError={(e) => {
+                                      if (ex.thumbnailUrl || ex.pictureUrl) {
+                                        (e.target as HTMLImageElement).src = ex.thumbnailUrl || ex.pictureUrl || "";
+                                      } else {
+                                        (e.target as HTMLImageElement).style.display = 'none';
+                                      }
+                                    }}
                                   />
                                 </div>
                              ) : ex.thumbnailUrl || ex.pictureUrl ? (
