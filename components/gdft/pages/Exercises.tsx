@@ -263,26 +263,39 @@ const Exercises = () => {
                     // Small delay to let the UI show the loading state
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
-                    const element = document.querySelector('.print-section') as HTMLElement;
+                    const element = document.getElementById('print-catalog');
                     if (!element) {
                       setIsGeneratingPDF(false);
                       return;
                     }
 
-                    element.classList.remove('hidden');
+                    // Temporarily bring the catalog on-screen for html2pdf to capture
+                    element.style.position = 'static';
+                    element.style.left = '0';
+                    element.style.width = '100%';
+                    element.style.background = 'white';
+                    element.style.padding = '20px';
+                    
                     const opt = {
-                      margin: 0,
+                      margin: [10, 5, 10, 5],
                       filename: 'GymDay_Exercise_Catalog.pdf',
                       image: { type: 'jpeg' as const, quality: 0.98 },
                       html2canvas: { scale: 2, useCORS: true, logging: false },
-                      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+                      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+                      pagebreak: { mode: ['avoid-all', 'css'] }
                     };
                     
                     // Dynamically import to avoid SSR issues
                     const html2pdfModule = (await import('html2pdf.js')).default;
                     await html2pdfModule().set(opt).from(element).save();
                     
-                    element.classList.add('hidden');
+                    // Move it back off-screen
+                    element.style.position = 'absolute';
+                    element.style.left = '-9999px';
+                    element.style.width = '190mm';
+                    element.style.background = '';
+                    element.style.padding = '';
+                    
                     toast.success("PDF Library Created!");
                   } catch (error) {
                     console.error("PDF Error:", error);
