@@ -360,7 +360,8 @@ export const slideboardExercises: Exercise[] = [
     muscleGroups: ["Core", "Legs"],
     equipment: "Slide Board",
     description: "Lie on your back on the slide board with your legs extended and feet on the reformer. Engage your core and pull your knees toward your chest, sliding your feet along the board. Keep your movements controlled to avoid jerking. Exhale as you pull in, and inhale as you extend your legs back out. This targets your core while engaging your legs for stability.",
-    pictureUrl: "https://i.imgur.com/KRP2fbM.png",
+    startPositionUrl: "/icons/slide-board/realistic/1-leg-pull-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/1-leg-pull-pos2.png",
     settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
   },
   {
@@ -370,7 +371,8 @@ export const slideboardExercises: Exercise[] = [
     muscleGroups: ["Arms", "Core"],
     equipment: "Slide Board",
     description: "Lie on your back on the slide board with your arms extended overhead, holding the reformer bar. Engage your core and pull your arms down toward your hips in a smooth arc, keeping them straight. Slide your hands along the board as you move. Inhale as you return your arms overhead, maintaining control. This works your arms and core for stability.",
-    pictureUrl: "https://i.imgur.com/JyFSW9N.png",
+    startPositionUrl: "/icons/slide-board/realistic/2-arm-pullover-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/2-arm-pullover-pos2.png",
     settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
   },
   {
@@ -380,7 +382,8 @@ export const slideboardExercises: Exercise[] = [
     muscleGroups: ["Chest", "Arms"],
     equipment: "Slide Board",
     description: "Sit on the slide board facing the reformer, holding the straps with both hands. Start with your arms extended out to the sides, then pull them inward in a wide arc, as if hugging a large ball, until your hands meet in front of your chest. Keep your elbows slightly bent and shoulders relaxed. Exhale as you pull in, and inhale as you open your arms back out. This targets your chest and arms.",
-    pictureUrl: "https://i.imgur.com/rRdbWHP.png",
+    startPositionUrl: "/icons/slide-board/realistic/3-butterfly-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/3-butterfly-pos2.png",
     settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
   },
   {
@@ -390,7 +393,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Back", "Arms"],
   equipment: "Slide Board",
   description: "Sit on the slide board facing the reformer with your legs extended and feet braced. Hold the straps with both hands, arms extended forward. Pull your elbows back, sliding your hands toward your waist, squeezing your shoulder blades together. Keep your back straight and core engaged throughout. Inhale as you extend your arms back out, maintaining control.",
-  pictureUrl: "https://i.imgur.com/ciFuVIm.png",
+  startPositionUrl: "/icons/slide-board/realistic/4-seated-row-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/4-seated-row-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -400,7 +404,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Cardiovascular", "Core"],
   equipment: "Slide Board",
   description: "Stand on the slide board with one foot on the reformer, holding the straps with both hands. Pull the straps toward your waist in a quick, rhythmic motion, engaging your core for stability. Alternate pulling with each arm to increase your heart rate. Keep your movements fast but controlled, breathing steadily. This boosts cardiovascular endurance while working your core.",
-  pictureUrl: "https://i.imgur.com/7HPxGFA.png",
+  startPositionUrl: "/icons/slide-board/realistic/8-cardio-pull-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/8-cardio-pull-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -410,7 +415,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Full Body", "Core"],
   equipment: "Slide Board",
   description: "Stand on the slide board in a squat position, feet shoulder-width apart, facing sideways like a surfer. Hold the reformer bar for balance and shift your weight side to side, sliding your feet along the board. Rotate your torso as if paddling on a surfboard, engaging your core. Keep your knees bent and movements fluid. This works your full body with a focus on core stability.",
-  pictureUrl: "https://i.imgur.com/FCOFO8E.png",
+  startPositionUrl: "/icons/slide-board/realistic/10-surfer-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/10-surfer-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -420,7 +426,7 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Chest", "Arms"],
   equipment: "Slide Board",
   description: "Sit on the slide board facing the reformer, holding the straps with both hands at chest level. Push your arms forward, extending them fully while sliding your hands along the board. Keep your shoulders down and chest lifted, exhaling as you press. Inhale as you return your hands to the starting position, maintaining control. This targets your chest and arms.",
-  pictureUrl: "https://i.imgur.com/rY1wAkr.png",
+  startPositionUrl: "https://i.imgur.com/rY1wAkr.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -430,7 +436,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Outer Thigh", "Glutes"],
   equipment: "Slide Board",
   description: "Lie on your side on the slide board with your legs stacked and the bottom leg on the reformer. Lift your top leg upward, sliding it along the board, keeping it straight. Engage your glutes and outer thigh as you lift, exhaling on the way up. Inhale as you lower your leg back down with control. This strengthens your outer thighs and glutes.",
-  pictureUrl: "https://i.imgur.com/n9A63em.png",
+  startPositionUrl: "/icons/slide-board/realistic/12-hip-abduction-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/12-hip-abduction-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -440,7 +447,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Biceps", "Arms"],
   equipment: "Slide Board",
   description: "Sit on the slide board facing the reformer, holding the straps with your palms up, arms extended. Bend your elbows to curl your hands toward your shoulders, sliding along the board. Keep your upper arms stationary and exhale as you curl. Inhale as you extend your arms back out, maintaining a slow, controlled motion. This targets your biceps and arms.",
-  pictureUrl: "https://i.imgur.com/rZBPP7j.png",
+  startPositionUrl: "/icons/slide-board/realistic/13-seated-curls-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/13-seated-curls-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -450,7 +458,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Triceps", "Arms"],
   equipment: "Slide Board",
   description: "Sit on the slide board facing away from the reformer, holding the straps with your arms overhead, elbows bent. Extend your arms upward, sliding your hands along the board, keeping your elbows close to your head. Exhale as you extend, feeling your triceps engage. Inhale as you bend your elbows to return to the starting position. This isolates your triceps and arms.",
-  pictureUrl: "https://i.imgur.com/drGzCn1.png",
+  startPositionUrl: "/icons/slide-board/realistic/14-tricep-extension-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/14-tricep-extension-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -460,7 +469,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Core", "Obliques"],
   equipment: "Slide Board",
   description: "Sit on the slide board with your knees bent, feet on the reformer, holding the straps. Twist your torso to one side, sliding your feet along the board, engaging your obliques. Return to the center and twist to the other side, keeping your core tight. Exhale with each twist, and move in a controlled rhythm. This works your core and obliques for rotational strength.",
-  pictureUrl: "https://i.imgur.com/3SEKWGP.png",
+  startPositionUrl: "/icons/slide-board/realistic/15-twister-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/15-twister-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -470,7 +480,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Glutes", "Hamstrings"],
   equipment: "Slide Board",
   description: "Lie on your stomach on the slide board with your legs extended, feet on the reformer. Bend your knees to pull your heels toward your glutes, sliding along the board. Engage your glutes and hamstrings as you pull, exhaling on the effort. Inhale as you extend your legs back out, keeping the movement smooth. This targets your glutes and hamstrings.",
-  pictureUrl: "https://i.imgur.com/JC3ojsQ.png",
+  startPositionUrl: "/icons/slide-board/realistic/16-hip-thigh-extension-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/16-hip-thigh-extension-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -480,7 +491,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Back", "Arms"],
   equipment: "Slide Board",
   description: "Lie on your back on the slide board, holding the straps with your arms extended overhead. Pull your hands toward your chest, sliding along the board, as if performing a pull-up, engaging your back. Keep your elbows close to your body and exhale as you pull. Inhale as you extend your arms back overhead, maintaining control. This strengthens your back and arms.",
-  pictureUrl: "https://i.imgur.com/ilzdIeL.png",
+  startPositionUrl: "/icons/slide-board/realistic/17-pull-up-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/17-pull-up-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -490,7 +502,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Chest", "Shoulders"],
   equipment: "Slide Board",
   description: "Stand on the slide board facing the reformer, holding the straps at chest height. Push your arms forward, extending them fully while sliding your hands along the board. Keep your shoulders down and core engaged, exhaling as you press. Inhale as you return your arms to the starting position, moving slowly. This targets your chest and shoulders.",
-  pictureUrl: "https://i.imgur.com/vkZuf8u.png",
+  startPositionUrl: "/icons/slide-board/realistic/18-front-press-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/18-front-press-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -500,7 +513,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Front Deltoids", "Shoulders"],
   equipment: "Slide Board",
   description: "Stand on the slide board facing the reformer, holding the straps with your arms down. Raise your arms straight in front of you to shoulder height, sliding along the board. Keep your movements controlled and exhale as you lift. Inhale as you lower your arms back down, avoiding any swinging. This isolates your front deltoids and shoulders.",
-  pictureUrl: "https://i.imgur.com/leYA7pf.png",
+  startPositionUrl: "/icons/slide-board/realistic/19-front-deltoid-raises-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/19-front-deltoid-raises-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -510,7 +524,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Shoulders", "Arms"],
   equipment: "Slide Board",
   description: "Stand on the slide board facing the reformer, holding the straps with your arms at your sides. Lift your arms out to the sides to shoulder height, sliding along the board, keeping them straight. Exhale as you raise, engaging your shoulders. Inhale as you lower your arms back down, maintaining control. This targets your shoulders and arms.",
-  pictureUrl: "https://i.imgur.com/vYzPdYY.png",
+  startPositionUrl: "/icons/slide-board/realistic/20-side-deltoid-raises-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/20-side-deltoid-raises-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -520,7 +535,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Rear Deltoids", "Back"],
   equipment: "Slide Board",
   description: "Stand on the slide board facing away from the reformer, holding the straps with your arms down. Bend forward slightly and lift your arms out to the sides, sliding along the board, focusing on your rear deltoids. Exhale as you lift, squeezing your shoulder blades together. Inhale as you lower your arms, keeping the motion smooth. This works your rear deltoids and back.",
-  pictureUrl: "https://i.imgur.com/hJwqLU0.png",
+  startPositionUrl: "/icons/slide-board/realistic/21-rear-deltoid-raises-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/21-rear-deltoid-raises-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -530,7 +546,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Biceps", "Arms"],
   equipment: "Slide Board",
   description: "Lie on your back on the slide board, holding the straps with your palms up, arms extended by your sides. Curl your hands toward your shoulders, sliding along the board, keeping your elbows close to your body. Exhale as you curl, engaging your biceps. Inhale as you extend your arms back out, moving slowly. This isolates your biceps and arms.",
-  pictureUrl: "https://i.imgur.com/RrBCQBX.png",
+  startPositionUrl: "/icons/slide-board/realistic/22-laying-curls-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/22-laying-curls-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -540,7 +557,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Abs", "Core"],
   equipment: "Slide Board",
   description: "Kneel on the slide board facing the reformer, holding the straps with both hands near your forehead. Crunch forward, pulling your elbows toward your knees, sliding your body along the board. Engage your abs and exhale as you crunch. Inhale as you return to the starting position, keeping your core tight. This targets your abs and core.",
-  pictureUrl: "https://i.imgur.com/3KSBK7t.png",
+  startPositionUrl: "/icons/slide-board/realistic/23-pulley-ab-crunch-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/23-pulley-ab-crunch-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -550,7 +568,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Back", "Shoulders"],
   equipment: "Slide Board",
   description: "Sit on the slide board facing the reformer, holding the straps with your arms extended. Pull your hands toward your chin, elbows flaring out, sliding along the board, engaging your upper back. Exhale as you pull, keeping your shoulders down. Inhale as you extend your arms back out, maintaining a steady pace. This strengthens your back and shoulders.",
-  pictureUrl: "https://i.imgur.com/mrFYvML.png",
+  startPositionUrl: "/icons/slide-board/realistic/24-seated-high-pull-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/24-seated-high-pull-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -560,7 +579,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Quadriceps", "Glutes"],
   equipment: "Slide Board",
   description: "Stand on the slide board on one leg, with the other leg lifted, holding the reformer for balance. Lower into a squat on your standing leg, sliding your foot along the board, keeping your knee over your ankle. Exhale as you squat, engaging your glutes. Inhale as you stand back up, maintaining control. This works your quadriceps and glutes.",
-  pictureUrl: "https://i.imgur.com/ZBH628K.png",
+  startPositionUrl: "/icons/slide-board/realistic/25-one-leg-squat-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/25-one-leg-squat-pos2.png",
   settings: { incline: 0, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -570,7 +590,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Calves", "Legs"],
   equipment: "Slide Board",
   description: "Stand on the slide board with your feet flat, holding the reformer for balance. Lift your heels off the board, sliding your toes along the surface, rising onto the balls of your feet. Exhale as you lift, engaging your calves. Inhale as you lower your heels back down, keeping the motion controlled. This targets your calves and legs.",
-  pictureUrl: "https://i.imgur.com/IH0YGKF.png",
+  startPositionUrl: "/icons/slide-board/realistic/26-toe-raises-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/26-toe-raises-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -580,7 +601,7 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Quadriceps", "Glutes"],
   equipment: "Slide Board",
   description: "Stand on the slide board with one foot forward, the other on the reformer, holding the bar for balance. Slide your back foot backward into a lunge, lowering your back knee toward the board. Keep your front knee over your ankle and exhale as you lunge. Inhale as you slide back to the starting position, engaging your glutes. This works your quadriceps and glutes.",
-  pictureUrl: "https://i.imgur.com/bseXvG3.png",
+  startPositionUrl: "https://i.imgur.com/bseXvG3.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -590,7 +611,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Hamstrings", "Glutes"],
   equipment: "Slide Board",
   description: "Lie on your back on the slide board with your heels on the reformer, legs extended. Pull your heels toward your glutes, sliding along the board, lifting your hips slightly. Engage your hamstrings and exhale as you pull. Inhale as you extend your legs back out, keeping your movements smooth. This targets your hamstrings and glutes.",
-  pictureUrl: "https://i.imgur.com/q14LPWv.png",
+  startPositionUrl: "/icons/slide-board/realistic/28-hamstring-pull-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/28-hamstring-pull-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -600,7 +622,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Inner Thigh", "Adductors"],
   equipment: "Slide Board",
   description: "Lie on your side on the slide board with your bottom leg on the reformer, top leg bent and resting in front. Pull your bottom leg upward, sliding it along the board, engaging your inner thigh. Exhale as you pull, keeping your core stable. Inhale as you lower your leg back down, maintaining control. This strengthens your inner thighs and adductors.",
-  pictureUrl: "https://i.imgur.com/Udj4quG.png",
+  startPositionUrl: "/icons/slide-board/realistic/29-inner-thigh-pull-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/29-inner-thigh-pull-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -610,7 +633,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Glutes", "Hamstrings"],
   equipment: "Slide Board",
   description: "Kneel on the slide board with your hands on the reformer for support, one leg extended back. Slide your extended leg further back, lifting it slightly, engaging your glutes. Exhale as you kick back, keeping your core tight. Inhale as you return your leg to the starting position, moving slowly. This targets your glutes and hamstrings.",
-  pictureUrl: "https://i.imgur.com/VZW4K3T.png",
+  startPositionUrl: "/icons/slide-board/realistic/30-kneeling-kickbacks-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/30-kneeling-kickbacks-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -620,7 +644,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Obliques", "Core"],
   equipment: "Slide Board",
   description: "Stand on the slide board with your feet on the reformer, holding the bar for balance. Bend your torso to one side, sliding your hand down your leg, engaging your obliques. Exhale as you bend, keeping your core tight. Inhale as you return to the center, then repeat on the other side. This works your obliques and core.",
-  pictureUrl: "https://i.imgur.com/nZUM7rv.png",
+  startPositionUrl: "/icons/slide-board/realistic/31-side-bends-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/31-side-bends-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -630,7 +655,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Quadriceps", "Core"],
   equipment: "Slide Board",
   description: "Stand on the slide board with your feet shoulder-width apart, holding the reformer bar. Lower into a squat, then twist your torso to one side as you stand, sliding your feet along the board. Exhale as you twist, engaging your core. Inhale as you return to the center and squat again, then twist to the other side. This targets your quadriceps and core.",
-  pictureUrl: "https://i.imgur.com/z3v3L9r.png",
+  startPositionUrl: "/icons/slide-board/realistic/32-twisting-squat-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/32-twisting-squat-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -640,7 +666,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Arms", "Core"],
   equipment: "Slide Board",
   description: "Stand on the slide board facing sideways, holding the strap with one hand like a tennis racket. Swing your arm across your body in a backhand motion, sliding your feet along the board, engaging your core. Exhale as you swing, keeping your movements controlled. Inhale as you return to the starting position, then repeat. This works your arms and core.",
-  pictureUrl: "https://i.imgur.com/AVSjXhb.png",
+  startPositionUrl: "/icons/slide-board/realistic/33-tennis-backhand-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/33-tennis-backhand-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -650,7 +677,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Back", "Shoulders"],
   equipment: "Slide Board",
   description: "Lie on your stomach on the slide board, holding the straps with your arms extended forward. Pull your hands toward your chin, elbows flaring out, sliding along the board, engaging your upper back. Exhale as you pull, keeping your shoulders down. Inhale as you extend your arms back out, maintaining control. This strengthens your back and shoulders.",
-  pictureUrl: "https://i.imgur.com/DOLfwtk.png",
+  startPositionUrl: "/icons/slide-board/realistic/34-laying-high-pull-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/34-laying-high-pull-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -660,7 +688,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Inner Thigh", "Adductors"],
   equipment: "Slide Board",
   description: "Sit on the slide board with your legs spread wide, feet on the reformer. Slide your feet outward as far as comfortable, feeling a stretch in your inner thighs, and hold the position. Keep your back straight and breathe deeply, exhaling as you deepen the stretch. Gently slide your feet back together to release. This stretches your inner thighs and adductors.",
-  pictureUrl: "https://i.imgur.com/Hw4xttH.png",
+  startPositionUrl: "/icons/slide-board/realistic/35-groin-stretch-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/35-groin-stretch-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -670,7 +699,8 @@ export const slideboardExercises: Exercise[] = [
   muscleGroups: ["Hamstrings", "Glutes"],
   equipment: "Slide Board",
   description: "Sit on the slide board with one leg extended forward on the reformer, the other bent back like a hurdler. Slide your extended leg forward, keeping it straight, to feel a stretch in your hamstrings. Lean slightly forward, exhaling as you stretch, keeping your back straight. Hold for a moment, then switch legs and repeat. This stretches your hamstrings and glutes.",
-  pictureUrl: "https://i.imgur.com/uqk4LU2.png",
+  startPositionUrl: "/icons/slide-board/realistic/36-hurdle-stretch-pos1.png",
+    endPositionUrl: "/icons/slide-board/realistic/36-hurdle-stretch-pos2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 },
 {
@@ -680,7 +710,7 @@ export const slideboardExercises: Exercise[] = [
     muscleGroups: ["Quadriceps", "Legs"],
     equipment: "Slide Board",
   description: "Sit on the slide board with your legs extended, feet on the reformer. Slide your feet forward, extending your legs fully, engaging your quadriceps. Exhale as you extend, keeping your core tight. Inhale as you bend your knees slightly to return, maintaining control. This targets your quadriceps and legs for strength. ",
-  pictureUrl: "https://i.imgur.com/URQe2L2.png",
+  startPositionUrl: "https://i.imgur.com/URQe2L2.png",
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 }
 ];
