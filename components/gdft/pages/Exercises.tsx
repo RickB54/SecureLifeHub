@@ -724,8 +724,8 @@ const Exercises = () => {
                 <div className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">{catEx.length} Exercises</div>
               </div>
               <div className="border-2 border-t-0 border-gray-100 rounded-b-2xl overflow-hidden">
-                <table className="w-full text-left">
-                  <thead>
+                <table className="w-full text-left" style={{ pageBreakInside: 'auto' }}>
+                  <thead className="print:table-header-group">
                     <tr className="bg-gray-50 text-gray-400 text-[10px] font-black uppercase tracking-widest">
                       <th className="w-16">Preview</th>
                       <th>Exercise Name</th>
@@ -733,10 +733,20 @@ const Exercises = () => {
                       <th>Focus Areas</th>
                     </tr>
                   </thead>
+                  <tfoot className="hidden print:table-footer-group">
+                    <tr>
+                      <td colSpan={4} className="pt-4 text-center text-[8px] text-gray-300">
+                        — GDFT Exercise Library —
+                      </td>
+                    </tr>
+                  </tfoot>
                   <tbody className="divide-y divide-gray-100">
                     {catEx.map((ex) => {
+                      const isWeights = category === "Weights";
                       const isManualImage = ex.pictureUrl && !ex.pictureUrl.includes('imgur.com');
-                      const shouldUseStartPos = ex.startPositionUrl && category !== "Slide Board" && !isManualImage;
+                      // ONLY use startPositionUrl (3D models/SVGs) for the Weights category.
+                      // For Cardio, No Equipment, and Slide Board, always show their specific pictureUrl.
+                      const shouldUseStartPos = ex.startPositionUrl && isWeights && !isManualImage;
 
                       return (
                         <tr key={ex.id} className="hover:bg-gray-50 transition-colors print:break-inside-avoid">
