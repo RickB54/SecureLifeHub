@@ -1187,26 +1187,25 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const handleNewStickyClick = (extraTags: string[] = []) => {
     let targetSection = selectedSection;
+    let targetNotebook = !selectedSection ? selectedNotebook : null;
     let sectionName = "";
-    if (!targetSection && selectedNotebook) {
-      const sections = notesStore.sections.filter(s => s.notebook_id === selectedNotebook);
-      if (sections.length > 0) {
-        targetSection = sections[0].id;
-        sectionName = sections[0].name;
-      } else {
-        alert("Please add a Tag Folder first! (Click the + next to the Labels in the sidebar)");
-        return;
-      }
-    }
     
     if (targetSection) {
       if (!sectionName) sectionName = notesStore.sections.find(s => s.id === targetSection)?.name || "";
       const notebookId = notesStore.sections.find(s => s.id === targetSection)?.notebook_id;
       const notebookName = notesStore.notebooks.find(nb => nb.id === notebookId)?.name || "";
       toast({ title: `Sticky will be created in ${notebookName ? notebookName + ' -> ' : ''}${sectionName}` });
+    } else if (targetNotebook) {
+      const notebookName = notesStore.notebooks.find(nb => nb.id === targetNotebook)?.name || "";
+      toast({ title: `Sticky will be created in ${notebookName}` });
     }
     
-    setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags: extraTags, versions: [], created_at: '', updated_at: '' });
+    const tags = [...extraTags];
+    if (targetNotebook) {
+      tags.push(`__notebook:${targetNotebook}`);
+    }
+    
+    setEditingNote({ id: 'new', title: '', content: '', section_id: targetSection, user_id: '', is_pinned: false, is_locked: false, tags, versions: [], created_at: '', updated_at: '' });
     setIsReminderMenuOpen(false);
     const now = new Date();
     now.setMinutes(now.getMinutes() + 1);
@@ -2546,11 +2545,21 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       ...(editingNote.tags?.filter(t => t.startsWith('__section:')).map(t => t.replace('__section:', '')) || [])
                     ];
                     const uniqueCardSections = Array.from(new Set(cardSections));
+                    const notebookTags = editingNote.tags?.filter(t => t.startsWith('__notebook:')).map(t => t.replace('__notebook:', '')) || [];
                     
-                    if (uniqueCardSections.length === 0) return null;
+                    if (uniqueCardSections.length === 0 && notebookTags.length === 0) return null;
                     
                     return (
                       <div className="px-4 pb-3 pl-10 pt-1 shrink-0 flex flex-wrap gap-1.5 z-10">
+                        {notebookTags.map(nbId => {
+                          const nb = notesStore.notebooks.find(n => n.id === nbId);
+                          if (!nb) return null;
+                          return (
+                            <div key={`nb-${nbId}`} className="inline-flex items-center text-[10px] sm:text-xs font-bold px-2.5 py-0.5 sm:py-1 rounded-full border border-black/25 bg-black/5 text-inherit select-none">
+                              {nb.name}
+                            </div>
+                          );
+                        })}
                         {uniqueCardSections.map(secId => {
                           const sec = notesStore.sections.find(s => s.id === secId);
                           if (!sec) return null;
