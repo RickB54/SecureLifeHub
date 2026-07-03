@@ -104,7 +104,7 @@ export const getFullSectionName = (notesStore: any, secId: string) => {
   const sec = notesStore.sections.find((s: any) => s.id === secId);
   if (!sec) return "";
   const nb = notesStore.notebooks.find((n: any) => n.id === sec.notebook_id);
-  if (!nb || nb.name === sec.name) return sec.name;
+  if (!nb || nb.name === sec.name || sec.name.toLowerCase() === 'general') return nb ? nb.name : sec.name;
   return `${nb.name} / ${sec.name}`;
 };
 
@@ -634,6 +634,8 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const [newSectionName, setNewSectionName] = useState("");
   const [selectedNbForNewSection, setSelectedNbForNewSection] = useState<string | null>(null);
   const [isSectionModalOpen, setIsSectionModalOpen] = useState(false);
+  const [isMoveSectionModalOpen, setIsMoveSectionModalOpen] = useState(false);
+  const [sectionToMove, setSectionToMove] = useState<Section | null>(null);
   const [isVisibilityOpen, setIsVisibilityOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -734,8 +736,29 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
   };
 
-  const handleToggleLabel = (secId: string) => {
+  const handleToggleLabel = async (id: string, type: 'section' | 'notebook' = 'section') => {
     if (!editingNote) return;
+    
+    let secId = id;
+    if (type === 'notebook') {
+      // Find root section or create it
+      const rootSec = notesStore.sections.find(s => s.notebook_id === id && (s.name === notesStore.notebooks.find(n=>n.id===id)?.name || s.name.toLowerCase() === 'general'));
+      if (rootSec) {
+        secId = rootSec.id;
+      } else {
+        const nb = notesStore.notebooks.find(n => n.id === id);
+        if (nb) {
+          try {
+            const newSec = await notesStore.createSection(nb.id, 'General');
+            secId = newSec.id;
+          } catch (err) {
+            toast({ title: "Error creating root section", variant: "destructive" });
+            return;
+          }
+        }
+      }
+    }
+
     const isChecked = editingNote.section_id === secId || editingNote.tags?.includes(`__section:${secId}`);
     let newTags = [...(editingNote.tags || [])];
     let newSectionId = editingNote.section_id;
@@ -1451,6 +1474,15 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     }
   };
 
+  const handleMoveSection = async (newNotebookId: string) => {
+    if (sectionToMove && newNotebookId) {
+      await notesStore.moveSection(sectionToMove.id, newNotebookId);
+      setIsMoveSectionModalOpen(false);
+      setSectionToMove(null);
+      toast({ title: "Submenu Moved" });
+    }
+  };
+
   const enableAnim = prefs.anim;
   const showTags = prefs.tags;
   const isMasonry = prefs.masonry;
@@ -1935,6 +1967,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-white z-[400]">
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSection(sec); }}><Edit2 className="w-4 h-4 mr-2"/> Edit Submenu</DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setSectionToMove(sec); setIsMoveSectionModalOpen(true); }}><Folder className="w-4 h-4 mr-2"/> Move to Tag Group</DropdownMenuItem>
                               <div className="border-t border-zinc-800 my-1" />
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleRemoveAllStatusesInSection(sec.id); }} className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10"><CheckSquare className="w-4 h-4 mr-2"/> Remove All Statuses</DropdownMenuItem>
                               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteSection(sec.id); }} className="text-red-400 hover:text-red-300 hover:bg-red-400/10"><Trash2 className="w-4 h-4 mr-2"/> Delete Submenu</DropdownMenuItem>
@@ -2846,6 +2879,33 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
         </div>
       )}
 
+      {/* Move Section Modal */}
+      {isMoveSectionModalOpen && sectionToMove && (
+        <div className="fixed inset-0 z-[300] bg-black/80 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6 w-full max-w-sm">
+            <h2 className="text-white font-bold mb-4">Move '{sectionToMove.name}' to...</h2>
+            <select
+              className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-white mb-4 focus-visible:ring-blue-500 focus:outline-none"
+              onChange={(e) => {
+                const targetNb = e.target.value;
+                if (targetNb) {
+                  handleMoveSection(targetNb);
+                }
+              }}
+              defaultValue=""
+            >
+              <option value="" disabled>Select a Tag Group...</option>
+              {notesStore.notebooks.filter((nb: any) => nb.id !== sectionToMove.notebook_id).map((nb: any) => (
+                <option key={nb.id} value={nb.id}>{nb.name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setIsMoveSectionModalOpen(false)} className="text-zinc-400">Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings Modal */}
       {isSettingsOpen && (
         <div 
@@ -3244,32 +3304,56 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               </div>
 
               <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                {notesStore.sections.length === 0 ? (
-                  <p className="text-xs text-zinc-500 italic py-2">No labels created yet</p>
-                ) : (
-                  notesStore.sections
-                    .filter(sec => 
-                      !labelSearchText || 
-                      sec.name.toLowerCase().includes(labelSearchText.toLowerCase())
-                    )
-                    .map(sec => {
-                      const isChecked = editingNote.section_id === sec.id || editingNote.tags?.includes(`__section:${sec.id}`);
-                      return (
-                        <div key={sec.id} className="flex items-center justify-between group px-2 py-1 transition-colors rounded-lg hover:bg-zinc-800/50">
-                          <label className="flex items-center gap-3 flex-1 cursor-pointer text-zinc-300 hover:text-white transition-colors">
-                            <input 
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => handleToggleLabel(sec.id)}
-                              className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
-                            />
-                            <span className="text-sm font-medium">{getFullSectionName(notesStore, sec.id)}</span>
-                          </label>
+                {(() => {
+                  const list: { type: 'section' | 'notebook', id: string, name: string }[] = [];
+                  notesStore.sections.forEach(sec => {
+                    list.push({ type: 'section', id: sec.id, name: getFullSectionName(notesStore, sec.id) });
+                  });
+                  notesStore.notebooks.forEach(nb => {
+                    const hasRoot = notesStore.sections.some(s => s.notebook_id === nb.id && (s.name === nb.name || s.name.toLowerCase() === 'general'));
+                    if (!hasRoot) {
+                      list.push({ type: 'notebook', id: nb.id, name: nb.name });
+                    }
+                  });
+                  const filtered = list.filter(item => !labelSearchText || item.name.toLowerCase().includes(labelSearchText.toLowerCase()));
+                  filtered.sort((a, b) => a.name.localeCompare(b.name));
+                  
+                  if (filtered.length === 0) return <p className="text-xs text-zinc-500 italic py-2">No labels found</p>;
+                  
+                  return filtered.map(item => {
+                    let isChecked = false;
+                    if (item.type === 'section') {
+                      isChecked = editingNote.section_id === item.id || !!editingNote.tags?.includes(`__section:${item.id}`);
+                    } else {
+                      // For notebook, check if there's any section matching this notebook that acts as root and is checked
+                      const rootSec = notesStore.sections.find(s => s.notebook_id === item.id && (s.name === item.name || s.name.toLowerCase() === 'general'));
+                      if (rootSec) {
+                        isChecked = editingNote.section_id === rootSec.id || !!editingNote.tags?.includes(`__section:${rootSec.id}`);
+                      }
+                    }
+
+                    return (
+                      <div key={`${item.type}-${item.id}`} className="flex items-center justify-between group px-2 py-1 transition-colors rounded-lg hover:bg-zinc-800/50">
+                        <label className="flex items-center gap-3 flex-1 cursor-pointer text-zinc-300 hover:text-white transition-colors">
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleLabel(item.id, item.type)}
+                            className="w-4 h-4 rounded border-zinc-700 bg-zinc-800 text-blue-600 focus:ring-blue-500 focus:ring-offset-zinc-900 focus:ring-offset-2"
+                          />
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </label>
+                        {item.type === 'section' && (
                           <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              onClick={(e) => { e.stopPropagation(); setIsLabelModalOpen(false); handleEditSection(sec); }}
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setIsLabelModalOpen(false); 
+                                const sec = notesStore.sections.find(s => s.id === item.id);
+                                if (sec) handleEditSection(sec); 
+                              }}
                               className="h-7 w-7 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded"
                               title="Edit Tag"
                             >
@@ -3278,17 +3362,18 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteLabelFromPopup(sec.id); }}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteLabelFromPopup(item.id); }}
                               className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded"
                               title="Delete Tag"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
-                        </div>
-                      );
-                    })
-                )}
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </div>
 

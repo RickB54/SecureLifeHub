@@ -50,6 +50,7 @@ interface NotesState {
   createSection: (notebookId: string, name: string) => Promise<Section>;
   deleteSection: (id: string) => Promise<void>;
   updateSection: (id: string, name: string) => Promise<void>;
+  moveSection: (id: string, newNotebookId: string) => Promise<void>;
   createNote: (sectionId: string | null, title: string, content: string, tags?: string[]) => Promise<string>;
   updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
@@ -176,6 +177,15 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     if (error) throw error;
     await get().refresh();
     return data;
+  },
+
+  moveSection: async (id: string, newNotebookId: string) => {
+    const { error } = await supabase
+      .from("sticky_sections")
+      .update({ notebook_id: newNotebookId })
+      .eq("id", id);
+    if (error) throw error;
+    await get().refresh();
   },
 
   deleteSection: async (id: string) => {
