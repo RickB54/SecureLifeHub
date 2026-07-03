@@ -104,7 +104,7 @@ export const getFullSectionName = (notesStore: any, secId: string) => {
   const sec = notesStore.sections.find((s: any) => s.id === secId);
   if (!sec) return "";
   const nb = notesStore.notebooks.find((n: any) => n.id === sec.notebook_id);
-  if (!nb || nb.name === sec.name || sec.name.toLowerCase() === 'general') return nb ? nb.name : sec.name;
+  if (!nb) return sec.name;
   return `${nb.name} / ${sec.name}`;
 };
 
@@ -253,11 +253,21 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 </span>
               </div>
             )}
-            {(showTags && (note.tags?.filter(t => !t.startsWith('__') || t === '__archived__').length > 0 || (uniqueCardSections.length === 0 && !note.section_id))) || uniqueCardSections.length > 0 || sectionName ? (
+            {(showTags && (note.tags?.filter(t => !t.startsWith('__') || t === '__archived__').length > 0 || (uniqueCardSections.length === 0 && !note.section_id))) || uniqueCardSections.length > 0 || note.tags?.some(t => t.startsWith('__notebook:')) || sectionName ? (
               <div className="mt-4 pt-4 border-t border-black/10 flex flex-wrap items-center gap-1">
                 {note.tags?.includes('__archived__') && (
                   <span className={`text-[9px] uppercase font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-sm`}>Archived</span>
                 )}
+                {note.tags?.filter(t => t.startsWith('__notebook:')).map(t => {
+                  const nbId = t.replace('__notebook:', '');
+                  const nb = notesStore.notebooks.find(n => n.id === nbId);
+                  if (!nb) return null;
+                  return (
+                    <span key={`nb-${nbId}`} className={`inline-flex items-center text-[9px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full border border-black/15 bg-black/5 ${color.text} select-none`}>
+                      {nb.name}
+                    </span>
+                  );
+                })}
                 {uniqueCardSections.length > 0 ? (
                   uniqueCardSections.map(secId => {
                     const sec = notesStore.sections.find(s => s.id === secId);
@@ -274,7 +284,7 @@ const SortableSticky = React.memo(({ note, animClass, sectionName, isMasonry, on
                 {showTags && note.tags && note.tags.filter(t => !t.startsWith('__')).length > 0 && note.tags.filter(t => !t.startsWith('__')).map(t => (
                   <span key={t} className={`text-[9px] uppercase font-bold ${color.tagBg} ${color.tagText} px-1.5 py-0.5 rounded-sm`}>{t}</span>
                 ))}
-                {showTags && (!note.tags || note.tags.filter(t => !t.startsWith('__')).length === 0) && !note.tags?.includes('__archived__') && uniqueCardSections.length === 0 && !sectionName && (
+                {showTags && (!note.tags || note.tags.filter(t => !t.startsWith('__')).length === 0) && !note.tags?.includes('__archived__') && uniqueCardSections.length === 0 && !note.tags?.some(t => t.startsWith('__notebook:')) && !sectionName && (
                   <span className={`text-[9px] uppercase font-bold bg-transparent ${color.text} opacity-50 italic px-1.5 py-0.5`}>No Tags</span>
                 )}
               </div>
@@ -688,15 +698,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     if (labelTargetNb === 'new_folder') {
       try {
         const newNb = await notesStore.createNotebook(trimmed);
-        const newSec = await notesStore.createSection(newNb.id, trimmed);
-        if (newSec) {
-          const newTags = [...(editingNote.tags || [])];
-          if (!newTags.includes(`__section:${newSec.id}`)) {
-            newTags.push(`__section:${newSec.id}`);
-          }
-          const newSectionId = editingNote.section_id || newSec.id;
-          setEditingNote({ ...editingNote, section_id: newSectionId, tags: newTags });
+        const newTags = [...(editingNote.tags || [])];
+        if (!newTags.includes(`__notebook:${newNb.id}`)) {
+          newTags.push(`__notebook:${newNb.id}`);
         }
+        setEditingNote({ ...editingNote, tags: newTags });
         setLabelSearchText("");
         toast({ title: `New Category "${trimmed}" created` });
       } catch (err) {
@@ -739,46 +745,36 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const handleToggleLabel = async (id: string, type: 'section' | 'notebook' = 'section') => {
     if (!editingNote) return;
     
-    let secId = id;
-    if (type === 'notebook') {
-      // Find root section or create it
-      const rootSec = notesStore.sections.find(s => s.notebook_id === id && (s.name === notesStore.notebooks.find(n=>n.id===id)?.name || s.name.toLowerCase() === 'general'));
-      if (rootSec) {
-        secId = rootSec.id;
-      } else {
-        const nb = notesStore.notebooks.find(n => n.id === id);
-        if (nb) {
-          try {
-            const newSec = await notesStore.createSection(nb.id, 'General');
-            secId = newSec.id;
-          } catch (err) {
-            toast({ title: "Error creating root section", variant: "destructive" });
-            return;
-          }
-        }
-      }
-    }
-
-    const isChecked = editingNote.section_id === secId || editingNote.tags?.includes(`__section:${secId}`);
     let newTags = [...(editingNote.tags || [])];
     let newSectionId = editingNote.section_id;
 
-    if (isChecked) {
-      newTags = newTags.filter(t => t !== `__section:${secId}`);
-      if (newSectionId === secId) {
-        const otherSecTag = newTags.find(t => t.startsWith('__section:'));
-        if (otherSecTag) {
-          newSectionId = otherSecTag.replace('__section:', '');
-        } else {
-          newSectionId = null;
-        }
+    if (type === 'notebook') {
+      const isChecked = newTags.includes(`__notebook:${id}`);
+      if (isChecked) {
+        newTags = newTags.filter(t => t !== `__notebook:${id}`);
+      } else {
+        newTags.push(`__notebook:${id}`);
       }
     } else {
-      if (!newTags.includes(`__section:${secId}`)) {
-        newTags.push(`__section:${secId}`);
-      }
-      if (!newSectionId) {
-        newSectionId = secId;
+      const isChecked = newSectionId === id || newTags.includes(`__section:${id}`);
+      
+      if (isChecked) {
+        newTags = newTags.filter(t => t !== `__section:${id}`);
+        if (newSectionId === id) {
+          const otherSecTag = newTags.find(t => t.startsWith('__section:'));
+          if (otherSecTag) {
+            newSectionId = otherSecTag.replace('__section:', '');
+          } else {
+            newSectionId = null;
+          }
+        }
+      } else {
+        if (!newTags.includes(`__section:${id}`)) {
+          newTags.push(`__section:${id}`);
+        }
+        if (!newSectionId) {
+          newSectionId = id;
+        }
       }
     }
 
@@ -982,7 +978,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
       }
       if (selectedNotebook) {
         const sectionIds = notesStore.sections.filter(s => s.notebook_id === selectedNotebook).map(s => s.id);
-        return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
+        return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))) || !!n.tags?.includes(`__notebook:${selectedNotebook}`);
       }
 
       if (dateFilter !== "all") {
@@ -1904,7 +1900,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                 const nbNotes = visibleNotes.filter(n => {
                   if (prefs.isolate && !n.tags?.includes('__sticky-notes__')) return false;
                   const sectionIds = notesStore.sections.filter(s => s.notebook_id === nb.id).map(s => s.id);
-                  return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', '')));
+                  return (n.section_id && sectionIds.includes(n.section_id)) || n.tags?.some(t => t.startsWith('__section:') && sectionIds.includes(t.replace('__section:', ''))) || !!n.tags?.includes(`__notebook:${nb.id}`);
                 });
                 const nbActiveCount = nbNotes.filter(n => !n.tags?.includes('__archived__')).length;
                 const nbArchivedCount = nbNotes.filter(n => n.tags?.includes('__archived__')).length;
@@ -1942,7 +1938,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                   </div>
                   {(expandedNotebook === nb.id || expandAll) && (
                     <div className="pl-6 pr-2 space-y-1">
-                      {notesStore.sections.filter(s => s.notebook_id === nb.id && !excludedSections.includes(s.id)).map(sec => {
+                      {notesStore.sections.filter(s => s.notebook_id === nb.id && !excludedSections.includes(s.id) && s.name.toLowerCase() !== 'general' && s.name !== nb.name).map(sec => {
                         const secNotes = visibleNotes.filter(n => (!prefs.isolate || n.tags?.includes('__sticky-notes__')) && (n.section_id === sec.id || n.tags?.includes(`__section:${sec.id}`)));
                         const secActiveCount = secNotes.filter(n => !n.tags?.includes('__archived__')).length;
                         const secArchivedCount = secNotes.filter(n => n.tags?.includes('__archived__')).length;
@@ -3306,15 +3302,16 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
               <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
                 {(() => {
                   const list: { type: 'section' | 'notebook', id: string, name: string }[] = [];
+                  notesStore.notebooks.forEach(nb => {
+                    list.push({ type: 'notebook', id: nb.id, name: nb.name });
+                  });
                   notesStore.sections.forEach(sec => {
+                    // Skip root sections from the list to avoid confusion, since they can just select the notebook
+                    const nb = notesStore.notebooks.find(n => n.id === sec.notebook_id);
+                    if (nb && (sec.name === nb.name || sec.name.toLowerCase() === 'general')) return;
                     list.push({ type: 'section', id: sec.id, name: getFullSectionName(notesStore, sec.id) });
                   });
-                  notesStore.notebooks.forEach(nb => {
-                    const hasRoot = notesStore.sections.some(s => s.notebook_id === nb.id && (s.name === nb.name || s.name.toLowerCase() === 'general'));
-                    if (!hasRoot) {
-                      list.push({ type: 'notebook', id: nb.id, name: nb.name });
-                    }
-                  });
+                  
                   const filtered = list.filter(item => !labelSearchText || item.name.toLowerCase().includes(labelSearchText.toLowerCase()));
                   filtered.sort((a, b) => a.name.localeCompare(b.name));
                   
@@ -3325,11 +3322,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                     if (item.type === 'section') {
                       isChecked = editingNote.section_id === item.id || !!editingNote.tags?.includes(`__section:${item.id}`);
                     } else {
-                      // For notebook, check if there's any section matching this notebook that acts as root and is checked
-                      const rootSec = notesStore.sections.find(s => s.notebook_id === item.id && (s.name === item.name || s.name.toLowerCase() === 'general'));
-                      if (rootSec) {
-                        isChecked = editingNote.section_id === rootSec.id || !!editingNote.tags?.includes(`__section:${rootSec.id}`);
-                      }
+                      isChecked = !!editingNote.tags?.includes(`__notebook:${item.id}`);
                     }
 
                     return (
