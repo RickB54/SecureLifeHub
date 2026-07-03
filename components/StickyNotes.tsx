@@ -1065,6 +1065,13 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
   const mainBoardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (isNoteModalOpen) {
+      setScrollTop(0);
+      if (textareaRef.current) textareaRef.current.scrollTop = 0;
+    }
+  }, [editingNote?.id, isNoteModalOpen]);
+
+  useEffect(() => {
     if (!textareaRef.current || !mirrorRef.current || !isNoteModalOpen || !editingNote) return;
     
     const updateTops = () => {
