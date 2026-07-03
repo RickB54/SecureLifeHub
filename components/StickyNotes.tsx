@@ -104,7 +104,7 @@ export const getFullSectionName = (notesStore: any, secId: string) => {
   const sec = notesStore.sections.find((s: any) => s.id === secId);
   if (!sec) return "";
   const nb = notesStore.notebooks.find((n: any) => n.id === sec.notebook_id);
-  if (!nb) return sec.name;
+  if (!nb || nb.name === sec.name || sec.name.toLowerCase() === 'general') return nb ? nb.name : sec.name;
   return `${nb.name} / ${sec.name}`;
 };
 
