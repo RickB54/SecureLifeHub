@@ -1257,7 +1257,7 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
 
   const handleSaveNote = async () => {
     if (editingNote) {
-      const hasTag = !!editingNote.section_id || (editingNote.tags || []).some(t => !t.startsWith('__') || t.startsWith('__section:'));
+      const hasTag = !!editingNote.section_id || (editingNote.tags || []).some(t => !t.startsWith('__') || t.startsWith('__section:') || t.startsWith('__notebook:'));
       if (!hasTag) {
         if (!window.confirm("Save without a tag? If you are in a submenu, it will auto tag the note to that menu item name.")) {
           setIsLabelModalOpen(true);
