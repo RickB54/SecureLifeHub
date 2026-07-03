@@ -749,9 +749,22 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
     let newSectionId = editingNote.section_id;
 
     if (type === 'notebook') {
-      const isChecked = newTags.includes(`__notebook:${id}`);
+      const rootSec = notesStore.sections.find(s => s.notebook_id === id && (s.name === notesStore.notebooks.find(n=>n.id===id)?.name || s.name.toLowerCase() === 'general'));
+      const hasNotebookTag = newTags.includes(`__notebook:${id}`);
+      const hasRootSection = rootSec ? (newSectionId === rootSec.id || newTags.includes(`__section:${rootSec.id}`)) : false;
+      const isChecked = hasNotebookTag || hasRootSection;
+      
       if (isChecked) {
+        // Remove notebook tag
         newTags = newTags.filter(t => t !== `__notebook:${id}`);
+        // Remove root section tag
+        if (rootSec) {
+          newTags = newTags.filter(t => t !== `__section:${rootSec.id}`);
+          if (newSectionId === rootSec.id) {
+            const otherSecTag = newTags.find(t => t.startsWith('__section:'));
+            newSectionId = otherSecTag ? otherSecTag.replace('__section:', '') : null;
+          }
+        }
       } else {
         newTags.push(`__notebook:${id}`);
       }
@@ -3332,6 +3345,11 @@ export default function StickyNotes({ setActivePage }: { setActivePage: (page: s
                       isChecked = editingNote.section_id === item.id || !!editingNote.tags?.includes(`__section:${item.id}`);
                     } else {
                       isChecked = !!editingNote.tags?.includes(`__notebook:${item.id}`);
+                      // Check for legacy root sections that act as this notebook
+                      const rootSec = notesStore.sections.find(s => s.notebook_id === item.id && (s.name === item.name || s.name.toLowerCase() === 'general'));
+                      if (rootSec) {
+                        isChecked = isChecked || editingNote.section_id === rootSec.id || !!editingNote.tags?.includes(`__section:${rootSec.id}`);
+                      }
                     }
 
                     return (
