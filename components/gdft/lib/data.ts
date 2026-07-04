@@ -214,6 +214,19 @@ export const getExercises = (): Exercise[] => {
     
     let parsedExercises = JSON.parse(stored);
     
+    // FORCE SYNC: Ensure local storage matches data.ts (removes deleted duplicates)
+    const defaultMap = new Map(defaultExercises.map(e => [e.name, e]));
+    
+    const seenNames = new Set();
+    parsedExercises = parsedExercises.filter((ex: Exercise) => {
+      if (ex.category === "Custom" || ex.name.startsWith("CF#")) return true;
+      if (!defaultMap.has(ex.name) || seenNames.has(ex.name)) return false;
+      seenNames.add(ex.name);
+      return true;
+    });
+
+    // FORCE SYNC: Ensure new images from data.ts are applied to existing exercises
+    
     // FORCE SYNC: Ensure new images from data.ts are applied to existing exercises
     const defaultMap = new Map(defaultExercises.map(e => [e.name, e]));
     parsedExercises = parsedExercises.map((ex: Exercise) => {
