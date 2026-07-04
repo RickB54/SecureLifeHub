@@ -716,23 +716,7 @@ export const slideboardExercises: Exercise[] = [
 ];
 export const weightExercises: Exercise[] = [
   {
-    id: "ex-gm50ig7c",
-    name: "MTS Triceps Extension",
-    category: "Weights",
-    targetMuscle: "Various",
-    startPositionUrl: "/icons/weights/realistic/mts-triceps-extension-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/mts-triceps-extension-pos2.png"
-  },
-  {
-    id: "ex-fhjdlgto",
-    name: "MTS Biceps Curl",
-    category: "Weights",
-    targetMuscle: "Various",
-    startPositionUrl: "/icons/weights/realistic/mts-biceps-curl-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/mts-biceps-curl-pos2.png"
-  },
-  {
-    id: "ex-3dy495ud",
+    id: "ex-uiy2bex5",
     name: "Cybex Eagle Row",
     category: "Weights",
     targetMuscle: "Various",
@@ -740,7 +724,7 @@ export const weightExercises: Exercise[] = [
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-row-pos2.png"
   },
   {
-    id: "ex-uoi2tedi",
+    id: "ex-dcphvk43",
     name: "Cybex Eagle Overhand Press",
     category: "Weights",
     targetMuscle: "Various",
@@ -748,7 +732,7 @@ export const weightExercises: Exercise[] = [
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-overhand-press-pos2.png"
   },
   {
-    id: "ex-vliwdnw9",
+    id: "ex-lfipz6o5",
     name: "Cybex Eagle Chest Press",
     category: "Weights",
     targetMuscle: "Various",
@@ -756,7 +740,7 @@ export const weightExercises: Exercise[] = [
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-chest-press-pos2.png"
   },
   {
-    id: "ex-bf7jylpw",
+    id: "ex-mfunbu32",
     name: "Cybex Eagle Arm Curl",
     category: "Weights",
     targetMuscle: "Various",
@@ -1849,8 +1833,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-4",
   name: "Hammer Strength MTS Biceps Curl",
-    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-biceps-curl-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-biceps-curl-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/hammer-strength-mts-biceps-curl-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/hammer-strength-mts-biceps-curl-pos2.png",
   category: "Weights",
   muscleGroups: ["Biceps"],
   equipment: "Machine",
@@ -1873,8 +1857,8 @@ export const weightExercises: Exercise[] = [
 {
   id: "machine-6",
   name: "Hammer Strength MTS Triceps Extension",
-    startPositionUrl: "/icons/weights/animated/hammer-strength-mts-triceps-extension-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/hammer-strength-mts-triceps-extension-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/hammer-strength-mts-triceps-extension-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/hammer-strength-mts-triceps-extension-pos2.png",
   category: "Weights",
   muscleGroups: ["Triceps"],
   equipment: "Machine",
