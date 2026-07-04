@@ -62,7 +62,8 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
            "lat pulldown machine",
            "cable lat pulldown",
            "squat jumps",
-           "calf raises"
+           "calf raises",
+           "lunges"
          ]);
          
          for (const ex of data) {
@@ -172,29 +173,6 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
            count++;
         }
 
-        // 2. Migrate Local Custom Exercises
-        const localExercises = localStorage.getItem('exercises');
-        if (localExercises) {
-            try {
-                const parsed = JSON.parse(localExercises);
-                const customExercises = parsed.filter((e: any) => e.userCreated);
-                const existingNames = new Set(uniqueDefaults.map(d => d.name.toLowerCase().trim()));
-
-                if (customExercises.length > 0) {
-                    console.log(`Migrating ${customExercises.length} custom exercises...`);
-                    for (const ex of customExercises) {
-                        if (existingNames.has(ex.name.toLowerCase().trim())) continue;
-                        const { id, ...rest } = ex;
-                        await api.exercises.create(rest as any, user.id);
-                        count++;
-                    }
-                    localStorage.removeItem('exercises');
-                }
-            } catch (e) {
-                console.error("Failed to migrate local exercises", e);
-            }
-        }
-        
         const data = await api.exercises.list();
         setExercises(data);
         toast.success(`Account setup complete! ${count} exercises available.`);
