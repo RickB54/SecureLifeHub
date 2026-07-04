@@ -716,6 +716,55 @@ export const slideboardExercises: Exercise[] = [
 ];
 export const weightExercises: Exercise[] = [
   {
+    id: "ex-gm50ig7c",
+    name: "MTS Triceps Extension",
+    category: "Weights",
+    targetMuscle: "Various",
+    startPositionUrl: "/icons/weights/realistic/mts-triceps-extension-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/mts-triceps-extension-pos2.png"
+  },
+  {
+    id: "ex-fhjdlgto",
+    name: "MTS Biceps Curl",
+    category: "Weights",
+    targetMuscle: "Various",
+    startPositionUrl: "/icons/weights/realistic/mts-biceps-curl-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/mts-biceps-curl-pos2.png"
+  },
+  {
+    id: "ex-3dy495ud",
+    name: "Cybex Eagle Row",
+    category: "Weights",
+    targetMuscle: "Various",
+    startPositionUrl: "/icons/weights/realistic/cybex-eagle-row-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/cybex-eagle-row-pos2.png"
+  },
+  {
+    id: "ex-uoi2tedi",
+    name: "Cybex Eagle Overhand Press",
+    category: "Weights",
+    targetMuscle: "Various",
+    startPositionUrl: "/icons/weights/realistic/cybex-eagle-overhand-press-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/cybex-eagle-overhand-press-pos2.png"
+  },
+  {
+    id: "ex-vliwdnw9",
+    name: "Cybex Eagle Chest Press",
+    category: "Weights",
+    targetMuscle: "Various",
+    startPositionUrl: "/icons/weights/realistic/cybex-eagle-chest-press-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/cybex-eagle-chest-press-pos2.png"
+  },
+  {
+    id: "ex-bf7jylpw",
+    name: "Cybex Eagle Arm Curl",
+    category: "Weights",
+    targetMuscle: "Various",
+    startPositionUrl: "/icons/weights/realistic/cybex-eagle-arm-curl-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/cybex-eagle-arm-curl-pos2.png"
+  },
+
+  {
     id: generateId(),
     name: "Bench Press",
     startPositionUrl: "/icons/weights/realistic/bench-press-pos1.png",
