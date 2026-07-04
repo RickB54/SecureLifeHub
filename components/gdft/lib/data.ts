@@ -226,9 +226,6 @@ export const getExercises = (): Exercise[] => {
     });
 
     // FORCE SYNC: Ensure new images from data.ts are applied to existing exercises
-    
-    // FORCE SYNC: Ensure new images from data.ts are applied to existing exercises
-    const defaultMap = new Map(defaultExercises.map(e => [e.name, e]));
     parsedExercises = parsedExercises.map((ex: Exercise) => {
       const def = defaultMap.get(ex.name);
       if (def) {
