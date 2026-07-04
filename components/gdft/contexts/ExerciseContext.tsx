@@ -51,11 +51,26 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
          console.log("Loading user exercises from Supabase");
          const data = await api.exercises.list();
          
-         // Auto-deduplicate
+         // Auto-deduplicate and filter out known broken duplicates
          const unique: Exercise[] = [];
          const seen = new Set();
+         const badDuplicates = new Set([
+           "cable biceps curl",
+           "cable triceps pushdown",
+           "leg press machine",
+           "leg extension machine",
+           "lat pulldown machine",
+           "cable lat pulldown",
+           "squat jumps",
+           "calf raises"
+         ]);
+         
          for (const ex of data) {
            const nameKey = ex.name.toLowerCase().trim();
+           // Hide the old duplicates that have missing images
+           if (badDuplicates.has(nameKey) && ex.category !== "Custom") {
+             continue;
+           }
            if (!seen.has(nameKey)) {
              seen.add(nameKey);
              unique.push(ex);
@@ -96,9 +111,33 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [user]);
 
+  const autoSyncMissingExercises = useCallback(async () => {
+    if (!user) return;
+    try {
+        const existing = await api.exercises.list();
+        const existingNames = new Set(existing.map((e: Exercise) => e.name.toLowerCase().trim()));
+
+        const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        const toAdd = allDefaults.filter(ex => !existingNames.has(ex.name.toLowerCase().trim()));
+        
+        if (toAdd.length > 0) {
+            console.log(`Auto-syncing ${toAdd.length} missing exercises...`);
+            for (const ex of toAdd) {
+                const { id, ...rest } = ex;
+                await api.exercises.create(rest as any, user.id);
+            }
+            refreshExercises();
+        }
+    } catch (e) {
+        console.error("Auto-sync failed", e);
+    }
+  }, [user, refreshExercises]);
+
   useEffect(() => {
-    refreshExercises();
-  }, [refreshExercises]);
+    refreshExercises().then(() => {
+      autoSyncMissingExercises();
+    });
+  }, [refreshExercises, autoSyncMissingExercises]);
 
    const seedDefaults = async () => {
     if (!user) return;
