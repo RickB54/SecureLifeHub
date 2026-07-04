@@ -1538,8 +1538,7 @@ export const weightExercises: Exercise[] = [
   muscleGroups: ["Triceps"],
   equipment: "Machine",
   description: "Area A: Sit with your back against the pad, grip the handles, and extend your arms downward to target the triceps. Pause, then return slowly.",
-  startPositionUrl: "/icons/weights/realistic/cfa-mts-triceps-extension-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/cfa-mts-triceps-extension-pos2.png",
+  pictureUrl: "https://i.imgur.com/JFHWnTq.jpg",
   settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
 },
 {
@@ -1549,8 +1548,7 @@ export const weightExercises: Exercise[] = [
   muscleGroups: ["Biceps"],
   equipment: "Machine",
   description: "Area A: Sit with your back straight and grasp the handles. Curl your arms upward toward your shoulders, squeeze the biceps, then lower under control.",
-  startPositionUrl: "/icons/weights/realistic/cfa-mts-biceps-curl-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/cfa-mts-biceps-curl-pos2.png",
+  pictureUrl: "https://i.imgur.com/zsmZowi.jpg",
   settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
 },
 {
@@ -1560,8 +1558,7 @@ export const weightExercises: Exercise[] = [
   muscleGroups: ["Back", "Biceps"],
   equipment: "Machine",
   description: "Area A: Sit with chest against the pad, grip the handles, and pull them toward your torso. Squeeze your shoulder blades, then return slowly.",
-  startPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-row-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-row-pos2.png",
+  pictureUrl: "https://i.imgur.com/euwZt5k.jpg",
   settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
 },
 {
@@ -1571,8 +1568,7 @@ export const weightExercises: Exercise[] = [
   muscleGroups: ["Shoulders", "Triceps"],
   equipment: "Machine",
   description: "Area A: Sit upright, grip the handles with an overhand grip. Press the handles upward above your head. Return slowly without locking elbows.",
-  startPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-overhand-press-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-overhand-press-pos2.png",
+  pictureUrl: "https://i.imgur.com/TPbGegA.jpg",
   settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
 },
 {
@@ -1582,8 +1578,7 @@ export const weightExercises: Exercise[] = [
   muscleGroups: ["Chest", "Triceps"],
   equipment: "Machine",
   description: "Area A: Sit with back against pad, grip handles and press forward until arms are extended. Return with control to starting position.",
-  startPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-chest-press-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-chest-press-pos2.png",
+  pictureUrl: "https://i.imgur.com/pkFuwC7.jpg",
   settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
 },
 {
@@ -1593,8 +1588,7 @@ export const weightExercises: Exercise[] = [
   muscleGroups: ["Biceps"],
   equipment: "Machine",
   description: "Area A: Sit with upper arms resting on pad. Grasp handles and curl toward shoulders. Squeeze, then lower with control.",
-  startPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-arm-curl-pos1.png",
-    endPositionUrl: "/icons/weights/realistic/cfa-cybex-eagle-arm-curl-pos2.png",
+  pictureUrl: "https://i.imgur.com/0fqdN45.jpg",
   settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
 },
 {
