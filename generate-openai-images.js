@@ -3,11 +3,23 @@ const path = require('path');
 const { OpenAI } = require('openai');
 const https = require('https');
 
+// Load environment variables from .env.local if present
+if (fs.existsSync('.env.local')) {
+  fs.readFileSync('.env.local', 'utf-8').split('\n').forEach(line => {
+    if (line.trim() && !line.startsWith('#')) {
+      const index = line.indexOf('=');
+      if (index > 0) {
+        process.env[line.substring(0, index).trim()] = line.substring(index + 1).trim();
+      }
+    }
+  });
+}
+
 // ==========================================
 // 1. PASTE YOUR API KEY HERE
 // ==========================================
 const openai = new OpenAI({
-  apiKey: 'YOUR_API_KEY_HERE', 
+  apiKey: process.env.OPENAI_API_KEY, 
 });
 
 const dataFile = path.join(__dirname, 'components/gdft/lib/data.ts');
@@ -34,45 +46,46 @@ const downloadImage = (url, filepath) => {
 async function processExercises() {
   let content = fs.readFileSync(dataFile, 'utf-8');
   
-  // Find all exercises across categories
-  const exerciseRegex = /name:\s*"([^"]+)",\s*category:\s*"([^"]+)"/g;
-  let match;
+  // Rock-solid line-by-line parser to find the exercises correctly
+  const lines = content.split('\n');
+  const exercises = [];
+  let currentEx = {};
+
+  for (const line of lines) {
+    if (line.includes('{')) {
+      if (Object.keys(currentEx).length > 2) {
+        exercises.push(currentEx);
+      }
+      currentEx = {};
+    }
+    
+    const nameMatch = line.match(/name:\s*"([^"]+)"/);
+    if (nameMatch) currentEx.name = nameMatch[1];
+    
+    const catMatch = line.match(/category:\s*"([^"]+)"/);
+    if (catMatch) currentEx.category = catMatch[1];
+    
+    const urlMatch = line.match(/startPositionUrl:\s*"([^"]+)"/);
+    if (urlMatch) currentEx.url = urlMatch[1];
+  }
+  if (Object.keys(currentEx).length > 2) {
+    exercises.push(currentEx);
+  }
+
   const toProcess = [];
 
-  while ((match = exerciseRegex.exec(content)) !== null) {
-    const name = match[1];
-    const category = match[2];
+  for (const ex of exercises) {
+    if (!ex.name || !ex.category || !ex.url) continue;
     
     // STRICT FILTERING RULES
-    if (category === "Slide Board") continue; // Never touch SlideBoard
-    if (/^CF[A-Z]\s/.test(name)) continue; // Never touch CF# custom exercises
+    if (ex.category === "Slide Board") continue; // Never touch SlideBoard
+    if (/^CF[A-Z]\s/.test(ex.name)) continue; // Never touch CF# custom exercises
     
-    // Skip the 6 already processed ones
-    const alreadyDone = [
-      'Hammer Strength MTS Triceps Extension', 
-      'Hammer Strength MTS Biceps Curl',
-      'Cybex Eagle Row', 
-      'Cybex Eagle Overhand Press', 
-      'Cybex Eagle Chest Press', 
-      'Cybex Eagle Arm Curl'
-    ];
-    if (alreadyDone.includes(name)) continue;
-
-    // STRICTEST SAFETY RULE: 
-    // If the exercise ALREADY has a custom photo, it will NOT be an .svg file.
-    // The old stick figures are all .svg files. We ONLY target .svg placeholders.
-    const blockRegex = new RegExp(`name:\\s*"(${name})"([^}]+)startPositionUrl:\\s*"([^"]+)"`);
-    const blockMatch = blockRegex.exec(content);
-    if (blockMatch) {
-      const currentUrl = blockMatch[3];
-      if (!currentUrl.endsWith('.svg')) {
-          console.log(`Skipping ${name} because it already has a custom image (${currentUrl})`);
-          continue; 
+    if (["Weights", "Cardio", "No Equipment"].includes(ex.category)) {
+      // ONLY process files that still have the old .svg stick figure placeholders!
+      if (ex.url.endsWith('.svg')) {
+        toProcess.push(ex);
       }
-    }
-
-    if (["Weights", "Cardio", "No Equipment"].includes(category)) {
-      toProcess.push({ name, category });
     }
   }
 
@@ -92,25 +105,34 @@ async function processExercises() {
     try {
       // Generate Position 1 (Start)
       const pos1Res = await openai.images.generate({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt: `${BASE_PROMPT} He is at the STARTING position of the exercise: ${ex.name}.`,
         n: 1,
         size: "1024x1024",
       });
-      await downloadImage(pos1Res.data[0].url, pos1Path);
+      if (pos1Res.data[0].b64_json) {
+        fs.writeFileSync(pos1Path, Buffer.from(pos1Res.data[0].b64_json, 'base64'));
+      } else {
+        await downloadImage(pos1Res.data[0].url, pos1Path);
+      }
 
       // Generate Position 2 (End)
       const pos2Res = await openai.images.generate({
-        model: "dall-e-3",
+        model: "gpt-image-1",
         prompt: `${BASE_PROMPT} He is at the ENDING/FLEXED position of the exercise: ${ex.name}.`,
         n: 1,
         size: "1024x1024",
       });
-      await downloadImage(pos2Res.data[0].url, pos2Path);
+      if (pos2Res.data[0].b64_json) {
+        fs.writeFileSync(pos2Path, Buffer.from(pos2Res.data[0].b64_json, 'base64'));
+      } else {
+        await downloadImage(pos2Res.data[0].url, pos2Path);
+      }
 
       console.log(`✔ Downloaded ${ex.name} pos1 and pos2`);
 
       // Update data.ts
+      content = fs.readFileSync(dataFile, 'utf-8'); // read fresh to avoid index shifting bugs
       const nameIndex = content.indexOf(`name: "${ex.name}"`);
       if (nameIndex !== -1) {
         const nextStartIdx = content.indexOf('startPositionUrl:', nameIndex);
@@ -119,8 +141,8 @@ async function processExercises() {
         
         if (nextStartIdx !== -1 && nextStartIdx - nameIndex < 300) {
             const newLine = `startPositionUrl: "/icons/${folder}/realistic/${safeName}-pos1.png",\n    endPositionUrl: "/icons/${folder}/realistic/${safeName}-pos2.png"`;
-            content = content.substring(0, nextStartIdx) + newLine + content.substring(endOfLine);
-            fs.writeFileSync(dataFile, content);
+            const newContent = content.substring(0, nextStartIdx) + newLine + content.substring(endOfLine);
+            fs.writeFileSync(dataFile, newContent);
             console.log(`✔ Updated data.ts for ${ex.name}`);
         }
       }
