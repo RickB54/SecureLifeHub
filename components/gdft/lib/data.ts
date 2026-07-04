@@ -214,18 +214,27 @@ export const getExercises = (): Exercise[] => {
     
     let parsedExercises = JSON.parse(stored);
     
-    // FORCE SYNC: Ensure local storage matches data.ts (removes deleted duplicates)
-    const defaultMap = new Map(defaultExercises.map(e => [e.name, e]));
-    
+
+    // Remove exact duplicates from localStorage to fix the 1000+ bug
     const seenNames = new Set();
-    parsedExercises = parsedExercises.filter((ex: Exercise) => {
-      if (ex.category === "Custom" || ex.name.startsWith("CF#")) return true;
-      if (!defaultMap.has(ex.name) || seenNames.has(ex.name)) return false;
-      seenNames.add(ex.name);
-      return true;
-    });
+    const deduplicated = [];
+    for (const ex of parsedExercises) {
+      if (!seenNames.has(ex.name)) {
+        seenNames.add(ex.name);
+        deduplicated.push(ex);
+      }
+    }
+    parsedExercises = deduplicated;
 
     // FORCE SYNC: Ensure new images from data.ts are applied to existing exercises
+    const defaultMap = new Map(defaultExercises.map(e => [e.name, e]));
+    
+    // Remove duplicates that we permanently deleted from data.ts (like "Leg Press Machine")
+    parsedExercises = parsedExercises.filter((ex: Exercise) => {
+      if (ex.category === "Custom" || (ex.name && ex.name.startsWith("CF#"))) return true;
+      return defaultMap.has(ex.name);
+    });
+
     parsedExercises = parsedExercises.map((ex: Exercise) => {
       const def = defaultMap.get(ex.name);
       if (def) {
