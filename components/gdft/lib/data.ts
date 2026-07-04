@@ -960,7 +960,7 @@ export const weightExercises: Exercise[] = [
   },
   {
     id: generateId(),
-    name: "Lunges",
+    name: "Dumbbell Lunges",
     startPositionUrl: "/icons/weights/realistic/lunges-pos1.png",
     endPositionUrl: "/icons/weights/realistic/lunges-pos2.png",
     category: "Weights",
@@ -2582,7 +2582,7 @@ export const noEquipmentExercises: Exercise[] = [
   },
   {
     id: generateId(),
-    name: "Lunges",
+    name: "Bodyweight Lunges",
     startPositionUrl: "/icons/weights/realistic/lunges-pos1.png",
     endPositionUrl: "/icons/weights/realistic/lunges-pos2.png",
     category: "No Equipment",
