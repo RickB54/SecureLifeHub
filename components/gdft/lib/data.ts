@@ -742,7 +742,7 @@ export const slideboardExercises: Exercise[] = [
   settings: { incline: 4, sets: 3, reps: 10 } as SlideboardSettings,
 }
 ];
-export const weightExercises: Exercise[] = [\n
+export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Hack Squat Machine",

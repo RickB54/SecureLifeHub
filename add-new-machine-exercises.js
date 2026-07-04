@@ -80,7 +80,7 @@ try {
   
   if (index !== -1) {
     const insertPos = index + targetStr.length;
-    const newContent = content.substring(0, insertPos) + '\\n' + newMachineExercises + content.substring(insertPos);
+    const newContent = content.substring(0, insertPos) + '\n' + newMachineExercises + content.substring(insertPos);
     fs.writeFileSync(dataFile, newContent);
     console.log('Successfully injected 6 new popular machine exercises into data.ts!');
     console.log('You can now run generate-openai-images.js again to generate their images.');
