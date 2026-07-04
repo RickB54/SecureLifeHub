@@ -750,7 +750,8 @@ export const weightExercises: Exercise[] = [
     muscleGroups: ["Quadriceps", "Glutes"],
     equipment: "Machine",
     description: "Position your back against the backrest and shoulders under the shoulder pads of the hack squat machine. Place your feet shoulder-width apart on the platform. Lower the weight by bending your knees until your thighs are parallel to the platform, then push back up. Keep your back flat against the pad at all times.",
-    startPositionUrl: "hack-squat-machine.svg",
+    startPositionUrl: "/icons/weights/realistic/hack-squat-machine-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/hack-squat-machine-pos2.png",
     settings: { sets: 3, reps: 10, weight: 90 } as WeightSettings,
   },
   {
@@ -760,7 +761,8 @@ export const weightExercises: Exercise[] = [
     muscleGroups: ["Calves", "Legs"],
     equipment: "Machine",
     description: "Sit on the machine and place your toes on the lower portion of the platform with your heels extending off. Place your lower thighs under the lever pad. Raise your heels by extending your ankles as high as possible, then lower them slowly until your calves are fully stretched.",
-    startPositionUrl: "seated-calf-raise-machine.svg",
+    startPositionUrl: "/icons/weights/realistic/seated-calf-raise-machine-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/seated-calf-raise-machine-pos2.png",
     settings: { sets: 3, reps: 12, weight: 45 } as WeightSettings,
   },
   {
@@ -770,7 +772,8 @@ export const weightExercises: Exercise[] = [
     muscleGroups: ["Back", "Lats"],
     equipment: "Machine",
     description: "Lie face down on the pad of the T-bar row machine. Grasp the handles and pull the weight up towards your chest, squeezing your shoulder blades together. Lower the weight slowly back to the starting position.",
-    startPositionUrl: "chest-supported-t-bar-row.svg",
+    startPositionUrl: "/icons/weights/realistic/chest-supported-t-bar-row-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/chest-supported-t-bar-row-pos2.png",
     settings: { sets: 3, reps: 10, weight: 45 } as WeightSettings,
   },
   {
@@ -780,7 +783,8 @@ export const weightExercises: Exercise[] = [
     muscleGroups: ["Chest", "Upper Chest"],
     equipment: "Cable",
     description: "Stand between two high cable pulleys with a handle attached to each. Grab the handles and step forward slightly. With a slight bend in your elbows, pull the handles down and across your body until your hands meet in front of your waist. Slowly return to the starting position.",
-    startPositionUrl: "cable-crossover.svg",
+    startPositionUrl: "/icons/weights/realistic/cable-crossover-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/cable-crossover-pos2.png",
     settings: { sets: 3, reps: 12, weight: 20 } as WeightSettings,
   },
   {
@@ -790,7 +794,8 @@ export const weightExercises: Exercise[] = [
     muscleGroups: ["Quadriceps", "Glutes"],
     equipment: "Machine",
     description: "Position the barbell of the Smith machine across your upper back and shoulders. Unrack the bar and stand with feet shoulder-width apart. Lower into a squat by bending your knees and pushing your hips back. Push back up to the starting position.",
-    startPositionUrl: "smith-machine-squat.svg",
+    startPositionUrl: "/icons/weights/realistic/smith-machine-squat-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/smith-machine-squat-pos2.png",
     settings: { sets: 3, reps: 10, weight: 90 } as WeightSettings,
   },
   {
@@ -800,7 +805,8 @@ export const weightExercises: Exercise[] = [
     muscleGroups: ["Biceps", "Arms"],
     equipment: "Machine",
     description: "Sit at the preacher curl machine with your upper arms resting flat on the pad. Grab the handles and curl the weight up towards your shoulders, squeezing your biceps. Lower the weight slowly back to the starting position.",
-    startPositionUrl: "preacher-curl-machine.svg",
+    startPositionUrl: "/icons/weights/realistic/preacher-curl-machine-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/preacher-curl-machine-pos2.png",
     settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
   },
 
@@ -2194,7 +2200,8 @@ export const cardioExercises: Exercise[] = [
     muscleGroups: ["Cardiovascular", "Legs", "Glutes"],
     equipment: "Machine",
     description: "Step onto the moving stairs and maintain an upright posture. Push through your full foot, especially the heel, to engage your glutes and hamstrings. Do not lean heavily on the handrails.",
-    startPositionUrl: "stairmaster.svg",
+    startPositionUrl: "/icons/cardio/realistic/stairmaster-pos1.png",
+    endPositionUrl: "/icons/cardio/realistic/stairmaster-pos2.png",
     settings: { time: 20, distance: 0 } as CardioSettings,
   },
   {
@@ -2204,7 +2211,8 @@ export const cardioExercises: Exercise[] = [
     muscleGroups: ["Cardiovascular", "Full Body"],
     equipment: "Machine",
     description: "Sit on the assault bike and use both your arms and legs to pedal and push/pull the handles simultaneously. The harder you work, the greater the resistance.",
-    startPositionUrl: "assault-bike.svg",
+    startPositionUrl: "/icons/cardio/realistic/assault-bike-pos1.png",
+    endPositionUrl: "/icons/cardio/realistic/assault-bike-pos2.png",
     settings: { time: 10, distance: 3 } as CardioSettings,
   },
   {
