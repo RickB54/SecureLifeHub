@@ -1,0 +1,25 @@
+Here are the answers to your 4 questions (I put them in this text file so the IDE chat glitch wouldn't hide them from you!):
+
+1. DO I LOSE MONEY IF I OVERESTIMATE? CAN I ADD MORE LATER?
+No, you never lose your money! The OpenAI API works exactly like a prepaid gift card. If you put $10 on your account and the script only ends up using $6, the remaining $4 will sit securely on your account forever. You can always come back and add another $5 a year from now if you decide to add 100 new exercises to your gym. 
+
+2. I CREATED THE KEY. HOW DO I ADD MONEY?
+Perfect! Looking at your screenshot, you are on the right track.
+To add money:
+1. Look at the very bottom left corner of your screen (underneath "API Keys") and click the "Settings" gear icon.
+2. In the Settings menu, click on "Billing".
+3. Click the green "Add to credit balance" button to load $10 onto your account. 
+*Note: Make sure "Auto-recharge" is turned OFF so it doesn't accidentally bill you again in the future!*
+
+3. CAN I USE THE ANTIGRAVITY TERMINAL OR GIT BASH?
+Yes! "VSCode terminal" just meant whatever terminal you normally use to run your project. Since you are in Vibe IDE, you can absolutely use the terminal right here!
+1. Just open a new terminal tab inside your IDE (or press Ctrl + C in your current terminal to temporarily stop your "npm run dev" server).
+2. Type "npm install openai" and hit enter.
+3. Then type "node generate-openai-images.js" and hit enter. 
+(Once it finishes, just run "npm run dev" again to start your server back up!)
+
+4. WHICH IS THE CORRECT SCRIPT?
+You want to use the file named: generate-openai-images.js
+It is located right here in your project: c:\VIBE IDE Projects\secure-life-hub\generate-openai-images.js
+
+Open that file, and on Line 10, replace YOUR_API_KEY_HERE with the new key you just generated!
