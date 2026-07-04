@@ -205,17 +205,45 @@ export const generateId = (): string => {
 
 export const getExercises = (): Exercise[] => {
   try {
+    const defaultExercises = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
     const stored = localStorage.getItem('exercises');
-    // Combine all exercise arrays if nothing is in storage
+    
     if (!stored) {
-      const defaultExercises = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
       return defaultExercises;
     }
-    return JSON.parse(stored);
+    
+    let parsedExercises = JSON.parse(stored);
+    
+    // FORCE SYNC: Ensure new images from data.ts are applied to existing exercises
+    const defaultMap = new Map(defaultExercises.map(e => [e.name, e]));
+    parsedExercises = parsedExercises.map((ex: Exercise) => {
+      const def = defaultMap.get(ex.name);
+      if (def) {
+        // If data.ts has specific static image URLs, force them to sync so the user sees updates
+        if (def.startPositionUrl && def.startPositionUrl !== ex.startPositionUrl) {
+          return { ...ex, startPositionUrl: def.startPositionUrl, endPositionUrl: def.endPositionUrl };
+        }
+      }
+      return ex;
+    });
+
+    // FORCE SYNC: Add any entirely new exercises (like Cybex) that aren't in localStorage yet
+    const existingNames = new Set(parsedExercises.map((e: Exercise) => e.name));
+    for (const def of defaultExercises) {
+      if (!existingNames.has(def.name)) {
+        parsedExercises.push(def);
+      }
+    }
+    
+    // Auto-save the synchronized list back to localStorage so it persists
+    localStorage.setItem('exercises', JSON.stringify(parsedExercises));
+
+    return parsedExercises;
   } catch (error) {
     console.error('Error getting exercises:', error);
     // Return all default exercises if there's an error
-    return [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+    const defaultExercises = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+    return defaultExercises;
   }
 };
 
