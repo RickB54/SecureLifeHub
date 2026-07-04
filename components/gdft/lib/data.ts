@@ -1056,8 +1056,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Kettlebell Goblet Clean",
-    startPositionUrl: "/icons/weights/animated/kettlebell-goblet-clean-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/kettlebell-goblet-clean-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/kettlebell-goblet-clean-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/kettlebell-goblet-clean-pos2.png",
     category: "Weights",
     muscleGroups: ["Full Body", "Core"],
     equipment: "Kettlebells",
@@ -1092,8 +1092,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Step-Ups",
-    startPositionUrl: "/icons/weights/animated/dumbbell-step-ups-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/dumbbell-step-ups-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/dumbbell-step-ups-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/dumbbell-step-ups-pos2.png",
     category: "Weights",
     muscleGroups: ["Legs", "Glutes"],
     equipment: "Dumbbells",
@@ -1128,8 +1128,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Dumbbell Pullover",
-    startPositionUrl: "/icons/weights/animated/dumbbell-pullover-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/dumbbell-pullover-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/dumbbell-pullover-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/dumbbell-pullover-pos2.png",
     category: "Weights",
     muscleGroups: ["Chest", "Back"],
     equipment: "Dumbbells",
@@ -1140,8 +1140,8 @@ export const weightExercises: Exercise[] = [
   {
     id: generateId(),
     name: "Farmer's Carry",
-    startPositionUrl: "/icons/weights/animated/farmer-s-carry-pos1.svg",
-    endPositionUrl: "/icons/weights/animated/farmer-s-carry-pos2.svg",
+    startPositionUrl: "/icons/weights/realistic/farmer-s-carry-pos1.png",
+    endPositionUrl: "/icons/weights/realistic/farmer-s-carry-pos2.png",
     category: "Weights",
     muscleGroups: ["Full Body", "Core"],
     equipment: "Dumbbells",

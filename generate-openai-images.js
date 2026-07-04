@@ -140,7 +140,7 @@ async function processExercises() {
         const endOfLine = content.indexOf('\n', nextEndIdx);
         
         if (nextStartIdx !== -1 && nextStartIdx - nameIndex < 300) {
-            const newLine = `startPositionUrl: "/icons/${folder}/realistic/${safeName}-pos1.png",\n    endPositionUrl: "/icons/${folder}/realistic/${safeName}-pos2.png"`;
+            const newLine = `startPositionUrl: "/icons/${folder}/realistic/${safeName}-pos1.png",\n    endPositionUrl: "/icons/${folder}/realistic/${safeName}-pos2.png",`;
             const newContent = content.substring(0, nextStartIdx) + newLine + content.substring(endOfLine);
             fs.writeFileSync(dataFile, newContent);
             console.log(`✔ Updated data.ts for ${ex.name}`);
