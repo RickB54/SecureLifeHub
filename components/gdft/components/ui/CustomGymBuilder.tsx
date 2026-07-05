@@ -784,13 +784,53 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                   </div>
                 ))}
                 
-                <Button 
-                  variant="outline" 
-                  className="w-full h-16 rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 gap-2 font-bold"
-                  onClick={handleAddSection}
-                >
-                  <PlusCircle className="h-5 w-5" /> Add Another Zone
-                </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-16 rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 gap-2 font-bold"
+                    onClick={handleAddSection}
+                  >
+                    <PlusCircle className="h-5 w-5" /> Add Another Zone
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full h-16 rounded-2xl border-dashed border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/20 text-amber-400 gap-2 font-bold">
+                        <Zap className="h-5 w-5" /> Auto-Create Category Zone
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="bg-gym-darker border-white/10 p-2 min-w-[200px]">
+                      {['Weights', 'Cardio', 'Slide Board', 'No Equipment'].map(cat => (
+                        <DropdownMenuItem 
+                          key={cat} 
+                          className="cursor-pointer font-bold text-gray-300 hover:text-white focus:bg-white/10 rounded-lg p-3"
+                          onClick={() => {
+                            const newSectionId = uuidv4();
+                            const matchingExercises = exercises.filter(ex => ex.category === cat);
+                            
+                            const newEquipment = matchingExercises.map(ex => ({
+                              id: uuidv4(),
+                              name: ex.name,
+                              type: cat as any,
+                              description: ex.description || "",
+                              photoUrl: ex.thumbnailUrl || ex.pictureUrl
+                            }));
+
+                            setGymSections([...gymSections, { 
+                              id: newSectionId, 
+                              name: `${cat} Zone`, 
+                              description: `All ${cat} exercises`, 
+                              photoUrl: "", 
+                              equipment: newEquipment 
+                            }]);
+                            toast.success(`Created ${cat} Zone with ${newEquipment.length} machines!`);
+                          }}
+                        >
+                          Create {cat} Zone
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               <div className="pt-8 flex justify-between">
