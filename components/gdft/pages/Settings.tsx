@@ -71,7 +71,9 @@ const Settings = () => {
     voiceLoggingEnabled,
     setVoiceLoggingEnabled,
     showScrollToTopButton,
-    setShowScrollToTopButton
+    setShowScrollToTopButton,
+    stickyExerciseSummary,
+    setStickyExerciseSummary
   } = useSettings();
   const navigate = useNavigate();
   const { exercises, exportToCSV, importFromCSV, deleteAllExercises, reinstallAllExercises, migrateImagesToSupabase, refreshExercises, purgeCustomExercisesOnly, deduplicateDatabase } = useExercise();
@@ -895,6 +897,32 @@ const Settings = () => {
                   if (navigator.vibrate) navigator.vibrate(50);
                 } else {
                   toast.info("Scroll to top button disabled.");
+                }
+              }}
+          </div>
+
+          <div className="flex items-center justify-between pt-4 border-t border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-gym-card/50 border border-white/5 flex items-center justify-center">
+                <BarChart2 className="h-5 w-5 text-gym-blue" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                   <Label htmlFor="sticky-summary" className="text-base font-medium">Sticky Exercise Summary</Label>
+                </div>
+                <p className="text-xs text-muted-foreground">Keep the exercise summary visible while scrolling</p>
+              </div>
+            </div>
+            <Switch
+              id="sticky-summary"
+              checked={stickyExerciseSummary}
+              onCheckedChange={(checked) => {
+                setStickyExerciseSummary(checked);
+                if (checked) {
+                  toast.success("Sticky summary enabled!");
+                  if (navigator.vibrate) navigator.vibrate(50);
+                } else {
+                  toast.info("Sticky summary disabled.");
                 }
               }}
             />

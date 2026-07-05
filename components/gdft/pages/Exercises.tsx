@@ -6,6 +6,7 @@ import ExerciseCard from "@/components/gdft/components/ui/ExerciseCard";
 import ExerciseFilters from "@/components/gdft/components/ui/ExerciseFilters";
 import { useExercise } from "@/components/gdft/contexts/ExerciseContext";
 import { useWorkout } from "@/components/gdft/contexts/WorkoutContext";
+import { useSettings } from "@/components/gdft/contexts/SettingsContext";
 import { Exercise, RelaxedMuscleGroup, RelaxedExerciseCategory } from "@/components/gdft/lib/data";
 import { ReorderFavoritesDialog } from "@/components/gdft/components/ReorderFavoritesDialog";
 import { Button } from "@/components/gdft/components/ui/button";
@@ -25,6 +26,7 @@ const Exercises = () => {
   const addToWorkout = searchParams.get("addToWorkout") === "true";
   const { exercises, filterExercises, deleteExercise, favoriteExercises, toggleFavorite, reinstallAllExercises } = useExercise();
   const { startWorkout, currentWorkout, addExerciseToCurrentWorkout } = useWorkout();
+  const { stickyExerciseSummary } = useSettings();
   
   // Load saved filters from localStorage or use defaults
   const loadSavedFilters = () => {
@@ -335,8 +337,11 @@ const Exercises = () => {
       )}
 
       {/* ── Exercise Summary ── */}
-      <div className="rounded-xl border border-white/10 p-4 mb-6 overflow-hidden"
-           style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+      <div className={`rounded-xl border border-white/10 p-4 mb-6 overflow-hidden ${stickyExerciseSummary ? 'sticky top-4 z-40 shadow-2xl backdrop-blur-md' : ''}`}
+           style={{ 
+             background: stickyExerciseSummary ? 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.95) 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+             boxShadow: stickyExerciseSummary ? '0 10px 40px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)' : undefined
+           }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-cyan-400" />

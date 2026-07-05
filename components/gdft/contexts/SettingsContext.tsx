@@ -31,6 +31,8 @@ interface SettingsContextType {
   setVoiceLoggingEnabled: (enabled: boolean) => void;
   showScrollToTopButton: boolean;
   setShowScrollToTopButton: (enabled: boolean) => void;
+  stickyExerciseSummary: boolean;
+  setStickyExerciseSummary: (enabled: boolean) => void;
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -120,6 +122,14 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     return true;
   });
 
+  const [stickyExerciseSummary, setStickyExerciseSummaryState] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('gdft_stickyExerciseSummary');
+      return saved !== 'false'; // Default to true
+    }
+    return true;
+  });
+
   useEffect(() => {
     localStorage.setItem('gdft_unitSystem', unitSystem);
   }, [unitSystem]);
@@ -160,6 +170,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem('gdft_showScrollToTopButton', showScrollToTopButton.toString());
   }, [showScrollToTopButton]);
 
+  useEffect(() => {
+    localStorage.setItem('gdft_stickyExerciseSummary', stickyExerciseSummary.toString());
+  }, [stickyExerciseSummary]);
+
   const setUnitSystem = (system: UnitSystem) => {
     setUnitSystemState(system);
   };
@@ -198,6 +212,10 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
 
   const setShowScrollToTopButton = (enabled: boolean) => {
     setShowScrollToTopButtonState(enabled);
+  };
+
+  const setStickyExerciseSummary = (enabled: boolean) => {
+    setStickyExerciseSummaryState(enabled);
   };
 
   const setTestingModeEnabled = (enabled: boolean) => {
@@ -240,7 +258,9 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
       voiceLoggingEnabled,
       setVoiceLoggingEnabled,
       showScrollToTopButton,
-      setShowScrollToTopButton
+      setShowScrollToTopButton,
+      stickyExerciseSummary,
+      setStickyExerciseSummary
     }}>
       {children}
     </SettingsContext.Provider>
