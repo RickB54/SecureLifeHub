@@ -66,16 +66,33 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
            "lunges"
          ]);
          
+         const isOwner = user?.email === 'rberube54@gmail.com';
+         const toPurgeIds: string[] = [];
+         
          for (const ex of data) {
            const nameKey = ex.name.toLowerCase().trim();
+           
            // Hide the old duplicates that have missing images
-           if (badDuplicates.has(nameKey) && ex.category !== "Custom") {
-             continue;
+           if (badDuplicates.has(nameKey) && ex.category !== "Custom") continue;
+           
+           // Auto-purge leaked CF exercises from test accounts
+           if (!isOwner && ex.name.startsWith("CF")) {
+               toPurgeIds.push(ex.id);
+               continue;
            }
+           
            if (!seen.has(nameKey)) {
              seen.add(nameKey);
              unique.push(ex);
            }
+         }
+         
+         if (toPurgeIds.length > 0) {
+             console.log(`Purging ${toPurgeIds.length} leaked CF exercises from non-owner account...`);
+             const chunkSize = 500;
+             for (let i = 0; i < toPurgeIds.length; i += chunkSize) {
+                 await api.exercises.deleteMany(toPurgeIds.slice(i, i + chunkSize));
+             }
          }
 
           if (unique.length === 0) {
@@ -116,9 +133,14 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return;
     try {
         const existing = await api.exercises.list();
-        const existingNames = new Set(existing.map((e: Exercise) => e.name.toLowerCase().trim()));
-
-        const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        const existingNames = new Set(existing.map(e => e.name.toLowerCase().trim()));
+        
+        const isOwner = user?.email === 'rberube54@gmail.com';
+        let allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        if (!isOwner) {
+            allDefaults = allDefaults.filter(ex => !ex.name.startsWith("CF"));
+        }
+        
         const toAdd = allDefaults.filter(ex => !existingNames.has(ex.name.toLowerCase().trim()));
         
         if (toAdd.length > 0) {
@@ -151,8 +173,16 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toast.info("Setting up your account...");
         let count = 0;
         
+        const isOwner = user?.email === 'rberube54@gmail.com';
+        
         // Combine all and unique by name before bulk insert
-        const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        let allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        
+        // Ensure CF exercises are ONLY given to the owner
+        if (!isOwner) {
+            allDefaults = allDefaults.filter(ex => !ex.name.startsWith("CF"));
+        }
+        
         const uniqueDefaults: any[] = [];
         const seenNames = new Set();
         
@@ -342,7 +372,12 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const existing = await api.exercises.list();
         const existingNames = new Set(existing.map((e: Exercise) => e.name.toLowerCase().trim()));
 
-        const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        const isOwner = user?.email === 'rberube54@gmail.com';
+        let allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        if (!isOwner) {
+            allDefaults = allDefaults.filter(ex => !ex.name.startsWith("CF"));
+        }
+        
         const toAdd = allDefaults.filter(ex => !existingNames.has(ex.name.toLowerCase().trim()));
         
         if (toAdd.length === 0) {
