@@ -97,10 +97,15 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   const [uploadingSectionImage, setUploadingSectionImage] = useState<string | null>(null);
 
   const filteredExistingExercises = exercises.filter(ex => {
+    // Only show base library exercises (no gymId) OR exercises belonging to the currently selected gym
+    const isBaseOrCurrentGym = !ex.gymId || (selectedGym && ex.gymId === selectedGym.id);
+    if (!isBaseOrCurrentGym) return false;
+
     const query = exerciseSearchQuery.toLowerCase().replace(/-/g, '');
     const exName = ex.name.toLowerCase().replace(/-/g, '');
     const matchesSearch = exName.includes(query);
     const matchesCategory = searchCategoryFilter === "All" || ex.category === searchCategoryFilter;
+    
     return matchesSearch && matchesCategory;
   });
 
@@ -123,7 +128,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
   const getValidPhotoUrl = (ex: Exercise) => {
     const url = ex.thumbnailUrl || ex.pictureUrl || ex.startPositionUrl || "";
     if (!url) return "";
-    if (url.endsWith(".svg") || url.includes("placeholder") || url.includes("7Hptjkc.png")) return "";
+    if (url.endsWith(".svg") || url.includes("placeholder") || url.includes("7Hptjkc.png") || url.includes("aiCPY1q.png")) return "";
     return url;
   };
 
@@ -969,8 +974,12 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                             {["All", "Weights", "Cardio", "Slide Board", "No Equipment"].map(cat => (
                               <button
                                 key={cat}
+                                type="button"
                                 className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${searchCategoryFilter === cat ? "bg-blue-600 text-white border-blue-600" : "bg-white/5 text-gray-400 border-white/10 hover:text-white"}`}
-                                onClick={() => setSearchCategoryFilter(cat)}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setSearchCategoryFilter(cat);
+                                }}
                               >
                                 {cat}
                               </button>
@@ -1248,9 +1257,9 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
             <div className="flex gap-4">
               <div className="h-10 w-10 shrink-0 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-blue-400 font-black">3</div>
               <div>
-                <p className="font-bold text-white mb-1">Add Equipment & Bulk Import</p>
+                <p className="font-bold text-white mb-1">Add Equipment Checklist</p>
                 <p className="text-sm text-gray-400">
-                  On the Equipment tab, click <strong>Bulk Import from Library</strong> to open a multi-select list of all your exercises. Check off as many exercises as you want to instantly map them to your active zone. You can also manually search for single exercises using the 🔍 icon.
+                  On the Equipment tab, you will see a full checklist of your library exercises. Simply tap the checkbox next to any exercise to instantly add it to the active zone! Use the category filters at the top to narrow down the list. Click <strong>+ Add Custom Machine</strong> to create a new unique machine that isn't in your library.
                 </p>
               </div>
             </div>
