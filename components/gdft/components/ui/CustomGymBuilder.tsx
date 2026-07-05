@@ -906,120 +906,126 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
 
                   {gymSections.map(section => (
                     <TabsContent key={section.id} value={section.id} className="mt-0 space-y-4">
-                      <div className="space-y-4">
-                        {/* Action Buttons at the TOP */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto md:h-[128px]">
-                        <Button 
-                          variant="outline" 
-                          className="h-24 md:h-full rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
-                          onClick={() => handleAddEquipment(section.id)}
-                        >
-                          <Plus className="h-6 w-6" />
-                          Add Single Machine
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="h-24 md:h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
-                          onClick={() => {
-                            setLinkingSectionId(section.id);
-                            setBulkImportSelectedIds([]);
-                            setBulkImportOpen(true);
-                          }}
-                        >
-                          <Search className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                          Bulk Import from Library
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-24 md:h-full rounded-2xl border-dashed border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/20 text-amber-400 flex flex-col gap-2 font-bold group">
-                              <Zap className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                              Auto-Fill Full Category
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-gym-darker border-white/10 p-2 min-w-[200px]">
-                            {['Weights', 'Cardio', 'Slide Board', 'No Equipment'].map(cat => (
-                              <DropdownMenuItem 
-                                key={cat} 
-                                className="cursor-pointer font-bold text-gray-300 hover:text-white focus:bg-white/10 rounded-lg p-3"
-                                onClick={() => handleAutoFillCategory(section.id, cat)}
-                              >
-                                Auto-Fill {cat}
-                              </DropdownMenuItem>
+                      {/* Custom Machines added by user */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-black text-white">Custom Machines</h3>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="rounded-full border-dashed border-white/20 bg-white/5 hover:bg-white/10 text-gray-300 font-bold"
+                            onClick={() => handleAddEquipment(section.id)}
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> Add Custom Machine
+                          </Button>
+                        </div>
+                        {section.equipment.filter(eq => !exercises.some(ex => ex.name === eq.name)).length === 0 ? (
+                          <div className="p-4 rounded-xl border border-dashed border-white/10 bg-white/5 text-center text-sm text-gray-500">
+                            No custom machines in this zone.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            {section.equipment.filter(eq => !exercises.some(ex => ex.name === eq.name)).map(eq => (
+                               <Card key={eq.id} className="bg-white/[0.03] border-white/5 overflow-hidden animate-in zoom-in-95">
+                                 <CardContent className="p-3 flex gap-3">
+                                   <div 
+                                     className="h-16 w-16 rounded-xl bg-gym-darker flex flex-col items-center justify-center border border-dashed border-white/10 cursor-pointer hover:bg-white/5 transition-all overflow-hidden shrink-0 group"
+                                     onClick={() => handleImageUpload(section.id, eq.id)}
+                                   >
+                                     {eq.photoUrl ? (
+                                       <img src={eq.photoUrl} alt={eq.name} className="h-full w-full object-cover" />
+                                     ) : (
+                                       <Camera className="h-5 w-5 text-gray-600 group-hover:text-blue-400" />
+                                     )}
+                                   </div>
+                                   <div className="flex-1 space-y-2">
+                                     <div className="flex gap-2">
+                                       <Input placeholder="Machine Name" className="h-8 text-sm font-bold bg-gym-darker border-white/10" value={eq.name} onChange={e => handleUpdateEquipment(section.id, eq.id, { name: e.target.value })} />
+                                       <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-500 hover:text-rose-400" onClick={() => handleRemoveEquipment(section.id, eq.id)}><Trash2 className="h-4 w-4" /></Button>
+                                     </div>
+                                     <Select value={eq.type} onValueChange={(val: any) => handleUpdateEquipment(section.id, eq.id, { type: val })}>
+                                       <SelectTrigger className="bg-gym-darker border-white/10 h-8 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
+                                       <SelectContent className="bg-gym-dark border-white/10">
+                                          <SelectItem value="Weights">Weights</SelectItem>
+                                          <SelectItem value="Cardio">Cardio</SelectItem>
+                                          <SelectItem value="Slide Board">Slide Board</SelectItem>
+                                          <SelectItem value="No Equipment">Bodyweight</SelectItem>
+                                          <SelectItem value="Custom">Custom</SelectItem>
+                                       </SelectContent>
+                                     </Select>
+                                   </div>
+                                 </CardContent>
+                               </Card>
                             ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Equipment Cards below */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {section.equipment.map(eq => (
-                        <Card key={eq.id} className="bg-white/[0.03] border-white/5 overflow-hidden animate-in zoom-in-95">
-                          <CardContent className="p-4 flex gap-4">
-                            <div 
-                              className="h-28 w-28 rounded-2xl bg-gym-darker flex flex-col items-center justify-center border border-dashed border-white/10 cursor-pointer hover:bg-white/5 transition-all overflow-hidden shrink-0 group"
-                              onClick={() => handleImageUpload(section.id, eq.id)}
-                            >
-                              {eq.photoUrl ? (
-                                <img src={eq.photoUrl} alt={eq.name} className="h-full w-full object-cover" />
-                              ) : (
-                                <>
-                                  <Camera className="h-6 w-6 text-gray-600 group-hover:text-blue-400 transition-colors" />
-                                  <span className="text-[10px] font-bold text-gray-500 mt-2 uppercase">Take Pic</span>
-                                </>
-                              )}
-                            </div>
-                            <div className="flex-1 space-y-3">
-                              <div className="flex gap-2">
-                                <Input 
-                                  placeholder="Machine Name" 
-                                  className="h-10 bg-gym-darker border-white/10 font-bold"
-                                  value={eq.name}
-                                  onChange={(e) => handleUpdateEquipment(section.id, eq.id, { name: e.target.value })}
-                                />
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-10 w-10 shrink-0 text-gray-500 hover:text-rose-400"
-                                  onClick={() => handleRemoveEquipment(section.id, eq.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                      {/* Library Checklist */}
+                      <div className="pt-6 space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10 pt-6">
+                          <h3 className="text-lg font-black text-white">Library Exercises</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {["All", "Weights", "Cardio", "Slide Board", "No Equipment"].map(cat => (
+                              <button
+                                key={cat}
+                                className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${searchCategoryFilter === cat ? "bg-blue-600 text-white border-blue-600" : "bg-white/5 text-gray-400 border-white/10 hover:text-white"}`}
+                                onClick={() => setSearchCategoryFilter(cat)}
+                              >
+                                {cat}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                          <Input 
+                            placeholder="Search library..." 
+                            className="pl-9 h-10 bg-white/5 border-white/10 text-white rounded-xl"
+                            value={exerciseSearchQuery}
+                            onChange={(e) => setExerciseSearchQuery(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="bg-white/[0.02] border border-white/10 rounded-2xl p-2 max-h-[400px] overflow-y-auto custom-scrollbar flex flex-col gap-1">
+                          {filteredExistingExercises.map(ex => {
+                            const isInZone = section.equipment.some(eq => eq.name === ex.name);
+                            return (
+                              <div 
+                                key={ex.id}
+                                className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-all ${isInZone ? 'bg-blue-500/10 border border-blue-500/20' : 'hover:bg-white/5 border border-transparent'}`}
+                                onClick={() => {
+                                  if (isInZone) {
+                                    handleUpdateSection(section.id, { equipment: section.equipment.filter(eq => eq.name !== ex.name) });
+                                  } else {
+                                    handleUpdateSection(section.id, { equipment: [...section.equipment, { id: uuidv4(), name: ex.name, type: (ex.category === "Weights" || ex.category === "Cardio" || ex.category === "Slide Board" || ex.category === "No Equipment") ? ex.category : 'Weights' as any, description: ex.description || "", photoUrl: getValidPhotoUrl(ex) }] });
+                                  }
+                                }}
+                              >
+                                <div className={`h-5 w-5 rounded border flex items-center justify-center shrink-0 transition-colors ${isInZone ? 'bg-blue-600 border-blue-600' : 'border-gray-500'}`}>
+                                  {isInZone && <Check className="h-3 w-3 text-white font-black" />}
+                                </div>
+                                <div className="h-10 w-10 rounded-lg bg-gym-darker overflow-hidden shrink-0 border border-white/10 flex items-center justify-center">
+                                  {getValidPhotoUrl(ex) ? (
+                                    <img src={getValidPhotoUrl(ex)} alt={ex.name} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <Dumbbell className="h-4 w-4 text-gray-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`font-bold text-sm truncate ${isInZone ? 'text-white' : 'text-gray-400'}`}>{ex.name}</p>
+                                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-bold">{ex.category}</p>
+                                </div>
                               </div>
-                              <div className="flex gap-2">
-                                <Select 
-                                  value={eq.type} 
-                                  onValueChange={(val: any) => handleUpdateEquipment(section.id, eq.id, { type: val })}
-                                >
-                                  <SelectTrigger className="bg-gym-darker border-white/10 h-10 flex-1">
-                                    <SelectValue placeholder="Type" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-gym-dark border-white/10">
-                                    <SelectItem value="Weights">Weights/Machines</SelectItem>
-                                    <SelectItem value="Cardio">Cardio Equipment</SelectItem>
-                                    <SelectItem value="No Equipment">Bodyweight Zone</SelectItem>
-                                    <SelectItem value="Slide Board">Slide Board</SelectItem>
-                                    <SelectItem value="Custom">Other Custom</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Button 
-                                  variant="outline" 
-                                  size="icon" 
-                                  className="h-10 w-10 bg-white/5 border-white/10 hover:bg-blue-500/20"
-                                  onClick={() => {
-                                    setLinkingSectionId(section.id);
-                                    setLinkingEquipmentId(eq.id);
-                                    setSearchInExistingOpen(true);
-                                  }}
-                                  title="Search from existing exercises"
-                                >
-                                  <Search className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                      ))}
-                    </div>
-                  </TabsContent>
+                            );
+                          })}
+                          {filteredExistingExercises.length === 0 && (
+                            <p className="text-center text-sm text-gray-500 py-8">No exercises found matching your search.</p>
+                          )}
+                        </div>
+                      </div>
+                    </TabsContent>
                 ))}
                 </Tabs>
               )}
