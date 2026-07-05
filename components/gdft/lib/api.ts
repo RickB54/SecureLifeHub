@@ -210,6 +210,22 @@ export const api = {
       return mapExerciseFromDB(data);
     },
     
+    createMany: async (exercises: Omit<Exercise, 'id'>[], userId: string) => {
+      const dbData = exercises.map(ex => mapExerciseToDB({ ...ex, id: undefined }, userId));
+      console.log(`[api] exercises.createMany inserting ${dbData.length} items...`);
+      const { data, error } = await supabase
+        .from('exercises')
+        .insert(dbData)
+        .select();
+        
+      if (error) {
+          console.error('[api] exercises.createMany error:', JSON.stringify(error));
+          throw error;
+      }
+      if (!data) throw new Error("No data returned from exercises.createMany");
+      return data.map(mapExerciseFromDB);
+    },
+    
     update: async (id: string, updates: Partial<Exercise>) => {
       const dbData = mapExerciseToDB(updates, undefined); // user_id is immutable via update usually, or handled by RLS
       // Remove undefined fields to avoid overwriting with null if that's not intended, or rely on update behavior
@@ -244,6 +260,19 @@ export const api = {
         .delete()
         .eq('id', id);
       if (error) throw error;
+    },
+    
+    deleteMany: async (ids: string[]) => {
+      if (ids.length === 0) return;
+      console.log(`[api] exercises.deleteMany deleting ${ids.length} items...`);
+      const { error } = await supabase
+        .from('exercises')
+        .delete()
+        .in('id', ids);
+      if (error) {
+          console.error('[api] exercises.deleteMany error:', JSON.stringify(error));
+          throw error;
+      }
     }
   },
 

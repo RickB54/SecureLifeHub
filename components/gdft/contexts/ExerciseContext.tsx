@@ -123,10 +123,7 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         
         if (toAdd.length > 0) {
             console.log(`Auto-syncing ${toAdd.length} missing exercises...`);
-            for (const ex of toAdd) {
-                const { id, ...rest } = ex;
-                await api.exercises.create(rest as any, user.id);
-            }
+            await api.exercises.createMany(toAdd, user.id);
             refreshExercises();
         }
     } catch (e) {
@@ -167,10 +164,9 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
            }
         }
 
-        for (const ex of uniqueDefaults) {
-           const { id, ...rest } = ex; 
-           await api.exercises.create(rest as any, user.id);
-           count++;
+        if (uniqueDefaults.length > 0) {
+            await api.exercises.createMany(uniqueDefaults, user.id);
+            count = uniqueDefaults.length;
         }
 
         const data = await api.exercises.list();
@@ -201,7 +197,12 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         
         if (toDeleteIds.length > 0) {
           console.log(`Cleaning up ${toDeleteIds.length} duplicates from database...`);
-          await Promise.all(toDeleteIds.map(id => api.exercises.delete(id)));
+          // Chunk deletions into groups of 500 to avoid Supabase URL length limits or payload limits
+          const chunkSize = 500;
+          for (let i = 0; i < toDeleteIds.length; i += chunkSize) {
+              const chunk = toDeleteIds.slice(i, i + chunkSize);
+              await api.exercises.deleteMany(chunk);
+          }
           const freshData = await api.exercises.list();
           setExercises(freshData);
           toast.success(`Removed ${toDeleteIds.length} duplicate exercises!`);
@@ -345,19 +346,19 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const toAdd = allDefaults.filter(ex => !existingNames.has(ex.name.toLowerCase().trim()));
         
         if (toAdd.length === 0) {
-            toast.info("Your library is already up to date — no exercises are missing!");
+            toast.info("Checking for duplicates...");
+            await deduplicateDatabase();
             return;
         }
 
         toast.info(`Adding ${toAdd.length} missing exercise${toAdd.length > 1 ? 's' : ''}…`);
-        for (const ex of toAdd) {
-            const { id, ...rest } = ex;
-            await api.exercises.create(rest as any, user.id);
-        }
+        await api.exercises.createMany(toAdd, user.id);
+        
+        await deduplicateDatabase();
         
         const data = await api.exercises.list();
         setExercises(data);
-        toast.success(`✅ Added ${toAdd.length} missing exercise${toAdd.length > 1 ? 's' : ''} to your library!`);
+        toast.success(`✅ Synced ${toAdd.length} missing exercise${toAdd.length > 1 ? 's' : ''} to your library!`);
     } catch (e) {
         console.error(e);
         toast.error("Failed to sync exercises");
