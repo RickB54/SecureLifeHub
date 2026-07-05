@@ -122,8 +122,8 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
       
     const gym = gyms.find(g => g.id === filterState.gymId);
     let prefixes: string[] = [];
-    if (gym) {
-       const activeSections = next.length > 0 ? gym.sections?.filter(s => next.includes(s.id)) : gym.sections;
+    if (gym && next.length > 0) {
+       const activeSections = gym.sections?.filter(s => next.includes(s.id));
        prefixes = activeSections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
     }
     
@@ -323,8 +323,7 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const prefixes = gym.sections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
-                                onFilterChange({ gymId: filterState.gymId, sectionIds: [], sectionPrefixes: prefixes });
+                                onFilterChange({ gymId: filterState.gymId, sectionIds: [], sectionPrefixes: [] });
                               }}
                               className="text-[10px] font-bold text-gray-500 hover:text-gray-300 underline underline-offset-2"
                             >

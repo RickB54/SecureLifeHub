@@ -95,28 +95,33 @@ const Exercises = () => {
           const isAlreadySelected = selectedExerciseIds.includes(ex.id);
           if (isAlreadySelected) return true;
           
-          // 1. If explicit zones are selected, filter strictly
-          if (gymFilter.sectionIds.length > 0) {
-            const isStrictGym = ex.gymId === gymFilter.gymId;
-            const isStrictSection = gymFilter.sectionIds.includes(ex.gymSectionId ?? "");
-            if (isStrictGym && isStrictSection) return true;
-            
-            // Allow legacy exercises that match the prefix of the selected zone(s)
-            if (gymFilter.sectionPrefixes && gymFilter.sectionPrefixes.length > 0) {
-              const exNameRaw = ex.name.toUpperCase().replace(/-/g, '');
-              const hasPrefixMatch = gymFilter.sectionPrefixes.some(prefix => exNameRaw.startsWith(prefix.replace(/-/g, '')));
-              if (hasPrefixMatch) return true;
-            }
-            
-            return false;
+          // If a gym is selected, we ONLY show exercises belonging to that gym.
+          // This ensures global defaults are NEVER mixed in.
+          let isGymMatch = false;
+          
+          // 1. Explicit Gym mapping match
+          if (ex.gymId === gymFilter.gymId) {
+             if (gymFilter.sectionIds.length === 0 && gymFilter.sectionPrefixes?.length === 0) {
+                 // If the gym is selected but ALL zones are cleared, show NOTHING
+                 isGymMatch = false;
+             } else if (gymFilter.sectionIds.length === 0) {
+                 // Fallback for legacy behavior just in case
+                 isGymMatch = !ex.gymSectionId;
+             } else {
+                 isGymMatch = gymFilter.sectionIds.includes(ex.gymSectionId ?? "");
+             }
           }
           
-          // 2. No strict zones selected. Allow all exercises for this gym, PLUS global defaults.
-          // The user specifically requested to see them when they select "My Gym".
-          // If it's a global exercise (no gymId), should we show it? Yes, gyms usually combine global + gym-specific.
-          if (ex.gymId && ex.gymId !== gymFilter.gymId) return false;
-          if (!ex.gymId && ex.name.toUpperCase().startsWith("CF")) return true; // Show untagged CF in My Gym
-          return true;
+          // 2. Legacy Prefix match (for untagged CF exercises)
+          if (!isGymMatch && !ex.gymId && gymFilter.sectionPrefixes && gymFilter.sectionPrefixes.length > 0) {
+             const exNameRaw = ex.name.toUpperCase().replace(/-/g, '');
+             const hasPrefixMatch = gymFilter.sectionPrefixes.some(prefix => exNameRaw.startsWith(prefix.replace(/-/g, '')));
+             if (hasPrefixMatch) {
+                 isGymMatch = true;
+             }
+          }
+          
+          return isGymMatch;
         }
         
         // If NO gym is selected (Main Library View):
