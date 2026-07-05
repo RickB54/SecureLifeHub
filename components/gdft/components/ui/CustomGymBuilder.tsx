@@ -108,7 +108,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
     if (linkingSectionId && linkingEquipmentId) {
       handleUpdateEquipment(linkingSectionId, linkingEquipmentId, {
         name: exercise.name,
-        photoUrl: exercise.thumbnailUrl || exercise.pictureUrl,
+          photoUrl: getValidPhotoUrl(exercise),
         description: exercise.description,
         type: exercise.category as any
       });
@@ -118,6 +118,13 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
       setLinkingEquipmentId(null);
       toast.success(`Linked to ${exercise.name}`);
     }
+  };
+
+  const getValidPhotoUrl = (ex: Exercise) => {
+    const url = ex.thumbnailUrl || ex.pictureUrl || ex.startPositionUrl || "";
+    if (!url) return "";
+    if (url.endsWith(".svg") || url.includes("placeholder") || url.includes("7Hptjkc.png")) return "";
+    return url;
   };
 
   const handleBulkImport = () => {
@@ -137,7 +144,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
           name: ex.name,
           type: (ex.category === "Weights" || ex.category === "Cardio" || ex.category === "Slide Board" || ex.category === "No Equipment") ? ex.category : 'Weights' as any,
           description: ex.description || "",
-          photoUrl: ex.thumbnailUrl || ex.pictureUrl
+          photoUrl: getValidPhotoUrl(ex)
         }));
         
         return {
@@ -166,7 +173,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
           name: ex.name,
           type: (ex.category === "Weights" || ex.category === "Cardio" || ex.category === "Slide Board" || ex.category === "No Equipment") ? ex.category : 'Weights' as any,
           description: ex.description || "",
-          photoUrl: ex.thumbnailUrl || ex.pictureUrl
+          photoUrl: getValidPhotoUrl(ex)
         }));
         
         return {
@@ -812,7 +819,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                               name: ex.name,
                               type: cat as any,
                               description: ex.description || "",
-                              photoUrl: ex.thumbnailUrl || ex.pictureUrl
+                              photoUrl: getValidPhotoUrl(ex)
                             }));
 
                             setGymSections([...gymSections, { 
@@ -883,7 +890,52 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
 
                   {gymSections.map(section => (
                     <TabsContent key={section.id} value={section.id} className="mt-0 space-y-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        {/* Action Buttons at the TOP */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto md:h-[128px]">
+                        <Button 
+                          variant="outline" 
+                          className="h-24 md:h-full rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
+                          onClick={() => handleAddEquipment(section.id)}
+                        >
+                          <Plus className="h-6 w-6" />
+                          Add Single Machine
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="h-24 md:h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
+                          onClick={() => {
+                            setLinkingSectionId(section.id);
+                            setBulkImportSelectedIds([]);
+                            setBulkImportOpen(true);
+                          }}
+                        >
+                          <Search className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                          Bulk Import from Library
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-24 md:h-full rounded-2xl border-dashed border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/20 text-amber-400 flex flex-col gap-2 font-bold group">
+                              <Zap className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                              Auto-Fill Full Category
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-gym-darker border-white/10 p-2 min-w-[200px]">
+                            {['Weights', 'Cardio', 'Slide Board', 'No Equipment'].map(cat => (
+                              <DropdownMenuItem 
+                                key={cat} 
+                                className="cursor-pointer font-bold text-gray-300 hover:text-white focus:bg-white/10 rounded-lg p-3"
+                                onClick={() => handleAutoFillCategory(section.id, cat)}
+                              >
+                                Auto-Fill {cat}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      {/* Equipment Cards below */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {section.equipment.map(eq => (
                         <Card key={eq.id} className="bg-white/[0.03] border-white/5 overflow-hidden animate-in zoom-in-95">
                           <CardContent className="p-4 flex gap-4">
@@ -950,49 +1002,6 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                             </div>
                           </CardContent>
                         </Card>
-                      ))}
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto md:h-[128px]">
-                        <Button 
-                          variant="outline" 
-                          className="h-24 md:h-full rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
-                          onClick={() => handleAddEquipment(section.id)}
-                        >
-                          <Plus className="h-6 w-6" />
-                          Add Single Machine
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          className="h-24 md:h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
-                          onClick={() => {
-                            setLinkingSectionId(section.id);
-                            setBulkImportSelectedIds([]);
-                            setBulkImportOpen(true);
-                          }}
-                        >
-                          <Search className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                          Bulk Import from Library
-                        </Button>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="h-24 md:h-full rounded-2xl border-dashed border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/20 text-amber-400 flex flex-col gap-2 font-bold group">
-                              <Zap className="h-6 w-6 group-hover:scale-110 transition-transform" />
-                              Auto-Fill Full Category
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-gym-darker border-white/10 p-2 min-w-[200px]">
-                            {['Weights', 'Cardio', 'Slide Board', 'No Equipment'].map(cat => (
-                              <DropdownMenuItem 
-                                key={cat} 
-                                className="cursor-pointer font-bold text-gray-300 hover:text-white focus:bg-white/10 rounded-lg p-3"
-                                onClick={() => handleAutoFillCategory(section.id, cat)}
-                              >
-                                Auto-Fill {cat}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
                     </div>
                   </TabsContent>
                 ))}
