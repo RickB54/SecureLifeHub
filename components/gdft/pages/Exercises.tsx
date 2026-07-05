@@ -91,7 +91,6 @@ const Exercises = () => {
       ).filter(ex => {
         // Must be in the exercisesToShow set
         if (!exercisesToShow.some(e => e.id === ex.id)) return false;
-        // Gym filter: multi-section support
         if (gymFilter.gymId) {
           const isAlreadySelected = selectedExerciseIds.includes(ex.id);
           if (isAlreadySelected) return true;
@@ -112,9 +111,21 @@ const Exercises = () => {
             return false;
           }
           
-          // 2. No strict zones selected. We allow ALL exercises to pass through.
+          // 2. No strict zones selected. Allow all exercises for this gym, PLUS global defaults.
+          // The user specifically requested to see them when they select "My Gym".
+          // If it's a global exercise (no gymId), should we show it? Yes, gyms usually combine global + gym-specific.
+          if (ex.gymId && ex.gymId !== gymFilter.gymId) return false;
+          if (!ex.gymId && ex.name.toUpperCase().startsWith("CF")) return true; // Show untagged CF in My Gym
           return true;
         }
+        
+        // If NO gym is selected (Main Library View):
+        // 1. Hide any exercise assigned to a specific gym
+        if (ex.gymId) return false;
+        
+        // 2. Hide any legacy untagged Choice Fitness (CF) exercises
+        if (ex.name.toUpperCase().startsWith("CF")) return false;
+        
         return true;
       });
 
