@@ -308,18 +308,29 @@ export const GymFilterPanel: React.FC<GymFilterPanelProps> = ({
                               );
                             })}
                           </div>
-                          {filterState.sectionIds.length > 0 && (
+                          <div className="mt-4 flex items-center justify-between">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const allSectionIds = gym.sections?.map(s => s.id) || [];
+                                const prefixes = gym.sections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
+                                onFilterChange({ gymId: filterState.gymId, sectionIds: allSectionIds, sectionPrefixes: prefixes });
+                              }}
+                              className="text-[10px] font-bold text-amber-500/80 hover:text-amber-300 underline underline-offset-2"
+                            >
+                              Select All Zones
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const prefixes = gym.sections?.map(s => extractCFPrefix(s.name)).filter(Boolean) as string[] || [];
                                 onFilterChange({ gymId: filterState.gymId, sectionIds: [], sectionPrefixes: prefixes });
                               }}
-                              className="mt-2 text-[10px] text-amber-500/60 hover:text-amber-300 underline underline-offset-2"
+                              className="text-[10px] font-bold text-gray-500 hover:text-gray-300 underline underline-offset-2"
                             >
-                              Show all zones
+                              Clear Selection
                             </button>
-                          )}
+                          </div>
                         </div>
                       )}
                     </div>
