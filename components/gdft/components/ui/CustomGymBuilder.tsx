@@ -155,6 +155,30 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
     setBulkImportSelectedIds([]);
   };
 
+  const handleAutoFillCategory = (sectionId: string, category: string) => {
+    const matchingExercises = exercises.filter(ex => ex.category === category);
+    if (matchingExercises.length === 0) return;
+    
+    setGymSections(gymSections.map(s => {
+      if (s.id === sectionId) {
+        const newEquipment = matchingExercises.map(ex => ({
+          id: uuidv4(),
+          name: ex.name,
+          type: (ex.category === "Weights" || ex.category === "Cardio" || ex.category === "Slide Board" || ex.category === "No Equipment") ? ex.category : 'Weights' as any,
+          description: ex.description || "",
+          photoUrl: ex.thumbnailUrl || ex.pictureUrl
+        }));
+        
+        return {
+          ...s,
+          equipment: [...s.equipment, ...newEquipment]
+        };
+      }
+      return s;
+    }));
+    toast.success(`Added ${matchingExercises.length} ${category} exercises!`);
+  };
+
   useEffect(() => {
     if (isOpen) {
       if (user) loadGyms();
@@ -888,10 +912,10 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                         </Card>
                       ))}
                       
-                      <div className="grid grid-cols-2 gap-4 h-[128px]">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-auto md:h-[128px]">
                         <Button 
                           variant="outline" 
-                          className="h-full rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
+                          className="h-24 md:h-full rounded-2xl border-dashed border-white/10 bg-white/5 hover:bg-white/10 text-gray-400 flex flex-col gap-2 font-bold"
                           onClick={() => handleAddEquipment(section.id)}
                         >
                           <Plus className="h-6 w-6" />
@@ -899,7 +923,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                         </Button>
                         <Button 
                           variant="outline" 
-                          className="h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
+                          className="h-24 md:h-full rounded-2xl border-dashed border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/20 text-blue-400 flex flex-col gap-2 font-bold group"
                           onClick={() => {
                             setLinkingSectionId(section.id);
                             setBulkImportSelectedIds([]);
@@ -909,6 +933,25 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                           <Search className="h-6 w-6 group-hover:scale-110 transition-transform" />
                           Bulk Import from Library
                         </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="h-24 md:h-full rounded-2xl border-dashed border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/20 text-amber-400 flex flex-col gap-2 font-bold group">
+                              <Zap className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                              Auto-Fill Full Category
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-gym-darker border-white/10 p-2 min-w-[200px]">
+                            {['Weights', 'Cardio', 'Slide Board', 'No Equipment'].map(cat => (
+                              <DropdownMenuItem 
+                                key={cat} 
+                                className="cursor-pointer font-bold text-gray-300 hover:text-white focus:bg-white/10 rounded-lg p-3"
+                                onClick={() => handleAutoFillCategory(section.id, cat)}
+                              >
+                                Auto-Fill {cat}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </TabsContent>
