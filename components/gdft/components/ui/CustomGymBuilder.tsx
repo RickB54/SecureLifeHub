@@ -707,18 +707,34 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                 >
                   Map Zones (Optional) <ChevronRight className="h-5 w-5" />
                 </Button>
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700 h-14 px-8 rounded-2xl font-black text-lg gap-2 shadow-xl shadow-blue-500/20"
-                  onClick={() => {
-                    if (gymSections.length === 0) {
-                      setGymSections([{ id: uuidv4(), name: "Main Area", description: "", equipment: [] }]);
-                    }
-                    setStep('equipment');
-                  }}
-                  disabled={!gymName}
-                >
-                  Add Exercises Directly <ChevronRight className="h-5 w-5" />
-                </Button>
+                <div className="flex gap-4">
+                  <Button 
+                    variant="outline"
+                    className="h-14 px-6 rounded-2xl font-black text-lg gap-2 border-white/10 hover:bg-emerald-600 hover:text-white hover:border-emerald-500 text-gray-400 shadow-lg transition-all"
+                    onClick={async () => {
+                      if (gymSections.length === 0) {
+                        setGymSections([{ id: uuidv4(), name: "Main Area", description: "", equipment: [] }]);
+                      }
+                      await saveGym();
+                      onClose();
+                    }}
+                    disabled={!gymName}
+                  >
+                    <Save className="h-5 w-5" /> Save Gym
+                  </Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 h-14 px-8 rounded-2xl font-black text-lg gap-2 shadow-xl shadow-blue-500/20"
+                    onClick={() => {
+                      if (gymSections.length === 0) {
+                        setGymSections([{ id: uuidv4(), name: "Main Area", description: "", equipment: [] }]);
+                      }
+                      setStep('equipment');
+                    }}
+                    disabled={!gymName}
+                  >
+                    Add Exercises Directly <ChevronRight className="h-5 w-5" />
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -1001,7 +1017,7 @@ const CustomGymBuilder: React.FC<CustomGymBuilderProps> = ({ isOpen, onClose }) 
                               </div>
                             </div>
                           </CardContent>
-                        </Card>
+                      ))}
                     </div>
                   </TabsContent>
                 ))}
