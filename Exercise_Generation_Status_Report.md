@@ -163,7 +163,19 @@ These exercises still use the blue stick-figure `.svg` files. These are the ONLY
 | Bird Dog | `/icons/no-equipment/animated/bird-dog-pos1.svg` |
 | Sit-Ups | `/icons/no-equipment/animated/sit-ups-pos1.svg` |
 | Inchworms | `/icons/no-equipment/animated/inchworms-pos1.svg` |
+## ✅ Recently Completed (Gemini AI - July 5 2026)
+These 4 exercises were generated using **Google Gemini's image creator** (not OpenAI) with white backgrounds per project requirements, and deployed to `/public/icons/no-equipment/realistic/`.
 
+| Exercise Name | New Image Path |
+|---|---|
+| Agility Ladder Drills | `/icons/no-equipment/realistic/agility-ladder-drills-pos1.png` |
+| Pistol Squats | `/icons/no-equipment/realistic/pistol-squats-pos1.png` |
+| Handstand Pushups | `/icons/no-equipment/realistic/handstand-pushups-pos1.png` |
+| Bear Crawls | `/icons/no-equipment/realistic/bear-crawls-pos1.png` |
 
-**Total Protected:** 36
-**Total Pending:** 114
+---
+
+**Total Protected/Done:** 40  
+**Total Still Pending (SVG placeholders):** 110  
+
+> **Note:** The remaining 110 exercises still show SVG animated icons. These can be batch-generated when OpenAI billing is resolved, OR generated one-by-one using Gemini. Let me know when you want to continue!
