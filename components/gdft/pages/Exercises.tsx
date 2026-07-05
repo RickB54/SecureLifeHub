@@ -7,7 +7,7 @@ import ExerciseFilters from "@/components/gdft/components/ui/ExerciseFilters";
 import { useExercise } from "@/components/gdft/contexts/ExerciseContext";
 import { useWorkout } from "@/components/gdft/contexts/WorkoutContext";
 import { useSettings } from "@/components/gdft/contexts/SettingsContext";
-import { Exercise, RelaxedMuscleGroup, RelaxedExerciseCategory } from "@/components/gdft/lib/data";
+import { Exercise, RelaxedMuscleGroup, RelaxedExerciseCategory, slideboardExercises, cardioExercises, weightExercises, noEquipmentExercises } from "@/components/gdft/lib/data";
 import { ReorderFavoritesDialog } from "@/components/gdft/components/ReorderFavoritesDialog";
 import { Button } from "@/components/gdft/components/ui/button";
 import ExercisesHelpPopup from "@/components/gdft/components/ui/ExercisesHelpPopup";
@@ -125,8 +125,13 @@ const Exercises = () => {
         }
         
         // If NO gym is selected (Main Library View):
-        // 1. Hide any exercise assigned to a specific gym
-        if (ex.gymId) return false;
+        // Build a set of all known standard library exercise names
+        const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        const defaultNames = new Set(allDefaults.map(d => d.name.toLowerCase().trim()));
+        
+        // 1. Hide any exercise assigned to a specific gym that is NOT a standard library exercise
+        //    (i.e. it's a custom gym machine - only visible when that gym is selected)
+        if (ex.gymId && !defaultNames.has(ex.name.toLowerCase().trim())) return false;
         
         // 2. Hide any legacy untagged Choice Fitness (CF) exercises
         if (ex.name.toUpperCase().startsWith("CF")) return false;
