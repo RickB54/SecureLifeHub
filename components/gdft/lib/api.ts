@@ -75,7 +75,13 @@ const mapSetFromDB = (db: any): WorkoutSet => ({
 export const api = {
   scheduledWorkouts: {
     list: async () => {
-      const { data, error } = await supabase.from('scheduled_workouts').select('*');
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      let query = supabase.from('scheduled_workouts').select('*');
+      if (userId) {
+          query = query.eq('user_id', userId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data.map((d: any) => ({
         id: d.id,
@@ -185,9 +191,15 @@ export const api = {
   },
   exercises: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('exercises')
-        .select('*');
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      
+      let query = supabase.from('exercises').select('*');
+      if (userId) {
+          query = query.eq('user_id', userId);
+      }
+      
+      const { data, error } = await query;
       
       if (error) throw error;
       return data.map(mapExerciseFromDB);
@@ -278,13 +290,22 @@ export const api = {
 
   workouts: {
     list: async () => {
-      const { data, error } = await supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      
+      let query = supabase
         .from('workouts')
         .select(`
           *,
           workout_sets (*)
         `)
         .order('start_time', { ascending: false });
+        
+      if (userId) {
+          query = query.eq('user_id', userId);
+      }
+      
+      const { data, error } = await query;
         
       if (error) throw error;
       
@@ -458,9 +479,13 @@ export const api = {
 
   savedTemplates: {
     list: async () => {
-      const { data, error } = await supabase
-        .from('saved_workout_templates')
-        .select('*');
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id;
+      let query = supabase.from('saved_workout_templates').select('*');
+      if (userId) {
+          query = query.eq('user_id', userId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data.map(d => ({
         id: d.id,
@@ -511,7 +536,13 @@ export const api = {
 
   customPlans: {
     list: async () => {
-        const { data, error } = await supabase.from('custom_plans').select('*');
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        let query = supabase.from('custom_plans').select('*');
+        if (userId) {
+            query = query.eq('user_id', userId);
+        }
+        const { data, error } = await query;
         if (error) throw error;
         return data.map(d => ({
             id: d.id,
@@ -581,7 +612,13 @@ export const api = {
   
   measurements: {
     list: async () => {
-        const { data, error } = await supabase.from('body_measurements').select('*').order('date', { ascending: false });
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        let query = supabase.from('body_measurements').select('*').order('date', { ascending: false });
+        if (userId) {
+            query = query.eq('user_id', userId);
+        }
+        const { data, error } = await query;
         if (error) throw error;
         return data.map((d: any) => ({
              id: d.id,
@@ -709,7 +746,13 @@ export const api = {
 
   healthMetrics: {
      list: async () => {
-         const { data, error } = await supabase.from('health_metrics').select('*').order('date', { ascending: false });
+         const { data: { session } } = await supabase.auth.getSession();
+         const userId = session?.user?.id;
+         let query = supabase.from('health_metrics').select('*').order('date', { ascending: false });
+         if (userId) {
+             query = query.eq('user_id', userId);
+         }
+         const { data, error } = await query;
          if (error) throw error;
          return data.map((d: any) => ({
              id: d.id,
