@@ -924,13 +924,25 @@ export const api = {
   },
   
   gyms: {
-    list: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+    list: async (userId?: string) => {
+      let uid = userId;
+      if (!uid) {
+        const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        uid = session?.user?.id;
+      }
+      if (!uid) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          uid = user?.id;
+        } catch {
+          // ignore
+        }
+      }
+      if (!uid) return [];
       const { data, error } = await supabase
         .from('gyms')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', uid)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -959,20 +971,36 @@ export const api = {
   },
   
   profiles: {
-    get: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+    get: async (userId?: string) => {
+      let uid = userId;
+      if (!uid) {
+        const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+        uid = session?.user?.id;
+      }
+      if (!uid) {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          uid = user?.id;
+        } catch {
+          // ignore
+        }
+      }
+      if (!uid) {
+        return { achievedPrs: [], lastChangelogViewed: null };
+      }
       
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', uid)
         .maybeSingle();
       
-      if (error) throw error;
+      if (error) {
+        console.warn("[api.profiles.get] Error fetching profile:", error);
+        return { id: uid, achievedPrs: [], lastChangelogViewed: null };
+      }
       if (!data) {
-          // Profile warning silenced to reduce console clutter
-          return { id: user.id, achievedPrs: [], lastChangelogViewed: null };
+        return { id: uid, achievedPrs: [], lastChangelogViewed: null };
       }
       return {
         id: data.id,
@@ -980,9 +1008,24 @@ export const api = {
         lastChangelogViewed: data.last_changelog_viewed
       };
     },
-    update: async (updates: any) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
+    update: async (updates: any, userId?: string) => {
+        let uid = userId;
+        if (!uid) {
+          const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+          uid = session?.user?.id;
+        }
+        if (!uid) {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            uid = user?.id;
+          } catch {
+            // ignore
+          }
+        }
+        if (!uid) {
+          console.warn("[api.profiles.update] No user authenticated, skipping update");
+          return null;
+        }
 
         const dbUpdates: any = {};
         if (updates.achievedPrs) dbUpdates.achieved_prs = updates.achievedPrs;
@@ -992,7 +1035,7 @@ export const api = {
 
         const { data, error } = await supabase
             .from('profiles')
-            .upsert({ id: user.id, ...dbUpdates })
+            .upsert({ id: uid, ...dbUpdates })
             .select()
             .maybeSingle();
             
@@ -1000,7 +1043,7 @@ export const api = {
             console.error('[api] profiles.update error:', JSON.stringify(error));
             throw error;
         }
-        if (!data) throw new Error("Failed to create/update profile");
+        if (!data) return null;
         return {
             id: data.id,
             achievedPrs: data.achieved_prs || [],
@@ -1008,14 +1051,26 @@ export const api = {
         };
     },
     
-    purgePrs: async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error("Not authenticated");
+    purgePrs: async (userId?: string) => {
+        let uid = userId;
+        if (!uid) {
+          const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+          uid = session?.user?.id;
+        }
+        if (!uid) {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            uid = user?.id;
+          } catch {
+            // ignore
+          }
+        }
+        if (!uid) return;
         
         const { error } = await supabase
             .from('profiles')
             .update({ achieved_prs: [] })
-            .eq('id', user.id);
+            .eq('id', uid);
             
         if (error) throw error;
     }

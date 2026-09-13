@@ -1071,10 +1071,10 @@ const Workout = () => {
   
   if (showActiveWorkout && currentWorkout && currentExercise) {
     return (
-      <div className="flex flex-col min-h-full bg-gym-darker page-transition pb-24">
+      <div className="flex flex-col min-h-full bg-gym-darker page-transition">
         {/* Fixed Top Section: Exercise Info & Media */}
-        <div className="sticky top-0 flex-none px-4 pt-4 border-b border-white/5 bg-gym-darker z-40 shadow-xl pb-2">
-          <div className="flex items-center justify-between mb-4">
+        <div className="sticky top-0 flex-none px-4 pt-2 border-b border-white/5 bg-gym-darker z-40 shadow-xl pb-2">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => {
                   if (window.confirm("End this workout?")) {
@@ -1134,7 +1134,7 @@ const Workout = () => {
             </div>
           </div>
 
-          <div className="mb-4">
+          <div className="mb-2">
             {/* Position image toggle — START / END */}
             {(() => {
               const hasStart = !!(currentExercise.startPositionUrl);
@@ -1153,7 +1153,7 @@ const Workout = () => {
 
               return (
                 <div
-                  className="relative w-full max-h-[30vh] md:max-h-[300px] aspect-video rounded-lg bg-gym-dark flex items-center justify-center overflow-hidden mb-4 cursor-pointer hover:opacity-95 transition-opacity border border-white/5 shadow-inner"
+                  className="relative w-full max-h-[160px] md:max-h-[220px] aspect-video rounded-lg bg-gym-dark flex items-center justify-center overflow-hidden mb-2 cursor-pointer hover:opacity-95 transition-opacity border border-white/5 shadow-inner"
                   onClick={() => setShowImagePopup(true)}
                 >
                   {currentExercise.startPositionUrl ? (
@@ -1229,7 +1229,7 @@ const Workout = () => {
             })()}
 
             {currentWorkout.exercises.length > 1 && (
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex justify-between items-center mb-2">
                 <button
                   className={`p-2 rounded-full ${currentExerciseIndex > 0 ? "bg-gym-blue" : "bg-gym-dark/50"}`}
                   onClick={handlePreviousExercise}
@@ -1250,7 +1250,7 @@ const Workout = () => {
               </div>
             )}
 
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-2">
               <div className="flex items-center bg-gym-dark border border-white/5 rounded-full px-4 py-1.5 shadow-sm">
                 <span className="text-xs text-muted-foreground mr-2 font-medium">Rest:</span>
                 
@@ -1296,7 +1296,7 @@ const Workout = () => {
               </div>
             </div>
 
-            <div className="flex justify-center space-x-2 mb-2">
+            <div className="flex justify-center space-x-2 mb-1">
               <Button
                 variant={showDescription ? "default" : "outline"}
                 onClick={() => { setShowDescription(!showDescription); setShowHistory(false); setShowNotes(false); }}
@@ -1323,7 +1323,7 @@ const Workout = () => {
         </div>
 
         {/* Scrollable Context & Sets Section */}
-        <div ref={setsContainerRef} className="flex-1 pt-4 px-4 pb-48 scroll-smooth">
+        <div ref={setsContainerRef} className="flex-1 pt-4 px-4 pb-8 scroll-smooth">
           {showDescription && (
             <div className="mb-6 p-4 bg-gym-card rounded-lg">
               <h3 className="text-sm font-medium mb-1 uppercase text-[10px] tracking-widest text-gray-500">Exercise Description</h3>
@@ -1381,8 +1381,8 @@ const Workout = () => {
           </div>
         </div>
 
-        {/* Global Action Footer */}
-        <div className="fixed bottom-16 left-0 right-0 p-4 bg-gym-darker border-t border-white/5 flex flex-col space-y-2 z-30">
+        {/* Docked Action Footer */}
+        <div className="sticky bottom-0 left-0 right-0 p-3 bg-gym-darker/95 backdrop-blur-md border-t border-white/10 flex flex-col space-y-2 z-30 mt-auto shadow-2xl">
           <button
             onClick={() => { if (window.confirm("End this workout and save your progress?")) handleEndWorkout(); }}
             className="w-full py-3 rounded-xl font-black uppercase tracking-widest bg-gym-blue text-white hover:bg-blue-600 transition-all shadow-lg active:scale-95 shadow-blue-500/10"

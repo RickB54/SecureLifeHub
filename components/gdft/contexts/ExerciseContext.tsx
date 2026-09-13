@@ -44,10 +44,11 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       setLoading(true);
       if (!user) {
-         console.log("No user, loading local defaults");
+         console.log("[ExerciseContext] No authenticated user, loading local defaults");
          const localDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
          setExercises(localDefaults);
-      } else {
+         return;
+      }
          console.log("Loading user exercises from Supabase");
          const data = await api.exercises.list();
          
@@ -120,7 +121,6 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setExercises(upToDate);
             // Automatic deduplication removed to avoid breaking past workout history links
           }
-      }
     } catch (error) {
       console.error("Failed to load exercises:", error);
       toast.error("Failed to load exercises");

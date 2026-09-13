@@ -141,11 +141,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
   // Load Data
   const loadData = useCallback(async () => {
     if (!user) {
-        // Load from localStorage if no user (Legacy/Mock)
-        // Or just empty
-        console.log("No user, loading local data (if any)");
-        // ... Logic to load from local storage could go here for backward compatibility
-        // But strict Supabase integration requested.
+        console.log("[WorkoutContext] No authenticated user, skipping loadData");
         return;
     }
 
@@ -158,7 +154,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
             api.measurements.list().catch(e => { console.error("Error loading measurements:", e); return []; }),
             api.healthMetrics.list().catch(e => { console.error("Error loading health metrics:", e); return []; }),
             api.scheduledWorkouts.list().catch(e => { console.error("Error loading scheduled workouts:", e); return []; }),
-            api.profiles.get().catch(e => { console.error("Error loading profile:", e); return { achievedPrs: [] }; })
+            api.profiles.get(user.id).catch(e => { console.warn("Error loading profile:", e); return { achievedPrs: [] }; })
         ]);
 
         setSavedWorkoutTemplates(tData);
@@ -903,7 +899,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
                 origin: { y: 0.6 }
             });
             // Update DB
-            api.profiles.update({ achievedPrs: newPrs }).catch(console.error);
+            api.profiles.update({ achievedPrs: newPrs }, user.id).catch(console.error);
             return newPrs;
         }
         
@@ -1389,7 +1385,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     if (!user) return;
     try {
       setLoading(true);
-      await api.profiles.purgePrs();
+      await api.profiles.purgePrs(user.id);
       setAchievedPrs([]);
       toast.success("Personal records purged");
     } catch (e) {

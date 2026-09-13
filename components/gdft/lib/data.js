@@ -1938,7 +1938,7 @@ exports.cardioExercises = [
         muscleGroups: ["Cardiovascular", "Legs", "Core"],
         equipment: "None",
         description: "Perform fast-paced footwork drills through an agility ladder laid flat on the floor (like high knees, lateral shuffles, or icky shuffle). Focus on speed, coordination, and minimal ground contact time.",
-        startPositionUrl: "agility-ladder-drills.svg",
+        startPositionUrl: "/icons/no-equipment/realistic/agility-ladder-drills-pos1.png",
         settings: { time: 15, distance: 0 },
     },
     {
@@ -2310,7 +2310,7 @@ exports.noEquipmentExercises = [
         muscleGroups: ["Quadriceps", "Glutes", "Core"],
         equipment: "None",
         description: "Stand on one leg with the other leg extended straight out in front of you. Lower your body into a deep squat on the standing leg, keeping your extended leg off the floor. Push back up to the starting position.",
-        startPositionUrl: "pistol-squats.svg",
+        startPositionUrl: "/icons/no-equipment/realistic/pistol-squats-pos1.png",
         settings: { time: 0, sets: 3, reps: 5 },
     },
     {
@@ -2320,7 +2320,7 @@ exports.noEquipmentExercises = [
         muscleGroups: ["Shoulders", "Triceps", "Core"],
         equipment: "None",
         description: "Kick up into a handstand against a wall. Lower your body by bending your elbows until your head gently touches the floor, then press back up until your arms are fully extended.",
-        startPositionUrl: "handstand-pushups.svg",
+        startPositionUrl: "/icons/no-equipment/realistic/handstand-pushups-pos1.png",
         settings: { time: 0, sets: 3, reps: 8 },
     },
     {
@@ -2330,7 +2330,7 @@ exports.noEquipmentExercises = [
         muscleGroups: ["Full Body", "Core", "Shoulders"],
         equipment: "None",
         description: "Start on all fours with your knees hovering just above the ground. Crawl forward by moving your opposite hand and foot simultaneously. Keep your back flat and core tight throughout the movement.",
-        startPositionUrl: "bear-crawls.svg",
+        startPositionUrl: "/icons/no-equipment/realistic/bear-crawls-pos1.png",
         settings: { time: 60, sets: 3, reps: 1 },
     },
     {

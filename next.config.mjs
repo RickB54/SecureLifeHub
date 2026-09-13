@@ -11,6 +11,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  allowedDevOrigins: ['192.168.1.244'],
   experimental: {
     webpackBuildWorker: true,
     parallelServerBuildTraces: true,
