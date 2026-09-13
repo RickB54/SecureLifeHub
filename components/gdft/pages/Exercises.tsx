@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, BarChart3, Trash, Heart, ListOrdered, Play, Edit, HelpCircle, Printer, FileText, ArrowLeft, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, BarChart3, Trash, Heart, ListOrdered, Play, Edit, HelpCircle, Printer, FileText, ArrowLeft, RefreshCw, ChevronDown, ChevronUp, Search, X } from "lucide-react";
 import ExerciseCard from "@/components/gdft/components/ui/ExerciseCard";
-import ExerciseFilters from "@/components/gdft/components/ui/ExerciseFilters";
 import { useExercise } from "@/components/gdft/contexts/ExerciseContext";
 import { useWorkout } from "@/components/gdft/contexts/WorkoutContext";
 import { useSettings } from "@/components/gdft/contexts/SettingsContext";
@@ -558,35 +557,64 @@ const Exercises = () => {
         onFilterChange={setGymFilter}
       />
 
-      <ExerciseVisualFilter
-        equipmentFilter={equipmentFilter}
-        categoryFilter={categoryFilter}
-        muscleGroupFilter={muscleGroupFilter}
-        onEquipmentChange={setEquipmentFilter}
-        onCategoryChange={(cat) => {
-          setCategoryFilter(cat);
-          setSelectionMode(false);
-          setSelectedExerciseIds([]);
-        }}
-        onMuscleGroupChange={setMuscleGroupFilter}
-      />
+      {/* ── STICKY COMPACT FILTER BAR ── */}
+      <div className="sticky top-0 z-10 bg-gym-darker/95 backdrop-blur-md pt-2 pb-3 mb-4 border-b border-white/10 -mx-4 px-4 space-y-2 shadow-md">
+        {/* A) Visual Filter Chips — compact version in 1 horizontal row */}
+        <ExerciseVisualFilter
+          equipmentFilter={equipmentFilter}
+          categoryFilter={categoryFilter}
+          muscleGroupFilter={muscleGroupFilter}
+          onEquipmentChange={setEquipmentFilter}
+          onCategoryChange={(cat) => {
+            setCategoryFilter(cat);
+            setSelectionMode(false);
+            setSelectedExerciseIds([]);
+          }}
+          onMuscleGroupChange={setMuscleGroupFilter}
+          compact={true}
+        />
 
-      <ExerciseFilters
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        equipmentFilter={equipmentFilter}
-        onEquipmentFilterChange={setEquipmentFilter}
-        categoryFilter={categoryFilter}
-        onCategoryFilterChange={(cat) => {
-          setCategoryFilter(cat);
-          setSelectionMode(false);
-          setSelectedExerciseIds([]);
-        }}
-        muscleGroupFilter={muscleGroupFilter}
-        onMuscleGroupFilterChange={setMuscleGroupFilter}
-        categoryCounts={categoryCounts}
-        className="mb-4"
-      />
+        {/* B) Category pills — row below chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide no-scrollbar">
+          {["All", "Weights", "Cardio", "Slide Board", "No Equipment"].map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => handleCategoryClick(cat)}
+              className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-bold transition-all border shrink-0 ${
+                categoryFilter === cat 
+                  ? "bg-gym-blue text-white border-gym-blue shadow-md shadow-blue-500/20" 
+                  : "bg-gym-dark/90 text-gray-400 border-white/10 hover:border-gray-500 hover:text-white"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* C) Search bar — sticky, always visible */}
+        <div className="relative flex items-center">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search className="h-4 w-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            className="bg-gym-dark/90 border border-white/10 text-white text-xs sm:text-sm rounded-lg focus:ring-1 focus:ring-gym-blue focus:border-gym-blue block w-full pl-9 pr-8 py-2 placeholder-gray-500"
+            placeholder="Search exercises..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-white"
+              title="Clear search"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
 
       {selectionMode && (
         <div className="mb-6 animate-fadeIn">

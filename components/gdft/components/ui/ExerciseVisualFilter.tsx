@@ -221,6 +221,7 @@ interface ExerciseVisualFilterProps {
   onEquipmentChange: (v: string) => void;
   onCategoryChange: (v: string) => void;
   onMuscleGroupChange: (v: string) => void;
+  compact?: boolean;
 }
 
 export const ExerciseVisualFilter: React.FC<ExerciseVisualFilterProps> = ({
@@ -230,6 +231,7 @@ export const ExerciseVisualFilter: React.FC<ExerciseVisualFilterProps> = ({
   onEquipmentChange,
   onCategoryChange,
   onMuscleGroupChange,
+  compact = false,
 }) => {
   const [activeGroup, setActiveGroup] = useState<FilterGroup | null>(null);
 
@@ -262,62 +264,100 @@ export const ExerciseVisualFilter: React.FC<ExerciseVisualFilterProps> = ({
   const hasActiveFilter = (groupId: FilterGroup) => getActiveValue(groupId) !== "All";
 
   return (
-    <div className="mb-5">
-      {/* Section label */}
-      <div className="flex items-center gap-2 mb-3">
-        <div className="h-0.5 w-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" />
-        <span className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Visual Filters</span>
-        <div className="h-0.5 flex-1 bg-gradient-to-r from-purple-500/20 to-transparent rounded-full" />
-        {(hasActiveFilter("equipment") || hasActiveFilter("category") || hasActiveFilter("muscle")) && (
-          <button
-            onClick={() => { onEquipmentChange("All"); onCategoryChange("All"); onMuscleGroupChange("All"); }}
-            className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-widest border border-red-500/30 rounded-full px-2 py-0.5 hover:border-red-400/60 transition-colors"
-          >
-            Clear All
-          </button>
-        )}
-      </div>
-
-      {/* 3 gateway cards */}
-      <div className="flex gap-3">
-        {GROUPS.map(group => (
-          <GatewayCard
-            key={group.id}
-            group={group}
-            isActive={activeGroup === group.id || hasActiveFilter(group.id)}
-            onClick={() => handleGatewayClick(group.id)}
-          />
-        ))}
-      </div>
-
-      {/* Active filter pills */}
-      {(hasActiveFilter("equipment") || hasActiveFilter("category") || hasActiveFilter("muscle")) && (
-        <div className="flex flex-wrap gap-2 mt-3">
-          {hasActiveFilter("equipment") && (
-            <div className="flex items-center gap-1 bg-sky-500/15 border border-sky-500/30 rounded-full px-3 py-1">
-              <span className="text-[11px] font-bold text-sky-400">🔧 {equipmentFilter}</span>
-              <button onClick={() => onEquipmentChange("All")} className="ml-1 text-sky-500 hover:text-white">
-                <X className="h-3 w-3" />
+    <div className={compact ? "" : "mb-5"}>
+      {compact ? (
+        /* ── Compact 3-chip row ── */
+        <div className="grid grid-cols-3 gap-2">
+          {GROUPS.map(group => {
+            const val = getActiveValue(group.id);
+            const isFiltered = val !== "All";
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => handleGatewayClick(group.id)}
+                className={`relative flex items-center justify-center gap-1.5 py-2 px-2 rounded-xl border text-xs font-bold transition-all truncate select-none ${
+                  isFiltered
+                    ? "bg-gym-dark text-white shadow-sm"
+                    : "bg-gym-dark/90 text-gray-300 hover:text-white hover:bg-gym-dark"
+                }`}
+                style={{
+                  borderColor: isFiltered ? group.accentColor : "rgba(255,255,255,0.12)",
+                  boxShadow: isFiltered ? `0 0 12px -2px ${group.glowColor}` : undefined,
+                }}
+                title={`Filter by ${group.label}${isFiltered ? `: ${val}` : ""}`}
+              >
+                <span className="text-sm shrink-0">{group.emoji}</span>
+                <span className="truncate">{isFiltered ? val : group.label}</span>
+                {isFiltered && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: group.accentColor }}
+                  />
+                )}
               </button>
-            </div>
-          )}
-          {hasActiveFilter("category") && (
-            <div className="flex items-center gap-1 bg-indigo-500/15 border border-indigo-500/30 rounded-full px-3 py-1">
-              <span className="text-[11px] font-bold text-indigo-400">📂 {categoryFilter}</span>
-              <button onClick={() => onCategoryChange("All")} className="ml-1 text-indigo-500 hover:text-white">
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-          {hasActiveFilter("muscle") && (
-            <div className="flex items-center gap-1 bg-pink-500/15 border border-pink-500/30 rounded-full px-3 py-1">
-              <span className="text-[11px] font-bold text-pink-400">💪 {muscleGroupFilter}</span>
-              <button onClick={() => onMuscleGroupChange("All")} className="ml-1 text-pink-500 hover:text-white">
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
+            );
+          })}
         </div>
+      ) : (
+        <>
+          {/* Section label */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-0.5 w-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full" />
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-400">Visual Filters</span>
+            <div className="h-0.5 flex-1 bg-gradient-to-r from-purple-500/20 to-transparent rounded-full" />
+            {(hasActiveFilter("equipment") || hasActiveFilter("category") || hasActiveFilter("muscle")) && (
+              <button
+                onClick={() => { onEquipmentChange("All"); onCategoryChange("All"); onMuscleGroupChange("All"); }}
+                className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-widest border border-red-500/30 rounded-full px-2 py-0.5 hover:border-red-400/60 transition-colors"
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+
+          {/* 3 gateway cards */}
+          <div className="flex gap-3">
+            {GROUPS.map(group => (
+              <GatewayCard
+                key={group.id}
+                group={group}
+                isActive={activeGroup === group.id || hasActiveFilter(group.id)}
+                onClick={() => handleGatewayClick(group.id)}
+              />
+            ))}
+          </div>
+
+          {/* Active filter pills */}
+          {(hasActiveFilter("equipment") || hasActiveFilter("category") || hasActiveFilter("muscle")) && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {hasActiveFilter("equipment") && (
+                <div className="flex items-center gap-1 bg-sky-500/15 border border-sky-500/30 rounded-full px-3 py-1">
+                  <span className="text-[11px] font-bold text-sky-400">🔧 {equipmentFilter}</span>
+                  <button onClick={() => onEquipmentChange("All")} className="ml-1 text-sky-500 hover:text-white">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              {hasActiveFilter("category") && (
+                <div className="flex items-center gap-1 bg-indigo-500/15 border border-indigo-500/30 rounded-full px-3 py-1">
+                  <span className="text-[11px] font-bold text-indigo-400">📂 {categoryFilter}</span>
+                  <button onClick={() => onCategoryChange("All")} className="ml-1 text-indigo-500 hover:text-white">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              {hasActiveFilter("muscle") && (
+                <div className="flex items-center gap-1 bg-pink-500/15 border border-pink-500/30 rounded-full px-3 py-1">
+                  <span className="text-[11px] font-bold text-pink-400">💪 {muscleGroupFilter}</span>
+                  <button onClick={() => onMuscleGroupChange("All")} className="ml-1 text-pink-500 hover:text-white">
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {/* ── Popup Modal ── */}
