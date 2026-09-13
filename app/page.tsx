@@ -678,21 +678,23 @@ function HomeContent() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Header is ALWAYS visible — even in fullscreen mode */}
-        <Header
-          onLogout={handleLogout}
-          onLock={() => setIsLocked(true)}
-          toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-          onNavigate={handleNavigate}
-          onBack={handleBack}
-          theme={theme}
-          toggleTheme={toggleTheme}
-          activePage={activePage}
-          onOpenHelp={() => commonProps.onOpenHelp(activePage)}
-          isFullscreen={isFullscreen}
-          setIsFullscreen={setIsFullscreen}
-        />
-        <div className={`flex flex-1 overflow-hidden pt-16`}>
+        {/* Header is hidden inside GDFT so GDFT has a dedicated full-screen experience */}
+        {activePage !== "type-gdft" && (
+          <Header
+            onLogout={handleLogout}
+            onLock={() => setIsLocked(true)}
+            toggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+            onNavigate={handleNavigate}
+            onBack={handleBack}
+            theme={theme}
+            toggleTheme={toggleTheme}
+            activePage={activePage}
+            onOpenHelp={() => commonProps.onOpenHelp(activePage)}
+            isFullscreen={isFullscreen}
+            setIsFullscreen={setIsFullscreen}
+          />
+        )}
+        <div className={`flex flex-1 overflow-hidden ${activePage === "type-gdft" ? "pt-0" : "pt-16"}`}>
           {/* Sidebar always rendered so hamburger menu works in fullscreen mode too */}
           <Sidebar
             activePage={activePage}
@@ -702,7 +704,7 @@ function HomeContent() {
             theme={theme}
             onOpenHelp={commonProps.onOpenHelp}
           />
-          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
+          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${activePage === "type-gdft" || isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
             {renderActivePage()}
           </main>
         </div>

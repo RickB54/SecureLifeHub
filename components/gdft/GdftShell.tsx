@@ -131,25 +131,29 @@ export default function GdftShell({ setActivePage, theme }: any) {
                   {/* Main GDFT App Container */}
                   <div className="flex flex-col h-full bg-gym-darker text-white">
                     {/* Gdft Top Header Bar */}
-                    <header className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-gym-darker/95 backdrop-blur-md z-30 shrink-0">
+                    <header className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-gym-darker z-30 shrink-0 select-none">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => {
                             if (setActivePage) setActivePage("dashboard");
                           }}
-                          className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-white px-2 py-1 rounded-md hover:bg-white/5 transition-colors"
-                          title="Exit GDFT to SecureLifeHub Dashboard"
+                          className="flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors"
+                          title="Exit GDFT and return to SecureLifeHub Dashboard"
                         >
                           <ArrowLeft className="h-4 w-4" />
-                          <span>SLH Hub</span>
+                          <span className="tracking-wide uppercase">EXIT GDFT</span>
                         </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black tracking-widest text-gym-blue uppercase">GymDay Fit</span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <button
                           onClick={toggleFullscreen}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1.5 text-xs font-medium"
-                          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen (hides Android nav bar)"}
+                          className="flex items-center gap-1.5 text-xs font-semibold text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors"
+                          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen (hides Android navigation and Chrome address bar)"}
                           aria-label="Toggle Fullscreen"
                         >
                           {isFullscreen ? (
