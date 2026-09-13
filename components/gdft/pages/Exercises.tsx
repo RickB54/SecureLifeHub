@@ -5,7 +5,6 @@ import { Plus, BarChart3, Trash, Heart, ListOrdered, Play, Edit, HelpCircle, Pri
 import ExerciseCard from "@/components/gdft/components/ui/ExerciseCard";
 import { useExercise } from "@/components/gdft/contexts/ExerciseContext";
 import { useWorkout } from "@/components/gdft/contexts/WorkoutContext";
-import { useSettings } from "@/components/gdft/contexts/SettingsContext";
 import { Exercise, RelaxedMuscleGroup, RelaxedExerciseCategory, slideboardExercises, cardioExercises, weightExercises, noEquipmentExercises } from "@/components/gdft/lib/data";
 import { ReorderFavoritesDialog } from "@/components/gdft/components/ReorderFavoritesDialog";
 import { Button } from "@/components/gdft/components/ui/button";
@@ -25,7 +24,6 @@ const Exercises = () => {
   const addToWorkout = searchParams.get("addToWorkout") === "true";
   const { exercises, filterExercises, deleteExercise, favoriteExercises, toggleFavorite, reinstallAllExercises } = useExercise();
   const { startWorkout, currentWorkout, addExerciseToCurrentWorkout } = useWorkout();
-  const { stickyExerciseSummary } = useSettings();
   
   // Load saved filters from localStorage or use defaults
   const loadSavedFilters = () => {
@@ -358,11 +356,12 @@ const Exercises = () => {
       )}
 
       {/* ── Exercise Summary ── */}
-      <div className={`rounded-xl border border-white/10 ${isSummaryExpanded ? 'p-4 mb-6' : 'p-3 md:p-4 mb-4'} transition-all duration-300 overflow-hidden ${stickyExerciseSummary ? 'sticky top-4 z-40 shadow-2xl backdrop-blur-md' : ''}`}
-           style={{ 
-             background: stickyExerciseSummary ? 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.95) 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-             boxShadow: stickyExerciseSummary ? '0 10px 40px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)' : undefined
-           }}>
+      <div 
+        className={`rounded-xl border border-white/10 ${isSummaryExpanded ? 'p-4 mb-6' : 'p-3 md:p-4 mb-4'} transition-all duration-300 overflow-hidden`}
+        style={{ 
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        }}
+      >
         <div 
           className={`flex items-center justify-between cursor-pointer select-none ${isSummaryExpanded ? 'mb-3' : 'mb-0'}`}
           onClick={() => setIsSummaryExpanded(prev => !prev)}
@@ -558,7 +557,7 @@ const Exercises = () => {
       />
 
       {/* ── STICKY COMPACT FILTER BAR ── */}
-      <div className="sticky top-0 z-10 bg-gym-darker/95 backdrop-blur-md pt-2 pb-3 mb-4 border-b border-white/10 -mx-4 px-4 space-y-2 shadow-md">
+      <div className="sticky top-0 z-20 bg-gym-darker pt-2 pb-3 mb-4 border-b border-white/10 -mx-4 px-4 space-y-2 shadow-lg">
         {/* A) Visual Filter Chips — compact version in 1 horizontal row */}
         <ExerciseVisualFilter
           equipmentFilter={equipmentFilter}
