@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Plus, BarChart3, Trash, Heart, ListOrdered, Play, Edit, HelpCircle, Printer, FileText, ArrowLeft, RefreshCw } from "lucide-react";
+import { Plus, BarChart3, Trash, Heart, ListOrdered, Play, Edit, HelpCircle, Printer, FileText, ArrowLeft, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import ExerciseCard from "@/components/gdft/components/ui/ExerciseCard";
 import ExerciseFilters from "@/components/gdft/components/ui/ExerciseFilters";
 import { useExercise } from "@/components/gdft/contexts/ExerciseContext";
@@ -62,6 +62,7 @@ const Exercises = () => {
   const [viewProgressExercise, setViewProgressExercise] = useState<Exercise | null>(null);
   const [gymFilter, setGymFilter] = useState<GymFilterState>({ gymId: null, sectionIds: [] });
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState<boolean>(() => (typeof window !== "undefined" ? window.innerWidth >= 768 : true));
   
   const categories: ("All" | "Favorites" | RelaxedExerciseCategory)[] = ["All", "Favorites", "Weights", "Cardio", "Slide Board", "No Equipment"];
   
@@ -358,175 +359,198 @@ const Exercises = () => {
       )}
 
       {/* ── Exercise Summary ── */}
-      <div className={`rounded-xl border border-white/10 p-4 mb-6 overflow-hidden ${stickyExerciseSummary ? 'sticky top-4 z-40 shadow-2xl backdrop-blur-md' : ''}`}
+      <div className={`rounded-xl border border-white/10 ${isSummaryExpanded ? 'p-4 mb-6' : 'p-3 md:p-4 mb-4'} transition-all duration-300 overflow-hidden ${stickyExerciseSummary ? 'sticky top-4 z-40 shadow-2xl backdrop-blur-md' : ''}`}
            style={{ 
              background: stickyExerciseSummary ? 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.95) 100%)' : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
              boxShadow: stickyExerciseSummary ? '0 10px 40px -10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)' : undefined
            }}>
-        <div className="flex items-center justify-between mb-3">
+        <div 
+          className={`flex items-center justify-between cursor-pointer select-none ${isSummaryExpanded ? 'mb-3' : 'mb-0'}`}
+          onClick={() => setIsSummaryExpanded(prev => !prev)}
+        >
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-cyan-400" />
             <h2 className="text-lg font-bold tracking-wide text-white">Exercise Summary</h2>
           </div>
           <div className="flex items-center space-x-2">
-            {categoryFilter === 'Favorites' && favoriteExercises.length > 0 && (
-              <Button variant="outline" size="sm" onClick={() => setShowReorderDialog(true)}>
+            {isSummaryExpanded && categoryFilter === 'Favorites' && favoriteExercises.length > 0 && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReorderDialog(true);
+                }}
+              >
                 <ListOrdered className="h-4 w-4 mr-2" />
                 Reorder
               </Button>
             )}
             <div
-              className="text-sm text-gray-400 cursor-pointer hover:text-cyan-400 transition-colors font-medium"
-              onClick={() => handleCategoryClick("All")}
+              className="text-xs md:text-sm font-semibold text-cyan-300 bg-cyan-950/70 border border-cyan-500/30 px-2.5 py-0.5 rounded-full hover:bg-cyan-900/60 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCategoryClick("All");
+              }}
+              title="Filter by all exercises"
             >
-              Total Exercises: {totalExercises}
+              Total: {totalExercises}
+            </div>
+            <div className="p-1 text-gray-400 hover:text-white transition-colors">
+              {isSummaryExpanded ? (
+                <ChevronUp className="h-5 w-5 text-cyan-400" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-400" />
+              )}
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-          {categories.map((category) => {
-            const isActive = category === categoryFilter;
+        {isSummaryExpanded && (
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 animate-in fade-in duration-200">
+            {categories.map((category) => {
+              const isActive = category === categoryFilter;
 
-            const categoryMeta: Record<string, {
-              gradient: string;
-              glow: string;
-              border: string;
-              activeBorder: string;
-              icon: string;
-              iconSvg?: React.ReactNode;
-              bgImage: string;
-              countColor: string;
-            }> = {
-              'All': {
-                gradient: 'linear-gradient(135deg, rgba(6,182,212,0.20) 0%, rgba(14,116,144,0.15) 100%)',
-                glow: 'rgba(6,182,212,0.5)',
-                border: 'rgba(6,182,212,0.25)',
-                activeBorder: '#06b6d4',
-                icon: '🏋️',
-                bgImage: '/images/exercise_bg_all.png',
-                countColor: '#67e8f9',
-              },
-              'Favorites': {
-                gradient: 'linear-gradient(135deg, rgba(234,179,8,0.20) 0%, rgba(161,98,7,0.15) 100%)',
-                glow: 'rgba(234,179,8,0.5)',
-                border: 'rgba(234,179,8,0.25)',
-                activeBorder: '#eab308',
-                icon: '⭐',
-                bgImage: '/images/exercise_bg_favorites.png',
-                countColor: '#fde047',
-              },
-              'Weights': {
-                gradient: 'linear-gradient(135deg, rgba(59,130,246,0.20) 0%, rgba(29,78,216,0.15) 100%)',
-                glow: 'rgba(59,130,246,0.5)',
-                border: 'rgba(59,130,246,0.25)',
-                activeBorder: '#3b82f6',
-                icon: '🏋️',
-                bgImage: '/images/exercise_bg_weights.png',
-                countColor: '#93c5fd',
-              },
-              'Cardio': {
-                gradient: 'linear-gradient(135deg, rgba(239,68,68,0.20) 0%, rgba(153,27,27,0.15) 100%)',
-                glow: 'rgba(239,68,68,0.5)',
-                border: 'rgba(239,68,68,0.25)',
-                activeBorder: '#ef4444',
-                icon: '🏃',
-                bgImage: '/images/exercise_bg_cardio.png',
-                countColor: '#fca5a5',
-              },
-              'Slide Board': {
-                gradient: 'linear-gradient(135deg, rgba(168,85,247,0.20) 0%, rgba(109,40,217,0.15) 100%)',
-                glow: 'rgba(168,85,247,0.5)',
-                border: 'rgba(168,85,247,0.25)',
-                activeBorder: '#a855f7',
-                icon: '',
-                iconSvg: (
-                  <svg viewBox="0 0 64 40" width="28" height="18" fill="white" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 0 3px rgba(216,180,254,0.7))'}}>
-                    {/* Inclined rail */}
-                    <rect x="4" y="28" width="46" height="3" rx="1.5" transform="rotate(-18 4 28)" />
-                    {/* Seat carriage */}
-                    <rect x="22" y="16" width="10" height="5" rx="2" />
-                    {/* Vertical tower */}
-                    <rect x="48" y="6" width="3" height="28" rx="1.5" />
-                    {/* Tower top crossbar */}
-                    <rect x="44" y="6" width="11" height="3" rx="1.5" />
-                    {/* Pulley circle */}
-                    <circle cx="50" cy="8" r="3" fill="none" stroke="white" strokeWidth="2" />
-                    {/* Cable line */}
-                    <line x1="27" y1="18" x2="50" y2="10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-                    {/* Base feet */}
-                    <rect x="2" y="33" width="6" height="3" rx="1.5" />
-                    <rect x="47" y="33" width="6" height="3" rx="1.5" />
-                  </svg>
-                ),
-                bgImage: '/images/exercise_bg_slideboard.png',
-                countColor: '#d8b4fe',
-              },
-              'No Equipment': {
-                gradient: 'linear-gradient(135deg, rgba(34,197,94,0.20) 0%, rgba(21,128,61,0.15) 100%)',
-                glow: 'rgba(34,197,94,0.5)',
-                border: 'rgba(34,197,94,0.25)',
-                activeBorder: '#22c55e',
-                icon: '🤸',
-                bgImage: '/images/exercise_bg_bodyweight.png',
-                countColor: '#86efac',
-              },
-            };
+              const categoryMeta: Record<string, {
+                gradient: string;
+                glow: string;
+                border: string;
+                activeBorder: string;
+                icon: string;
+                iconSvg?: React.ReactNode;
+                bgImage: string;
+                countColor: string;
+              }> = {
+                'All': {
+                  gradient: 'linear-gradient(135deg, rgba(6,182,212,0.20) 0%, rgba(14,116,144,0.15) 100%)',
+                  glow: 'rgba(6,182,212,0.5)',
+                  border: 'rgba(6,182,212,0.25)',
+                  activeBorder: '#06b6d4',
+                  icon: '🏋️',
+                  bgImage: '/images/exercise_bg_all.png',
+                  countColor: '#67e8f9',
+                },
+                'Favorites': {
+                  gradient: 'linear-gradient(135deg, rgba(234,179,8,0.20) 0%, rgba(161,98,7,0.15) 100%)',
+                  glow: 'rgba(234,179,8,0.5)',
+                  border: 'rgba(234,179,8,0.25)',
+                  activeBorder: '#eab308',
+                  icon: '⭐',
+                  bgImage: '/images/exercise_bg_favorites.png',
+                  countColor: '#fde047',
+                },
+                'Weights': {
+                  gradient: 'linear-gradient(135deg, rgba(59,130,246,0.20) 0%, rgba(29,78,216,0.15) 100%)',
+                  glow: 'rgba(59,130,246,0.5)',
+                  border: 'rgba(59,130,246,0.25)',
+                  activeBorder: '#3b82f6',
+                  icon: '🏋️',
+                  bgImage: '/images/exercise_bg_weights.png',
+                  countColor: '#93c5fd',
+                },
+                'Cardio': {
+                  gradient: 'linear-gradient(135deg, rgba(239,68,68,0.20) 0%, rgba(153,27,27,0.15) 100%)',
+                  glow: 'rgba(239,68,68,0.5)',
+                  border: 'rgba(239,68,68,0.25)',
+                  activeBorder: '#ef4444',
+                  icon: '🏃',
+                  bgImage: '/images/exercise_bg_cardio.png',
+                  countColor: '#fca5a5',
+                },
+                'Slide Board': {
+                  gradient: 'linear-gradient(135deg, rgba(168,85,247,0.20) 0%, rgba(109,40,217,0.15) 100%)',
+                  glow: 'rgba(168,85,247,0.5)',
+                  border: 'rgba(168,85,247,0.25)',
+                  activeBorder: '#a855f7',
+                  icon: '',
+                  iconSvg: (
+                    <svg viewBox="0 0 64 40" width="28" height="18" fill="white" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 0 3px rgba(216,180,254,0.7))'}}>
+                      {/* Inclined rail */}
+                      <rect x="4" y="28" width="46" height="3" rx="1.5" transform="rotate(-18 4 28)" />
+                      {/* Seat carriage */}
+                      <rect x="22" y="16" width="10" height="5" rx="2" />
+                      {/* Vertical tower */}
+                      <rect x="48" y="6" width="3" height="28" rx="1.5" />
+                      {/* Tower top crossbar */}
+                      <rect x="44" y="6" width="11" height="3" rx="1.5" />
+                      {/* Pulley circle */}
+                      <circle cx="50" cy="8" r="3" fill="none" stroke="white" strokeWidth="2" />
+                      {/* Cable line */}
+                      <line x1="27" y1="18" x2="50" y2="10" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                      {/* Base feet */}
+                      <rect x="2" y="33" width="6" height="3" rx="1.5" />
+                      <rect x="47" y="33" width="6" height="3" rx="1.5" />
+                    </svg>
+                  ),
+                  bgImage: '/images/exercise_bg_slideboard.png',
+                  countColor: '#d8b4fe',
+                },
+                'No Equipment': {
+                  gradient: 'linear-gradient(135deg, rgba(34,197,94,0.20) 0%, rgba(21,128,61,0.15) 100%)',
+                  glow: 'rgba(34,197,94,0.5)',
+                  border: 'rgba(34,197,94,0.25)',
+                  activeBorder: '#22c55e',
+                  icon: '🤸',
+                  bgImage: '/images/exercise_bg_bodyweight.png',
+                  countColor: '#86efac',
+                },
+              };
 
-            const meta = categoryMeta[category] || categoryMeta['All'];
-            const label = category === 'All' ? 'Total' : category;
+              const meta = categoryMeta[category] || categoryMeta['All'];
+              const label = category === 'All' ? 'Total' : category;
 
-            return (
-              <div
-                key={category}
-                onClick={() => handleCategoryClick(category)}
-                style={{
-                  background: meta.gradient,
-                  border: `2px solid ${isActive ? meta.activeBorder : meta.border}`,
-                  boxShadow: isActive ? `0 0 18px 2px ${meta.glow}, inset 0 0 20px rgba(0,0,0,0.3)` : `inset 0 0 20px rgba(0,0,0,0.3)`,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  transition: 'all 0.2s ease',
-                }}
-                className="rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer group min-h-[90px]"
-              >
-                {/* Background image */}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  backgroundImage: `url(${meta.bgImage})`,
-                  backgroundSize: 'cover', backgroundPosition: 'center',
-                  opacity: 0.45,
-                  filter: 'grayscale(20%)',
-                }} />
+              return (
+                <div
+                  key={category}
+                  onClick={() => handleCategoryClick(category)}
+                  style={{
+                    background: meta.gradient,
+                    border: `2px solid ${isActive ? meta.activeBorder : meta.border}`,
+                    boxShadow: isActive ? `0 0 18px 2px ${meta.glow}, inset 0 0 20px rgba(0,0,0,0.3)` : `inset 0 0 20px rgba(0,0,0,0.3)`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                    transition: 'all 0.2s ease',
+                  }}
+                  className="rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer group min-h-[90px]"
+                >
+                  {/* Background image */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    backgroundImage: `url(${meta.bgImage})`,
+                    backgroundSize: 'cover', backgroundPosition: 'center',
+                    opacity: 0.45,
+                    filter: 'grayscale(20%)',
+                  }} />
 
-                {/* Hover overlay */}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'rgba(255,255,255,0)',
-                  transition: 'background 0.2s',
-                }}
-                  className="group-hover:bg-white/5"
-                />
+                  {/* Hover overlay */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(255,255,255,0)',
+                    transition: 'background 0.2s',
+                  }}
+                    className="group-hover:bg-white/5"
+                  />
 
-                {/* Content */}
-                <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-                  <div className="mb-0.5" style={{ lineHeight: 1, height: '1.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {meta.iconSvg
-                      ? meta.iconSvg
-                      : <span className="text-lg">{meta.icon}</span>
-                    }
-                  </div>
-                  <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70 mb-1 leading-tight">
-                    {label}
-                  </div>
-                  <div className="font-black text-2xl leading-none" style={{ color: meta.countColor, textShadow: `0 0 12px ${meta.glow}` }}>
-                    {categoryCounts[category] || 0}
+                  {/* Content */}
+                  <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+                    <div className="mb-0.5" style={{ lineHeight: 1, height: '1.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {meta.iconSvg
+                        ? meta.iconSvg
+                        : <span className="text-lg">{meta.icon}</span>
+                      }
+                    </div>
+                    <div className="text-[11px] font-semibold uppercase tracking-widest text-white/70 mb-1 leading-tight">
+                      {label}
+                    </div>
+                    <div className="font-black text-2xl leading-none" style={{ color: meta.countColor, textShadow: `0 0 12px ${meta.glow}` }}>
+                      {categoryCounts[category] || 0}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       
       <GymFilterPanel
