@@ -148,13 +148,13 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     try {
         setLoading(true);
         const [wData, tData, pData, mData, hData, sData, profData] = await Promise.all([
-            api.workouts.list().catch(e => { console.error("Error loading workouts:", e); return []; }),
-            api.savedTemplates.list().catch(e => { console.error("Error loading templates:", e); return []; }),
-            api.customPlans.list().catch(e => { console.error("Error loading plans:", e); return []; }),
-            api.measurements.list().catch(e => { console.error("Error loading measurements:", e); return []; }),
-            api.healthMetrics.list().catch(e => { console.error("Error loading health metrics:", e); return []; }),
-            api.scheduledWorkouts.list().catch(e => { console.error("Error loading scheduled workouts:", e); return []; }),
-            api.profiles.get(user.id).catch(e => { console.warn("Error loading profile:", e); return { achievedPrs: [] }; })
+            api.workouts.list(user.id).catch(e => { console.warn("Error loading workouts:", e?.message || e); return []; }),
+            api.savedTemplates.list(user.id).catch(e => { console.warn("Error loading templates:", e?.message || e); return []; }),
+            api.customPlans.list(user.id).catch(e => { console.warn("Error loading plans:", e?.message || e); return []; }),
+            api.measurements.list(user.id).catch(e => { console.warn("Error loading measurements:", e?.message || e); return []; }),
+            api.healthMetrics.list(user.id).catch(e => { console.warn("Error loading health metrics:", e?.message || e); return []; }),
+            api.scheduledWorkouts.list(user.id).catch(e => { console.warn("Error loading scheduled workouts:", e?.message || e); return []; }),
+            api.profiles.get(user.id).catch(e => { console.warn("Error loading profile:", e?.message || e); return { achievedPrs: [] }; })
         ]);
 
         setSavedWorkoutTemplates(tData);
@@ -260,12 +260,12 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
       if (migratedCount > 0) {
         // Refresh data after migration
          const [wData, tData, pData, mData, hData, sData] = await Promise.all([
-              api.workouts.list(),
-              api.savedTemplates.list(),
-              api.customPlans.list(),
-              api.measurements.list(),
-              api.healthMetrics.list(),
-              api.scheduledWorkouts.list()
+              api.workouts.list(user.id),
+              api.savedTemplates.list(user.id),
+              api.customPlans.list(user.id),
+              api.measurements.list(user.id),
+              api.healthMetrics.list(user.id),
+              api.scheduledWorkouts.list(user.id)
           ]);
           setWorkouts(wData);
           setSavedWorkoutTemplates(tData);
@@ -376,7 +376,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
 
       // Refresh local state
       if (user) {
-          const updatedMetrics = await api.healthMetrics.list();
+          const updatedMetrics = await api.healthMetrics.list(user.id);
           setHealthMetrics(updatedMetrics);
       }
 
@@ -1190,10 +1190,10 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
   const refreshHealthMetrics = useCallback(async () => {
     if (!user) return;
     try {
-      const data = await api.healthMetrics.list();
+      const data = await api.healthMetrics.list(user.id);
       setHealthMetrics(data);
-    } catch (error) {
-      console.error("Failed to refresh health metrics:", error);
+    } catch (error: any) {
+      console.warn("Failed to refresh health metrics:", error?.message || error);
     }
   }, [user]);
   const deleteStatsData = useCallback(() => {}, []);

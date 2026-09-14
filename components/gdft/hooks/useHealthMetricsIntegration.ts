@@ -22,7 +22,7 @@ export const useHealthMetricsIntegration = () => {
 
     try {
       // Check if metric already exists for this workout
-      const existingMetrics = await api.healthMetrics.list();
+      const existingMetrics = await api.healthMetrics.list(user.id);
       const alreadySynced = existingMetrics.some(m => m.workoutId === workout.id);
 
       if (alreadySynced) {

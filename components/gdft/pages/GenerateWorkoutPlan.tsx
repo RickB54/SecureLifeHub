@@ -184,7 +184,7 @@ const GenerateWorkoutPlan = () => {
           // Fetch additional profile data if needed, or rely on what we have
           // For now, let's assume basics or mock. 
           // In a real scenario, we'd fetch body measurements here.
-          const measurements = await api.measurements.list();
+          const measurements = await api.measurements.list(user.id);
           const latestWeight = measurements.length > 0 ? measurements[0].weight : undefined;
           userProfile = {
             id: user.id,

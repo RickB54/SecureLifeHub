@@ -70,20 +70,32 @@ const mapSetFromDB = (db: any): WorkoutSet => ({
   timestamp: new Date(db.timestamp).getTime(),
 });
 
+const resolveUserId = async (userId?: string): Promise<string | undefined> => {
+  if (userId) return userId;
+  try {
+    const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    if (session?.user?.id) return session.user.id;
+    const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+    if (user?.id) return user.id;
+  } catch {
+    // Ignore auth lookup failure
+  }
+  return undefined;
+};
+
 // API Service
 
 export const api = {
   scheduledWorkouts: {
-    list: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-      let query = supabase.from('scheduled_workouts').select('*');
-      if (userId) {
-          query = query.eq('user_id', userId);
+    list: async (userId?: string) => {
+      const uid = await resolveUserId(userId);
+      if (!uid) return [];
+      const { data, error } = await supabase.from('scheduled_workouts').select('*').eq('user_id', uid);
+      if (error) {
+        console.warn("[api.scheduledWorkouts.list] error:", error?.message || error);
+        return [];
       }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data.map((d: any) => ({
+      return (data || []).map((d: any) => ({
         id: d.id,
         date: new Date(d.date),
         workoutType: d.workout_type,
@@ -190,19 +202,20 @@ export const api = {
     }
   },
   exercises: {
-    list: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-      
+    list: async (userId?: string) => {
+      const uid = await resolveUserId(userId);
       let query = supabase.from('exercises').select('*');
-      if (userId) {
-          query = query.eq('user_id', userId);
+      if (uid) {
+          query = query.eq('user_id', uid);
       }
       
       const { data, error } = await query;
       
-      if (error) throw error;
-      return data.map(mapExerciseFromDB);
+      if (error) {
+        console.warn("[api.exercises.list] error:", error?.message || error);
+        return [];
+      }
+      return (data || []).map(mapExerciseFromDB);
     },
     
     create: async (exercise: Omit<Exercise, 'id'>, userId: string) => {
@@ -289,27 +302,48 @@ export const api = {
   },
 
   workouts: {
-    list: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
+    list: async (userId?: string) => {
+      const uid = await resolveUserId(userId);
+      if (!uid) return [];
       
-      let query = supabase
-        .from('workouts')
-        .select(`
-          *,
-          workout_sets (*)
-        `)
-        .order('start_time', { ascending: false });
-        
-      if (userId) {
-          query = query.eq('user_id', userId);
+      try {
+        const query = supabase
+          .from('workouts')
+          .select(`
+            *,
+            workout_sets (*)
+          `)
+          .eq('user_id', uid)
+          .order('start_time', { ascending: false });
+          
+        const { data, error } = await query;
+        if (!error && data) {
+          return data.map(w => mapWorkoutFromDB(w, w.workout_sets));
+        }
+        if (error) {
+          console.warn("[api.workouts.list] Relational select failed, falling back to simple select:", error?.message || error);
+        }
+      } catch (relErr) {
+        console.warn("[api.workouts.list] Relational select threw:", relErr);
       }
-      
-      const { data, error } = await query;
-        
-      if (error) throw error;
-      
-      return data.map(w => mapWorkoutFromDB(w, w.workout_sets));
+
+      // Fallback: simple select
+      try {
+        const fallbackQuery = supabase
+          .from('workouts')
+          .select('*')
+          .eq('user_id', uid)
+          .order('start_time', { ascending: false });
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+        if (fallbackError) {
+          console.warn("[api.workouts.list] Fallback query error:", fallbackError?.message || fallbackError);
+          return [];
+        }
+        return (fallbackData || []).map(w => mapWorkoutFromDB(w, []));
+      } catch (err) {
+        console.warn("[api.workouts.list] Fallback exception:", err);
+        return [];
+      }
     },
 
     create: async (workout: Workout, userId: string) => {
@@ -478,16 +512,15 @@ export const api = {
   },
 
   savedTemplates: {
-    list: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id;
-      let query = supabase.from('saved_workout_templates').select('*');
-      if (userId) {
-          query = query.eq('user_id', userId);
+    list: async (userId?: string) => {
+      const uid = await resolveUserId(userId);
+      if (!uid) return [];
+      const { data, error } = await supabase.from('saved_workout_templates').select('*').eq('user_id', uid);
+      if (error) {
+        console.warn("[api.savedTemplates.list] error:", error?.message || error);
+        return [];
       }
-      const { data, error } = await query;
-      if (error) throw error;
-      return data.map(d => ({
+      return (data || []).map(d => ({
         id: d.id,
         name: d.name,
         type: d.type as any,
@@ -535,16 +568,15 @@ export const api = {
   },
 
   customPlans: {
-    list: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        let query = supabase.from('custom_plans').select('*');
-        if (userId) {
-            query = query.eq('user_id', userId);
+    list: async (userId?: string) => {
+        const uid = await resolveUserId(userId);
+        if (!uid) return [];
+        const { data, error } = await supabase.from('custom_plans').select('*').eq('user_id', uid);
+        if (error) {
+          console.warn("[api.customPlans.list] error:", error?.message || error);
+          return [];
         }
-        const { data, error } = await query;
-        if (error) throw error;
-        return data.map(d => ({
+        return (data || []).map(d => ({
             id: d.id,
             name: d.name,
             days: d.days,
@@ -611,16 +643,15 @@ export const api = {
   },
   
   measurements: {
-    list: async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const userId = session?.user?.id;
-        let query = supabase.from('body_measurements').select('*').order('date', { ascending: false });
-        if (userId) {
-            query = query.eq('user_id', userId);
+    list: async (userId?: string) => {
+        const uid = await resolveUserId(userId);
+        if (!uid) return [];
+        const { data, error } = await supabase.from('body_measurements').select('*').eq('user_id', uid).order('date', { ascending: false });
+        if (error) {
+          console.warn("[api.measurements.list] error:", error?.message || error);
+          return [];
         }
-        const { data, error } = await query;
-        if (error) throw error;
-        return data.map((d: any) => ({
+        return (data || []).map((d: any) => ({
              id: d.id,
              date: d.date,
              weight: d.weight,
@@ -745,16 +776,15 @@ export const api = {
   },
 
   healthMetrics: {
-     list: async () => {
-         const { data: { session } } = await supabase.auth.getSession();
-         const userId = session?.user?.id;
-         let query = supabase.from('health_metrics').select('*').order('date', { ascending: false });
-         if (userId) {
-             query = query.eq('user_id', userId);
+     list: async (userId?: string) => {
+         const uid = await resolveUserId(userId);
+         if (!uid) return [];
+         const { data, error } = await supabase.from('health_metrics').select('*').eq('user_id', uid).order('date', { ascending: false });
+         if (error) {
+           console.warn("[api.healthMetrics.list] error:", error?.message || error);
+           return [];
          }
-         const { data, error } = await query;
-         if (error) throw error;
-         return data.map((d: any) => ({
+         return (data || []).map((d: any) => ({
              id: d.id,
              date: d.date,
              workoutId: d.workout_id,
@@ -925,27 +955,18 @@ export const api = {
   
   gyms: {
     list: async (userId?: string) => {
-      let uid = userId;
-      if (!uid) {
-        const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-        uid = session?.user?.id;
-      }
-      if (!uid) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          uid = user?.id;
-        } catch {
-          // ignore
-        }
-      }
+      const uid = await resolveUserId(userId);
       if (!uid) return [];
       const { data, error } = await supabase
         .from('gyms')
         .select('*')
         .eq('user_id', uid)
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.warn("[api.gyms.list] error:", error?.message || error);
+        return [];
+      }
+      return data || [];
     },
     create: async (gym: any, userId: string) => {
       const { data, error } = await supabase.from('gyms').insert({
@@ -953,14 +974,18 @@ export const api = {
         name: gym.name,
         location: gym.location,
         description: gym.description,
-        type: gym.type || 'Commercial',
-        sections: gym.sections || []
+        is_default: gym.isDefault || false
       }).select().maybeSingle();
       if (error) throw error;
       return data;
     },
-    update: async (id: string, updates: any) => {
-      const { data, error } = await supabase.from('gyms').update(updates).eq('id', id).select().maybeSingle();
+    update: async (id: string, gym: any) => {
+      const { data, error } = await supabase.from('gyms').update({
+        name: gym.name,
+        location: gym.location,
+        description: gym.description,
+        is_default: gym.isDefault
+      }).eq('id', id).select().maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -972,19 +997,7 @@ export const api = {
   
   profiles: {
     get: async (userId?: string) => {
-      let uid = userId;
-      if (!uid) {
-        const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-        uid = session?.user?.id;
-      }
-      if (!uid) {
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          uid = user?.id;
-        } catch {
-          // ignore
-        }
-      }
+      const uid = await resolveUserId(userId);
       if (!uid) {
         return { achievedPrs: [], lastChangelogViewed: null };
       }
@@ -996,7 +1009,7 @@ export const api = {
         .maybeSingle();
       
       if (error) {
-        console.warn("[api.profiles.get] Error fetching profile:", error);
+        console.warn("[api.profiles.get] Error fetching profile:", error?.message || error);
         return { id: uid, achievedPrs: [], lastChangelogViewed: null };
       }
       if (!data) {
@@ -1009,19 +1022,7 @@ export const api = {
       };
     },
     update: async (updates: any, userId?: string) => {
-        let uid = userId;
-        if (!uid) {
-          const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
-          uid = session?.user?.id;
-        }
-        if (!uid) {
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            uid = user?.id;
-          } catch {
-            // ignore
-          }
-        }
+        const uid = await resolveUserId(userId);
         if (!uid) {
           console.warn("[api.profiles.update] No user authenticated, skipping update");
           return null;
