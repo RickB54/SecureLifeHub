@@ -39,11 +39,10 @@ import ExercisePositionManager from "./pages/ExercisePositionManager"
 const queryClient = new QueryClient();
 
 // Back navigation controller for Android hardware back button
-function GdftBackInterceptor({ setActivePage }: { setActivePage?: (page: string) => void }) {
+function GdftBackInterceptor({ onExitRequested }: { onExitRequested: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPathRef = useRef(location.pathname);
-  const lastBackPressRef = useRef<number>(0);
 
   useEffect(() => {
     currentPathRef.current = location.pathname;
@@ -62,22 +61,10 @@ function GdftBackInterceptor({ setActivePage }: { setActivePage?: (page: string)
         // Re-push history entry to intercept subsequent back press
         window.history.pushState({ gdft: true }, "");
       } else {
-        // Home page (/): Double-press to exit GDFT to SLH
-        const now = Date.now();
-        if (now - lastBackPressRef.current < 2000) {
-          // Confirmed exit
-          if (setActivePage) {
-            setActivePage("dashboard");
-          }
-        } else {
-          lastBackPressRef.current = now;
-          toast("Press back again to exit GDFT", {
-            id: "gdft-exit-toast",
-            duration: 2000,
-          });
-          // Re-push history entry
-          window.history.pushState({ gdft: true }, "");
-        }
+        // Home page (/): Trigger Exit Confirmation Dialog
+        onExitRequested();
+        // Re-push history entry so next press is also intercepted if user stays
+        window.history.pushState({ gdft: true }, "");
       }
     };
 
@@ -86,13 +73,14 @@ function GdftBackInterceptor({ setActivePage }: { setActivePage?: (page: string)
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [navigate, setActivePage]);
+  }, [navigate, onExitRequested]);
 
   return null;
 }
 
 export default function GdftShell({ setActivePage, theme }: any) {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showExitDialog, setShowExitDialog] = useState(false);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -123,7 +111,7 @@ export default function GdftShell({ setActivePage, theme }: any) {
           <ExerciseProvider>
             <WorkoutProvider>
               <MemoryRouter>
-                <GdftBackInterceptor setActivePage={setActivePage} />
+                <GdftBackInterceptor onExitRequested={() => setShowExitDialog(true)} />
                 <WorkoutReminderSystem />
                 <ScrollToTop />
                 <div className={`flex flex-col h-full rounded-2xl overflow-hidden shadow-2xl relative ${theme === 'light' ? 'bg-white text-gray-900' : 'bg-gym-darker text-white border border-white/10'}`}>
@@ -134,9 +122,7 @@ export default function GdftShell({ setActivePage, theme }: any) {
                     <header className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-gym-darker z-30 shrink-0 select-none">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => {
-                            if (setActivePage) setActivePage("dashboard");
-                          }}
+                          onClick={() => setShowExitDialog(true)}
                           className="flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors"
                           title="Exit GDFT and return to SecureLifeHub Dashboard"
                         >
@@ -200,6 +186,55 @@ export default function GdftShell({ setActivePage, theme }: any) {
                     </div>
                   </div>
                 </div>
+
+                {/* ── EXIT GDFT CONFIRMATION DIALOG ── */}
+                {showExitDialog && (
+                  <>
+                    {/* Backdrop */}
+                    <div 
+                      className="fixed inset-0 z-[200] bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
+                      onClick={() => setShowExitDialog(false)}
+                    />
+                    {/* Centered Modal */}
+                    <div 
+                      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[201] w-[90vw] max-w-sm rounded-2xl border border-white/10 p-6 shadow-2xl animate-in zoom-in-95 duration-150"
+                      style={{ background: 'linear-gradient(180deg, #0f172a 0%, #080d1a 100%)', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.8), 0 0 20px rgba(239,68,68,0.15)' }}
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <div className="h-12 w-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-3">
+                          <ArrowLeft className="h-6 w-6 text-red-400" />
+                        </div>
+                        <h3 className="text-xl font-black italic tracking-tight text-white uppercase">
+                          Exit GymDay Fit?
+                        </h3>
+                        <p className="text-xs text-gray-400 mt-1 mb-6">
+                          You'll return to Secure Life Hub
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-3 w-full">
+                          <button
+                            type="button"
+                            onClick={() => setShowExitDialog(false)}
+                            className="py-2.5 px-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-bold text-xs uppercase tracking-wider transition-colors"
+                          >
+                            Stay
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowExitDialog(false);
+                              if (setActivePage) setActivePage("dashboard");
+                            }}
+                            className="py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-600/20 transition-colors"
+                          >
+                            Exit
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <Toaster />
                 <Sonner />
                 <ScrollToTopButton />

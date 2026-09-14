@@ -92,6 +92,16 @@ const Settings = () => {
   const [expandedTesterId, setExpandedTesterId] = useState<string | null>(null);
   const [rosterFilter, setRosterFilter] = useState<'all' | 'day' | 'week' | 'month'>('all');
   const [showArchived, setShowArchived] = useState(false);
+  
+  // Accordion expansion states (collapsed by default)
+  const [isAchievementsExpanded, setIsAchievementsExpanded] = useState(false);
+  const [isAnalyticsExpanded, setIsAnalyticsExpanded] = useState(false);
+  const [isSmartwatchExpanded, setIsSmartwatchExpanded] = useState(false);
+  const [isDataManagementExpanded, setIsDataManagementExpanded] = useState(false);
+  const [isLibraryUtilityExpanded, setIsLibraryUtilityExpanded] = useState(false);
+  const [isAudioFeedbackExpanded, setIsAudioFeedbackExpanded] = useState(false);
+  const [isDangerZoneExpanded, setIsDangerZoneExpanded] = useState(false);
+  const [isSoftwareIntelExpanded, setIsSoftwareIntelExpanded] = useState(false);
 
   // Load and sync beta roster
   const loadBetaRoster = (e?: any) => {
@@ -723,7 +733,7 @@ const Settings = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="hover:bg-white/5">
             <ArrowLeft className="h-6 w-6" />
           </Button>
-          <h1 className="page-heading mb-0">Settings</h1>
+          <h1 className="page-heading mb-0">GDFT Settings</h1>
         </div>
         <Button variant="ghost" size="icon" onClick={() => setHelpPageIndex(0)}>
           <HelpCircle className="h-6 w-6" />
@@ -739,7 +749,10 @@ const Settings = () => {
           <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110">
             <Trophy className="h-40 w-40 text-yellow-500" />
           </div>
-          <div className="flex items-center justify-between mb-4 relative z-10">
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none relative z-10"
+            onClick={() => setIsAchievementsExpanded(prev => !prev)}
+          >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20">
                 <Trophy className="h-6 w-6 text-yellow-500" />
@@ -750,19 +763,26 @@ const Settings = () => {
               </div>
             </div>
             
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setHelpPageIndex(1)} // Achievements page index
-              className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
-            >
-              <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={(e) => { e.stopPropagation(); setHelpPageIndex(1); }}
+                className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
+              >
+                <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
+              </Button>
+              <div className="p-1">
+                <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isAchievementsExpanded ? 'rotate-180 text-white' : ''}`} />
+              </div>
+            </div>
           </div>
           
-          <div className="relative z-10">
-             <AchievementsList />
-          </div>
+          {isAchievementsExpanded && (
+            <div className="relative z-10 pt-4 animate-in fade-in duration-200">
+               <AchievementsList />
+            </div>
+          )}
         </div>
 
         {/* Data Metrics Section - Moved Up */}
@@ -770,7 +790,10 @@ const Settings = () => {
           <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110">
             <BarChart2 className="h-40 w-40 text-gym-blue" />
           </div>
-          <div className="flex items-center justify-between mb-4 relative z-10">
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none relative z-10"
+            onClick={() => setIsAnalyticsExpanded(prev => !prev)}
+          >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-xl bg-gym-blue/10 flex items-center justify-center border border-gym-blue/20">
                 <BarChart2 className="h-6 w-6 text-gym-blue" />
@@ -781,53 +804,63 @@ const Settings = () => {
               </div>
             </div>
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setHelpPageIndex(2)} // Analytics index
-              className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
-            >
-              <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={(e) => { e.stopPropagation(); setHelpPageIndex(2); }}
+                className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
+              >
+                <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
+              </Button>
+              <div className="p-1">
+                <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isAnalyticsExpanded ? 'rotate-180 text-white' : ''}`} />
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-gray-400 mb-6 relative z-10">
-            Generate comprehensive reports of your fitness journey, including workout activity, body measurements, and BMI trends.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-10">
-            <Button 
-                className="w-full bg-gym-blue hover:bg-gym-blue/90 text-white font-black h-12 rounded-xl shadow-lg shadow-blue-500/10 uppercase tracking-tighter"
-                onClick={() => navigate('/data-metrics-report')}
-            >
-                <Activity className="mr-2 h-5 w-5" />
-                View Full Report
-            </Button>
-            
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button 
-                    variant="outline"
-                    className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white font-black h-12 rounded-xl uppercase tracking-tighter"
-                    >
-                    <Timer className="mr-2 h-5 w-5 text-gym-purple" />
-                    Manage Benchmarks
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 bg-gym-darker border-white/5 shadow-2xl">
-                    <DialogHeader className="p-8 pb-4 bg-gradient-to-br from-purple-600/10 to-blue-600/10 border-b border-white/5">
-                        <DialogTitle className="text-3xl font-black italic tracking-tighter uppercase flex items-center gap-3">
-                            <Timer className="h-8 w-8 text-gym-purple" />
-                            Exercise Benchmarks
-                        </DialogTitle>
-                        <DialogDescription className="text-gray-400 font-medium">
-                            Set your targets and baseline values for personalized workout suggestions.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="flex-1 overflow-y-auto p-8 pt-4">
-                        <BenchmarkDataView hideHeader={true} />
-                    </div>
-                </DialogContent>
-            </Dialog>
-          </div>
+          
+          {isAnalyticsExpanded && (
+            <div className="relative z-10 pt-4 animate-in fade-in duration-200">
+              <p className="text-sm text-gray-400 mb-6">
+                Generate comprehensive reports of your fitness journey, including workout activity, body measurements, and BMI trends.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Button 
+                    className="w-full bg-gym-blue hover:bg-gym-blue/90 text-white font-black h-12 rounded-xl shadow-lg shadow-blue-500/10 uppercase tracking-tighter"
+                    onClick={() => navigate('/data-metrics-report')}
+                >
+                    <Activity className="mr-2 h-5 w-5" />
+                    View Full Report
+                </Button>
+                
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button 
+                        variant="outline"
+                        className="w-full border-white/10 bg-white/5 hover:bg-white/10 text-white font-black h-12 rounded-xl uppercase tracking-tighter"
+                        >
+                        <Timer className="mr-2 h-5 w-5 text-gym-purple" />
+                        Manage Benchmarks
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 bg-gym-darker border-white/5 shadow-2xl">
+                        <DialogHeader className="p-8 pb-4 bg-gradient-to-br from-purple-600/10 to-blue-600/10 border-b border-white/5">
+                            <DialogTitle className="text-3xl font-black italic tracking-tighter uppercase flex items-center gap-3">
+                                <Timer className="h-8 w-8 text-gym-purple" />
+                                Exercise Benchmarks
+                            </DialogTitle>
+                            <DialogDescription className="text-gray-400 font-medium">
+                                Set your targets and baseline values for personalized workout suggestions.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex-1 overflow-y-auto p-8 pt-4">
+                            <BenchmarkDataView hideHeader={true} />
+                        </div>
+                    </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Display Settings Section */}
@@ -935,92 +968,108 @@ const Settings = () => {
           <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110">
             <Watch className="h-40 w-40 text-blue-400" />
           </div>
-          <div className="flex items-center gap-3 mb-6 relative z-10">
-            <div className="h-10 w-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
-              <Watch className="h-6 w-6 text-blue-400" />
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none relative z-10"
+            onClick={() => setIsSmartwatchExpanded(prev => !prev)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-400/10 flex items-center justify-center border border-blue-400/20">
+                <Watch className="h-6 w-6 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-black italic tracking-tight text-white uppercase leading-none">Smartwatch Sync</h2>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-widest mt-1">Health Connect Integration</p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-black italic tracking-tight text-white uppercase leading-none">Smartwatch Sync</h2>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-widest mt-1">Health Connect Integration</p>
+            
+            <div className="flex items-center gap-1">
+              <Button 
+                size="icon"
+                variant="ghost"
+                onClick={(e) => { e.stopPropagation(); setHelpPageIndex(4); }}
+                className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
+              >
+                <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
+              </Button>
+              <div className="p-1">
+                <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 ${isSmartwatchExpanded ? 'rotate-180 text-white' : ''}`} />
+              </div>
             </div>
-            <Button 
-              size="icon"
-              variant="ghost"
-              onClick={() => setHelpPageIndex(4)} // Data & Diagnostics (Smartwatch sync is here)
-              className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
-            >
-              <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
-            </Button>
           </div>
           
-          <div className="space-y-6 relative z-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-black/30 p-4 rounded-xl border border-white/5">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-black uppercase tracking-widest text-gray-500">Connection Status</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                    syncStatus.isConnected 
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  }`}>
-                    {syncStatus.isConnected ? 'Active' : 'Inactive'}
-                  </span>
+          {isSmartwatchExpanded && (
+            <div className="space-y-6 relative z-10 pt-6 animate-in fade-in duration-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-black/30 p-4 rounded-xl border border-white/5">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-black uppercase tracking-widest text-gray-500">Connection Status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      syncStatus.isConnected 
+                        ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                        : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                    }`}>
+                      {syncStatus.isConnected ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  {syncStatus.lastSyncTime ? (
+                    <div>
+                      <p className="text-lg font-black text-white italic tracking-tighter">Synced</p>
+                      <p className="text-[10px] text-gray-500 uppercase font-bold mt-0.5">
+                        Last: {syncStatus.lastSyncTime.toLocaleDateString()} at {syncStatus.lastSyncTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-bold text-gray-500 italic uppercase">Waiting for data...</p>
+                  )}
                 </div>
-                {syncStatus.lastSyncTime ? (
-                  <div>
-                    <p className="text-lg font-black text-white italic tracking-tighter">Synced</p>
-                    <p className="text-[10px] text-gray-500 uppercase font-bold mt-0.5">
-                      Last: {syncStatus.lastSyncTime.toLocaleDateString()} at {syncStatus.lastSyncTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+
+                <div className="bg-black/30 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Setup Guide</p>
+                  <div className="space-y-1">
+                    <p className="text-xs text-gray-300 flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-gym-blue" />
+                      Pair watch with Samsung/Google Health
+                    </p>
+                    <p className="text-xs text-gray-300 flex items-center gap-2">
+                      <CheckCircle className="h-3 w-3 text-gym-blue" />
+                      Auto-sync enabled for recent data
                     </p>
                   </div>
-                ) : (
-                  <p className="text-sm font-bold text-gray-500 italic uppercase">Waiting for data...</p>
-                )}
-              </div>
-
-              <div className="bg-black/30 p-4 rounded-xl border border-white/5 flex flex-col justify-center">
-                <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Setup Guide</p>
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-300 flex items-center gap-2">
-                    <CheckCircle className="h-3 w-3 text-gym-blue" />
-                    Pair watch with Samsung/Google Health
-                  </p>
-                  <p className="text-xs text-gray-300 flex items-center gap-2">
-                    <CheckCircle className="h-3 w-3 text-gym-blue" />
-                    Auto-sync enabled for recent data
-                  </p>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                onClick={handleCheckPermissions}
-                disabled={isLoading || isSyncing}
-                className="bg-blue-600 hover:bg-blue-700 h-10 rounded-xl font-bold flex-1 shadow-lg shadow-blue-500/15"
-              >
-                <SettingsIcon className="h-4 w-4 mr-2" />
-                {syncStatus.hasPermissions ? 'Update Permissions' : 'Grant Permissions'}
-              </Button>
-              <Button 
-                onClick={handleManualSync}
-                disabled={isLoading || isSyncing}
-                variant="outline"
-                className="border-white/10 bg-white/5 hover:bg-white/10 h-10 rounded-xl font-bold flex-1"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-                {isSyncing ? 'Syncing...' : 'Sync Now'}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button 
+                  onClick={handleCheckPermissions}
+                  disabled={isLoading || isSyncing}
+                  className="bg-blue-600 hover:bg-blue-700 h-10 rounded-xl font-bold flex-1 shadow-lg shadow-blue-500/15"
+                >
+                  <SettingsIcon className="h-4 w-4 mr-2" />
+                  {syncStatus.hasPermissions ? 'Update Permissions' : 'Grant Permissions'}
+                </Button>
+                <Button 
+                  onClick={handleManualSync}
+                  disabled={isLoading || isSyncing}
+                  variant="outline"
+                  className="border-white/10 bg-white/5 hover:bg-white/10 h-10 rounded-xl font-bold flex-1"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : 'Sync Now'}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Data Management Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Data Recovery & Cloud Sync Section */}
           <div className="card-glass p-6 rounded-2xl relative overflow-hidden flex flex-col h-full border border-white/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-xl bg-gym-blue/10 flex items-center justify-center border border-gym-blue/20">
+            <div 
+              onClick={() => setIsDataManagementExpanded(!isDataManagementExpanded)}
+              className="flex items-center gap-3 cursor-pointer select-none group/hdr"
+            >
+              <div className="h-10 w-10 rounded-xl bg-gym-blue/10 flex items-center justify-center border border-gym-blue/20 group-hover/hdr:border-gym-blue/40 transition-colors">
                 <Database className="h-6 w-6 text-gym-blue" />
               </div>
               <div className="flex-1">
@@ -1030,113 +1079,123 @@ const Settings = () => {
               <Button 
                 size="icon"
                 variant="ghost"
-                onClick={() => setHelpPageIndex(4)} // Data & Diagnostics
+                onClick={(e) => { e.stopPropagation(); setHelpPageIndex(4); }} // Data & Diagnostics
                 className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
               >
                 <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
               </Button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 mb-6">
-              {/* Cloud Sync Tool */}
-              <div className="bg-black/40 rounded-xl border border-white/5 p-4 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
-                  <Cloud className="h-20 w-20 text-gym-blue" />
-                </div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Cloud className="h-4 w-4 text-gym-blue" />
-                    <span className="text-sm font-black uppercase text-white tracking-widest">Supabase Cloud</span>
-                  </div>
-                  {!user && (
-                    <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Sign-in Required</span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400 mb-4 font-medium h-8 line-clamp-2">
-                  Maintain a persistent account to sync workouts and body metrics across all your devices seamlessly.
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    variant="ghost" 
-                    className="h-10 text-[10px] font-black uppercase text-gym-blue hover:bg-gym-blue/10 gap-2 border border-gym-blue/10 bg-gym-blue/5" 
-                    onClick={handleSupabaseBackup}
-                    disabled={!user || isLoading}
-                  >
-                    <Upload className="h-3 w-3" /> Backup Cloud
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="h-10 text-[10px] font-black uppercase text-gym-green hover:bg-gym-green/10 gap-2 border border-gym-green/10 bg-gym-green/5" 
-                    onClick={handleSupabaseRestore}
-                    disabled={!user || isLoading}
-                  >
-                    <RefreshCw className="h-3 w-3" /> Restore Cloud
-                  </Button>
-                </div>
-              </div>
-
-              {/* Local & Drive Utilities */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={handleBackupAllData}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-                      <Download className="h-4 w-4 text-gym-blue group-hover:animate-bounce" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase text-gym-blue">Full JSON</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-black uppercase text-white">Local Backup</span>
-                  </div>
-                </div>
-
-                <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={handleRestoreAllDataClick}>
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-                      <Upload className="h-4 w-4 text-gym-green group-hover:scale-110 transition-transform" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase text-gym-green">Import File</span>
-                  </div>
-                  <div>
-                    <span className="text-xs font-black uppercase text-white">Local Restore</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Google Drive Bar */}
-              <div className="bg-gym-darker/60 rounded-xl border border-white/5 p-3 flex items-center justify-between group hover:border-gym-blue/30 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-[#4285F4]/10 flex items-center justify-center border border-[#4285F4]/20">
-                    <WifiOff className="h-4 w-4 text-[#4285F4]" />
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase text-white tracking-widest leading-none">Google Drive Helper</h4>
-                    <p className="text-[9px] text-gray-500 font-bold uppercase mt-1">Manual Cloud Storage</p>
-                  </div>
-                </div>
-                <div className="flex gap-1">
-                  <Button 
-                    variant="ghost" 
-                    className="h-8 px-2 text-[10px] font-black uppercase text-gym-blue hover:bg-gym-blue/10 gap-1.5" 
-                    onClick={handleGoogleDriveBackup}
-                  >
-                    <Download className="h-3 w-3" /> Save to Drive
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    className="h-8 px-2 text-[10px] font-black uppercase text-gym-green hover:bg-gym-green/10 gap-1.5" 
-                    onClick={handleGoogleDriveRestore}
-                  >
-                    <Upload className="h-3 w-3" /> Restore
-                  </Button>
-                </div>
+              <div className="p-1 rounded-lg bg-white/5 border border-white/5 text-gray-400 group-hover/hdr:text-white transition-colors">
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isDataManagementExpanded ? 'rotate-180 text-white' : ''}`} />
               </div>
             </div>
+
+            {isDataManagementExpanded && (
+              <div className="pt-6 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 gap-4 mb-6">
+                  {/* Cloud Sync Tool */}
+                  <div className="bg-black/40 rounded-xl border border-white/5 p-4 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
+                      <Cloud className="h-20 w-20 text-gym-blue" />
+                    </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <Cloud className="h-4 w-4 text-gym-blue" />
+                        <span className="text-sm font-black uppercase text-white tracking-widest">Supabase Cloud</span>
+                      </div>
+                      {!user && (
+                        <span className="text-[9px] font-black uppercase text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">Sign-in Required</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mb-4 font-medium h-8 line-clamp-2">
+                      Maintain a persistent account to sync workouts and body metrics across all your devices seamlessly.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button 
+                        variant="ghost" 
+                        className="h-10 text-[10px] font-black uppercase text-gym-blue hover:bg-gym-blue/10 gap-2 border border-gym-blue/10 bg-gym-blue/5" 
+                        onClick={handleSupabaseBackup}
+                        disabled={!user || isLoading}
+                      >
+                        <Upload className="h-3 w-3" /> Backup Cloud
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        className="h-10 text-[10px] font-black uppercase text-gym-green hover:bg-gym-green/10 gap-2 border border-gym-green/10 bg-gym-green/5" 
+                        onClick={handleSupabaseRestore}
+                        disabled={!user || isLoading}
+                      >
+                        <RefreshCw className="h-3 w-3" /> Restore Cloud
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Local & Drive Utilities */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={handleBackupAllData}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                          <Download className="h-4 w-4 text-gym-blue group-hover:animate-bounce" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-gym-blue">Full JSON</span>
+                      </div>
+                      <div>
+                        <span className="text-xs font-black uppercase text-white">Local Backup</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={handleRestoreAllDataClick}>
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="h-8 w-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                          <Upload className="h-4 w-4 text-gym-green group-hover:scale-110 transition-transform" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-gym-green">Import File</span>
+                      </div>
+                      <div>
+                        <span className="text-xs font-black uppercase text-white">Local Restore</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Google Drive Bar */}
+                  <div className="bg-gym-darker/60 rounded-xl border border-white/5 p-3 flex items-center justify-between group hover:border-gym-blue/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-[#4285F4]/10 flex items-center justify-center border border-[#4285F4]/20">
+                        <WifiOff className="h-4 w-4 text-[#4285F4]" />
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase text-white tracking-widest leading-none">Google Drive Helper</h4>
+                        <p className="text-[9px] text-gray-500 font-bold uppercase mt-1">Manual Cloud Storage</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        className="h-8 px-2 text-[10px] font-black uppercase text-gym-blue hover:bg-gym-blue/10 gap-1.5" 
+                        onClick={handleGoogleDriveBackup}
+                      >
+                        <Download className="h-3 w-3" /> Save to Drive
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        className="h-8 px-2 text-[10px] font-black uppercase text-gym-green hover:bg-gym-green/10 gap-1.5" 
+                        onClick={handleGoogleDriveRestore}
+                      >
+                        <Upload className="h-3 w-3" /> Restore
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Library Utility Section */}
           <div className="card-glass p-6 rounded-2xl relative overflow-hidden flex flex-col h-full border border-white/5">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+            <div 
+              onClick={() => setIsLibraryUtilityExpanded(!isLibraryUtilityExpanded)}
+              className="flex items-center gap-3 cursor-pointer select-none group/hdr"
+            >
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 group-hover/hdr:border-amber-500/40 transition-colors">
                 <Dumbbell className="h-6 w-6 text-amber-500" />
               </div>
               <div className="flex-1">
@@ -1146,12 +1205,12 @@ const Settings = () => {
                     <PopoverTrigger asChild>
                       <button 
                         className="h-4 w-4 text-gray-500 hover:text-amber-500 cursor-help outline-none"
-                        onClick={() => setHelpPageIndex(4)} // Data & Diagnostics index
+                        onClick={(e) => { e.stopPropagation(); setHelpPageIndex(4); }} // Data & Diagnostics index
                       >
                         <HelpCircle className="h-4 w-4" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent side="right" className="max-w-[250px] bg-black/95 border-white/20 text-[11px] p-4 text-white shadow-2xl z-[100]">
+                    <PopoverContent side="right" className="max-w-[250px] bg-black/95 border-white/20 text-[11px] p-4 text-white shadow-2xl z-[100]" onClick={(e) => e.stopPropagation()}>
                       <div className="space-y-2">
                         <p className="font-black uppercase tracking-widest text-amber-500 border-b border-amber-500/20 pb-1 mb-2">Library Help</p>
                         <p className="leading-relaxed">
@@ -1163,73 +1222,80 @@ const Settings = () => {
                 </div>
                 <p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest mt-1">Exercise Database Controls</p>
               </div>
+              <div className="p-1 rounded-lg bg-white/5 border border-white/5 text-gray-400 group-hover/hdr:text-white transition-colors">
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isLibraryUtilityExpanded ? 'rotate-180 text-white' : ''}`} />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 mb-6">
-               <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={handleExportCSV}>
-                    <div className="flex justify-between items-start mb-2">
-                       <div className="h-8 w-8 rounded-lg bg-amber-500/5 flex items-center justify-center border border-amber-500/10">
-                          <Download className="h-4 w-4 text-amber-500 group-hover:animate-bounce" />
-                       </div>
-                       <span className="text-[10px] font-black uppercase text-amber-500">CSV Sheet</span>
-                    </div>
-                    <div>
-                       <span className="text-xs font-black uppercase text-white">Port Library</span>
-                    </div>
-                  </div>
+            {isLibraryUtilityExpanded && (
+              <div className="pt-6 flex flex-col flex-1 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 gap-4 mb-6">
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={handleExportCSV}>
+                        <div className="flex justify-between items-start mb-2">
+                           <div className="h-8 w-8 rounded-lg bg-amber-500/5 flex items-center justify-center border border-amber-500/10">
+                              <Download className="h-4 w-4 text-amber-500 group-hover:animate-bounce" />
+                           </div>
+                           <span className="text-[10px] font-black uppercase text-amber-500">CSV Sheet</span>
+                        </div>
+                        <div>
+                           <span className="text-xs font-black uppercase text-white">Port Library</span>
+                        </div>
+                      </div>
 
-                  <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
-                    <div className="flex justify-between items-start mb-2">
-                       <div className="h-8 w-8 rounded-lg bg-gym-blue/5 flex items-center justify-center border border-gym-blue/10">
-                          <Upload className="h-4 w-4 text-gym-blue group-hover:scale-110 transition-transform" />
-                       </div>
-                       <span className="text-[10px] font-black uppercase text-gym-blue">Bulk Add</span>
-                    </div>
-                    <div>
-                       <span className="text-xs font-black uppercase text-white">Import Library</span>
-                    </div>
-                  </div>
-               </div>
+                      <div className="bg-white/5 rounded-xl border border-white/5 p-4 flex flex-col justify-between hover:bg-white/10 transition-all cursor-pointer group" onClick={() => fileInputRef.current?.click()}>
+                        <div className="flex justify-between items-start mb-2">
+                           <div className="h-8 w-8 rounded-lg bg-gym-blue/5 flex items-center justify-center border border-gym-blue/10">
+                              <Upload className="h-4 w-4 text-gym-blue group-hover:scale-110 transition-transform" />
+                           </div>
+                           <span className="text-[10px] font-black uppercase text-gym-blue">Bulk Add</span>
+                        </div>
+                        <div>
+                           <span className="text-xs font-black uppercase text-white">Import Library</span>
+                        </div>
+                      </div>
+                   </div>
 
-               <div className="bg-black/40 rounded-xl border border-white/5 p-5 flex flex-col items-center justify-center text-center group hover:bg-black/60 transition-all border-dashed">
-                  <SettingsIcon className="h-8 w-8 text-gray-600 mb-3 group-hover:rotate-180 transition-transform duration-700" />
-                  <h3 className="text-sm font-black uppercase text-white mb-2">Factory Reinstall</h3>
-                  <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-4 leading-relaxed max-w-[200px]">
-                    Reset all default exercises to their original state and fix broken entries.
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full h-10 border-white/10 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl uppercase text-[10px] tracking-[0.2em]"
-                    onClick={handleReinstallExercises}
-                    disabled={isLoading}
-                  >
-                    Factory Reinstall Defaults
-                  </Button>
-               </div>
-            </div>
-            
-            <div className="mt-auto space-y-2 pt-2">
-                <Button 
-                   variant="ghost" 
-                   className="w-full text-xs font-black uppercase italic tracking-tighter text-gym-blue hover:text-white hover:bg-gym-blue/20 gap-2 h-10 rounded-xl border border-gym-blue/10"
-                   onClick={handleMigrateImages}
-                   disabled={isMigrating || isLoading}
-                >
-                   {isMigrating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                   {isMigrating ? "Syncing Exercise Assets..." : "Sync Assets to Supabase Cloud"}
-                </Button>
+                   <div className="bg-black/40 rounded-xl border border-white/5 p-5 flex flex-col items-center justify-center text-center group hover:bg-black/60 transition-all border-dashed">
+                      <SettingsIcon className="h-8 w-8 text-gray-600 mb-3 group-hover:rotate-180 transition-transform duration-700" />
+                      <h3 className="text-sm font-black uppercase text-white mb-2">Factory Reinstall</h3>
+                      <p className="text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-4 leading-relaxed max-w-[200px]">
+                        Reset all default exercises to their original state and fix broken entries.
+                      </p>
+                      <Button
+                        variant="outline"
+                        className="w-full h-10 border-white/10 bg-white/5 hover:bg-white/10 text-white font-black rounded-xl uppercase text-[10px] tracking-[0.2em]"
+                        onClick={handleReinstallExercises}
+                        disabled={isLoading}
+                      >
+                        Factory Reinstall Defaults
+                      </Button>
+                   </div>
+                </div>
+                
+                <div className="mt-auto space-y-2 pt-2">
+                    <Button 
+                       variant="ghost" 
+                       className="w-full text-xs font-black uppercase italic tracking-tighter text-gym-blue hover:text-white hover:bg-gym-blue/20 gap-2 h-10 rounded-xl border border-gym-blue/10"
+                       onClick={handleMigrateImages}
+                       disabled={isMigrating || isLoading}
+                    >
+                       {isMigrating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                       {isMigrating ? "Syncing Exercise Assets..." : "Sync Assets to Supabase Cloud"}
+                    </Button>
 
-                <Button 
-                   variant="ghost" 
-                   className="w-full text-[10px] font-black uppercase italic tracking-tighter text-amber-500 hover:text-white hover:bg-amber-500/20 gap-2 h-10 rounded-xl border border-amber-500/10"
-                   onClick={handleMigrateCFExercises}
-                   disabled={isMigrating || isLoading}
-                >
-                   {isMigrating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
-                   Tag CF Exercises → Choice Fitness
-                </Button>
-            </div>
+                    <Button 
+                       variant="ghost" 
+                       className="w-full text-[10px] font-black uppercase italic tracking-tighter text-amber-500 hover:text-white hover:bg-amber-500/20 gap-2 h-10 rounded-xl border border-amber-500/10"
+                       onClick={handleMigrateCFExercises}
+                       disabled={isMigrating || isLoading}
+                    >
+                       {isMigrating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                       Tag CF Exercises → Choice Fitness
+                    </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -1279,223 +1345,237 @@ const Settings = () => {
         </div>
 
         {/* Sound Settings Section */}
-        <div className="card-glass p-6 rounded-2xl group relative overflow-hidden">
+        <div className="card-glass p-6 rounded-2xl group relative overflow-hidden mb-6">
           <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110">
             <Volume2 className="h-40 w-40 text-gym-blue" />
           </div>
-          <div className="flex items-center gap-3 mb-4 relative z-10">
-            <div className="h-10 w-10 rounded-xl bg-gym-blue/10 flex items-center justify-center border border-gym-blue/20">
+          <div 
+            onClick={() => setIsAudioFeedbackExpanded(!isAudioFeedbackExpanded)}
+            className="flex items-center gap-3 relative z-10 cursor-pointer select-none group/hdr"
+          >
+            <div className="h-10 w-10 rounded-xl bg-gym-blue/10 flex items-center justify-center border border-gym-blue/20 group-hover/hdr:border-gym-blue/40 transition-colors">
               <Volume2 className="h-6 w-6 text-gym-blue" />
             </div>
-            <div>
+            <div className="flex-1">
               <h2 className="text-xl font-black italic tracking-tight text-white uppercase leading-none">Audio & Feedback</h2>
               <p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest mt-1">Alerts & Vibrations</p>
             </div>
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => setHelpPageIndex(3)} // Timers / Performance index
-              className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors ml-auto"
+              onClick={(e) => { e.stopPropagation(); setHelpPageIndex(3); }} // Timers / Performance index
+              className="h-8 w-8 rounded-full hover:bg-white/5 flex items-center justify-center transition-colors"
             >
               <HelpCircle className="h-5 w-5 text-gray-400 hover:text-white" />
             </Button>
+            <div className="p-1 rounded-lg bg-white/5 border border-white/5 text-gray-400 group-hover/hdr:text-white transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isAudioFeedbackExpanded ? 'rotate-180 text-white' : ''}`} />
+            </div>
           </div>
-          <p className="text-sm text-gray-400 mb-6">
-            Customize sounds and vibrations for timers and notifications.
-          </p>
           
-          <div className="space-y-8">
-            {/* Rest Timer Sound Settings */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gym-blue uppercase tracking-wider">Rest Timer Settings</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="timer-sound" className="text-base text-white">Sound</Label>
-                    <p className="text-xs text-muted-foreground">Play a sound when rest timer finishes</p>
-                  </div>
-                  <Switch 
-                    id="timer-sound"
-                    checked={timerSound}
-                    onCheckedChange={setTimerSound}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="timer-vibration" className="text-base text-white">Vibration</Label>
-                    <p className="text-xs text-muted-foreground">Vibrate device when rest timer finishes</p>
-                  </div>
-                  <Switch 
-                    id="timer-vibration"
-                    checked={timerVibration}
-                    onCheckedChange={setTimerVibration}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notification Sound Settings */}
-            <div className="space-y-4 pt-4 border-t border-gray-700/50">
-              <h3 className="text-sm font-semibold text-gym-purple uppercase tracking-wider">Notification Sound settings</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notif-sound" className="text-base text-white">Sound</Label>
-                    <p className="text-xs text-muted-foreground">Hear a chime or bell for workout reminders</p>
-                  </div>
-                  <Switch 
-                    id="notif-sound"
-                    checked={notificationSound}
-                    onCheckedChange={setNotificationSound}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="notif-vibration" className="text-base text-white">Vibration</Label>
-                    <p className="text-xs text-muted-foreground">Vibrate device for workout reminders</p>
-                  </div>
-                  <Switch 
-                    id="notif-vibration"
-                    checked={notificationVibration}
-                    onCheckedChange={setNotificationVibration}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Rest Timer Duration */}
-            <div className="pt-6 border-t border-gray-700">
-              <Label className="text-base text-white">Default Rest Timer Duration</Label>
-              <p className="text-xs text-muted-foreground mb-3">Sets how long the rest timer counts down after each set.</p>
-              
-              {/* Preset buttons */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                {[10, 15, 30, 45, 50, 60].map(sec => (
-                  <Button
-                    key={sec}
-                    size="sm"
-                    variant={defaultRestTime === sec && !isCustomRest ? 'default' : 'outline'}
-                    className={defaultRestTime === sec && !isCustomRest ? 'bg-gym-blue border-gym-blue' : 'border-gray-600'}
-                    onClick={() => { setDefaultRestTime(sec); setIsCustomRest(false); setCustomRestInput(''); }}
-                  >
-                    {sec}s
-                  </Button>
-                ))}
-                <Button
-                  size="sm"
-                  variant={isCustomRest ? 'default' : 'outline'}
-                  className={isCustomRest ? 'bg-gym-purple border-gym-purple' : 'border-gray-600'}
-                  onClick={() => setIsCustomRest(true)}
-                >
-                  Custom
-                </Button>
-              </div>
-
-              {/* Custom input */}
-              {isCustomRest && (
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min={5}
-                    max={600}
-                    placeholder="Enter seconds (5–600)"
-                    value={customRestInput}
-                    onChange={e => setCustomRestInput(e.target.value)}
-                    className="w-48 bg-gym-darker border-gray-600"
-                  />
-                  <Button
-                    size="sm"
-                    className="bg-gym-green hover:bg-gym-green/80"
-                    onClick={() => {
-                      const val = Math.min(600, Math.max(5, parseInt(customRestInput, 10) || 60));
-                      setDefaultRestTime(val);
-                      setCustomRestInput(String(val));
-                    }}
-                  >
-                    Set
-                  </Button>
-                  <span className="text-xs text-gray-400">max 10 min (600s)</span>
-                </div>
-              )}
-
-              <p className="text-xs text-gym-blue mt-2">
-                Current: <strong>{defaultRestTime}s</strong> ({Math.floor(defaultRestTime / 60)}m {defaultRestTime % 60}s)
+          {isAudioFeedbackExpanded && (
+            <div className="pt-6 relative z-10 animate-in fade-in duration-200">
+              <p className="text-sm text-gray-400 mb-6">
+                Customize sounds and vibrations for timers and notifications.
               </p>
-            </div>
-
-            {/* Voice Logging Settings */}
-            <div className="space-y-4 pt-4 border-t border-gray-700/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                    <Mic className="h-4 w-4 text-blue-500" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                       <Label htmlFor="voice-logging" className="text-base text-white">Voice Logging</Label>
-                       <Button 
-                         variant="ghost" 
-                         size="icon" 
-                         onClick={() => setHelpPageIndex(7)} 
-                         className="h-5 w-5 rounded-full hover:bg-white/5 flex items-center justify-center"
-                       >
-                         <HelpCircle className="h-3 w-3 text-gray-500" />
-                       </Button>
+              
+              <div className="space-y-8">
+                {/* Rest Timer Sound Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gym-blue uppercase tracking-wider">Rest Timer Settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="timer-sound" className="text-base text-white">Sound</Label>
+                        <p className="text-xs text-muted-foreground">Play a sound when rest timer finishes</p>
+                      </div>
+                      <Switch 
+                        id="timer-sound"
+                        checked={timerSound}
+                        onCheckedChange={setTimerSound}
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">Log sets hands-free using voice commands</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="timer-vibration" className="text-base text-white">Vibration</Label>
+                        <p className="text-xs text-muted-foreground">Vibrate device when rest timer finishes</p>
+                      </div>
+                      <Switch 
+                        id="timer-vibration"
+                        checked={timerVibration}
+                        onCheckedChange={setTimerVibration}
+                      />
+                    </div>
                   </div>
                 </div>
-                <Switch 
-                  id="voice-logging"
-                  checked={voiceLoggingEnabled}
-                  onCheckedChange={(checked) => {
-                    setVoiceLoggingEnabled(checked);
-                    if (checked) {
-                      toast.success("Voice logging enabled! You can now log sets hands-free during workouts.");
-                      if (navigator.vibrate) navigator.vibrate(50);
-                    } else {
-                      toast.info("Voice logging disabled.");
-                    }
-                  }}
-                />
+
+                {/* Notification Sound Settings */}
+                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                  <h3 className="text-sm font-semibold text-gym-purple uppercase tracking-wider">Notification Sound settings</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="notif-sound" className="text-base text-white">Sound</Label>
+                        <p className="text-xs text-muted-foreground">Hear a chime or bell for workout reminders</p>
+                      </div>
+                      <Switch 
+                        id="notif-sound"
+                        checked={notificationSound}
+                        onCheckedChange={setNotificationSound}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="notif-vibration" className="text-base text-white">Vibration</Label>
+                        <p className="text-xs text-muted-foreground">Vibrate device for workout reminders</p>
+                      </div>
+                      <Switch 
+                        id="notif-vibration"
+                        checked={notificationVibration}
+                        onCheckedChange={setNotificationVibration}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Rest Timer Duration */}
+                <div className="pt-6 border-t border-gray-700">
+                  <Label className="text-base text-white">Default Rest Timer Duration</Label>
+                  <p className="text-xs text-muted-foreground mb-3">Sets how long the rest timer counts down after each set.</p>
+                  
+                  {/* Preset buttons */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[10, 15, 30, 45, 50, 60].map(sec => (
+                      <Button
+                        key={sec}
+                        size="sm"
+                        variant={defaultRestTime === sec && !isCustomRest ? 'default' : 'outline'}
+                        className={defaultRestTime === sec && !isCustomRest ? 'bg-gym-blue border-gym-blue' : 'border-gray-600'}
+                        onClick={() => { setDefaultRestTime(sec); setIsCustomRest(false); setCustomRestInput(''); }}
+                      >
+                        {sec}s
+                      </Button>
+                    ))}
+                    <Button
+                      size="sm"
+                      variant={isCustomRest ? 'default' : 'outline'}
+                      className={isCustomRest ? 'bg-gym-purple border-gym-purple' : 'border-gray-600'}
+                      onClick={() => setIsCustomRest(true)}
+                    >
+                      Custom
+                    </Button>
+                  </div>
+
+                  {/* Custom input */}
+                  {isCustomRest && (
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        min={5}
+                        max={600}
+                        placeholder="Enter seconds (5–600)"
+                        value={customRestInput}
+                        onChange={e => setCustomRestInput(e.target.value)}
+                        className="w-48 bg-gym-darker border-gray-600"
+                      />
+                      <Button
+                        size="sm"
+                        className="bg-gym-green hover:bg-gym-green/80"
+                        onClick={() => {
+                          const val = Math.min(600, Math.max(5, parseInt(customRestInput, 10) || 60));
+                          setDefaultRestTime(val);
+                          setCustomRestInput(String(val));
+                        }}
+                      >
+                        Set
+                      </Button>
+                      <span className="text-xs text-gray-400">max 10 min (600s)</span>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gym-blue mt-2">
+                    Current: <strong>{defaultRestTime}s</strong> ({Math.floor(defaultRestTime / 60)}m {defaultRestTime % 60}s)
+                  </p>
+                </div>
+
+                {/* Voice Logging Settings */}
+                <div className="space-y-4 pt-4 border-t border-gray-700/50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                        <Mic className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                           <Label htmlFor="voice-logging" className="text-base text-white">Voice Logging</Label>
+                           <Button 
+                             variant="ghost" 
+                             size="icon" 
+                             onClick={(e) => { e.stopPropagation(); setHelpPageIndex(7); }} 
+                             className="h-5 w-5 rounded-full hover:bg-white/5 flex items-center justify-center"
+                           >
+                             <HelpCircle className="h-3 w-3 text-gray-500" />
+                           </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Log sets hands-free using voice commands</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      id="voice-logging"
+                      checked={voiceLoggingEnabled}
+                      onCheckedChange={(checked) => {
+                        setVoiceLoggingEnabled(checked);
+                        if (checked) {
+                          toast.success("Voice logging enabled! You can now log sets hands-free during workouts.");
+                          if (navigator.vibrate) navigator.vibrate(50);
+                        } else {
+                          toast.info("Voice logging disabled.");
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
-
-
-
             </div>
-          </div>
+          )}
         </div>
 
         
         {/* Danger Zone */}
-        <div className="card-glass p-6 rounded-2xl relative overflow-hidden group border border-red-500/10 mb-6">
+        <div className="card-glass p-6 rounded-2xl relative overflow-hidden group border border-red-500/20 mb-6 bg-red-950/10">
           <div className="absolute top-0 right-0 p-6 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110">
             <AlertTriangle className="h-40 w-40 text-red-500" />
           </div>
-          <div className="flex items-center gap-3 mb-6 relative z-10">
-            <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
+          <div 
+            onClick={() => setIsDangerZoneExpanded(!isDangerZoneExpanded)}
+            className="flex items-center gap-3 relative z-10 cursor-pointer select-none group/hdr"
+          >
+            <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/30 group-hover/hdr:border-red-500/50 transition-colors">
               <AlertTriangle className="h-6 w-6 text-red-500" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black italic tracking-tight text-white uppercase leading-none text-red-500">Danger Zone</h2>
+                <h2 className="text-xl font-black italic tracking-tight uppercase leading-none text-red-500">Danger Zone</h2>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  onClick={() => setHelpPageIndex(5)} // Danger Zone index
+                  onClick={(e) => { e.stopPropagation(); setHelpPageIndex(5); }} // Danger Zone index
                   className="h-6 w-6 rounded-full hover:bg-red-500/10 flex items-center justify-center transition-colors"
                 >
                   <HelpCircle className="h-4 w-4 text-red-500/50 hover:text-red-500" />
                 </Button>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="h-4 w-4 text-red-500/50 hover:text-red-500 cursor-help outline-none">
+                    <button 
+                      className="h-4 w-4 text-red-500/50 hover:text-red-500 cursor-help outline-none"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <AlertTriangle className="h-4 w-4" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent side="bottom" className="max-w-[280px] bg-black/95 border-red-500/30 text-[11px] p-4 text-white shadow-2xl z-[100]">
+                  <PopoverContent side="bottom" className="max-w-[280px] bg-black/95 border-red-500/30 text-[11px] p-4 text-white shadow-2xl z-[100]" onClick={(e) => e.stopPropagation()}>
                     <div className="space-y-3">
                       <div className="flex gap-2">
                         <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
@@ -1516,619 +1596,636 @@ const Settings = () => {
                   </PopoverContent>
                 </Popover>
               </div>
-              <p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest mt-1">Irreversible Actions</p>
+              <p className="text-[10px] font-medium text-red-400/70 uppercase tracking-widest mt-1">Irreversible Actions</p>
+            </div>
+            <div className="p-1 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 group-hover/hdr:text-red-300 transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isDangerZoneExpanded ? 'rotate-180 text-red-300' : ''}`} />
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 relative z-10">
-            <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10 flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-black uppercase text-white mb-1">Purge Local Storage</h4>
-                <p className="text-[10px] text-gray-500 font-medium uppercase mb-4">Wipes all workouts, sets, and metrics stored locally on this device.</p>
+          {isDangerZoneExpanded && (
+            <div className="pt-6 relative z-10 animate-in fade-in duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 relative z-10">
+                <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-black uppercase text-white mb-1">Purge Local Storage</h4>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase mb-4">Wipes all workouts, sets, and metrics stored locally on this device.</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="w-full h-10 bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={handleDeleteAllData}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Wipe All Local Data
+                  </Button>
+                </div>
+
+                <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10 flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-xs font-black uppercase text-white mb-1">Delete Exercise Library</h4>
+                    <p className="text-[10px] text-gray-500 font-medium uppercase mb-4">Clears your entire exercise database. Defaults can be reinstalled later.</p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    className="w-full h-10 bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white font-bold rounded-xl transition-all uppercase text-[10px] tracking-widest"
+                    onClick={handleDeleteAllExercises}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Purge Library
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="destructive"
-                className="w-full h-10 bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={handleDeleteAllData}
-                disabled={isLoading}
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" /> Wipe All Local Data
-              </Button>
-            </div>
 
-            <div className="p-4 bg-red-500/5 rounded-xl border border-red-500/10 flex flex-col justify-between">
-              <div>
-                <h4 className="text-xs font-black uppercase text-white mb-1">Delete Exercise Library</h4>
-                <p className="text-[10px] text-gray-500 font-medium uppercase mb-4">Clears your entire exercise database. Defaults can be reinstalled later.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10 border-t border-white/5 pt-6">
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      if (confirm("Purge ALL workout history? This cannot be undone.")) purgeWorkoutsOnly();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <History className="mr-2 h-3.5 w-3.5" /> Purge Workout History Only
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      if (confirm("Purge ALL analytics (Measurements & Metrics)? This cannot be undone.")) purgeAnalyticsOnly();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Activity className="mr-2 h-3.5 w-3.5" /> Purge Analytics Only
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      if (confirm("Purge ALL personal stats and PRs? This cannot be undone.")) purgePersonalStatsOnly();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Trophy className="mr-2 h-3.5 w-3.5" /> Purge Personal Stats
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      if (confirm("Purge ALL custom workout plans? This cannot be undone.")) purgeCustomPlansOnly();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <ClipboardList className="mr-2 h-3.5 w-3.5" /> Purge Custom Plans
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      if (confirm("Purge ONLY your personally added exercises? The default library remains safe.")) purgeCustomExercisesOnly();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Dumbbell className="mr-2 h-3.5 w-3.5" /> Purge Custom Exercises
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-yellow-500/10 bg-yellow-500/5 hover:bg-yellow-500/20 text-yellow-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={() => {
+                      if (confirm("Remove all duplicate exercises from your library? (Keeps only one of each)")) deduplicateDatabase();
+                    }}
+                    disabled={isLoading}
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5" /> Clean Duplicate Exercises
+                  </Button>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="destructive"
+                    className="w-full h-10 bg-red-600/20 text-red-500 border border-red-600/30 hover:bg-red-600 hover:text-white font-black rounded-xl uppercase text-[10px] tracking-widest"
+                    onClick={async () => {
+                      if (confirm("DANGER: This will wipe EVERYTHING (Workouts, Metrics, Plans, Stats) EXCEPT your Exercises. This is permanent. Continue?")) {
+                        try {
+                          setIsLoading(true);
+                          await Promise.all([
+                            purgeWorkoutsOnly(),
+                            purgeAnalyticsOnly(),
+                            purgePersonalStatsOnly(),
+                            purgeCustomPlansOnly()
+                          ]);
+                          toast.success("Full Cloud Reset Complete (Library Preserved)");
+                        } catch (e) {
+                          toast.error("Total purge failed part-way through.");
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      }
+                    }}
+                    disabled={isLoading}
+                  >
+                    <RotateCcw className="mr-2 h-3.5 w-3.5" /> Full Cloud Reset (Keeps Exercises)
+                  </Button>
+                </div>
               </div>
-              <Button
-                variant="destructive"
-                className="w-full h-10 bg-red-600/10 text-red-500 border border-red-600/20 hover:bg-red-600 hover:text-white font-bold rounded-xl transition-all uppercase text-[10px] tracking-widest"
-                onClick={handleDeleteAllExercises}
-                disabled={isLoading}
-              >
-                <Trash2 className="mr-2 h-3.5 w-3.5" /> Purge Library
-              </Button>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10 border-t border-white/5 pt-6">
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={() => {
-                  if (confirm("Purge ALL workout history? This cannot be undone.")) purgeWorkoutsOnly();
-                }}
-                disabled={isLoading}
-              >
-                <History className="mr-2 h-3.5 w-3.5" /> Purge Workout History Only
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={() => {
-                  if (confirm("Purge ALL analytics (Measurements & Metrics)? This cannot be undone.")) purgeAnalyticsOnly();
-                }}
-                disabled={isLoading}
-              >
-                <Activity className="mr-2 h-3.5 w-3.5" /> Purge Analytics Only
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={() => {
-                  if (confirm("Purge ALL personal stats and PRs? This cannot be undone.")) purgePersonalStatsOnly();
-                }}
-                disabled={isLoading}
-              >
-                <Trophy className="mr-2 h-3.5 w-3.5" /> Purge Personal Stats
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={() => {
-                  if (confirm("Purge ALL custom workout plans? This cannot be undone.")) purgeCustomPlansOnly();
-                }}
-                disabled={isLoading}
-              >
-                <ClipboardList className="mr-2 h-3.5 w-3.5" /> Purge Custom Plans
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-red-500/10 bg-red-500/5 hover:bg-red-500/20 text-red-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={() => {
-                  if (confirm("Purge ONLY your personally added exercises? The default library remains safe.")) purgeCustomExercisesOnly();
-                }}
-                disabled={isLoading}
-              >
-                <Dumbbell className="mr-2 h-3.5 w-3.5" /> Purge Custom Exercises
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-yellow-500/10 bg-yellow-500/5 hover:bg-yellow-500/20 text-yellow-500 font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={() => {
-                  if (confirm("Remove all duplicate exercises from your library? (Keeps only one of each)")) deduplicateDatabase();
-                }}
-                disabled={isLoading}
-              >
-                <Sparkles className="mr-2 h-3.5 w-3.5" /> Clean Duplicate Exercises
-              </Button>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="destructive"
-                className="w-full h-10 bg-red-600/20 text-red-500 border border-red-600/30 hover:bg-red-600 hover:text-white font-black rounded-xl uppercase text-[10px] tracking-widest"
-                onClick={async () => {
-                  if (confirm("DANGER: This will wipe EVERYTHING (Workouts, Metrics, Plans, Stats) EXCEPT your Exercises. This is permanent. Continue?")) {
-                    try {
-                      setIsLoading(true);
-                      await Promise.all([
-                        purgeWorkoutsOnly(),
-                        purgeAnalyticsOnly(),
-                        purgePersonalStatsOnly(),
-                        purgeCustomPlansOnly()
-                      ]);
-                      toast.success("Full Cloud Reset Complete (Library Preserved)");
-                    } catch (e) {
-                      toast.error("Total purge failed part-way through.");
-                    } finally {
-                      setIsLoading(false);
-                    }
-                  }
-                }}
-                disabled={isLoading}
-              >
-                <RotateCcw className="mr-2 h-3.5 w-3.5" /> Full Cloud Reset (Keeps Exercises)
-              </Button>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Software Intel Section */}
-        <div className="card-glass p-8 rounded-2xl relative overflow-hidden group">
+        <div className="card-glass p-6 md:p-8 rounded-2xl relative overflow-hidden group mb-6">
           <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110">
              <SettingsIcon className="h-48 w-48 text-gray-400" />
           </div>
-          <div className="flex items-center gap-6 relative z-10 mb-6">
-            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-blue-500/20 border border-white/10 group-hover:rotate-3 transition-transform">
-               <Trophy className="h-10 w-10 text-white" />
+          <div 
+            onClick={() => setIsSoftwareIntelExpanded(!isSoftwareIntelExpanded)}
+            className="flex items-center gap-4 md:gap-6 relative z-10 cursor-pointer select-none group/hdr"
+          >
+            <div className="h-16 w-16 md:h-20 md:w-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-2xl shadow-blue-500/20 border border-white/10 group-hover/hdr:rotate-3 transition-transform shrink-0">
+               <Trophy className="h-8 w-8 md:h-10 md:w-10 text-white" />
             </div>
-            <div>
-               <p className="text-2xl font-black italic tracking-tighter text-white uppercase">GymDay Fit</p>
+            <div className="flex-1 min-w-0">
+               <p className="text-xl md:text-2xl font-black italic tracking-tighter text-white uppercase">GymDay Fit</p>
                <div className="flex items-center gap-2 mt-1">
                   <span className="px-2 py-0.5 rounded-lg bg-white/5 text-[10px] font-black text-gray-400 uppercase tracking-tighter border border-white/5">v3.4 Stable</span>
                   <span className="px-2 py-0.5 rounded-lg bg-gym-blue/10 text-[10px] font-black text-gym-blue uppercase tracking-tighter border border-gym-blue/20">Pro</span>
                </div>
             </div>
+            <div className="p-1 rounded-lg bg-white/5 border border-white/5 text-gray-400 group-hover/hdr:text-white transition-colors">
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isSoftwareIntelExpanded ? 'rotate-180 text-white' : ''}`} />
+            </div>
           </div>
 
-          <div className="bg-black/30 p-4 rounded-xl border border-white/5 mb-6">
-             <p className="text-xs text-gray-400 leading-relaxed font-medium">
-                Engineered for maximum performance tracking, GymDay Fit Tracker provides professional-grade biomechanical insights and routine planning to fuel your physical evolution.
-             </p>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <History className="h-4 w-4" />
-                  Version History
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col p-0 bg-[#0f172a] border-gray-800 shadow-2xl">
-                <DialogHeader className="p-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/5">
-                  <DialogTitle className="text-2xl font-black italic flex items-center gap-3 tracking-tighter uppercase text-white">
-                    <History className="h-6 w-6 text-gym-blue animate-pulse-slow" />
-                    Changelog
-                  </DialogTitle>
-                  <DialogDescription className="text-gray-400 font-medium">Evolution of GymDay Fit Tracker</DialogDescription>
-                </DialogHeader>
-                
-                <div className="flex-1 overflow-y-auto px-6 py-4">
-                  <Accordion type="single" collapsible defaultValue="v35" className="w-full space-y-3">
-                    {/* Version 3.5 */}
-                    <AccordionItem value="v35" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner border border-blue-500/20">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left">
-                          <div className="h-10 w-10 rounded-xl bg-blue-600/20 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-500/30">
-                            <Zap className="h-5 w-5 text-blue-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-black text-lg text-white leading-none">Version 3.5</h3>
-                            <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Live Workout Update</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <ul className="space-y-3 text-sm text-gray-300">
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Neural Voice Logging:</strong> Hands-free set and heart rate acquisition. Say "HR 145" or "Add 30 for 10" to log instantly without touching your phone.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Tactical Workout Header:</strong> The topmost section of your workout (images and title) now remains pinned to the top, perfect for quick reference while filming or moving around.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Advanced Analytics v2:</strong> View high-fidelity performance graphs that correlate your lifting volume with your heart rate fluctuations for deeper session insight.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Precision Alignment:</strong> Adding sets now automatically aligns the entry box with your visual field, streamlining the "Set → Log → Rest" cycle.</span>
-                          </li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-                    {/* Version 3.4 */}
-                    <AccordionItem value="v34" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left">
-                          <div className="h-10 w-10 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-500/30">
-                            <Sparkles className="h-5 w-5 text-amber-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-black text-lg text-white leading-none">Version 3.4</h3>
-                            <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Pro Animation Update</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <ul className="space-y-3 text-sm text-gray-300">
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Range of Motion Photos:</strong> Add both a <em>Before</em> and <em>After</em> photo to any exercise. A new animation engine cycles between them every 3 seconds during your workout!</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Direct Upload Support:</strong> No more copying URLs! You can now upload photos directly from your phone or PC for every position image.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Live Workout Shortcuts:</strong> Tap the new <em>Pencil</em> icon or <em>Camera</em> placeholders in the workout header to jump straight to the edit screen and add missing photos instantly.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Granular Danger Zone:</strong> Total control over your data! Selectively purge workout history, body analytics, or personal stats without losing your exercises or plans.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Advanced Data Management:</strong> New mobile-perfect Help Legends added to the Danger Zone and Library Utility sections. Everything's now just a tap away.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Gym Privacy & Sync:</strong> Enhanced security ensures your custom gyms are private to your account only. Deduplication logic also keeps your gym list clean and duplicates-free.</span>
-                          </li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Version 3.3 */}
-                    <AccordionItem value="v33" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left">
-                          <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-500/30">
-                            <Sparkles className="h-5 w-5 text-blue-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-black text-lg text-white leading-none">Version 3.3</h3>
-                            <span className="text-[10px] bg-blue-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Pro Update</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <ul className="space-y-3 text-sm text-gray-300">
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Multi-Zone Selection:</strong> Run workouts across your whole gym! Switching zones now keeps your previous picks visible at the top so you can build a massive multi-area session.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Enhanced Help Center:</strong> A completely rewritten 7-page visual guide in the Exercise Library covering everything from filters to pro-tips.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Gym Migration Tool:</strong> One-tap migration in Settings to automatically tag all your custom exercises to the correct gym zones.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Zone Previews:</strong> See exactly which exercises belong to each area of your gym with real-time thumbnails and counts before you even filter.</span>
-                          </li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Version 3.2 */}
-                    <AccordionItem value="v32" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left">
-                          <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-500/30">
-                            <Sparkles className="h-5 w-5 text-emerald-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-black text-lg text-white leading-none">Version 3.2</h3>
-                            <span className="text-[10px] bg-emerald-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Stable Update</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <ul className="space-y-3 text-sm text-gray-300">
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Visual Exercise Filters:</strong> Tap Equipment, Category, or Muscle Group gateway cards to browse sub-filters with vivid imagery in a centered popup modal.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Expanded Exercise Library:</strong> 40+ new common exercises added — dumbbell tricep extensions, kickbacks, skull crushers, cable pushdowns, hammer curls, leg press, Bulgarian split squats, and more.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Sync Library Button:</strong> One-tap sync to add any missing default exercises to your library without affecting existing data.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>My Gym Filter:</strong> Filter the Exercise Library by your Custom Gym Builder gyms and individual zones — quickly find only the machines in your specific section.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Collapsible Dropdown Filters:</strong> Equipment, Category, and Muscle Group dropdowns now collapse into a compact accordion — search bar stays always visible.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Centered Filter Popups:</strong> Visual filter modals now open perfectly centered on screen instead of sliding from the bottom.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Cancelled Workout Fix:</strong> Workouts cancelled mid-session or due to app staleness are no longer recorded as completed in Stats or History.</span>
-                          </li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Version 3.1 */}
-                    <AccordionItem value="v31" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left">
-                          <div className="h-10 w-10 rounded-xl bg-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/20 border border-cyan-500/30">
-                            <Sparkles className="h-5 w-5 text-cyan-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-black text-lg text-white leading-none">Version 3.1</h3>
-                            <span className="text-[10px] bg-cyan-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Pro Update</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <ul className="space-y-3 text-sm text-gray-300">
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Professional Gym Builder:</strong> Plan your gym into zones for targeted training.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>Visual Intelligence:</strong> 100+ exercise thumbnails integrated across Stats & Plans.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>PWA Refresh:</strong> Native-feel branding and high-res iconography for mobile shortcuts.</span>
-                          </li>
-                          <li className="flex gap-3">
-                            <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
-                            <span><strong>AI Workout Architect:</strong> Equipment-aware Gemini AI routines.</span>
-                          </li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Version 3.0 */}
-                    <AccordionItem value="v30" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left">
-                          <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
-                            <Watch className="h-5 w-5 text-purple-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-black text-lg text-white leading-none">Version 3.0</h3>
-                            <span className="text-[10px] bg-purple-500/30 text-purple-300 px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Cloud Sync</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4">
-                        <ul className="space-y-2 text-sm text-gray-400">
-                          <li className="flex gap-2"><span>•</span> Smartwatch Sync via Health Connect Integration</li>
-                          <li className="flex gap-2"><span>•</span> Health Meter Circle Graph & Timeline Trends</li>
-                          <li className="flex gap-2"><span>•</span> Smart Entry Flow for precision workout tracking</li>
-                          <li className="flex gap-2"><span>•</span> Dynamic Graffiti Target Achievement effects</li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-
-                    {/* Version 2.0 */}
-                    <AccordionItem value="v20" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden">
-                      <AccordionTrigger className="hover:no-underline py-4">
-                        <div className="flex items-center gap-3 text-left opacity-70">
-                          <div className="h-10 w-10 rounded-xl bg-gray-500/20 flex items-center justify-center border border-gray-500/30">
-                            <Zap className="h-5 w-5 text-gray-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-white">Version 2.0</h3>
-                            <span className="text-[10px] text-gray-500 uppercase font-black">AI Core</span>
-                          </div>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="pb-4 opacity-70">
-                        <ul className="space-y-1 text-xs text-gray-500">
-                          <li>• Gemini Pro API Integration for Smart Planning</li>
-                          <li>• Advanced Favorite & Search algorithms</li>
-                        </ul>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
-                
-                <div className="p-4 bg-gray-900/50 border-t border-white/5 flex justify-center">
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Built for Greatness • {new Date().getFullYear()}</p>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  onClick={() => setBetaTesterDialogOpen(true)}
-                  className="h-10 px-8 rounded-xl font-black uppercase tracking-widest text-[11px] bg-gym-blue/10 border-gym-blue/20 text-gym-blue hover:bg-gym-blue hover:text-white transition-all shadow-lg shadow-blue-500/10 gap-2"
-                >
-                  <Sparkles className="h-4 w-4" /> Become a Beta Tester
-                </Button>
-                <Button
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8 text-gray-500 hover:text-white"
-                  onClick={() => setHelpPageIndex(6)}
-                >
-                  <HelpCircle className="h-4 w-4" />
-                </Button>
+          {isSoftwareIntelExpanded && (
+            <div className="pt-6 relative z-10 animate-in fade-in duration-200">
+              <div className="bg-black/30 p-4 rounded-xl border border-white/5 mb-6">
+                 <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                    Engineered for maximum performance tracking, GymDay Fit Tracker provides professional-grade biomechanical insights and routine planning to fuel your physical evolution.
+                 </p>
               </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <History className="h-4 w-4" />
+                      Version History
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md max-h-[85vh] overflow-hidden flex flex-col p-0 bg-[#0f172a] border-gray-800 shadow-2xl">
+                    <DialogHeader className="p-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-b border-white/5">
+                      <DialogTitle className="text-2xl font-black italic flex items-center gap-3 tracking-tighter uppercase text-white">
+                        <History className="h-6 w-6 text-gym-blue animate-pulse-slow" />
+                        Changelog
+                      </DialogTitle>
+                      <DialogDescription className="text-gray-400 font-medium">Evolution of GymDay Fit Tracker</DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="flex-1 overflow-y-auto px-6 py-4">
+                      <Accordion type="single" collapsible defaultValue="v35" className="w-full space-y-3">
+                        {/* Version 3.5 */}
+                        <AccordionItem value="v35" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner border border-blue-500/20">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="h-10 w-10 rounded-xl bg-blue-600/20 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-500/30">
+                                <Zap className="h-5 w-5 text-blue-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-black text-lg text-white leading-none">Version 3.5</h3>
+                                <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Live Workout Update</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <ul className="space-y-3 text-sm text-gray-300">
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Neural Voice Logging:</strong> Hands-free set and heart rate acquisition. Say "HR 145" or "Add 30 for 10" to log instantly without touching your phone.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Tactical Workout Header:</strong> The topmost section of your workout (images and title) now remains pinned to the top, perfect for quick reference while filming or moving around.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Advanced Analytics v2:</strong> View high-fidelity performance graphs that correlate your lifting volume with your heart rate fluctuations for deeper session insight.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Precision Alignment:</strong> Adding sets now automatically aligns the entry box with your visual field, streamlining the "Set → Log → Rest" cycle.</span>
+                              </li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                        {/* Version 3.4 */}
+                        <AccordionItem value="v34" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="h-10 w-10 rounded-xl bg-amber-500/20 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-500/30">
+                                <Sparkles className="h-5 w-5 text-amber-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-black text-lg text-white leading-none">Version 3.4</h3>
+                                <span className="text-[10px] bg-amber-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Pro Animation Update</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <ul className="space-y-3 text-sm text-gray-300">
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Range of Motion Photos:</strong> Add both a <em>Before</em> and <em>After</em> photo to any exercise. A new animation engine cycles between them every 3 seconds during your workout!</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Direct Upload Support:</strong> No more copying URLs! You can now upload photos directly from your phone or PC for every position image.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Live Workout Shortcuts:</strong> Tap the new <em>Pencil</em> icon or <em>Camera</em> placeholders in the workout header to jump straight to the edit screen and add missing photos instantly.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Granular Danger Zone:</strong> Total control over your data! Selectively purge workout history, body analytics, or personal stats without losing your exercises or plans.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Advanced Data Management:</strong> New mobile-perfect Help Legends added to the Danger Zone and Library Utility sections. Everything's now just a tap away.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Gym Privacy & Sync:</strong> Enhanced security ensures your custom gyms are private to your account only. Deduplication logic also keeps your gym list clean and duplicates-free.</span>
+                              </li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
 
-              {/* Beta Roster Management UI */}
-              <div className="mt-4 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-gym-blue animate-pulse" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Program Management</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 bg-black/30 p-1 rounded-xl border border-white/5">
-                    <Button 
-                      onClick={() => setRosterFilter('all')}
-                      variant="ghost" 
-                      className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${rosterFilter === 'all' ? 'bg-gym-blue text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-white'}`}
-                    >All</Button>
-                    <Button 
-                      onClick={() => setRosterFilter('day')}
-                      variant="ghost" 
-                      className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${rosterFilter === 'day' ? 'bg-gym-blue text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-white'}`}
-                    >24H</Button>
-                    <Button 
-                      onClick={() => setRosterFilter('week')}
-                      variant="ghost" 
-                      className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${rosterFilter === 'week' ? 'bg-gym-blue text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-white'}`}
-                    >Week</Button>
-                    <div className="w-[1px] h-4 bg-white/10 mx-1" />
-                    <Button 
-                      onClick={() => setShowArchived(!showArchived)}
-                      variant="ghost" 
-                      className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${showArchived ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-gray-500 hover:text-white'}`}
+                        {/* Version 3.3 */}
+                        <AccordionItem value="v33" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="h-10 w-10 rounded-xl bg-blue-500/20 flex items-center justify-center shadow-lg shadow-blue-500/20 border border-blue-500/30">
+                                <Sparkles className="h-5 w-5 text-blue-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-black text-lg text-white leading-none">Version 3.3</h3>
+                                <span className="text-[10px] bg-blue-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Pro Update</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <ul className="space-y-3 text-sm text-gray-300">
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Multi-Zone Selection:</strong> Run workouts across your whole gym! Switching zones now keeps your previous picks visible at the top so you can build a massive multi-area session.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Enhanced Help Center:</strong> A completely rewritten 7-page visual guide in the Exercise Library covering everything from filters to pro-tips.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Gym Migration Tool:</strong> One-tap migration in Settings to automatically tag all your custom exercises to the correct gym zones.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Zone Previews:</strong> See exactly which exercises belong to each area of your gym with real-time thumbnails and counts before you even filter.</span>
+                              </li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        {/* Version 3.2 */}
+                        <AccordionItem value="v32" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-500/30">
+                                <Sparkles className="h-5 w-5 text-emerald-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-black text-lg text-white leading-none">Version 3.2</h3>
+                                <span className="text-[10px] bg-emerald-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Stable Update</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <ul className="space-y-3 text-sm text-gray-300">
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Visual Exercise Filters:</strong> Tap Equipment, Category, or Muscle Group gateway cards to browse sub-filters with vivid imagery in a centered popup modal.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Expanded Exercise Library:</strong> 40+ new common exercises added — dumbbell tricep extensions, kickbacks, skull crushers, cable pushdowns, hammer curls, leg press, Bulgarian split squats, and more.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Sync Library Button:</strong> One-tap sync to add any missing default exercises to your library without affecting existing data.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>My Gym Filter:</strong> Filter the Exercise Library by your Custom Gym Builder gyms and individual zones — quickly find only the machines in your specific section.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Collapsible Dropdown Filters:</strong> Equipment, Category, and Muscle Group dropdowns now collapse into a compact accordion — search bar stays always visible.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Centered Filter Popups:</strong> Visual filter modals now open perfectly centered on screen instead of sliding from the bottom.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Cancelled Workout Fix:</strong> Workouts cancelled mid-session or due to app staleness are no longer recorded as completed in Stats or History.</span>
+                              </li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        {/* Version 3.1 */}
+                        <AccordionItem value="v31" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden shadow-inner">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="h-10 w-10 rounded-xl bg-cyan-500/20 flex items-center justify-center shadow-lg shadow-cyan-500/20 border border-cyan-500/30">
+                                <Sparkles className="h-5 w-5 text-cyan-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-black text-lg text-white leading-none">Version 3.1</h3>
+                                <span className="text-[10px] bg-cyan-500 text-black px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Pro Update</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <ul className="space-y-3 text-sm text-gray-300">
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Professional Gym Builder:</strong> Plan your gym into zones for targeted training.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>Visual Intelligence:</strong> 100+ exercise thumbnails integrated across Stats & Plans.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>PWA Refresh:</strong> Native-feel branding and high-res iconography for mobile shortcuts.</span>
+                              </li>
+                              <li className="flex gap-3">
+                                <div className="h-5 w-5 rounded-full bg-cyan-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">•</div>
+                                <span><strong>AI Workout Architect:</strong> Equipment-aware Gemini AI routines.</span>
+                              </li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        {/* Version 3.0 */}
+                        <AccordionItem value="v30" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left">
+                              <div className="h-10 w-10 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30">
+                                <Watch className="h-5 w-5 text-purple-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-black text-lg text-white leading-none">Version 3.0</h3>
+                                <span className="text-[10px] bg-purple-500/30 text-purple-300 px-1.5 py-0.5 rounded-full font-black uppercase mt-1 inline-block">Cloud Sync</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4">
+                            <ul className="space-y-2 text-sm text-gray-400">
+                              <li className="flex gap-2"><span>•</span> Smartwatch Sync via Health Connect Integration</li>
+                              <li className="flex gap-2"><span>•</span> Health Meter Circle Graph & Timeline Trends</li>
+                              <li className="flex gap-2"><span>•</span> Smart Entry Flow for precision workout tracking</li>
+                              <li className="flex gap-2"><span>•</span> Dynamic Graffiti Target Achievement effects</li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+
+                        {/* Version 2.0 */}
+                        <AccordionItem value="v20" className="border-none bg-white/5 rounded-2xl px-4 overflow-hidden">
+                          <AccordionTrigger className="hover:no-underline py-4">
+                            <div className="flex items-center gap-3 text-left opacity-70">
+                              <div className="h-10 w-10 rounded-xl bg-gray-500/20 flex items-center justify-center border border-gray-500/30">
+                                <Zap className="h-5 w-5 text-gray-400" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold text-white">Version 2.0</h3>
+                                <span className="text-[10px] text-gray-500 uppercase font-black">AI Core</span>
+                              </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="pb-4 opacity-70">
+                            <ul className="space-y-1 text-xs text-gray-500">
+                              <li>• Gemini Pro API Integration for Smart Planning</li>
+                              <li>• Advanced Favorite & Search algorithms</li>
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </Accordion>
+                    </div>
+                    
+                    <div className="p-4 bg-gray-900/50 border-t border-white/5 flex justify-center">
+                      <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600">Built for Greatness • {new Date().getFullYear()}</p>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setBetaTesterDialogOpen(true)}
+                      className="h-10 px-8 rounded-xl font-black uppercase tracking-widest text-[11px] bg-gym-blue/10 border-gym-blue/20 text-gym-blue hover:bg-gym-blue hover:text-white transition-all shadow-lg shadow-blue-500/10 gap-2"
                     >
-                      {showArchived ? 'Active' : 'Archived'}
+                      <Sparkles className="h-4 w-4" /> Become a Beta Tester
+                    </Button>
+                    <Button
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8 text-gray-500 hover:text-white"
+                      onClick={() => setHelpPageIndex(6)}
+                    >
+                      <HelpCircle className="h-4 w-4" />
                     </Button>
                   </div>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
-                  {betaRoster
-                    .filter(t => {
-                      if (!showArchived && t.isArchived) return false;
-                      if (showArchived && !t.isArchived) return false;
-                      
-                      const now = Date.now();
-                      const oneDay = 24 * 60 * 60 * 1000;
-                      if (rosterFilter === 'day') return (now - t.timestamp) < oneDay;
-                      if (rosterFilter === 'week') return (now - t.timestamp) < (oneDay * 7);
-                      if (rosterFilter === 'month') return (now - t.timestamp) < (oneDay * 30);
-                      return true;
-                    })
-                    .sort((a, b) => b.timestamp - a.timestamp)
-                    .map((tester, idx) => {
-                      const isExpanded = expandedTesterId === tester.id;
-                      const isFounder = tester.status.includes('Founder') || tester.status.includes('Architect');
-                      return (
-                        <div 
-                          key={tester.id || idx}
-                          className={`group flex flex-col gap-0 rounded-2xl border transition-all ${
-                            isExpanded 
-                            ? 'bg-white/10 border-white/20 shadow-xl' 
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4 p-3 w-full">
-                            <div 
-                              onClick={() => setExpandedTesterId(isExpanded ? null : tester.id)}
-                              className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border transition-transform cursor-pointer ${
-                                isFounder 
-                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 shadow-lg shadow-amber-500/5' 
-                                : 'bg-gym-blue/10 border-gym-blue/20 text-gym-blue'
-                              } ${isExpanded ? 'scale-90' : 'group-hover:scale-110'}`}
-                            >
-                              {isFounder ? <Crown className="h-5 w-5" /> : <Users className="h-5 w-5" />}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 pointer-events-none">
-                              <div className="flex items-center gap-2">
-                                <p className="text-xs font-black text-white truncate uppercase tracking-tight">{tester.name}</p>
-                                {isFounder && (
-                                  <span className="text-[8px] font-black bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-sm uppercase border border-amber-500/20">Staff</span>
-                                )}
-                              </div>
-                              <p className="text-[10px] text-gray-500 truncate font-medium">{tester.email}</p>
-                            </div>
-                            
-                            <div className="text-right shrink-0 flex items-center gap-2 sm:gap-4">
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
-                                      onClick={(e) => { e.stopPropagation(); archiveTester(tester.id); }}
-                                      className="h-7 w-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
-                                    >
-                                      <Archive className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent><p className="text-[10px] font-bold uppercase">{tester.isArchived ? 'Restore' : 'Archive'}</p></TooltipContent>
-                                </Tooltip>
-                                
-                                {!isFounder && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={(e) => { e.stopPropagation(); deleteTester(tester.id, tester.name); }}
-                                        className="h-7 w-7 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-500"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p className="text-[10px] font-bold uppercase">Delete Permanently</p></TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
-                              <ChevronDown 
-                                onClick={() => setExpandedTesterId(isExpanded ? null : tester.id)}
-                                className={`h-4 w-4 text-gray-600 transition-transform duration-300 cursor-pointer ${isExpanded ? 'rotate-180 text-white' : ''}`} 
-                              />
-                            </div>
-                          </div>
 
-                          {isExpanded && (
-                            <div className="px-3 pb-4 pt-0 animate-in slide-in-from-top-2 duration-300">
-                              <div className="mt-1 p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2">
-                                    <MessageSquare className="h-3 w-3 text-gym-blue" />
-                                    <span className="text-[9px] font-black uppercase text-gym-blue tracking-[0.2em]">Candidate Vision</span>
-                                  </div>
-                                  <span className="text-[9px] font-bold text-gray-600 italic">Received: {tester.date}</span>
+                  {/* Beta Roster Management UI */}
+                  <div className="mt-4 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-gym-blue animate-pulse" />
+                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Program Management</p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 bg-black/30 p-1 rounded-xl border border-white/5">
+                        <Button 
+                          onClick={() => setRosterFilter('all')}
+                          variant="ghost" 
+                          className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${rosterFilter === 'all' ? 'bg-gym-blue text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+                        >All</Button>
+                        <Button 
+                          onClick={() => setRosterFilter('day')}
+                          variant="ghost" 
+                          className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${rosterFilter === 'day' ? 'bg-gym-blue text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+                        >24H</Button>
+                        <Button 
+                          onClick={() => setRosterFilter('week')}
+                          variant="ghost" 
+                          className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${rosterFilter === 'week' ? 'bg-gym-blue text-white shadow-lg shadow-blue-500/20' : 'text-gray-500 hover:text-white'}`}
+                        >Week</Button>
+                        <div className="w-[1px] h-4 bg-white/10 mx-1" />
+                        <Button 
+                          onClick={() => setShowArchived(!showArchived)}
+                          variant="ghost" 
+                          className={`h-7 px-3 text-[9px] font-black uppercase rounded-lg transition-all ${showArchived ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' : 'text-gray-500 hover:text-white'}`}
+                        >
+                          {showArchived ? 'Active' : 'Archived'}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-2 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                      {betaRoster
+                        .filter(t => {
+                          if (!showArchived && t.isArchived) return false;
+                          if (showArchived && !t.isArchived) return false;
+                          
+                          const now = Date.now();
+                          const oneDay = 24 * 60 * 60 * 1000;
+                          if (rosterFilter === 'day') return (now - t.timestamp) < oneDay;
+                          if (rosterFilter === 'week') return (now - t.timestamp) < (oneDay * 7);
+                          if (rosterFilter === 'month') return (now - t.timestamp) < (oneDay * 30);
+                          return true;
+                        })
+                        .sort((a, b) => b.timestamp - a.timestamp)
+                        .map((tester, idx) => {
+                          const isExpanded = expandedTesterId === tester.id;
+                          const isFounder = tester.status.includes('Founder') || tester.status.includes('Architect');
+                          return (
+                            <div 
+                              key={tester.id || idx}
+                              className={`group flex flex-col gap-0 rounded-2xl border transition-all ${
+                                isExpanded 
+                                ? 'bg-white/10 border-white/20 shadow-xl' 
+                                : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10'
+                              }`}
+                            >
+                              <div className="flex items-center gap-4 p-3 w-full">
+                                <div 
+                                  onClick={() => setExpandedTesterId(isExpanded ? null : tester.id)}
+                                  className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border transition-transform cursor-pointer ${
+                                    isFounder 
+                                    ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 shadow-lg shadow-amber-500/5' 
+                                    : 'bg-gym-blue/10 border-gym-blue/20 text-gym-blue'
+                                  } ${isExpanded ? 'scale-90' : 'group-hover:scale-110'}`}
+                                >
+                                  {isFounder ? <Crown className="h-5 w-5" /> : <Users className="h-5 w-5" />}
                                 </div>
-                                <p className="text-xs text-gray-300 leading-relaxed italic pr-2 font-medium">"{tester.suggestions || 'No specific feedback provided yet.'}"</p>
-                                <div className="pt-2 flex items-center justify-between">
-                                  <div className="flex gap-2">
-                                    <span className="text-[8px] font-black text-gray-600 bg-white/5 px-2 py-1 rounded inline-block uppercase tracking-widest">{tester.id}</span>
-                                    <span className="text-[8px] font-black text-gym-blue/60 bg-gym-blue/5 px-2 py-1 rounded inline-block uppercase tracking-widest">{tester.status}</span>
+                                
+                                <div className="flex-1 min-w-0 pointer-events-none">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs font-black text-white truncate uppercase tracking-tight">{tester.name}</p>
+                                    {isFounder && (
+                                      <span className="text-[8px] font-black bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded-sm uppercase border border-amber-500/20">Staff</span>
+                                    )}
                                   </div>
-                                  {tester.mailOpened && (
-                                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                      <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
-                                      <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">Clipboard Ready</span>
-                                    </div>
-                                  )}
+                                  <p className="text-[10px] text-gray-500 truncate font-medium">{tester.email}</p>
+                                </div>
+                                
+                                <div className="text-right shrink-0 flex items-center gap-2 sm:gap-4">
+                                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button 
+                                          variant="ghost" 
+                                          size="icon" 
+                                          onClick={(e) => { e.stopPropagation(); archiveTester(tester.id); }}
+                                          className="h-7 w-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                                        >
+                                          <Archive className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent><p className="text-[10px] font-bold uppercase">{tester.isArchived ? 'Restore' : 'Archive'}</p></TooltipContent>
+                                    </Tooltip>
+                                    
+                                    {!isFounder && (
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={(e) => { e.stopPropagation(); deleteTester(tester.id, tester.name); }}
+                                            className="h-7 w-7 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-500"
+                                          >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent><p className="text-[10px] font-bold uppercase">Delete Permanently</p></TooltipContent>
+                                      </Tooltip>
+                                    )}
+                                  </div>
+                                  <ChevronDown 
+                                    onClick={() => setExpandedTesterId(isExpanded ? null : tester.id)}
+                                    className={`h-4 w-4 text-gray-600 transition-transform duration-300 cursor-pointer ${isExpanded ? 'rotate-180 text-white' : ''}`} 
+                                  />
                                 </div>
                               </div>
+
+                              {isExpanded && (
+                                <div className="px-3 pb-4 pt-0 animate-in slide-in-from-top-2 duration-300">
+                                  <div className="mt-1 p-4 rounded-xl bg-black/40 border border-white/5 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <MessageSquare className="h-3 w-3 text-gym-blue" />
+                                        <span className="text-[9px] font-black uppercase text-gym-blue tracking-[0.2em]">Candidate Vision</span>
+                                      </div>
+                                      <span className="text-[9px] font-bold text-gray-600 italic">Received: {tester.date}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-300 leading-relaxed italic pr-2 font-medium">"{tester.suggestions || 'No specific feedback provided yet.'}"</p>
+                                    <div className="pt-2 flex items-center justify-between">
+                                      <div className="flex gap-2">
+                                        <span className="text-[8px] font-black text-gray-600 bg-white/5 px-2 py-1 rounded inline-block uppercase tracking-widest">{tester.id}</span>
+                                        <span className="text-[8px] font-black text-gym-blue/60 bg-gym-blue/5 px-2 py-1 rounded inline-block uppercase tracking-widest">{tester.status}</span>
+                                      </div>
+                                      {tester.mailOpened && (
+                                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                          <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
+                                          <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">Clipboard Ready</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          );
+                        })}
+                      
+                      {betaRoster.length === 0 && (
+                        <div className="p-8 text-center bg-white/5 border border-white/5 rounded-2xl">
+                          <Users className="h-10 w-10 text-gray-700 mx-auto mb-3 opacity-20" />
+                          <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">No candidates found in this scope.</p>
                         </div>
-                      );
-                    })}
-                  
-                  {betaRoster.length === 0 && (
-                    <div className="p-8 text-center bg-white/5 border border-white/5 rounded-2xl">
-                      <Users className="h-10 w-10 text-gray-700 mx-auto mb-3 opacity-20" />
-                      <p className="text-[10px] font-black uppercase text-gray-600 tracking-widest">No candidates found in this scope.</p>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
       <SettingsHelpPopup
