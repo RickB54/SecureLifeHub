@@ -58,31 +58,19 @@ export function useVault() {
 
             if (folderError) throw folderError
 
-            // Fetch Items
+            // Tier 1 Projection Query: Fetch only metadata/index columns on session load
             const { data: itemData, error: itemError } = await supabase
                 .from("vault_items")
-                .select("*")
+                .select("id, user_id, type, title, username, website, category, folder_id, is_favorite, is_archived, created_at, updated_at")
                 .order("created_at", { ascending: false })
 
             if (itemError) throw itemError
 
-            // Telemetry: Measure actual response payload size and base64 breakdown
+            // Telemetry: Measure actual projected response payload size
             if (itemData) {
                 const totalBytes = new Blob([JSON.stringify(itemData)]).size;
                 const totalKB = (totalBytes / 1024).toFixed(2);
-                let base64Count = 0;
-                let totalBase64Bytes = 0;
-
-                itemData.forEach(item => {
-                    const metaStr = JSON.stringify(item.item_metadata || {});
-                    const matches = metaStr.match(/data:image\/[a-zA-Z]+;base64,[^"]+/g);
-                    if (matches) {
-                        base64Count++;
-                        matches.forEach(m => totalBase64Bytes += m.length);
-                    }
-                });
-
-                console.log(`📊 [Vault Payload Measurement] Total Items: ${itemData.length} | Total Payload: ${totalKB} KB (${totalBytes} B) | Rows with Base64: ${base64Count} | Total Base64 Size: ${(totalBase64Bytes / 1024).toFixed(2)} KB | Avg Base64 per row: ${base64Count > 0 ? ((totalBase64Bytes / base64Count) / 1024).toFixed(2) : '0'} KB`);
+                console.log(`📊 [Vault Projected Payload Measurement] Total Items: ${itemData.length} | Projected Payload: ${totalKB} KB (${totalBytes} B) [Tier 1 Egress Optimized]`);
             }
 
             // Map to ensure compatibility with existing components if needed
@@ -111,6 +99,27 @@ export function useVault() {
         } finally {
             setLoading(false)
         }
+    }, [user])
+
+    // On-demand detail loader for Tier 2 lazy-loading
+    const fetchItemDetails = useCallback(async (id: string) => {
+        if (!user || !id) return null
+        try {
+            const { data, error } = await supabase
+                .from("vault_items")
+                .select("*")
+                .eq("id", id)
+                .single()
+
+            if (error) throw error
+            if (data) {
+                setItems(prev => prev.map(item => item.id === id ? { ...item, ...data, updatedAt: data.updated_at, createdAt: data.created_at } : item))
+                return data
+            }
+        } catch (err) {
+            console.error(`Error loading details for item ${id}:`, err)
+        }
+        return null
     }, [user])
 
     useEffect(() => {
@@ -406,6 +415,7 @@ export function useVault() {
         updateItem,
         updateFolder,
         deleteItem,
+        fetchItemDetails,
         refresh: fetchData
     }
 }

@@ -69,6 +69,7 @@ interface PasswordsProps {
   setIsFullscreen?: (val: boolean) => void
   onOpenHelp?: (targetId?: string) => void
   mockSettings?: Record<string, boolean>
+  fetchItemDetails?: (id: string) => Promise<any>
 }
 
 export default function Passwords({
@@ -87,7 +88,8 @@ export default function Passwords({
   isFullscreen,
   setIsFullscreen,
   onOpenHelp,
-  mockSettings
+  mockSettings,
+  fetchItemDetails
 }: PasswordsProps) {
   // State for view mode (folder only now)
   const [viewMode, setViewMode] = useState("folder")
@@ -408,12 +410,19 @@ export default function Passwords({
     }
   }
 
-  // Handle edit password - now shows in side panel instead of modal
-  const handleEditPassword = (id: string) => {
+  // Handle edit password - now shows in side panel instead of modal with on-demand full details
+  const handleEditPassword = async (id: string) => {
     const passwordToEdit = records.find((record) => record.id === id)
     setSelectedRecord(passwordToEdit)
     setShowPasswordInDetails(false) // Reset password visibility when selecting new record
-    // Don't open modal - details will show in side panel
+
+    // Tier 2 Lazy-Loading: If full record details (password/notes/item_metadata) aren't loaded, fetch them on-demand
+    if (fetchItemDetails && (!passwordToEdit?.password && !passwordToEdit?.notes && !passwordToEdit?.item_metadata)) {
+      const fullDetails = await fetchItemDetails(id)
+      if (fullDetails) {
+        setSelectedRecord((prev: any) => prev?.id === id ? { ...prev, ...fullDetails } : prev)
+      }
+    }
   }
 
   // Handle duplicate password
@@ -705,6 +714,67 @@ export default function Passwords({
     
     return allFilteredSortedPasswords.filter((p) => p.folder_id === selectedFolder);
   }, [allFilteredSortedPasswords, selectedFolder, searchQuery]);
+
+  // Tier 2 Pagination State (50 items/page for egress and rendering optimization)
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
+
+  // Reset page when filters or folder selection changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter, timeFilter, favoriteFilter, archivedFilter, selectedFolder, forceListView]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPasswords.length / PAGE_SIZE));
+  const paginatedPasswords = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredPasswords.slice(start, start + PAGE_SIZE);
+  }, [filteredPasswords, currentPage]);
+
+  const renderPaginationBar = () => {
+    if (filteredPasswords.length <= PAGE_SIZE) return null;
+
+    const startItem = (currentPage - 1) * PAGE_SIZE + 1;
+    const endItem = Math.min(currentPage * PAGE_SIZE, filteredPasswords.length);
+
+    return (
+      <div className={`flex items-center justify-between px-4 py-2.5 border-t ${theme === 'light' ? 'border-gray-200 bg-gray-50/80 text-gray-700' : 'border-white/5 bg-white/[0.03] text-gray-300'} text-xs select-none rounded-b-xl`}>
+        <div className="flex items-center gap-1.5">
+          <span>Showing</span>
+          <span className="font-semibold text-blue-400">{startItem}–{endItem}</span>
+          <span>of</span>
+          <span className="font-semibold">{filteredPasswords.length}</span>
+          <span>records</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              currentPage === 1
+                ? 'opacity-30 cursor-not-allowed'
+                : theme === 'light' ? 'hover:bg-gray-200 bg-white text-gray-800 border border-gray-300 shadow-sm' : 'hover:bg-white/10 bg-white/5 text-white border border-white/10'
+            }`}
+          >
+            Previous
+          </button>
+          <span className="font-medium px-1">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            className={`px-3 py-1 rounded-lg font-medium transition-all ${
+              currentPage === totalPages
+                ? 'opacity-30 cursor-not-allowed'
+                : theme === 'light' ? 'hover:bg-gray-200 bg-white text-gray-800 border border-gray-300 shadow-sm' : 'hover:bg-white/10 bg-white/5 text-white border border-white/10'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   // Function to get direct passwords in a folder (for folder mode)
   const getDirectPasswordsInFolder = (folderId: string, items: any[] = passwords) => {
@@ -1142,7 +1212,7 @@ export default function Passwords({
 
   // Render table rows for passwords
   const renderPasswordRows = () => {
-    const filteredPasswordsList = filteredPasswords
+    const filteredPasswordsList = paginatedPasswords
 
     if (filteredPasswordsList.length === 0) {
       return (
@@ -1286,7 +1356,7 @@ export default function Passwords({
 
   // Render grid items for passwords
   const renderPasswordGrid = () => {
-    const filteredPasswordsList = filteredPasswords
+    const filteredPasswordsList = paginatedPasswords
 
     if (filteredPasswordsList.length === 0) {
       return (
@@ -2453,61 +2523,64 @@ export default function Passwords({
                   <p className="text-xs mt-1">Try adjusting your filter or search</p>
                 </div>
               ) : (
-                <div id="vault-table-container" className="divide-y divide-white/5">
-                  {filteredPasswords.map((pw, index) => {
-                    const title = pw.title || pw.website || "Untitled";
-                    const firstLetter = title.charAt(0).toUpperCase();
-                    const prevTitle = index > 0 ? (filteredPasswords[index - 1].title || filteredPasswords[index - 1].website || "Untitled") : "";
-                    const prevLetter = index > 0 ? prevTitle.charAt(0).toUpperCase() : null;
-                    const isFirstOfLetter = firstLetter !== prevLetter;
-                    const cleanLetter = /^[A-Z]$/.test(firstLetter) ? firstLetter : "#";
-                    const anchorId = isFirstOfLetter ? `letter-group-${cleanLetter}` : undefined;
+                <>
+                  <div id="vault-table-container" className="divide-y divide-white/5">
+                    {paginatedPasswords.map((pw, index) => {
+                      const title = pw.title || pw.website || "Untitled";
+                      const firstLetter = title.charAt(0).toUpperCase();
+                      const prevTitle = index > 0 ? (paginatedPasswords[index - 1].title || paginatedPasswords[index - 1].website || "Untitled") : "";
+                      const prevLetter = index > 0 ? prevTitle.charAt(0).toUpperCase() : null;
+                      const isFirstOfLetter = firstLetter !== prevLetter;
+                      const cleanLetter = /^[A-Z]$/.test(firstLetter) ? firstLetter : "#";
+                      const anchorId = isFirstOfLetter ? `letter-group-${cleanLetter}` : undefined;
 
-                    return (
-                      <div
-                        key={pw.id}
-                        id={anchorId}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
-                        onClick={() => handleEditPassword(pw.id)}
-                      >
-                        <div className="flex-shrink-0">
-                          {pw.website ? (
-                            <div className="p-2 bg-blue-500/10 rounded-lg">
-                              <ExternalLink className="h-4 w-4 text-blue-400" />
-                            </div>
-                          ) : (
-                            <div className="p-2 bg-purple-500/10 rounded-lg">
-                              <Lock className="h-4 w-4 text-purple-400" />
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-                            <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
+                      return (
+                        <div
+                          key={pw.id}
+                          id={anchorId}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition-colors group"
+                          onClick={() => handleEditPassword(pw.id)}
+                        >
+                          <div className="flex-shrink-0">
+                            {pw.website ? (
+                              <div className="p-2 bg-blue-500/10 rounded-lg">
+                                <ExternalLink className="h-4 w-4 text-blue-400" />
+                              </div>
+                            ) : (
+                              <div className="p-2 bg-purple-500/10 rounded-lg">
+                                <Lock className="h-4 w-4 text-purple-400" />
+                              </div>
+                            )}
                           </div>
-                          {pw.website && (
-                            <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
-                          )}
-                          {pw.username && (
-                            <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
-                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              {pw.is_favorite && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
+                              <span className="font-medium text-sm truncate">{pw.title || pw.website || 'Untitled'}</span>
+                            </div>
+                            {pw.website && (
+                              <span className="text-xs text-blue-400 opacity-70 truncate block">{pw.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}</span>
+                            )}
+                            {pw.username && (
+                              <span className="text-xs text-gray-500 truncate block">{pw.username}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              className={`p-1.5 rounded-md transition-colors ${
+                                pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
+                              }`}
+                              onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
+                              title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
+                            >
+                              <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            className={`p-1.5 rounded-md transition-colors ${
-                              pw.is_favorite ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-400 hover:bg-yellow-500/10'
-                            }`}
-                            onClick={(e) => { e.stopPropagation(); handleToggleFavorite(pw.id); }}
-                            title={pw.is_favorite ? 'Remove from Favorites' : 'Add to Favorites'}
-                          >
-                            <Star className="h-4 w-4" fill={pw.is_favorite ? 'currentColor' : 'none'} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                  {renderPaginationBar()}
+                </>
               )}
             </div>
           </div>
@@ -2650,6 +2723,7 @@ export default function Passwords({
                           </div>
                         )}
                       </div>
+                      {renderPaginationBar()}
                   </div>
 
                   {/* A-Z Fast Selector */}

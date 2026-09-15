@@ -11,6 +11,7 @@ import HealthAI from "./health-ai"
 import GoogleCalendarIntegration from "./google-calendar-integration"
 import { MOCKED_HEALTH } from "../lib/mock-data"
 import MockDataBanner from "./ui/mock-data-banner"
+import { supabase } from "@/lib/supabase"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -155,10 +156,35 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         recognition.start()
     }
 
+    // Health Hub Isolation Query: Fetch full health records independently of Vault projection
+    const [isolatedHealthRecords, setIsolatedHealthRecords] = useState<any[] | null>(null)
+
+    useEffect(() => {
+        let isMounted = true
+        async function fetchIsolatedHealth() {
+            try {
+                const { data, error } = await supabase
+                    .from("vault_items")
+                    .select("*")
+                    .or("category.in.(Health Records,Medications,Vitals,Health Insurance,Doctors,Medical),type.in.(health-record,medication,vital,doctor,health-insurance,health-checkin)")
+                    .order("created_at", { ascending: false })
+
+                if (!error && data && isMounted) {
+                    setIsolatedHealthRecords(data)
+                }
+            } catch (e) {
+                console.error("Health isolation fetch error:", e)
+            }
+        }
+        fetchIsolatedHealth()
+        return () => { isMounted = false }
+    }, [])
+
     // Consolidated records for use in ALL tabs
+    const effectiveRecords = isolatedHealthRecords && isolatedHealthRecords.length > 0 ? isolatedHealthRecords : records
     const consolidatedRecords = useMemo(() => {
-        return showMockData ? MOCKED_HEALTH : records;
-    }, [showMockData, records])
+        return showMockData ? MOCKED_HEALTH : effectiveRecords;
+    }, [showMockData, effectiveRecords])
 
     const healthRecords = useMemo(() => {
         return consolidatedRecords.filter(r => 

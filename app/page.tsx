@@ -361,6 +361,7 @@ function HomeContent() {
     updateFolder,
     deleteItem,
     bulkAddItems, // Destructure bulkAddItems
+    fetchItemDetails,
     refresh
   } = useVault()
   // Note: We need to adapt the setRecords for legacy components if they rely on it heavily,
@@ -447,6 +448,7 @@ function HomeContent() {
     updateFolder,
     deleteItem,
     bulkAddItems: bulkAddItems as ((items: any[]) => Promise<void>) | undefined,
+    fetchItemDetails,
     autoLockTimeout,
     setAutoLockTimeout,
     twoFactorEnabled,
