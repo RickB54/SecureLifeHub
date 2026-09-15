@@ -66,6 +66,25 @@ export function useVault() {
 
             if (itemError) throw itemError
 
+            // Telemetry: Measure actual response payload size and base64 breakdown
+            if (itemData) {
+                const totalBytes = new Blob([JSON.stringify(itemData)]).size;
+                const totalKB = (totalBytes / 1024).toFixed(2);
+                let base64Count = 0;
+                let totalBase64Bytes = 0;
+
+                itemData.forEach(item => {
+                    const metaStr = JSON.stringify(item.item_metadata || {});
+                    const matches = metaStr.match(/data:image\/[a-zA-Z]+;base64,[^"]+/g);
+                    if (matches) {
+                        base64Count++;
+                        matches.forEach(m => totalBase64Bytes += m.length);
+                    }
+                });
+
+                console.log(`📊 [Vault Payload Measurement] Total Items: ${itemData.length} | Total Payload: ${totalKB} KB (${totalBytes} B) | Rows with Base64: ${base64Count} | Total Base64 Size: ${(totalBase64Bytes / 1024).toFixed(2)} KB | Avg Base64 per row: ${base64Count > 0 ? ((totalBase64Bytes / base64Count) / 1024).toFixed(2) : '0'} KB`);
+            }
+
             // Map to ensure compatibility with existing components if needed
             const mappedFolders = (folderData || []).map(f => ({
                 ...f,

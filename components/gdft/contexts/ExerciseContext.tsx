@@ -38,10 +38,18 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Use derived favorites
   const favoriteExercises = exercises.filter(e => e.isFavorite).map(e => e.id);
   const [loading, setLoading] = useState(false);
+  const lastFetchTimeRef = useRef<number>(0);
+  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-  // Load exercises from Supabase
-  const refreshExercises = useCallback(async () => {
+  // Load exercises from Supabase with session caching
+  const refreshExercises = useCallback(async (force = false) => {
     try {
+      // If we already have exercises in memory and cache is still fresh, skip re-fetching
+      if (!force && exercises.length > 0 && (Date.now() - lastFetchTimeRef.current) < CACHE_TTL_MS) {
+        console.log("[ExerciseContext] Using session-cached exercises (egress protected)");
+        return;
+      }
+
       setLoading(true);
       if (!user) {
          console.log("[ExerciseContext] No authenticated user, loading local defaults");
@@ -49,115 +57,105 @@ export const ExerciseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
          setExercises(localDefaults);
          return;
       }
-         console.log("Loading user exercises from Supabase");
-         const data = await api.exercises.list();
-         
-         // Auto-deduplicate and filter out known broken duplicates
-         const unique: Exercise[] = [];
-         const seen = new Set();
-         const badDuplicates = new Set([
-           "cable biceps curl",
-           "cable triceps pushdown",
-           "leg press machine",
-           "leg extension machine",
-           "lat pulldown machine",
-           "cable lat pulldown",
-           "squat jumps",
-           "calf raises",
-           "lunges"
-         ]);
-         
-         const isOwner = user?.email === 'rberube54@gmail.com';
-         const toPurgeIds: string[] = [];
-         
-         for (const ex of data) {
-           const nameKey = ex.name.toLowerCase().trim();
-           
-           // Hide the old duplicates that have missing images
-           if (badDuplicates.has(nameKey) && ex.category !== "Custom") continue;
-           
-           // Auto-purge leaked CF exercises from test accounts
-           if (!isOwner && ex.name.startsWith("CF")) {
-               toPurgeIds.push(ex.id);
-               continue;
-           }
-           
-           if (!seen.has(nameKey)) {
-             seen.add(nameKey);
-             unique.push(ex);
-           }
-         }
-         
-         if (toPurgeIds.length > 0) {
-             console.log(`Purging ${toPurgeIds.length} leaked CF exercises from non-owner account...`);
-             const chunkSize = 500;
-             for (let i = 0; i < toPurgeIds.length; i += chunkSize) {
-                 await api.exercises.deleteMany(toPurgeIds.slice(i, i + chunkSize));
-             }
-         }
-
-          if (unique.length === 0) {
-            console.log("DB empty, seeding defaults...");
-            seedDefaults();
-          } else {
-            // Hot-swap image URLs for default exercises so new assets show up instantly
-            const allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
-            const defaultMap = new Map(allDefaults.map(d => [d.name.toLowerCase().trim(), d]));
-            
-            const upToDate = unique.map(ex => {
-              const defaultEx = defaultMap.get(ex.name.toLowerCase().trim());
-              if (defaultEx) {
-                return { 
-                  ...ex, 
-                  startPositionUrl: defaultEx.startPositionUrl, 
-                  endPositionUrl: defaultEx.endPositionUrl,
-                  thumbnailUrl: defaultEx.thumbnailUrl,
-                  pictureUrl: defaultEx.pictureUrl
-                };
-              }
-              return ex;
-            });
-            
-            setExercises(upToDate);
-            // Automatic deduplication removed to avoid breaking past workout history links
+      
+      console.log("[ExerciseContext] Loading user exercises from Supabase...");
+      const data = await api.exercises.list();
+      lastFetchTimeRef.current = Date.now();
+      
+      // Auto-deduplicate and filter out known broken duplicates
+      const unique: Exercise[] = [];
+      const seen = new Set<string>();
+      const badDuplicates = new Set([
+        "cable biceps curl",
+        "cable triceps pushdown",
+        "leg press machine",
+        "leg extension machine",
+        "lat pulldown machine",
+        "cable lat pulldown",
+        "squat jumps",
+        "calf raises",
+        "lunges"
+      ]);
+      
+      const isOwner = user?.email === 'rberube54@gmail.com';
+      const toPurgeIds: string[] = [];
+      
+      for (const ex of data) {
+        const nameKey = ex.name.toLowerCase().trim();
+        
+        // Hide the old duplicates that have missing images
+        if (badDuplicates.has(nameKey) && ex.category !== "Custom") continue;
+        
+        // Auto-purge leaked CF exercises from test accounts
+        if (!isOwner && ex.name.startsWith("CF")) {
+            toPurgeIds.push(ex.id);
+            continue;
+        }
+        
+        if (!seen.has(nameKey)) {
+          seen.add(nameKey);
+          unique.push(ex);
+        }
+      }
+      
+      if (toPurgeIds.length > 0) {
+          console.log(`Purging ${toPurgeIds.length} leaked CF exercises from non-owner account...`);
+          const chunkSize = 500;
+          for (let i = 0; i < toPurgeIds.length; i += chunkSize) {
+              await api.exercises.deleteMany(toPurgeIds.slice(i, i + chunkSize));
           }
+      }
+
+      if (unique.length === 0) {
+        console.log("DB empty, seeding defaults...");
+        seedDefaults();
+      } else {
+        // Hot-swap image URLs for default exercises so new assets show up instantly
+        let allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
+        if (!isOwner) {
+          allDefaults = allDefaults.filter(ex => !ex.name.startsWith("CF"));
+        }
+        const defaultMap = new Map(allDefaults.map(d => [d.name.toLowerCase().trim(), d]));
+        
+        const upToDate = unique.map(ex => {
+          const defaultEx = defaultMap.get(ex.name.toLowerCase().trim());
+          if (defaultEx) {
+            return { 
+              ...ex, 
+              startPositionUrl: defaultEx.startPositionUrl, 
+              endPositionUrl: defaultEx.endPositionUrl,
+              thumbnailUrl: defaultEx.thumbnailUrl,
+              pictureUrl: defaultEx.pictureUrl
+            };
+          }
+          return ex;
+        });
+        
+        // Check for missing defaults using the existing 'seen' set without executing a second api.exercises.list()
+        const toAdd = allDefaults.filter(ex => !seen.has(ex.name.toLowerCase().trim()));
+        if (toAdd.length > 0) {
+          console.log(`[ExerciseContext] In-memory detected ${toAdd.length} missing exercises. Auto-syncing without second fetch...`);
+          try {
+            await api.exercises.createMany(toAdd, user.id);
+            toAdd.forEach(ex => upToDate.push(ex as any));
+          } catch (err) {
+            console.error("[ExerciseContext] Auto-sync createMany failed:", err);
+          }
+        }
+
+        setExercises(upToDate);
+      }
     } catch (error) {
       console.error("Failed to load exercises:", error);
       toast.error("Failed to load exercises");
     } finally {
       setLoading(false);
     }
-  }, [user]);
-
-  const autoSyncMissingExercises = useCallback(async () => {
-    if (!user) return;
-    try {
-        const existing = await api.exercises.list();
-        const existingNames = new Set(existing.map(e => e.name.toLowerCase().trim()));
-        
-        const isOwner = user?.email === 'rberube54@gmail.com';
-        let allDefaults = [...slideboardExercises, ...cardioExercises, ...weightExercises, ...noEquipmentExercises];
-        if (!isOwner) {
-            allDefaults = allDefaults.filter(ex => !ex.name.startsWith("CF"));
-        }
-        
-        const toAdd = allDefaults.filter(ex => !existingNames.has(ex.name.toLowerCase().trim()));
-        
-        if (toAdd.length > 0) {
-            console.log(`Auto-syncing ${toAdd.length} missing exercises...`);
-            await api.exercises.createMany(toAdd, user.id);
-            refreshExercises();
-        }
-    } catch (e) {
-        console.error("Auto-sync failed", e);
-    }
-  }, [user, refreshExercises]);
+  }, [user, exercises.length]);
 
   useEffect(() => {
-    refreshExercises().then(() => {
-      autoSyncMissingExercises();
-    });
-  }, [refreshExercises, autoSyncMissingExercises]);
+    refreshExercises();
+  }, [refreshExercises]);
 
    const seedDefaults = async () => {
     if (!user) return;

@@ -137,16 +137,24 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
   const [achievedPrs, setAchievedPrs] = useState<PR[]>([]);
   const [customPlans, setCustomPlans] = useState<CustomPlan[]>([]);
   const [loading, setLoading] = useState(false);
+  const lastLoadedTimeRef = useRef<number>(0);
+  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
-  // Load Data
-  const loadData = useCallback(async () => {
+  // Load Data with session-level caching
+  const loadData = useCallback(async (force = false) => {
     if (!user) {
         console.log("[WorkoutContext] No authenticated user, skipping loadData");
         return;
     }
 
+    if (!force && workouts.length > 0 && (Date.now() - lastLoadedTimeRef.current) < CACHE_TTL_MS) {
+        console.log("[WorkoutContext] Using session-cached workout data (egress protected)");
+        return;
+    }
+
     try {
         setLoading(true);
+        console.log("[WorkoutContext] Loading workout data from Supabase...");
         const [wData, tData, pData, mData, hData, sData, profData] = await Promise.all([
             api.workouts.list(user.id).catch(e => { console.warn("Error loading workouts:", e?.message || e); return []; }),
             api.savedTemplates.list(user.id).catch(e => { console.warn("Error loading templates:", e?.message || e); return []; }),
@@ -156,6 +164,8 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
             api.scheduledWorkouts.list(user.id).catch(e => { console.warn("Error loading scheduled workouts:", e?.message || e); return []; }),
             api.profiles.get(user.id).catch(e => { console.warn("Error loading profile:", e?.message || e); return { achievedPrs: [] }; })
         ]);
+
+        lastLoadedTimeRef.current = Date.now();
 
         setSavedWorkoutTemplates(tData);
         setCustomPlans(pData);
@@ -197,7 +207,7 @@ export const WorkoutProvider: React.FC<WorkoutProviderProps> = ({ children }) =>
     } finally {
         setLoading(false);
     }
-  }, [user]);
+  }, [user, workouts.length]);
 
   const migrateLocalData = useCallback(async () => {
       if (!user) return;
