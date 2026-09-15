@@ -41,9 +41,10 @@ interface NotesState {
   notes: Note[];
   sections: Section[];
   notebooks: Notebook[];
+  lastFetchedAt: number;
   // Per-section sync state (keyed by section id)
   sectionSyncStates: Record<string, SectionSyncState>;
-  refresh: () => Promise<void>;
+  refresh: (force?: boolean) => Promise<void>;
   createNotebook: (name: string) => Promise<Notebook>;
   deleteNotebook: (id: string) => Promise<void>;
   updateNotebook: (id: string, name: string) => Promise<void>;
@@ -59,6 +60,7 @@ interface NotesState {
 }
 
 const SYNC_STATES_KEY = 'sticky_notes_section_sync_states';
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes session TTL
 
 function loadSyncStatesFromStorage(): Record<string, SectionSyncState> {
   if (typeof window === 'undefined') return {};
@@ -81,6 +83,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   notes: [],
   sections: [],
   notebooks: [],
+  lastFetchedAt: 0,
   sectionSyncStates: loadSyncStatesFromStorage(),
 
   loadSectionSyncStates: () => {
@@ -95,7 +98,16 @@ export const useNotesStore = create<NotesState>((set, get) => ({
     set({ sectionSyncStates: updated });
   },
 
-  refresh: async () => {
+  refresh: async (force: boolean = false) => {
+    const state = get();
+    const now = Date.now();
+
+    // Session cache check: if within 10m TTL and already loaded, skip re-querying 3 tables
+    if (!force && state.lastFetchedAt && (now - state.lastFetchedAt) < CACHE_TTL_MS) {
+      console.log("⚡ [StickyNotes Store] Using cached session notes (TTL: 10m)");
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -123,6 +135,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
         notebooks: notebooksRes.data || [],
         sections: sectionsRes.data || [],
         notes: notesRes.data || [],
+        lastFetchedAt: Date.now(),
       });
     } catch (error) {
       console.error("Error refreshing notes store:", error);
@@ -140,7 +153,7 @@ export const useNotesStore = create<NotesState>((set, get) => ({
       .single();
 
     if (error) throw error;
-    await get().refresh();
+    await get().refresh(true);
     return data;
   },
 

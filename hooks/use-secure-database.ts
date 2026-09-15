@@ -7,15 +7,31 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 import { toast } from "sonner"
 
+// Session-level staleness cache (10-minute TTL)
+const CACHE_TTL_MS = 10 * 60 * 1000
+let cachedDatabases: Database[] | null = null
+let cachedReports: { [dbTitle: string]: any[] } | null = null
+let lastDatabaseFetchTime = 0
+
 export function useSecureDatabase() {
   const { user } = useAuth()
-  const [databases, setDatabases] = useState<Database[]>([])
-  const [initialized, setInitialized] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [savedReports, setSavedReports] = useState<{ [dbTitle: string]: any[] }>({})
+  const [databases, setDatabases] = useState<Database[]>(() => cachedDatabases || [])
+  const [initialized, setInitialized] = useState(() => !!cachedDatabases)
+  const [loading, setLoading] = useState(() => !cachedDatabases)
+  const [savedReports, setSavedReports] = useState<{ [dbTitle: string]: any[] }>(() => cachedReports || {})
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (force: boolean = false) => {
     if (!user) return
+
+    // Session cache check: if within 10-minute TTL, use cached data and avoid 3 Supabase queries
+    if (!force && cachedDatabases && (Date.now() - lastDatabaseFetchTime) < CACHE_TTL_MS) {
+      console.log("⚡ [Databases Hub] Using cached session databases (TTL: 10m)")
+      setDatabases(cachedDatabases)
+      if (cachedReports) setSavedReports(cachedReports)
+      setLoading(false)
+      setInitialized(true)
+      return
+    }
 
     setLoading(true)
     try {
@@ -35,6 +51,7 @@ export function useSecureDatabase() {
         }
       }
 
+      let finalDbs: Database[] = []
       // 2. Migration or Initialization if Supabase is empty
       if (!dbData || dbData.length === 0) {
           const stored = typeof window !== 'undefined' ? localStorage.getItem("slh_custom_databases") : null
@@ -86,7 +103,8 @@ export function useSecureDatabase() {
                   }
               }
               
-              setDatabases(migratedDatabases.sort((a,b) => (a.orderIndex || 0) - (b.orderIndex || 0)))
+              finalDbs = migratedDatabases.sort((a,b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+              setDatabases(finalDbs)
               toast.success("Professional Cloud Migration Complete")
               // Clear localStorage to prevent duplicate migrations
               localStorage.removeItem("slh_custom_databases")
@@ -99,8 +117,10 @@ export function useSecureDatabase() {
               }))
               const { data: insertedData, error: insertError } = await supabase.from("secure_databases").insert(initialDbs).select()
               if (!insertError && insertedData) {
-                  setDatabases(insertedData as Database[])
+                  finalDbs = insertedData as Database[]
+                  setDatabases(finalDbs)
               } else {
+                  finalDbs = defaultTemplates
                   setDatabases(defaultTemplates)
               }
           }
@@ -125,7 +145,8 @@ export function useSecureDatabase() {
               else return acc;
           }, [] as Database[]);
               
-          setDatabases(uniqueDatabases as Database[])
+          finalDbs = uniqueDatabases as Database[]
+          setDatabases(finalDbs)
       }
 
       // Fetch Reports
@@ -133,14 +154,19 @@ export function useSecureDatabase() {
         .from("database_reports")
         .select("*")
         .eq("user_id", user.id)
+      const groupedReports: { [key: string]: any[] } = {}
       if (!reportError && reportData) {
-          const groupedReports: { [key: string]: any[] } = {}
           reportData.forEach(r => {
               if (!groupedReports[r.database_title]) groupedReports[r.database_title] = []
               groupedReports[r.database_title].push(r)
           })
           setSavedReports(groupedReports)
       }
+
+      // Cache session state
+      cachedDatabases = finalDbs
+      cachedReports = groupedReports
+      lastDatabaseFetchTime = Date.now()
 
     } catch (error: any) {
       console.error("Critical Secure Engine Fault Detailed:", {
