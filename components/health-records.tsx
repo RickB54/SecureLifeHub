@@ -12,6 +12,7 @@ import GoogleCalendarIntegration from "./google-calendar-integration"
 import { MOCKED_HEALTH } from "../lib/mock-data"
 import MockDataBanner from "./ui/mock-data-banner"
 import { supabase } from "@/lib/supabase"
+import Doctors from "./doctors"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -33,12 +34,12 @@ interface HealthDashboardProps {
     theme: string
     setRecords?: any
     onOpenHelp?: (targetId?: string) => void
-    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin"
+    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors"
     mockSettings?: Record<string, boolean>
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings }: HealthDashboardProps) {
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin">(initialTab)
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(initialTab as any)
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
     const [editingVital, setEditingVital] = useState<any>(null)
@@ -260,16 +261,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }
 
     const weightData = activeVitalRecords.filter(r => r.title === "Weight").map(r => ({
-        date: r.item_metadata.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
-        value: parseFloat(r.item_metadata.value) || 0
+        date: r.item_metadata?.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
+        value: parseFloat(r.item_metadata?.value ?? '0') || 0
     }))
 
     const bpData = activeVitalRecords.filter(r => r.title === "Blood Pressure").map(r => {
-        const parts = (r.item_metadata.value || "0/0").split('/')
+        const parts = (r.item_metadata?.value || "0/0").split('/')
         const sys = parseInt(parts[0]) || 0
         const dia = parseInt(parts[1]) || 0
         return {
-            date: r.item_metadata.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
+            date: r.item_metadata?.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
             systolic: sys,
             diastolic: dia
         }
@@ -536,16 +537,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         const vitalGroups = [
             { id: 'bp', title: 'Blood Pressure', icon: Activity, color: 'rose', data: bpData, multi: true },
             { id: 'weight', title: 'Weight', icon: Weight, color: 'orange', data: weightData },
-            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
-            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: safeFormat(r.item_metadata.date, 'MMM d'), value: parseFloat(r.item_metadata.value) })) },
+            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
         ]
 
         const filteredHistoricalLog = vitalRecords.filter(vital => {
@@ -979,6 +980,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         { id: 'meds', label: 'Meds', icon: Pill },
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },
                         { id: 'vitals', label: 'Vitals', icon: Activity },
+                        { id: 'doctors', label: 'My Doctors', icon: User },
                         { id: 'appointments', label: 'Visits', icon: Clock },
                         { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
                         { id: 'checkin', label: 'Check-in', icon: Activity }
@@ -1020,6 +1022,18 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 {activeTab === 'calendar' && <div className="px-4 md:px-8 pb-8">{renderCalendarView()}</div>}
                 {activeTab === 'appointments' && <div className="px-4 md:px-8 pb-8">{renderAppointments()}</div>}
                 {activeTab === 'checkin' && <div className="px-4 md:px-8 pb-8">{renderCheckin()}</div>}
+                {activeTab === 'doctors' && (
+                    <div className="pb-8">
+                        <Doctors
+                            records={effectiveRecords}
+                            addItem={addItem}
+                            updateItem={updateItem}
+                            deleteItem={deleteItem}
+                            theme={theme}
+                            onOpenHelp={onOpenHelp}
+                        />
+                    </div>
+                )}
                 {activeTab === 'ai' && (
                     <div className="px-4 md:px-8 pb-8">
                         <HealthAI

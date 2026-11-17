@@ -6,6 +6,7 @@ import {
   Heart, Car, Briefcase, Box, Smartphone,
   CheckCircle2,
   Book,
+  BookOpen,
   Globe,
   Plane, Target, Key, Activity, CreditCard, Image, Lock, HelpCircle,
   Settings2, Star, Trash2, ChevronDown, ChevronUp, Zap, DollarSign, Database,
@@ -76,6 +77,7 @@ export default function Dashboard({
   const [addFolderModalOpen, setAddFolderModalOpen] = useState(false)
   const [enabledPulseIds, setEnabledPulseIds] = useState<string[]>(['security', 'assets', 'goals'])
   const [dbCount, setDbCount] = useState(0)
+  const [journalCount, setJournalCount] = useState(0)
   const [viewMode, setViewMode] = useState<'grid' | 'wheel'>('grid')
   const [localScores, setLocalScores] = useState<Record<string, number>>({})
   const [configOpen, setConfigOpen] = useState(false)
@@ -92,6 +94,13 @@ export default function Dashboard({
       try {
         const parsed = JSON.parse(savedDbs)
         setDbCount(Array.isArray(parsed) ? parsed.length : 0)
+      } catch (e) {}
+    }
+    const savedProjects = localStorage.getItem('projects')
+    if (savedProjects) {
+      try {
+        const parsed = JSON.parse(savedProjects)
+        setJournalCount(Array.isArray(parsed) ? parsed.length : 0)
       } catch (e) {}
     }
   }, [])
@@ -301,6 +310,7 @@ export default function Dashboard({
             <ModuleCard title="Goals" count={goalsCount} description="Objective & habit architecture" icon={<Target />} color="teal" onClick={() => setActivePage('type-goals')} onHelp={() => onOpenHelp?.('goals')} />
             <ModuleCard title="Media" count={mediaCount} description="High-fidelity visual vault" icon={<Image />} color="cyan" onClick={() => setActivePage('type-media')} onHelp={() => onOpenHelp?.('media')} />
             <ModuleCard title="Travel" count={travelCount} description="Itinerary & mobility hub" icon={<Plane />} color="indigo" onClick={() => setActivePage('type-travel')} onHelp={() => onOpenHelp?.('mobility')} />
+            <ModuleCard title="App Dev Journal" count={journalCount} description="App project dev tracker" icon={<BookOpen />} color="violet" onClick={() => setActivePage('type-app-dev-journal')} onHelp={() => onOpenHelp?.('app-dev-journal')} />
         </div>
       ) : (
         <div className={`p-10 rounded-[3rem] ${glassPanel} animate-in zoom-in-95 duration-700`}>
@@ -420,23 +430,27 @@ function ModuleCard({ title, count, description, icon, color, onClick, isLocked,
         rose: "border-rose-500/30 hover:border-rose-500 text-rose-500 shadow-rose-900/10",
         teal: "border-teal-500/30 hover:border-teal-500 text-teal-400 shadow-teal-900/10",
         cyan: "border-cyan-500/30 hover:border-cyan-500 text-cyan-400 shadow-cyan-900/10",
+        violet: "border-violet-500/30 hover:border-violet-500 text-violet-400 shadow-violet-900/10",
     }
     const colorStyle = colors[color] || colors.blue
 
     return (
-        <div className={`text-left p-8 rounded-[3rem] border bg-white/5 backdrop-blur-3xl transition-all hover:scale-[1.02] active:scale-[0.98] group relative flex flex-col justify-between h-full ${colorStyle}`}>
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+        <div 
+            onClick={onClick}
+            className={`cursor-pointer text-left p-8 rounded-[3rem] border bg-white/5 backdrop-blur-3xl transition-all hover:scale-[1.02] active:scale-[0.98] group relative flex flex-col justify-between h-full select-none ${colorStyle}`}
+        >
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform pointer-events-none">
                 {icon && <div className={color === 'pink' ? 'text-pink-500' : ''}>{Object.cloneElement(icon, { className: "h-20 w-20" })}</div>}
             </div>
             
             <div className="relative z-10 w-full mb-8">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                        <div className="p-3 rounded-2xl bg-white/5 cursor-pointer" onClick={onClick}>
+                        <div className="p-3 rounded-2xl bg-white/5">
                           {icon && Object.cloneElement(icon, { className: "h-5 w-5" })}
                         </div>
                         <div className="flex items-center gap-2">
-                          <h4 className="text-xl font-black italic tracking-tighter text-white uppercase cursor-pointer" onClick={onClick}>{title}</h4>
+                          <h4 className="text-xl font-black italic tracking-tighter text-white uppercase">{title}</h4>
                           <button 
                             type="button" 
                             onClick={(e) => { e.stopPropagation(); onHelp?.(); }}
@@ -452,14 +466,14 @@ function ModuleCard({ title, count, description, icon, color, onClick, isLocked,
                 <div className="mb-4">
                   <span className="bg-white/5 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter text-gray-400 border border-white/5">{count} Items</span>
                 </div>
-                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed cursor-pointer" onClick={onClick}>{description}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest leading-relaxed">{description}</p>
             </div>
             
-            <div className="flex items-end justify-between relative z-10 cursor-pointer" onClick={onClick}>
+            <div className="flex items-end justify-between relative z-10">
                 <p className="text-5xl font-black italic tracking-tighter text-white">{count}</p>
-                <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Open Hub</span>
-                    <ChevronRight className="h-3 w-3 text-gray-700" />
+                <div className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white/5 border border-white/5 group-hover:bg-white/10 transition-all">
+                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-500 group-hover:text-white">Open Hub</span>
+                    <ChevronRight className="h-3 w-3 text-gray-700 group-hover:text-white transition-colors" />
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { 
   Users, 
   Plus, 
@@ -21,6 +21,16 @@ import {
   HelpCircle
 } from "lucide-react"
 import { toast } from "sonner"
+import { supabase } from "@/lib/supabase"
+
+const normalizeUrl = (url?: string) => {
+  if (!url) return ""
+  const trimmed = url.trim()
+  if (!trimmed) return ""
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 interface DoctorsProps {
   records: any[]
   addItem: (item: any) => Promise<any>
@@ -35,11 +45,39 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
   const [searchQuery, setSearchQuery] = useState("")
   const [editingDoctor, setEditingDoctor] = useState<any>(null)
 
+  // Isolated Supabase fetch to get full doctor records (including item_metadata)
+  // This bypasses the Tier 1 projected query in useVault which omits item_metadata
+  const [isolatedDoctors, setIsolatedDoctors] = useState<any[] | null>(null)
+
+  const fetchDoctors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("vault_items")
+        .select("*")
+        .or("category.eq.My Doctors,category.eq.Doctors,type.eq.doctor-record")
+        .order("title", { ascending: true })
+      if (!error && data) setIsolatedDoctors(data)
+    } catch (e) {
+      console.error("[Doctors] fetch error:", e)
+    }
+  }
+
+  useEffect(() => {
+    fetchDoctors()
+  }, [])
+
+  // Use isolated records if available; fall back to prop
+  const effectiveDoctorRecords = isolatedDoctors ?? records
+
   const doctors = useMemo(() => {
-    return records.filter(r => 
-      r.type === "doctor-record" || (r.category === "My Doctors" && r.type === "note")
+    return effectiveDoctorRecords.filter(r =>
+      r.type === "doctor-record" ||
+      r.category === "My Doctors" ||
+      r.category === "Doctors" ||
+      r.item_metadata?.is_doctor === true ||
+      r.item_metadata?.custom_type === "doctor-record"
     ).sort((a, b) => (a.title || "").localeCompare(b.title || ""))
-  }, [records])
+  }, [effectiveDoctorRecords])
 
   const filteredDoctors = doctors.filter(dr => 
     dr.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -65,30 +103,48 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!formData.name?.trim()) {
+      toast.error("Doctor name is required")
+      return
+    }
+
+    const cleanPortalUrl = normalizeUrl(formData.portalUrl)
+
     const doctorData = {
-      type: "doctor-record",
-      title: formData.name,
+      type: "note",
+      title: formData.name.trim(),
       category: "My Doctors",
+      website: cleanPortalUrl || null,
+      notes: formData.notes?.trim() || null,
       item_metadata: {
-        specialty: formData.specialty,
-        facility: formData.facility,
-        phone: formData.phone,
-        email: formData.email,
-        address: formData.address,
-        portalUrl: formData.portalUrl,
-        notes: formData.notes
+        specialty: formData.specialty?.trim() || "",
+        facility: formData.facility?.trim() || "",
+        phone: formData.phone?.trim() || "",
+        email: formData.email?.trim() || "",
+        address: formData.address?.trim() || "",
+        portalUrl: cleanPortalUrl || formData.portalUrl?.trim() || "",
+        notes: formData.notes?.trim() || "",
+        is_doctor: true,
+        custom_type: "doctor-record"
       }
     }
 
-    if (editingDoctor) {
-      await updateItem(editingDoctor.id, doctorData)
-      toast.success("Doctor updated successfully")
-    } else {
-      await addItem(doctorData)
-      toast.success("Doctor added to your list")
+    try {
+      if (editingDoctor) {
+        await updateItem(editingDoctor.id, doctorData)
+        toast.success("Doctor updated successfully")
+      } else {
+        await addItem(doctorData)
+        toast.success("Doctor added to your list")
+      }
+      setShowAddModal(false)
+      resetForm()
+      // Re-fetch to show newly saved record
+      await fetchDoctors()
+    } catch (err: any) {
+      console.error("Failed to save doctor:", err)
+      toast.error(err?.message || "Failed to save doctor")
     }
-    setShowAddModal(false)
-    resetForm()
   }
 
   const handleEdit = (doctor: any) => {
@@ -100,8 +156,8 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
       phone: doctor.item_metadata?.phone || "",
       email: doctor.item_metadata?.email || "",
       address: doctor.item_metadata?.address || "",
-      portalUrl: doctor.item_metadata?.portalUrl || "",
-      notes: doctor.item_metadata?.notes || ""
+      portalUrl: doctor.item_metadata?.portalUrl || doctor.website || doctor.item_metadata?.url || "",
+      notes: doctor.item_metadata?.notes || doctor.notes || ""
     })
     setShowAddModal(true)
   }
@@ -165,7 +221,15 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
                   <button onClick={() => handleEdit(dr)} className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-blue-400">
                     <Edit3 className="h-4 w-4" />
                   </button>
-                  <button onClick={() => { if(confirm("Delete this provider?")) deleteItem(dr.id) }} className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-rose-400">
+                  <button 
+                    onClick={async () => { 
+                      if(confirm("Delete this provider?")) {
+                        await deleteItem(dr.id)
+                        await fetchDoctors()
+                      }
+                    }} 
+                    className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-rose-400"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -189,51 +253,72 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
               <div className="space-y-4">
                 <div className="space-y-2">
                   {dr.item_metadata?.phone && (
-                    <div className="flex items-center gap-3 text-sm text-gray-300 hover:text-rose-400 transition-colors cursor-pointer group/item">
+                    <a 
+                      href={`tel:${dr.item_metadata.phone.replace(/[^0-9+]/g, '')}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-3 text-sm text-gray-300 hover:text-rose-400 transition-colors group/item"
+                    >
                       <div className="p-1.5 rounded-lg bg-white/5 group-hover/item:bg-rose-500/10 transition-colors">
                         <Phone className="h-3.5 w-3.5" />
                       </div>
                       <span className="font-medium">{dr.item_metadata.phone}</span>
-                    </div>
+                    </a>
                   )}
                   {dr.item_metadata?.email && (
-                    <div className="flex items-center gap-3 text-sm text-gray-300 hover:text-rose-400 transition-colors cursor-pointer group/item">
+                    <a 
+                      href={`mailto:${dr.item_metadata.email.trim()}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-3 text-sm text-gray-300 hover:text-rose-400 transition-colors group/item"
+                    >
                       <div className="p-1.5 rounded-lg bg-white/5 group-hover/item:bg-rose-500/10 transition-colors">
                         <Mail className="h-3.5 w-3.5" />
                       </div>
                       <span className="font-medium truncate">{dr.item_metadata.email}</span>
-                    </div>
+                    </a>
                   )}
                   {dr.item_metadata?.address && (
-                    <div className="flex items-center gap-3 text-sm text-gray-300 hover:text-rose-400 transition-colors cursor-pointer group/item">
+                    <a 
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(dr.item_metadata.address)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center gap-3 text-sm text-gray-300 hover:text-rose-400 transition-colors group/item"
+                    >
                       <div className="p-1.5 rounded-lg bg-white/5 group-hover/item:bg-rose-500/10 transition-colors shrink-0">
                         <MapPin className="h-3.5 w-3.5" />
                       </div>
                       <span className="font-medium text-xs leading-relaxed">{dr.item_metadata.address}</span>
-                    </div>
+                    </a>
                   )}
                 </div>
 
-                {(dr.item_metadata?.notes || dr.item_metadata?.portalUrl) && (
-                  <div className="pt-4 border-t border-white/5 space-y-3">
-                    {dr.item_metadata?.notes && (
-                      <p className="text-xs text-gray-500 italic line-clamp-2">
-                        "{dr.item_metadata.notes}"
-                      </p>
-                    )}
-                    {dr.item_metadata?.portalUrl && (
-                      <a 
-                        href={dr.item_metadata.portalUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/20 transition-all group/portal"
-                      >
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover/portal:text-rose-400">Patient Portal</span>
-                        <ExternalLink className="h-3 h-3 text-gray-600 group-hover/portal:text-rose-400" />
-                      </a>
-                    )}
-                  </div>
-                )}
+                {(() => {
+                  const portalUrl = normalizeUrl(dr.item_metadata?.portalUrl || dr.website || dr.item_metadata?.url)
+                  const notes = dr.item_metadata?.notes || dr.notes
+                  if (!notes && !portalUrl) return null
+
+                  return (
+                    <div className="pt-4 border-t border-white/5 space-y-3">
+                      {notes && (
+                        <p className="text-xs text-gray-500 italic line-clamp-2">
+                          "{notes}"
+                        </p>
+                      )}
+                      {portalUrl && (
+                        <a 
+                          href={portalUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center justify-between p-3 rounded-2xl bg-white/5 hover:bg-rose-500/10 border border-white/5 hover:border-rose-500/20 transition-all group/portal cursor-pointer"
+                        >
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover/portal:text-rose-400">Patient Portal</span>
+                          <ExternalLink className="h-3.5 w-3.5 text-gray-400 group-hover/portal:text-rose-400 transition-colors" />
+                        </a>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           ))

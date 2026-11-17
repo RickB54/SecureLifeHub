@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { Exercise, generateId, parseCSVData as csvToExercises, exercisesToCSV, slideboardExercises, cardioExercises, weightExercises, noEquipmentExercises } from "@/components/gdft/lib/data";
 import { api } from "@/components/gdft/lib/api";
 import { useAuth } from "@/components/auth-provider";

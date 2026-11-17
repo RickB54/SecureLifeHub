@@ -1,4 +1,4 @@
-import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2, StickyNote } from "lucide-react"
+import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2, StickyNote, BookOpen } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -13,6 +13,13 @@ export const sidebarSections = [
         title: "Secure Database",
         color: "indigo",
         items: [{ id: "secure-database", label: "Secure Database", icon: <Database className="h-5 w-5" /> }],
+        isTopLevel: true,
+    },
+    {
+        id: "app-dev-journal",
+        title: "App Dev Journal",
+        color: "violet",
+        items: [{ id: "type-app-dev-journal", label: "App Dev Journal", icon: <BookOpen className="h-5 w-5" /> }],
         isTopLevel: true,
     },
     {

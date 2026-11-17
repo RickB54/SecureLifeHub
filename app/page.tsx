@@ -49,6 +49,7 @@ import SecureNotes from "@/components/secure-notes"
 import StickyNotes from "@/components/StickyNotes"
 import SecureDatabase from "@/components/secure-database/secure-database"
 import GdftShell from "@/components/gdft/GdftShell"
+import AppDevJournalShell from "@/components/app-dev-journal/AppDevJournalShell"
 import { Minimize } from "lucide-react"
 
 function HomeContent() {
@@ -274,9 +275,9 @@ function HomeContent() {
     }
   }, [user, isLocked, authLoading, searchParams, activePage, startupPage, navHistory.length])
 
-  // E. Auto-lock suspend/resume for GDFT
+  // E. Auto-lock suspend/resume for GDFT and App Dev Journal
   useEffect(() => {
-    if (activePage === "type-gdft") {
+    if (activePage === "type-gdft" || activePage === "type-app-dev-journal") {
       window.dispatchEvent(new Event('autoLockSuspend'))
     } else {
       window.dispatchEvent(new Event('autoLockResume'))
@@ -535,6 +536,8 @@ function HomeContent() {
         return <Doctors {...commonProps} />
       case "type-gdft":
         return <GdftShell {...commonProps} />
+      case "type-app-dev-journal":
+        return <AppDevJournalShell setActivePage={handleNavigate} theme={theme} />
       case "type-medical":
         return (
           <HealthInsurance
@@ -680,8 +683,8 @@ function HomeContent() {
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Header is hidden inside GDFT so GDFT has a dedicated full-screen experience */}
-        {activePage !== "type-gdft" && (
+        {/* Header is hidden inside GDFT and App Dev Journal for a full-screen experience */}
+        {activePage !== "type-gdft" && activePage !== "type-app-dev-journal" && (
           <Header
             onLogout={handleLogout}
             onLock={() => setIsLocked(true)}
@@ -696,7 +699,7 @@ function HomeContent() {
             setIsFullscreen={setIsFullscreen}
           />
         )}
-        <div className={`flex flex-1 overflow-hidden ${activePage === "type-gdft" ? "pt-0" : "pt-16"}`}>
+        <div className={`flex flex-1 overflow-hidden ${activePage === "type-gdft" || activePage === "type-app-dev-journal" ? "pt-0" : "pt-16"}`}>
           {/* Sidebar always rendered so hamburger menu works in fullscreen mode too */}
           <Sidebar
             activePage={activePage}
@@ -706,7 +709,7 @@ function HomeContent() {
             theme={theme}
             onOpenHelp={commonProps.onOpenHelp}
           />
-          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${activePage === "type-gdft" || isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
+          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${activePage === "type-gdft" || activePage === "type-app-dev-journal" || isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
             {renderActivePage()}
           </main>
         </div>

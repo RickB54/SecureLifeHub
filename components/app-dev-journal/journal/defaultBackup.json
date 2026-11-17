@@ -1,0 +1,1603 @@
+{
+  "projects": [
+    {
+      "id": "1794606850144",
+      "appName": "RJB Art Studio",
+      "platforms": [
+        "Antigravity, RJB"
+      ],
+      "aiAgents": [
+        "Claude, RJB"
+      ],
+      "googleKeepAccounts": [
+        "RJB"
+      ],
+      "aiTools": [],
+      "cloudServices": [
+        "Netlify"
+      ],
+      "userNames": [
+        "RJB"
+      ],
+      "initialRequestDate": "",
+      "currentRequestDate": "2026-11-09",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "C:\\Users\\rberu\\Documents\\rjb-art-studio",
+      "publishedUrl": "rjbart.netlify.app",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "order": 0,
+      "isFavorite": true,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "localHost": "http://localhost:5180 ",
+      "modifiedAt": "2026-11-16T00:11:18.963Z"
+    },
+    {
+      "id": "1794605594143",
+      "appName": "Prime Auto Detail (CRM)",
+      "platforms": [
+        "Antigravity, PAD"
+      ],
+      "aiAgents": [
+        "Claude, PAD"
+      ],
+      "googleKeepAccounts": [
+        "PAD"
+      ],
+      "aiTools": [
+        "GitHub, RB54"
+      ],
+      "cloudServices": [
+        "Supabase",
+        "Google Cloud",
+        "Netlify"
+      ],
+      "userNames": [
+        "PAD"
+      ],
+      "initialRequestDate": "",
+      "currentRequestDate": "2026-11-09",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "C:\\Users\\rberu\\PDSv6_Supabase",
+      "publishedUrl": "PrimeAutoDetail.net",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "order": 0,
+      "isFavorite": true,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "localHost": "6066",
+      "modifiedAt": "2026-11-16T00:11:17.035Z"
+    },
+    {
+      "id": "1794584970981",
+      "appName": "SecureLifeHub",
+      "platforms": [
+        "Antigravity"
+      ],
+      "aiAgents": [
+        "Claude, RB54"
+      ],
+      "googleKeepAccounts": [
+        "RB54"
+      ],
+      "aiTools": [],
+      "cloudServices": [
+        "Netlify",
+        "Supabase"
+      ],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "",
+      "currentRequestDate": "2026-11-10",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "C:\\VIBE IDE Projects\\secure-life-hub",
+      "publishedUrl": "https://securelifehub.netlify.app/",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "order": 1,
+      "isFavorite": true,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "localHost": "3005",
+      "modifiedAt": "2026-11-16T00:11:12.799Z"
+    },
+    {
+      "id": "screenshot-nov-2026-13",
+      "appName": "Pattern Play Runouts - OLD",
+      "platforms": [
+        "Bolt.new"
+      ],
+      "aiAgents": [],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-02-24",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 22,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "modifiedAt": "2026-11-16T00:19:46.883Z",
+      "isHidden": true
+    },
+    {
+      "id": "screenshot-nov-2026-16",
+      "appName": "PowerMatrix",
+      "platforms": [
+        "Bolt.new"
+      ],
+      "aiAgents": [
+        "xAI Grok, RB"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB"
+      ],
+      "initialRequestDate": "2025-04-16",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 25,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:19:06.168Z"
+    },
+    {
+      "id": "screenshot-nov-2026-17",
+      "appName": "Billiards Point Tracker",
+      "platforms": [
+        "Bolt.new"
+      ],
+      "aiAgents": [
+        "xAI Grok",
+        "ChatGPT, 15D"
+      ],
+      "googleKeepAccounts": [
+        "15D"
+      ],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "15D"
+      ],
+      "initialRequestDate": "2025-10-06",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 26,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:10:55.992Z"
+    },
+    {
+      "id": "screenshot-nov-2026-18",
+      "appName": "Prime Detail Solutions - OLD",
+      "platforms": [
+        "Bolt.new"
+      ],
+      "aiAgents": [],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RAS"
+      ],
+      "initialRequestDate": "",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 27,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:13:35.501Z"
+    },
+    {
+      "id": "screenshot-nov-2026-19",
+      "appName": "ScoreKeeper",
+      "platforms": [
+        "CodePen"
+      ],
+      "aiAgents": [
+        "ChatGPT",
+        "xAI Grok"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "15D"
+      ],
+      "initialRequestDate": "2025-02-14",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 28,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:24:38.822Z"
+    },
+    {
+      "id": "screenshot-nov-2026-20",
+      "appName": "Score Card with Timer",
+      "platforms": [
+        "CodePen"
+      ],
+      "aiAgents": [
+        "xAI Grok"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-02-24",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 29,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:19:58.222Z"
+    },
+    {
+      "id": "screenshot-nov-2026-21",
+      "appName": "SmartCalorieSnap",
+      "platforms": [
+        "Google Studio"
+      ],
+      "aiAgents": [
+        "xAI Grok"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-04-21",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 30,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": []
+    },
+    {
+      "id": "screenshot-nov-2026-22",
+      "appName": "PowerMatrix",
+      "platforms": [
+        "Google Studio"
+      ],
+      "aiAgents": [
+        "xAI Grok"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-04-15",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 31,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:20:07.109Z"
+    },
+    {
+      "id": "screenshot-nov-2026-0",
+      "appName": "GymDayFitTracker - OLD",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [
+        "xAI Grok, RB54"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB"
+      ],
+      "initialRequestDate": "2025-03-21",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 9,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:20:52.182Z"
+    },
+    {
+      "id": "screenshot-nov-2026-1",
+      "appName": "SnapEatSmart",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [
+        "xAI Grok, RAS"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RAS"
+      ],
+      "initialRequestDate": "2025-04-21",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 10,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": ""
+    },
+    {
+      "id": "screenshot-nov-2026-2",
+      "appName": "Pattern Play Runouts",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [
+        "ChatGPT, RB54"
+      ],
+      "googleKeepAccounts": [
+        "RB54"
+      ],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-02-11",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 11,
+      "isFavorite": true,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "modifiedAt": "2026-11-16T00:21:00.439Z"
+    },
+    {
+      "id": "screenshot-nov-2026-3",
+      "appName": "CueTrack",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "15D"
+      ],
+      "initialRequestDate": "2025-02-14",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 12,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": ""
+    },
+    {
+      "id": "screenshot-nov-2026-4",
+      "appName": "15 Diamonds",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [],
+      "googleKeepAccounts": [
+        "RB"
+      ],
+      "aiTools": [
+        "GitHub"
+      ],
+      "cloudServices": [
+        "Netlify"
+      ],
+      "userNames": [
+        "RB"
+      ],
+      "initialRequestDate": "2025-02-10",
+      "currentRequestDate": "2025-02-22",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "11/13/2026, 10:06:00 AM",
+        "isChecked": true
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "diamonds-and-angles.lovable.app",
+      "order": 13,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": [],
+      "modifiedAt": "2026-11-15T23:22:44.282Z"
+    },
+    {
+      "id": "screenshot-nov-2026-5",
+      "appName": "Life Journal",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [
+        "ChatGPT, RB54"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-02-18",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 14,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": ""
+    },
+    {
+      "id": "screenshot-nov-2026-7",
+      "appName": "Prime Detail Pro",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [
+        "xAI Grok, PDS"
+      ],
+      "googleKeepAccounts": [
+        "PDS"
+      ],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "PDS"
+      ],
+      "initialRequestDate": "",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 16,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:21:10.737Z"
+    },
+    {
+      "id": "screenshot-nov-2026-14",
+      "appName": "App Dev Journal",
+      "platforms": [
+        "Lovable"
+      ],
+      "aiAgents": [],
+      "googleKeepAccounts": [
+        "RB54"
+      ],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-02-19",
+      "currentRequestDate": "2026-11-12",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "This app was made from an old Bolt.new account and i used Lovable to transform it into what it is now.",
+        "lastUpdated": "11/13/2026, 5:34:29 PM",
+        "isChecked": true
+      },
+      "currentRequestNotes": {
+        "content": "Here are all the pending items requested since then, starting with Data & Core Fixes:\n\nBake in your 26 backup records: Package your uploaded JSON as the app's permanent default data so deployed users start with all your records, while keeping them 100% editable.\nSanitize \"Lovable\": Correct the spelling to \"Lovable\" in all 6 affected records and remove any trace of \"Lovable\" from dropdowns and filters.\nCalendar popover picker: Replace the hidden date picker with an interactive popover calendar so clicking the calendar icon lets you select dates with the mouse.\nCloud Services accounts: Add the 8 Google Account options (RB, RB54, 15D, PDS, RAS, PAD, RJB, RetroRick, + Custom) beside each Cloud Services checkbox.\nGlobal custom sync: Adding or deleting a custom field in any record automatically updates across all records and filter lists.\n\nThought for 6s\nHere are the remaining items for In-App UI & Exports: 6. Move Save buttons: Place \"Save to PDF\" and \"Save Spreadsheet\" next to the \"Help\" button to save an entire row and pull the header up. 7. Filter reset button: Add a single reset icon button right on the filter row to restore all filters and sorting to default. 8. Remove bottom Sort tab: Remove the obsolete \"Sort\" tab from the bottom navigation bar. 9. Rename to Last Request Date: Rename both \"Latest Update\" (cover) and \"Current Request Date\" (inside) to \"Last Request Date\". 10. Internal modified timestamp: Add a small italic cyan timestamp on the bottom-left icon row (below Google Account), updating only when edited and excluded from PDFs. 11. Export dropdowns & 2-column PDF: Add dropdown options (App Summary vs All Fields, All vs Filtered) to both Save buttons, and format the PDF into a clean 8.5\u00d711 mirrored 2-column layout with dynamic titles.",
+        "lastUpdated": "11/13/2026, 4:20:10 PM",
+        "isChecked": true
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "https://app-dev-journal.lovable.app",
+      "order": 21,
+      "isFavorite": true,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": [],
+      "modifiedAt": "2026-11-16T00:20:30.329Z"
+    },
+    {
+      "id": "screenshot-nov-2026-23",
+      "appName": "PDS",
+      "platforms": [
+        "Tempo"
+      ],
+      "aiAgents": [
+        "xAI Grok, PDS"
+      ],
+      "googleKeepAccounts": [
+        "PDS"
+      ],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "PDS"
+      ],
+      "initialRequestDate": "2025-10-29",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 32,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:22:15.024Z"
+    },
+    {
+      "id": "screenshot-nov-2026-24",
+      "appName": "Astrology Venture",
+      "platforms": [
+        "Tempo"
+      ],
+      "aiAgents": [
+        "xAI Grok, RB"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB"
+      ],
+      "initialRequestDate": "2025-04-25",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 33,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": ""
+    },
+    {
+      "id": "screenshot-nov-2026-25",
+      "appName": "GDFT v2.0",
+      "platforms": [
+        "Trae"
+      ],
+      "aiAgents": [],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "Claude"
+      ],
+      "initialRequestDate": "2025-06-13",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 34,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:22:20.146Z"
+    },
+    {
+      "id": "screenshot-nov-2026-8",
+      "appName": "CustomGymTracker",
+      "platforms": [
+        "v0.dev"
+      ],
+      "aiAgents": [
+        "xAI Grok, RAS"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RAS"
+      ],
+      "initialRequestDate": "2025-03-11",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 17,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:22:48.525Z"
+    },
+    {
+      "id": "screenshot-nov-2026-9",
+      "appName": "Memory Match",
+      "platforms": [
+        "v0.dev"
+      ],
+      "aiAgents": [
+        "ChatGPT, RB"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB"
+      ],
+      "initialRequestDate": "2025-04-07",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 18,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": ""
+    },
+    {
+      "id": "screenshot-nov-2026-10",
+      "appName": "SecurePassHub-OLD",
+      "platforms": [
+        "v0.dev"
+      ],
+      "aiAgents": [
+        "xAI Grok, RB"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB"
+      ],
+      "initialRequestDate": "2025-03-12",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 19,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:16:31.900Z"
+    },
+    {
+      "id": "screenshot-nov-2026-11",
+      "appName": "Custom DB",
+      "platforms": [
+        "v0.dev"
+      ],
+      "aiAgents": [
+        "xAI Grok, 15D"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "15D"
+      ],
+      "initialRequestDate": "2025-02-23",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 20,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "screenshots": [],
+      "isHidden": true,
+      "modifiedAt": "2026-11-16T00:22:45.314Z"
+    },
+    {
+      "id": "screenshot-nov-2026-12",
+      "appName": "Pool Table Builder",
+      "platforms": [
+        "v0.dev"
+      ],
+      "aiAgents": [
+        "xAI Grok, RB54"
+      ],
+      "googleKeepAccounts": [],
+      "aiTools": [],
+      "cloudServices": [],
+      "userNames": [
+        "RB54"
+      ],
+      "initialRequestDate": "2025-02-24",
+      "currentRequestDate": "",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "",
+      "publishedUrl": "",
+      "order": 21,
+      "isFavorite": false,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": ""
+    },
+    {
+      "id": "screenshot-nov-2026-6",
+      "appName": "Pocket Stats Pro",
+      "platforms": [
+        "Trae",
+        "Lovable"
+      ],
+      "aiAgents": [
+        "Claude, RAS",
+        "ChatGPT, RB54"
+      ],
+      "googleKeepAccounts": [
+        "RAS"
+      ],
+      "aiTools": [],
+      "cloudServices": [
+        "Netlify"
+      ],
+      "userNames": [
+        "RAS"
+      ],
+      "initialRequestDate": "2025-09-23",
+      "currentRequestDate": "2026-11-12",
+      "lastGoodRestorePoint": "",
+      "currentRestorePoint": "",
+      "initialRequestNotes": {
+        "content": "Trae has a Merge with Lovable\nAlso Lovable URL is https://pocket-stats-pro.lovable.app/ \n\nOld version of Pocket Stats Pro was started on 9/23/25 with Lovable under RAS Google Account with ChatGPT RB54. \nNetlify's old host URL was fanciful-parfait-a4a845.netlify.app ",
+        "lastUpdated": "11/13/2026, 5:26:28 PM",
+        "isChecked": false
+      },
+      "currentRequestNotes": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatWasDone": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "whatNeedsFixed": {
+        "content": "",
+        "lastUpdated": "",
+        "isChecked": false
+      },
+      "previewUrl": "https://github.com/RickB54/pocket-stats-pro/pull/new/trae-update",
+      "publishedUrl": "pocket-stats-pro.netlify.app",
+      "order": 13,
+      "isFavorite": true,
+      "isDeployed": false,
+      "deployedDate": "",
+      "deployedFrom": "",
+      "publishedFrom": "",
+      "customPlatform": "",
+      "customAiAgent": "",
+      "customAiTools": "",
+      "customCloudService": "",
+      "customUserName": "",
+      "screenshots": [],
+      "localHost": "",
+      "modifiedAt": "2026-11-16T00:12:10.726Z"
+    }
+  ],
+  "ideas": [],
+  "todos": [
+    {
+      "id": "1794609269030",
+      "content": "This app was made from an old Bolt.new account and i used Lovable to transform it into what it is now.",
+      "projectId": "screenshot-nov-2026-14",
+      "projectName": "App Dev Journal",
+      "noteType": "General Notes",
+      "dateCreated": "2026-11-13T22:34:29.030Z",
+      "completed": false,
+      "priority": "medium",
+      "category": "work",
+      "tags": [],
+      "linkedNotes": [
+        {
+          "content": "This app was made from an old Bolt.new account and i used Lovable to transform it into what it is now.",
+          "lastUpdated": "11/13/2026, 5:34:26 PM",
+          "isChecked": false
+        }
+      ]
+    },
+    {
+      "id": "1794608486232",
+      "content": "Also Lovable URL is https://pocket-stats-pro.lovable.app/ \n\nOld version of Pocket Stats Pro was started on 9/23/25 with Lovable under RAS Google Account with ChatGPT RB54. \nNetlify's old host URL was fanciful-parfait-a4a845.netlify.app ",
+      "projectId": "screenshot-nov-2026-6",
+      "projectName": "Pocket Stats Pro",
+      "noteType": "General Notes",
+      "dateCreated": "2026-11-13T22:21:26.232Z",
+      "completed": false,
+      "priority": "medium",
+      "category": "work",
+      "tags": [],
+      "linkedNotes": [
+        {
+          "content": "Also Lovable URL is https://pocket-stats-pro.lovable.app/ \n\nOld version of Pocket Stats Pro was started on 9/23/25 with Lovable under RAS Google Account with ChatGPT RB54. \nNetlify's old host URL was fanciful-parfait-a4a845.netlify.app ",
+          "lastUpdated": "11/13/2026, 5:21:24 PM",
+          "isChecked": false
+        }
+      ]
+    },
+    {
+      "id": "1794604768853",
+      "content": "Here are all the pending items requested since then, starting with Data & Core Fixes:\n\nBake in your 26 backup records: Package your uploaded JSON as the app's permanent default data so deployed users start with all your records, while keeping them 100% editable.\nSanitize \"Lovable\": Correct the spelling to \"Lovable\" in all 6 affected records and remove any trace of \"Lovable\" from dropdowns and filters.\nCalendar popover picker: Replace the hidden date picker with an interactive popover calendar so clicking the calendar icon lets you select dates with the mouse.\nCloud Services accounts: Add the 8 Google Account options (RB, RB54, 15D, PDS, RAS, PAD, RJB, RetroRick, + Custom) beside each Cloud Services checkbox.\nGlobal custom sync: Adding or deleting a custom field in any record automatically updates across all records and filter lists.\n\nThought for 6s\nHere are the remaining items for In-App UI & Exports: 6. Move Save buttons: Place \"Save to PDF\" and \"Save Spreadsheet\" next to the \"Help\" button to save an entire row and pull the header up. 7. Filter reset button: Add a single reset icon button right on the filter row to restore all filters and sorting to default. 8. Remove bottom Sort tab: Remove the obsolete \"Sort\" tab from the bottom navigation bar. 9. Rename to Last Request Date: Rename both \"Latest Update\" (cover) and \"Current Request Date\" (inside) to \"Last Request Date\". 10. Internal modified timestamp: Add a small italic cyan timestamp on the bottom-left icon row (below Google Account), updating only when edited and excluded from PDFs. 11. Export dropdowns & 2-column PDF: Add dropdown options (App Summary vs All Fields, All vs Filtered) to both Save buttons, and format the PDF into a clean 8.5\u00d711 mirrored 2-column layout with dynamic titles.",
+      "projectId": "screenshot-nov-2026-14",
+      "projectName": "App Dev Journal",
+      "noteType": "Current Request Notes",
+      "dateCreated": "2026-11-13T21:19:28.853Z",
+      "completed": false,
+      "priority": "medium",
+      "category": "work",
+      "tags": [],
+      "linkedNotes": [
+        {
+          "content": "Here are all the pending items requested since then, starting with Data & Core Fixes:\n\nBake in your 26 backup records: Package your uploaded JSON as the app's permanent default data so deployed users start with all your records, while keeping them 100% editable.\nSanitize \"Lovable\": Correct the spelling to \"Lovable\" in all 6 affected records and remove any trace of \"Lovable\" from dropdowns and filters.\nCalendar popover picker: Replace the hidden date picker with an interactive popover calendar so clicking the calendar icon lets you select dates with the mouse.\nCloud Services accounts: Add the 8 Google Account options (RB, RB54, 15D, PDS, RAS, PAD, RJB, RetroRick, + Custom) beside each Cloud Services checkbox.\nGlobal custom sync: Adding or deleting a custom field in any record automatically updates across all records and filter lists.\n\nThought for 6s\nHere are the remaining items for In-App UI & Exports: 6. Move Save buttons: Place \"Save to PDF\" and \"Save Spreadsheet\" next to the \"Help\" button to save an entire row and pull the header up. 7. Filter reset button: Add a single reset icon button right on the filter row to restore all filters and sorting to default. 8. Remove bottom Sort tab: Remove the obsolete \"Sort\" tab from the bottom navigation bar. 9. Rename to Last Request Date: Rename both \"Latest Update\" (cover) and \"Current Request Date\" (inside) to \"Last Request Date\". 10. Internal modified timestamp: Add a small italic cyan timestamp on the bottom-left icon row (below Google Account), updating only when edited and excluded from PDFs. 11. Export dropdowns & 2-column PDF: Add dropdown options (App Summary vs All Fields, All vs Filtered) to both Save buttons, and format the PDF into a clean 8.5\u00d711 mirrored 2-column layout with dynamic titles.",
+          "lastUpdated": "11/13/2026, 4:15:29 PM",
+          "isChecked": false
+        }
+      ]
+    },
+    {
+      "id": "1794579846846",
+      "content": "I use all 8 Google Accounts to gain as many tokens as possible.",
+      "projectId": "1794579708942",
+      "projectName": "SecurePassHub",
+      "noteType": "General Notes",
+      "dateCreated": "2026-11-13T14:24:06.846Z",
+      "completed": false,
+      "priority": "medium",
+      "category": "work",
+      "tags": [],
+      "linkedNotes": [
+        {
+          "content": "I use all 8 Google Accounts to gain as many tokens as possible.",
+          "lastUpdated": "11/13/2026, 9:23:59 AM",
+          "isChecked": false
+        }
+      ]
+    },
+    {
+      "id": "1794525468510",
+      "content": "Old version of Pocket Stats Pro was started on 9/23/25 with Lovable under RAS Google Account with ChatGPT RB54. \nNetlify's old host URL was fanciful-parfait-a4a845.netlify.app ",
+      "projectId": "screenshot-nov-2026-6",
+      "projectName": "Pocket Stats Pro",
+      "noteType": "General Notes",
+      "dateCreated": "2026-11-12T23:17:48.510Z",
+      "completed": false,
+      "priority": "medium",
+      "category": "work",
+      "tags": [],
+      "linkedNotes": [
+        {
+          "content": "Old version of Pocket Stats Pro was started on 9/23/25 with Lovable under RAS Google Account with ChatGPT RB54. \nNetlify's old host URL was fanciful-parfait-a4a845.netlify.app ",
+          "lastUpdated": "11/12/2026, 6:17:47 PM",
+          "isChecked": false
+        }
+      ]
+    }
+  ],
+  "customFields": [],
+  "journal-shared-options": {
+    "added": {},
+    "deleted": {}
+  },
+  "journal-settings": {
+    "theme": "oled",
+    "density": "comfortable",
+    "defaultSort": "platform",
+    "defaultTab": "projects",
+    "rememberLastRecord": false,
+    "pdfOrientation": "portrait",
+    "exportScope": "summary",
+    "autoSave": true,
+    "autoSaveDelay": 500,
+    "confirmDelete": true
+  }
+}

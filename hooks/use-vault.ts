@@ -180,13 +180,22 @@ export function useVault() {
         return newFolder
     }
 
+    const ALLOWED_VAULT_TYPES = ['password', 'note', 'financial-card', 'contact', 'address']
+
     const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }, options?: { skipRefresh?: boolean }) => {
         if (!user) return
         try {
+            const isAllowedType = ALLOWED_VAULT_TYPES.includes(item.type || '')
+            const sanitizedType = isAllowedType ? (item.type || 'password') : 'note'
+            const itemMetadata = {
+                ...(item.item_metadata || {}),
+                ...(!isAllowedType && item.type ? { custom_type: item.type } : {})
+            }
+
             // Prepare payload (remove UI specific fields if any)
             const payload = {
                 user_id: user.id,
-                type: item.type || 'password',
+                type: sanitizedType,
                 title: item.title || item.website || 'Untitled',
                 username: item.username || null,
                 password: item.password || null,
@@ -196,7 +205,7 @@ export function useVault() {
                 is_favorite: item.is_favorite || false,
                 is_archived: item.is_archived || false,
                 notes: item.notes || null,
-                item_metadata: item.item_metadata || {} // Add metadata support
+                item_metadata: itemMetadata
             }
 
             console.log("=== VAULT ADD PAYLOAD ===")
@@ -254,20 +263,26 @@ export function useVault() {
     const bulkAddItems = async (newItems: (Partial<VaultItem> & { item_metadata?: any })[]) => {
         if (!user || newItems.length === 0) return
         try {
-            const payload = newItems.map(item => ({
-                user_id: user.id,
-                type: item.type || 'password',
-                title: item.title || item.website || 'Untitled',
-                username: item.username,
-                password: item.password,
-                website: item.website,
-                category: item.category,
-                folder_id: item.folder_id,
-                is_favorite: item.is_favorite || false,
-                is_archived: item.is_archived || false,
-                notes: item.notes,
-                item_metadata: item.item_metadata || {}
-            }))
+            const payload = newItems.map(item => {
+                const isAllowed = ALLOWED_VAULT_TYPES.includes(item.type || '')
+                return {
+                    user_id: user.id,
+                    type: isAllowed ? (item.type || 'password') : 'note',
+                    title: item.title || item.website || 'Untitled',
+                    username: item.username,
+                    password: item.password,
+                    website: item.website,
+                    category: item.category,
+                    folder_id: item.folder_id,
+                    is_favorite: item.is_favorite || false,
+                    is_archived: item.is_archived || false,
+                    notes: item.notes,
+                    item_metadata: {
+                        ...(item.item_metadata || {}),
+                        ...(!isAllowed && item.type ? { custom_type: item.type } : {})
+                    }
+                }
+            })
 
             const { data, error } = await supabase
                 .from("vault_items")
@@ -320,6 +335,13 @@ export function useVault() {
             if (Object.keys(metadataUpdates).length > 0) {
                 const baseMetadata = dbPayload.item_metadata || currentMetadata;
                 dbPayload.item_metadata = { ...baseMetadata, ...metadataUpdates };
+            }
+
+            // Ensure type satisfies database check constraint
+            if (dbPayload.type && !ALLOWED_VAULT_TYPES.includes(dbPayload.type)) {
+                const baseMeta = dbPayload.item_metadata || currentMetadata;
+                dbPayload.item_metadata = { ...baseMeta, custom_type: dbPayload.type };
+                dbPayload.type = 'note';
             }
 
             const { error } = await supabase
