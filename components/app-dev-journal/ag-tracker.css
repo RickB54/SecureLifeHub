@@ -593,6 +593,11 @@
   overflow: hidden;
 }
 
+.journal-root .ag-help-dialog {
+  width: min(96vw, 760px) !important;
+  max-width: 760px !important;
+}
+
 .journal-root .ag-tracker-modal-dialog-header {
   display: flex;
   align-items: center;

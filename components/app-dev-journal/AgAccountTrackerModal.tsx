@@ -21,8 +21,10 @@ import {
   ChevronDown,
   ChevronUp,
   Palette,
+  HelpCircle,
 } from "lucide-react"
 import AgAccountTrackerReports from "./AgAccountTrackerReports"
+import AgAccountTrackerHelpModal from "./AgAccountTrackerHelpModal"
 import TrackerErrorBoundary from "./TrackerErrorBoundary"
 
 // Default row labels from the printable PDF
@@ -312,6 +314,7 @@ function AgAccountTrackerModalInner({
   const [reportsOpen, setReportsOpen] = useState(false)
   const [quickLogOpen, setQuickLogOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>(loadExpandedRows)
 
@@ -415,6 +418,10 @@ function AgAccountTrackerModalInner({
       if (e.key === "Escape") {
         if (toast !== null) {
           setToast(null)
+          return
+        }
+        if (helpOpen) {
+          setHelpOpen(false)
           return
         }
         if (quickLogOpen) {
@@ -1490,11 +1497,23 @@ function AgAccountTrackerModalInner({
                 <span>Import JSON</span>
               </button>
 
+              {/* HELP & GUIDE BUTTON */}
+              <button
+                type="button"
+                className="ag-tracker-btn font-semibold text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20"
+                onClick={() => setHelpOpen(true)}
+                title="Help Guide: Step-by-step instructions and complete explanation of the AG Tracker process"
+                aria-label="Help & Guide"
+              >
+                <HelpCircle className="h-4 w-4 text-emerald-400" />
+                <span>Help</span>
+              </button>
+
               <button
                 type="button"
                 className="ag-tracker-btn ag-tracker-btn-icon"
                 onClick={handleImmediateClose}
-                title="Close tracker (Esc)"
+                title="Close tracker (Esc) - all changes auto-saved"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -1616,20 +1635,43 @@ function AgAccountTrackerModalInner({
                     <span>Collapse All</span>
                   </button>
                 </div>
-                <span className="text-xs text-gray-400 hidden sm:inline">
-                  Click any row to expand / edit details
-                </span>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs text-gray-400 hidden sm:inline">
+                    Click any row to expand / edit details
+                  </span>
+                  <button
+                    type="button"
+                    className="ag-tracker-btn text-xs py-1 px-2.5 text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20"
+                    onClick={() => setHelpOpen(true)}
+                    title="Open Step-by-Step Process Guide & Help"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                    <span>Process Guide &amp; Help</span>
+                  </button>
+                </div>
               </div>
 
               <table className="ag-tracker-table">
                 <thead>
                   <tr>
-                    <th className="ag-tracker-th" style={{ width: "110px" }}>Row</th>
-                    <th className="ag-tracker-th" style={{ width: "165px" }}>Google Account</th>
-                    <th className="ag-tracker-th" style={{ width: "190px" }}>Used On / Status</th>
-                    <th className="ag-tracker-th" style={{ width: "175px" }}>Next Available</th>
-                    <th className="ag-tracker-th" style={{ width: "350px" }}>Notes</th>
-                    <th className="ag-tracker-th" style={{ width: "45px", textAlign: "center" }}>Act</th>
+                    <th className="ag-tracker-th" style={{ width: "110px" }} title="Row identifier and account cycle label matching the printable PDF tracking sheet">
+                      Row
+                    </th>
+                    <th className="ag-tracker-th" style={{ width: "165px" }} title="Google account used for Antigravity (or select 'Manage Options...' to customize)">
+                      Google Account
+                    </th>
+                    <th className="ag-tracker-th" style={{ width: "190px" }} title="Timestamp when development started with this account, and its current status (In use, Low, Out)">
+                      Used On / Status
+                    </th>
+                    <th className="ag-tracker-th" style={{ width: "175px" }} title="Projected date and time when token quota resets (calculated automatically or via quick choices)">
+                      Next Available
+                    </th>
+                    <th className="ag-tracker-th" style={{ width: "350px" }} title="Notes for this entry. Click the expand icon to edit in full screen.">
+                      Notes
+                    </th>
+                    <th className="ag-tracker-th" style={{ width: "45px", textAlign: "center" }} title="Actions: Add line or delete line">
+                      Act
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2721,6 +2763,13 @@ function AgAccountTrackerModalInner({
             customCallback: onSave,
           })
         }}
+        theme={theme}
+      />
+
+      {/* PROCESS GUIDE & HELP POPUP DIALOG */}
+      <AgAccountTrackerHelpModal
+        isOpen={helpOpen}
+        onClose={() => setHelpOpen(false)}
         theme={theme}
       />
     </>

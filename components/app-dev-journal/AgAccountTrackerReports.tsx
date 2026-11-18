@@ -22,6 +22,7 @@ import {
   DEFAULT_ROW_LABELS,
   formatDisplayDateTime,
 } from "./AgAccountTrackerModal"
+import AgAccountTrackerHelpModal from "./AgAccountTrackerHelpModal"
 import TrackerErrorBoundary from "./TrackerErrorBoundary"
 
 const PREFS_STORAGE_KEY = "slh-ag-report-prefs"
@@ -156,6 +157,7 @@ function AgAccountTrackerReportsInner({
   const [nowMs, setNowMs] = useState(Date.now())
   const [displayOrder, setDisplayOrder] = useState<string[]>([])
   const [expandedReportRows, setExpandedReportRows] = useState<Record<string, boolean>>({})
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Refresh countdowns every minute
   useEffect(() => {
@@ -562,6 +564,16 @@ function AgAccountTrackerReportsInner({
             >
               <Printer className="h-4 w-4" />
               <span>Print</span>
+            </button>
+            <button
+              type="button"
+              className="ag-tracker-btn text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20"
+              onClick={() => setHelpOpen(true)}
+              title="Help Guide: Step-by-step process and documentation"
+              aria-label="Help"
+            >
+              <HelpCircle className="h-4 w-4 text-emerald-400" />
+              <span>Help</span>
             </button>
             <button
               type="button"
@@ -1531,6 +1543,13 @@ function AgAccountTrackerReportsInner({
           )}
         </main>
       </div>
+
+      {/* HELP GUIDE POPUP MODAL */}
+      <AgAccountTrackerHelpModal
+        isOpen={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        theme={theme}
+      />
     </div>
   )
 }
