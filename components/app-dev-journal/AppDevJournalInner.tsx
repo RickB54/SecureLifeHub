@@ -39,6 +39,13 @@ export default function AppDevJournalInner() {
       const raw = localStorage.getItem("journal-settings")
       if (raw) {
         const parsed = JSON.parse(raw)
+        // Auto-recover if user was switched into light mode by the removed in-tracker picker
+        if (!localStorage.getItem("slh_theme_restored_dark_v1") && parsed.theme === "light") {
+          parsed.theme = "dark"
+          localStorage.setItem("journal-settings", JSON.stringify(parsed))
+          localStorage.setItem("slh_theme_restored_dark_v1", "true")
+          return "dark"
+        }
         if (parsed.theme) return parsed.theme
       }
     } catch {}
@@ -223,7 +230,6 @@ export default function AppDevJournalInner() {
           isOpen={isTrackerOpen}
           onClose={handleCloseTracker}
           theme={theme}
-          onThemeChange={handleThemeChange}
         />
       </div>
     </GoogleOAuthProvider>

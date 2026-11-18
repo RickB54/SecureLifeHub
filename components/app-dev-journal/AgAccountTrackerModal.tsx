@@ -20,7 +20,6 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  Palette,
   HelpCircle,
 } from "lucide-react"
 import AgAccountTrackerReports from "./AgAccountTrackerReports"
@@ -239,7 +238,6 @@ interface AgAccountTrackerModalProps {
   isOpen: boolean
   onClose: () => void
   theme?: string
-  onThemeChange?: (theme: string) => void
 }
 
 interface FullScreenNotesState {
@@ -275,7 +273,6 @@ function AgAccountTrackerModalInner({
   isOpen,
   onClose,
   theme: propTheme,
-  onThemeChange,
 }: AgAccountTrackerModalProps) {
   const [theme, setTheme] = useState<string>(() => {
     if (propTheme) return propTheme
@@ -285,29 +282,10 @@ function AgAccountTrackerModalInner({
     } catch {}
     return "dark"
   })
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false)
 
   useEffect(() => {
     if (propTheme) setTheme(propTheme)
   }, [propTheme])
-
-  const handleSelectTheme = (newTheme: string) => {
-    setTheme(newTheme)
-    if (onThemeChange) {
-      onThemeChange(newTheme)
-    } else {
-      try {
-        const raw = localStorage.getItem("journal-settings")
-        const current = raw ? JSON.parse(raw) : {}
-        current.theme = newTheme
-        localStorage.setItem("journal-settings", JSON.stringify(current))
-      } catch {}
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("slh_journal_theme_changed", { detail: { theme: newTheme } }))
-        window.dispatchEvent(new CustomEvent("slh_remount_journal"))
-      }
-    }
-  }
   const [data, setData] = useState<AgTrackerStorageData>(getInitialData)
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved")
   const [manageOptionsOpen, setManageOptionsOpen] = useState(false)
@@ -1370,49 +1348,6 @@ function AgAccountTrackerModalInner({
             </div>
 
             <div className="ag-tracker-header-actions">
-              {/* THEME SELECTOR BUTTON */}
-              <div className="relative inline-block">
-                <button
-                  type="button"
-                  className="ag-tracker-btn font-semibold"
-                  onClick={() => setThemeMenuOpen((prev) => !prev)}
-                  title={`Current Theme: ${theme.toUpperCase()} (Click to change)`}
-                  aria-label="Display Theme"
-                >
-                  <Palette className="h-4 w-4 text-pink-400" />
-                  <span className="capitalize">{theme === "oled" ? "OLED" : theme}</span>
-                  <ChevronDown className="h-3 w-3 opacity-60 ml-0.5" />
-                </button>
-                {themeMenuOpen && (
-                  <div
-                    className="ag-theme-menu-dropdown absolute right-0 mt-1 z-50 py-1 rounded-md shadow-xl"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {[
-                      { id: "dark", label: "Dark" },
-                      { id: "light", label: "Light" },
-                      { id: "oled", label: "OLED" },
-                      { id: "cyberpunk", label: "Cyberpunk" },
-                    ].map((opt) => (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        className={`ag-theme-menu-item flex items-center justify-between w-full px-3 py-1.5 text-xs text-left ${
-                          theme === opt.id ? "active font-bold text-sky-400" : ""
-                        }`}
-                        onClick={() => {
-                          handleSelectTheme(opt.id)
-                          setThemeMenuOpen(false)
-                        }}
-                      >
-                        <span>{opt.label}</span>
-                        {theme === opt.id && <Check className="h-3 w-3 text-sky-400 ml-2" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
               {/* QUICK LOG BUTTON */}
               <button
                 type="button"
