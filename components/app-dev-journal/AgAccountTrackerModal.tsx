@@ -1443,7 +1443,7 @@ function AgAccountTrackerModalInner({
               {/* NEW CYCLE BUTTON */}
               <button
                 type="button"
-                className="ag-tracker-btn"
+                className="ag-tracker-btn ag-btn-utility"
                 onClick={handleStartNewCycle}
                 title="Archive current cycle and clear entries while preserving account statuses"
                 aria-label="New Cycle"
@@ -1455,7 +1455,7 @@ function AgAccountTrackerModalInner({
               {/* HISTORY BUTTON */}
               <button
                 type="button"
-                className="ag-tracker-btn"
+                className="ag-tracker-btn ag-btn-utility"
                 onClick={() => setHistoryOpen(true)}
                 title="View and restore past cycles"
                 aria-label="History"
@@ -1466,7 +1466,7 @@ function AgAccountTrackerModalInner({
 
               <button
                 type="button"
-                className="ag-tracker-btn"
+                className="ag-tracker-btn ag-btn-utility"
                 onClick={handlePrint}
                 title="Print clean table formatted for US Letter"
                 aria-label="Print"
@@ -1477,24 +1477,24 @@ function AgAccountTrackerModalInner({
 
               <button
                 type="button"
-                className="ag-tracker-btn"
+                className="ag-tracker-btn ag-btn-utility"
                 onClick={handleExportJson}
                 title="Export all trackers as JSON backup"
                 aria-label="Export JSON"
               >
                 <Download className="h-4 w-4" />
-                <span>Export JSON</span>
+                <span>Export</span>
               </button>
 
               <button
                 type="button"
-                className="ag-tracker-btn"
+                className="ag-tracker-btn ag-btn-utility"
                 onClick={() => fileInputRef.current?.click()}
                 title="Import tracker backup from JSON file"
                 aria-label="Import JSON"
               >
                 <Upload className="h-4 w-4" />
-                <span>Import JSON</span>
+                <span>Import</span>
               </button>
 
               {/* HELP & GUIDE BUTTON */}
