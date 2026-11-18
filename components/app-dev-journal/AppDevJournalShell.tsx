@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic"
 import { ArrowLeft } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import SyncStatusIndicator from "./sync/SyncStatusIndicator"
 
 // Dynamic import with ssr:false — the journal uses localStorage, window, Web Speech API
 const AppDevJournalInner = dynamic(
@@ -21,6 +22,38 @@ interface AppDevJournalShellProps {
 
 export default function AppDevJournalShell({ setActivePage, theme }: AppDevJournalShellProps) {
   const [showExitDialog, setShowExitDialog] = useState(false)
+  const [isTrackerOpen, setIsTrackerOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const handleTrackerChange = (e: any) => {
+      if (typeof e.detail?.isOpen === "boolean") {
+        setIsTrackerOpen(e.detail.isOpen)
+      }
+    }
+    const handleTrackerOpen = () => setIsTrackerOpen(true)
+    const handleTrackerClose = () => setIsTrackerOpen(false)
+
+    window.addEventListener("slh_tracker_state_changed", handleTrackerChange)
+    window.addEventListener("slh_open_ag_tracker", handleTrackerOpen)
+    window.addEventListener("slh_close_ag_tracker", handleTrackerClose)
+
+    return () => {
+      window.removeEventListener("slh_tracker_state_changed", handleTrackerChange)
+      window.removeEventListener("slh_open_ag_tracker", handleTrackerOpen)
+      window.removeEventListener("slh_close_ag_tracker", handleTrackerClose)
+    }
+  }, [])
+
+  const handleExitClick = () => {
+    if (isTrackerOpen) {
+      window.dispatchEvent(new CustomEvent("slh_close_ag_tracker"))
+      setIsTrackerOpen(false)
+    } else {
+      setShowExitDialog(true)
+    }
+  }
 
   return (
     <>
@@ -32,18 +65,28 @@ export default function AppDevJournalShell({ setActivePage, theme }: AppDevJourn
         <header className="sticky top-0 flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#121212] z-40 shrink-0 select-none">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowExitDialog(true)}
+              onClick={handleExitClick}
               className="flex items-center gap-1.5 text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-colors"
-              title="Exit App Dev Journal and return to Secure Life Hub"
+              title={
+                isTrackerOpen
+                  ? "Exit AG Account Tracker and return to Journal"
+                  : "Exit App Dev Journal and return to Secure Life Hub"
+              }
             >
               <ArrowLeft className="h-4 w-4" />
-              <span className="tracking-wide uppercase">EXIT Journal</span>
+              <span className="tracking-wide uppercase">
+                {isTrackerOpen ? "EXIT TRACKER" : "EXIT Journal"}
+              </span>
             </button>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-black tracking-widest text-violet-400 uppercase">App Dev Journal</span>
+            <span className="text-xs font-black tracking-widest text-violet-400 uppercase">
+              {isTrackerOpen ? "AG ACCOUNT TRACKER" : "App Dev Journal"}
+            </span>
           </div>
-          <div className="w-24" /> {/* Spacer for centering */}
+          <div className="flex items-center justify-end min-w-[90px]">
+            <SyncStatusIndicator />
+          </div>
         </header>
 
         {/* Journal app — ssr:false dynamic import */}

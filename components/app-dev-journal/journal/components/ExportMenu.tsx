@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, FileDown, FileSpreadsheet, FileText } from 'lucide-react';
+import { Download, FileDown, FileSpreadsheet, FileText, ClipboardList } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -51,6 +51,19 @@ export default function ExportMenu({ kind, projects, filtered, sort, direction, 
           <FileText className="h-4 w-4" />
           <span>AG Account Tracker</span>
         </a>
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onSelect={() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('slh_open_ag_tracker'));
+          }
+        }}
+        title="AG Account Tracker (Editable)"
+        aria-label="AG Account Tracker (Editable)"
+        className="flex items-center gap-2 cursor-pointer w-full"
+      >
+        <ClipboardList className="h-4 w-4" />
+        <span>AG Account Tracker (Editable)</span>
       </DropdownMenuItem>
       <p className="px-2 py-1 text-xs text-muted-foreground break-words" aria-label="Export title">{options.title}</p>
       {error && <p role="alert" className="p-2 text-sm text-destructive">{error}</p>}

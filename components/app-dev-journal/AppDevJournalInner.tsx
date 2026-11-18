@@ -15,21 +15,53 @@
  * The original journal source in ./journal/ is UNTOUCHED.
  */
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { GoogleOAuthProvider } from "@react-oauth/google"
 import App from "./journal/App"
+import AgAccountTrackerModal from "./AgAccountTrackerModal"
+import { journalSync } from "./sync/journalSync"
 
 // Import scoped journal CSS (compiled Tailwind v4, scoped under .journal-root)
 import "./journal-scoped.css"
+import "./ag-tracker.css"
 
 // Google OAuth client ID — left exactly as-is per integration requirements
 const GOOGLE_CLIENT_ID = "15diamondbilliards.apps.googleusercontent.com"
 
 export default function AppDevJournalInner() {
   const rootRef = useRef<HTMLDivElement>(null)
+  const [isTrackerOpen, setIsTrackerOpen] = useState(false)
+  const [mountKey, setMountKey] = useState(0)
+
+  // Notify parent/shell when tracker opens or closes
+  const handleOpenTracker = useCallback(() => {
+    setIsTrackerOpen(true)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("slh_tracker_state_changed", { detail: { isOpen: true } }))
+    }
+  }, [])
+
+  const handleCloseTracker = useCallback(() => {
+    setIsTrackerOpen(false)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("slh_tracker_state_changed", { detail: { isOpen: false } }))
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
+
+    window.addEventListener("slh_open_ag_tracker", handleOpenTracker)
+    window.addEventListener("slh_close_ag_tracker", handleCloseTracker)
+
+    const handleRemount = () => {
+      setMountKey((prev) => prev + 1)
+    }
+    window.addEventListener("slh_remount_journal", handleRemount)
+
+    // Mount Supabase sync interception & trigger initial reconcile on open
+    journalSync.mount()
+    void journalSync.reconcileOnOpen()
 
     // PATCH 1: Redirect window.scrollTo to #main-scroll-container
     // The journal calls window.scrollTo({ top: 0, behavior: 'smooth' }) for back-to-top.
@@ -91,6 +123,10 @@ export default function AppDevJournalInner() {
     }
 
     return () => {
+      window.removeEventListener("slh_open_ag_tracker", handleOpenTracker)
+      window.removeEventListener("slh_close_ag_tracker", handleCloseTracker)
+      window.removeEventListener("slh_remount_journal", handleRemount)
+      journalSync.unmount()
       // Restore original window.scrollTo on unmount
       window.scrollTo = originalScrollTo as typeof window.scrollTo
       // Restore classList methods
@@ -117,7 +153,11 @@ export default function AppDevJournalInner() {
         className="journal-root"
         style={{ isolation: "isolate" }}
       >
-        <App />
+        <App key={mountKey} />
+        <AgAccountTrackerModal
+          isOpen={isTrackerOpen}
+          onClose={handleCloseTracker}
+        />
       </div>
     </GoogleOAuthProvider>
   )
