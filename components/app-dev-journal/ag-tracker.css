@@ -1785,3 +1785,78 @@
   padding: 0.25rem 0.45rem !important;
   vertical-align: middle !important;
 }
+
+/* Hide print header on screen */
+.journal-root .ag-report-print-header {
+  display: none !important;
+}
+
+@media print {
+  .journal-root .ag-report-print-header {
+    display: flex !important;
+  }
+}
+
+/* Accordion report rows */
+.journal-root .ag-report-tr-collapsed {
+  height: 38px !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.journal-root .ag-report-tr-collapsed:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.journal-root.journal-theme-light .ag-report-tr-collapsed:hover,
+.journal-root .journal-theme-light .ag-report-tr-collapsed:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Contrast fix for Light and other themes */
+.journal-root .ag-report-account-name,
+.journal-root .ag-tracker-row-title {
+  color: var(--foreground, #f3f4f6);
+  font-weight: 700;
+}
+
+.journal-root .ag-tracker-row-account {
+  color: var(--foreground, #e5e7eb);
+}
+
+.journal-root.journal-theme-light .ag-report-account-name,
+.journal-root .journal-theme-light .ag-report-account-name,
+.journal-root.journal-theme-light .ag-tracker-row-title,
+.journal-root .journal-theme-light .ag-tracker-row-title,
+.journal-root.journal-theme-light .ag-tracker-row-account,
+.journal-root .journal-theme-light .ag-tracker-row-account {
+  color: #0f172a !important;
+}
+
+.journal-root.journal-theme-light .text-white,
+.journal-root .journal-theme-light .text-white {
+  color: #0f172a !important;
+}
+
+.journal-root.journal-theme-light .text-gray-200,
+.journal-root.journal-theme-light .text-gray-300,
+.journal-root .journal-theme-light .text-gray-200,
+.journal-root .journal-theme-light .text-gray-300 {
+  color: #334155 !important;
+}
+
+.journal-root.journal-theme-light .ag-tracker-dialog,
+.journal-root.journal-theme-light .ag-report-dialog,
+.journal-root .journal-theme-light .ag-tracker-dialog,
+.journal-root .journal-theme-light .ag-report-dialog {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.journal-root.journal-theme-light .ag-tracker-table td,
+.journal-root.journal-theme-light .ag-report-table td,
+.journal-root .journal-theme-light .ag-tracker-table td,
+.journal-root .journal-theme-light .ag-report-table td {
+  color: #0f172a !important;
+}

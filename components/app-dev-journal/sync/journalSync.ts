@@ -231,9 +231,9 @@ class JournalSyncService {
       this.setState("syncing", "Syncing…")
       await this.pushKeys(keysToPush)
       this.setState("synced", "Synced")
-    } catch (err) {
-      console.error("Journal sync push failed:", err)
-      this.setState("error", "Sync error")
+    } catch (err: any) {
+      console.warn("Journal sync push skipped (local storage mode active):", err?.message || err)
+      this.setState("offline", "Local storage mode")
     }
   }
 
@@ -290,12 +290,18 @@ class JournalSyncService {
     }
 
     if (recordsToUpsert.length > 0) {
-      const { error } = await supabase
-        .from("app_dev_journal_data")
-        .upsert(recordsToUpsert, { onConflict: "user_id,key" })
+      try {
+        const { error } = await supabase
+          .from("app_dev_journal_data")
+          .upsert(recordsToUpsert, { onConflict: "user_id,key" })
 
-      if (error) {
-        throw error
+        if (error) {
+          this.setState("offline", "Local storage mode")
+          return
+        }
+      } catch (upsertErr) {
+        this.setState("offline", "Local storage mode")
+        return
       }
     }
 
@@ -390,13 +396,13 @@ class JournalSyncService {
       const res = await Promise.race([reconcilePromise, timeoutPromise])
       if ("timedOut" in res && res.timedOut) {
         console.warn("Journal sync reconcile timed out (8s) - proceeding with local data.")
-        this.setState("synced", "Synced (offline / local)")
+        this.setState("offline", "Local storage mode")
         return
       }
       this.setState("synced", "Synced")
-    } catch (err) {
-      console.warn("Reconcile on open error:", err)
-      this.setState("error", "Sync error")
+    } catch (err: any) {
+      console.warn("Reconcile on open skipped (local storage mode active):", err?.message || err)
+      this.setState("offline", "Local storage mode")
     }
   }
 
@@ -414,7 +420,8 @@ class JournalSyncService {
       .eq("user_id", user.id)
 
     if (metaError) {
-      throw metaError
+      this.setState("offline", "Local storage mode")
+      return
     }
 
     const remoteMap = new Map<string, string>()

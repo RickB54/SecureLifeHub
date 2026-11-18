@@ -13,6 +13,8 @@ import {
   Sparkles,
   Zap,
   Maximize2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import {
   AccountTracker,
@@ -139,6 +141,7 @@ function AgAccountTrackerReportsInner({
   const [prefs, setPrefs] = useState<ReportPrefs>(loadReportPrefs)
   const [nowMs, setNowMs] = useState(Date.now())
   const [displayOrder, setDisplayOrder] = useState<string[]>([])
+  const [expandedReportRows, setExpandedReportRows] = useState<Record<string, boolean>>({})
 
   // Refresh countdowns every minute
   useEffect(() => {
@@ -174,7 +177,7 @@ function AgAccountTrackerReportsInner({
     for (const tracker of trackers) {
       for (const row of tracker.rows || []) {
         for (const line of row.lines || []) {
-          const acct = line.googleAccount?.trim() || row.label.trim()
+          const acct = line.googleAccount?.trim() || row.label?.trim()
           if (acct) accountNamesSet.add(acct)
         }
       }
@@ -199,7 +202,7 @@ function AgAccountTrackerReportsInner({
         const appName = tracker.appName || tracker.title
         for (const row of tracker.rows || []) {
           for (const line of row.lines || []) {
-            const lineAccount = line.googleAccount?.trim() || row.label.trim()
+            const lineAccount = line.googleAccount?.trim() || row.label?.trim()
             if (lineAccount === accountName) {
               if (line.notes && !latestNotes) {
                 latestNotes = line.notes
@@ -368,7 +371,6 @@ function AgAccountTrackerReportsInner({
       const item = statMap.get(name)
       if (item) ordered.push(item)
     }
-    // Add any accounts not in displayOrder yet
     for (const item of accountStats) {
       if (!displayOrder.includes(item.accountName)) {
         ordered.push(item)
@@ -381,6 +383,26 @@ function AgAccountTrackerReportsInner({
   const waitingCount = accountStats.filter(
     (a) => a.nextStatusType === "amber" || a.nextStatusType === "red"
   ).length
+
+  // Accordion row helpers
+  const toggleReportRow = (accountName: string) => {
+    setExpandedReportRows((prev) => ({
+      ...prev,
+      [accountName]: !prev[accountName],
+    }))
+  }
+
+  const handleExpandAllReportRows = () => {
+    const next: Record<string, boolean> = {}
+    orderedAccounts.forEach((a) => {
+      next[a.accountName] = true
+    })
+    setExpandedReportRows(next)
+  }
+
+  const handleCollapseAllReportRows = () => {
+    setExpandedReportRows({})
+  }
 
   // Quick choices for Used On
   const handleUsedOnQuickChoice = (accountName: string, choice: string) => {
@@ -465,7 +487,7 @@ function AgAccountTrackerReportsInner({
   )
 
   const renderLineStatusBadge = (status?: string) => {
-    if (!status) return <span className="text-gray-500">—</span>
+    if (!status) return <span className="text-gray-400">—</span>
     if (status === "In use") {
       return <span className="ag-status-badge ag-status-inuse">In use</span>
     }
@@ -539,7 +561,7 @@ function AgAccountTrackerReportsInner({
           </div>
         </header>
 
-        {/* PRINT ONLY HEADER */}
+        {/* PRINT ONLY HEADER (Strictly hidden on screen) */}
         <div className="ag-report-print-header">
           <div>
             <h1 className="text-xl font-bold">
@@ -562,7 +584,7 @@ function AgAccountTrackerReportsInner({
           </div>
         </div>
 
-        {/* SCROLLABLE MAIN CONTENT (Compact: all 8 accounts fit without scrolling on desktop) */}
+        {/* SCROLLABLE MAIN CONTENT */}
         <main className="ag-report-main">
           {/* COMPACT SUMMARY STRIP */}
           <div className="ag-report-summary-strip">
@@ -585,7 +607,7 @@ function AgAccountTrackerReportsInner({
             {currentlyActiveAccount && (
               <div className="ag-report-stat-card highlight">
                 <span className="ag-report-stat-label">Currently Active</span>
-                <span className="ag-report-stat-value text-white truncate max-w-[140px]">
+                <span className="ag-report-stat-value ag-report-account-name truncate max-w-[140px]">
                   {currentlyActiveAccount}
                 </span>
               </div>
@@ -599,12 +621,36 @@ function AgAccountTrackerReportsInner({
             <div className="ag-report-tab-content">
               <div className="ag-report-section">
                 <div className="ag-report-section-header">
-                  <h3 className="ag-report-section-title">
-                    Used Accounts ({orderedAccounts.length})
-                  </h3>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400 hidden sm:inline">
-                      Edits save instantly • Re-sorts on blur
+                    <h3 className="ag-report-section-title">
+                      Used Accounts ({orderedAccounts.length})
+                    </h3>
+                    {/* ACCORDION EXPAND / COLLAPSE ALL BUTTONS */}
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <button
+                        type="button"
+                        className="ag-tracker-btn text-xs py-0.5 px-2"
+                        onClick={handleExpandAllReportRows}
+                        title="Expand all 8 account rows for full editing"
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                        <span>Expand All</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="ag-tracker-btn text-xs py-0.5 px-2"
+                        onClick={handleCollapseAllReportRows}
+                        title="Collapse all 8 account rows"
+                      >
+                        <ChevronUp className="h-3 w-3" />
+                        <span>Collapse All</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 hidden md:inline">
+                      Click any row to expand / edit details
                     </span>
                     <button
                       type="button"
@@ -631,288 +677,385 @@ function AgAccountTrackerReportsInner({
                     <thead>
                       <tr>
                         <th style={{ width: "36px" }}>#</th>
-                        <th style={{ width: "130px" }}>Account</th>
-                        <th style={{ width: "105px" }}>Status</th>
-                        <th style={{ width: "220px" }}>Used On</th>
+                        <th style={{ width: "140px" }}>Account</th>
+                        <th style={{ width: "110px" }}>Status</th>
+                        <th style={{ width: "230px" }}>Used On</th>
                         <th style={{ width: "120px" }}>Time Since</th>
-                        <th style={{ width: "220px" }}>Next Available</th>
+                        <th style={{ width: "230px" }}>Next Available</th>
                         <th style={{ width: "200px" }}>Notes</th>
+                        <th style={{ width: "50px", textAlign: "center" }}>Act</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orderedAccounts.map((acct, idx) => (
-                        <tr key={acct.accountName} className="ag-report-tr">
-                          <td className="text-muted text-xs">{idx + 1}</td>
-                          <td className="font-bold text-white text-xs">
-                            {acct.accountName}
-                          </td>
+                      {orderedAccounts.map((acct, idx) => {
+                        const isExpanded = Boolean(expandedReportRows[acct.accountName])
 
-                          {/* Editable Status */}
-                          <td>
-                            <select
-                              aria-label={`Status for ${acct.accountName}`}
-                              className="ag-tracker-select text-xs py-0.5 px-1.5"
-                              value={acct.latestLineStatus || ""}
-                              onChange={(e) => {
-                                if (onUpdateAccountData) {
-                                  onUpdateAccountData(acct.accountName, {
-                                    status: e.target.value as LineStatus,
-                                  })
-                                }
-                              }}
-                              onBlur={handleFieldBlur}
+                        if (!isExpanded) {
+                          // COLLAPSED ACCORDION ROW
+                          return (
+                            <tr
+                              key={acct.accountName}
+                              className="ag-report-tr ag-report-tr-collapsed cursor-pointer"
+                              onClick={() => toggleReportRow(acct.accountName)}
+                              title="Click to expand and edit account"
                             >
-                              <option value="">(—)</option>
-                              <option value="In use">In use</option>
-                              <option value="Low">Low</option>
-                              <option value="Out">Out</option>
-                            </select>
-                          </td>
+                              <td className="text-muted text-xs">{idx + 1}</td>
+                              <td className="font-bold text-xs">
+                                <div className="flex items-center gap-1.5 ag-report-account-name">
+                                  <ChevronDown className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                                  <span>{acct.accountName}</span>
+                                </div>
+                              </td>
+                              <td>{renderLineStatusBadge(acct.latestLineStatus)}</td>
+                              <td className="text-xs">
+                                {acct.latestUsedIso
+                                  ? formatDisplayDateTime(acct.latestUsedIso)
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
+                              <td>
+                                <span
+                                  className={`ag-report-badge ag-report-badge-${acct.usedAgeType}`}
+                                >
+                                  {formatTimeSince(acct.latestUsedIso, nowMs)}
+                                </span>
+                              </td>
+                              <td className="text-xs">
+                                {acct.latestNextAvailableIso
+                                  ? formatDisplayDateTime(acct.latestNextAvailableIso)
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
+                              <td className="text-xs text-gray-400 truncate max-w-[200px]">
+                                {acct.notes || <span className="text-gray-500">—</span>}
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn text-xs py-0.5 px-1.5 text-blue-400 hover:text-blue-300"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleReportRow(acct.accountName)
+                                  }}
+                                  title="Expand row"
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        }
 
-                          {/* Editable Used On */}
-                          <td>
-                            <div className="flex items-center gap-1">
+                        // EXPANDED ACCORDION ROW (Full In-Place Editor)
+                        return (
+                          <tr
+                            key={acct.accountName}
+                            className="ag-report-tr ag-report-tr-expanded bg-blue-500/5"
+                          >
+                            <td className="text-muted text-xs">{idx + 1}</td>
+                            <td className="font-bold text-xs">
+                              <div
+                                className="flex items-center gap-1.5 ag-report-account-name cursor-pointer"
+                                onClick={() => toggleReportRow(acct.accountName)}
+                                title="Click to collapse"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                                <span>{acct.accountName}</span>
+                              </div>
+                            </td>
+
+                            {/* Editable Status */}
+                            <td>
                               <select
-                                aria-label="Quick Choice Used On"
-                                className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
-                                defaultValue=""
+                                aria-label={`Status for ${acct.accountName}`}
+                                className="ag-tracker-select text-xs py-0.5 px-1.5"
+                                value={acct.latestLineStatus || ""}
                                 onChange={(e) => {
-                                  handleUsedOnQuickChoice(
-                                    acct.accountName,
-                                    e.target.value
-                                  )
-                                  e.target.value = ""
+                                  if (onUpdateAccountData) {
+                                    onUpdateAccountData(acct.accountName, {
+                                      status: e.target.value as LineStatus,
+                                    })
+                                  }
                                 }}
                                 onBlur={handleFieldBlur}
                               >
-                                <option value="" disabled>
-                                  Quick…
-                                </option>
-                                <option value="now">Now</option>
-                                <option value="today-9am">Today 9am</option>
-                                <option value="yesterday">Yesterday</option>
-                                <option value="clear">Clear</option>
+                                <option value="">(—)</option>
+                                <option value="In use">In use</option>
+                                <option value="Low">Low</option>
+                                <option value="Out">Out</option>
                               </select>
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon p-1"
-                                onClick={() =>
-                                  handleUsedOnQuickChoice(acct.accountName, "now")
-                                }
-                                title="Stamp current time"
-                              >
-                                <Zap className="h-3 w-3 text-amber-400" />
-                              </button>
-                              <input
-                                type="datetime-local"
-                                className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
-                                value={acct.latestUsedIso || ""}
-                                onChange={(e) => {
-                                  if (onUpdateAccountData) {
-                                    onUpdateAccountData(acct.accountName, {
-                                      usedOn: e.target.value,
-                                    })
-                                  }
-                                }}
-                                onBlur={handleFieldBlur}
-                              />
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Time Since Badge */}
-                          <td>
-                            <span
-                              className={`ag-report-badge ag-report-badge-${acct.usedAgeType}`}
-                            >
-                              {formatTimeSince(acct.latestUsedIso, nowMs)}
-                            </span>
-                          </td>
-
-                          {/* Editable Next Available */}
-                          <td>
-                            <div className="flex items-center gap-1">
-                              <select
-                                aria-label="Quick Choice Next Available"
-                                className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
-                                defaultValue=""
-                                onChange={(e) => {
-                                  handleNextAvailableQuickChoice(
-                                    acct.accountName,
-                                    e.target.value
-                                  )
-                                  e.target.value = ""
-                                }}
-                                onBlur={handleFieldBlur}
-                              >
-                                <option value="" disabled>
-                                  Quick…
-                                </option>
-                                <option value="ready-now">Ready now</option>
-                                <option value="+2h">+2 hrs</option>
-                                <option value="+4h">+4 hrs</option>
-                                <option value="+8h">+8 hrs</option>
-                                <option value="+12h">+12 hrs</option>
-                                <option value="+24h">+24 hrs</option>
-                                <option value="clear">Clear</option>
-                              </select>
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon p-1"
-                                onClick={() =>
-                                  handleNextAvailableQuickChoice(
-                                    acct.accountName,
-                                    "+24h"
-                                  )
-                                }
-                                title="Set +24h"
-                              >
-                                <Clock className="h-3 w-3 text-sky-400" />
-                              </button>
-                              <input
-                                type="datetime-local"
-                                className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
-                                value={acct.latestNextAvailableIso || ""}
-                                onChange={(e) => {
-                                  if (onUpdateAccountData) {
-                                    onUpdateAccountData(acct.accountName, {
-                                      nextAvailable: e.target.value,
-                                    })
+                            {/* Editable Used On */}
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  aria-label="Quick Choice Used On"
+                                  className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    handleUsedOnQuickChoice(
+                                      acct.accountName,
+                                      e.target.value
+                                    )
+                                    e.target.value = ""
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                >
+                                  <option value="" disabled>
+                                    Quick…
+                                  </option>
+                                  <option value="now">Now</option>
+                                  <option value="today-9am">Today 9am</option>
+                                  <option value="yesterday">Yesterday</option>
+                                  <option value="clear">Clear</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                  onClick={() =>
+                                    handleUsedOnQuickChoice(acct.accountName, "now")
                                   }
-                                }}
-                                onBlur={handleFieldBlur}
-                              />
-                            </div>
-                          </td>
+                                  title="Stamp current time"
+                                >
+                                  <Zap className="h-3 w-3 text-amber-400" />
+                                </button>
+                                <input
+                                  type="datetime-local"
+                                  className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
+                                  value={acct.latestUsedIso || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        usedOn: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                />
+                              </div>
+                            </td>
 
-                          {/* Editable Notes Cell with Maximize2 button */}
-                          <td>
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1 min-w-0"
-                                placeholder="Notes..."
-                                value={acct.notes || ""}
-                                onChange={(e) => {
-                                  if (onUpdateAccountData) {
-                                    onUpdateAccountData(acct.accountName, {
-                                      notes: e.target.value,
-                                    })
-                                  }
-                                }}
-                                onBlur={handleFieldBlur}
-                              />
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon p-1 shrink-0"
-                                onClick={() => {
-                                  if (onOpenNotesEditor) {
-                                    onOpenNotesEditor(
-                                      `${acct.accountName} – Notes`,
-                                      acct.notes || "",
-                                      (newVal) => {
-                                        if (onUpdateAccountData) {
-                                          onUpdateAccountData(acct.accountName, {
-                                            notes: newVal,
-                                          })
-                                        }
-                                      }
+                            {/* Time Since Badge */}
+                            <td>
+                              <span
+                                className={`ag-report-badge ag-report-badge-${acct.usedAgeType}`}
+                              >
+                                {formatTimeSince(acct.latestUsedIso, nowMs)}
+                              </span>
+                            </td>
+
+                            {/* Editable Next Available */}
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  aria-label="Quick Choice Next Available"
+                                  className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    handleNextAvailableQuickChoice(
+                                      acct.accountName,
+                                      e.target.value
+                                    )
+                                    e.target.value = ""
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                >
+                                  <option value="" disabled>
+                                    Quick…
+                                  </option>
+                                  <option value="ready-now">Ready now</option>
+                                  <option value="+2h">+2 hrs</option>
+                                  <option value="+4h">+4 hrs</option>
+                                  <option value="+8h">+8 hrs</option>
+                                  <option value="+12h">+12 hrs</option>
+                                  <option value="+24h">+24 hrs</option>
+                                  <option value="clear">Clear</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                  onClick={() =>
+                                    handleNextAvailableQuickChoice(
+                                      acct.accountName,
+                                      "+24h"
                                     )
                                   }
-                                }}
-                                title="Open full notes editor"
+                                  title="Set +24h"
+                                >
+                                  <Clock className="h-3 w-3 text-sky-400" />
+                                </button>
+                                <input
+                                  type="datetime-local"
+                                  className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
+                                  value={acct.latestNextAvailableIso || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        nextAvailable: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                />
+                              </div>
+                            </td>
+
+                            {/* Editable Notes Cell with Maximize2 */}
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1 min-w-0"
+                                  placeholder="Notes..."
+                                  value={acct.notes || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        notes: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                />
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn ag-tracker-btn-icon p-1 shrink-0"
+                                  onClick={() => {
+                                    if (onOpenNotesEditor) {
+                                      onOpenNotesEditor(
+                                        `${acct.accountName} – Notes`,
+                                        acct.notes || "",
+                                        (newVal) => {
+                                          if (onUpdateAccountData) {
+                                            onUpdateAccountData(acct.accountName, {
+                                              notes: newVal,
+                                            })
+                                          }
+                                        }
+                                      )
+                                    }
+                                  }}
+                                  title="Open full notes editor"
+                                >
+                                  <Maximize2 className="h-3 w-3 text-gray-400 hover:text-white" />
+                                </button>
+                              </div>
+                            </td>
+
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                type="button"
+                                className="ag-tracker-btn-icon text-gray-400 hover:text-white p-1"
+                                onClick={() => toggleReportRow(acct.accountName)}
+                                title="Collapse row"
                               >
-                                <Maximize2 className="h-3 w-3 text-gray-300" />
+                                <ChevronUp className="h-3.5 w-3.5" />
                               </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
 
                   {/* Mobile Card List (< 768px) */}
                   <div className="ag-report-mobile-cards">
-                    {orderedAccounts.map((acct, idx) => (
-                      <div key={acct.accountName} className="ag-report-mobile-card">
-                        <div className="ag-report-mobile-card-top">
-                          <span className="font-bold text-white">
-                            #{idx + 1} {acct.accountName}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {renderLineStatusBadge(acct.latestLineStatus)}
-                            <span
-                              className={`ag-report-badge ag-report-badge-${acct.usedAgeType}`}
-                            >
-                              {formatTimeSince(acct.latestUsedIso, nowMs)}
-                            </span>
-                          </div>
-                        </div>
+                    {orderedAccounts.map((acct, idx) => {
+                      const isExpanded = Boolean(expandedReportRows[acct.accountName])
 
-                        <div className="ag-report-mobile-card-row">
-                          <span className="ag-report-mobile-card-label">Status:</span>
-                          <select
-                            className="ag-tracker-select text-xs py-0.5 px-1.5 w-auto"
-                            value={acct.latestLineStatus || ""}
-                            onChange={(e) => {
-                              if (onUpdateAccountData) {
-                                onUpdateAccountData(acct.accountName, {
-                                  status: e.target.value as LineStatus,
-                                })
-                              }
-                            }}
+                      return (
+                        <div key={acct.accountName} className="ag-report-mobile-card">
+                          <div
+                            className="ag-report-mobile-card-top cursor-pointer"
+                            onClick={() => toggleReportRow(acct.accountName)}
                           >
-                            <option value="">(—)</option>
-                            <option value="In use">In use</option>
-                            <option value="Low">Low</option>
-                            <option value="Out">Out</option>
-                          </select>
-                        </div>
-
-                        <div className="ag-report-mobile-card-row">
-                          <span className="ag-report-mobile-card-label">Last Used:</span>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="datetime-local"
-                              className="ag-tracker-input text-xs py-0.5 px-1 w-[140px]"
-                              value={acct.latestUsedIso || ""}
-                              onChange={(e) => {
-                                if (onUpdateAccountData) {
-                                  onUpdateAccountData(acct.accountName, {
-                                    usedOn: e.target.value,
-                                  })
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="ag-tracker-btn ag-tracker-btn-icon p-1"
-                              onClick={() =>
-                                handleUsedOnQuickChoice(acct.accountName, "now")
-                              }
-                            >
-                              <Zap className="h-3 w-3 text-amber-400" />
-                            </button>
+                            <span className="font-bold ag-report-account-name flex items-center gap-1.5">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-blue-400" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-blue-400" />
+                              )}
+                              #{idx + 1} {acct.accountName}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {renderLineStatusBadge(acct.latestLineStatus)}
+                              <span
+                                className={`ag-report-badge ag-report-badge-${acct.usedAgeType}`}
+                              >
+                                {formatTimeSince(acct.latestUsedIso, nowMs)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="ag-report-mobile-card-row">
-                          <span className="ag-report-mobile-card-label">Notes:</span>
-                          <input
-                            type="text"
-                            className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1"
-                            placeholder="Notes..."
-                            value={acct.notes || ""}
-                            onChange={(e) => {
-                              if (onUpdateAccountData) {
-                                onUpdateAccountData(acct.accountName, {
-                                  notes: e.target.value,
-                                })
-                              }
-                            }}
-                          />
+                          {isExpanded && (
+                            <div className="mt-2.5 pt-2 border-t border-white/10 space-y-2">
+                              <div className="ag-report-mobile-card-row">
+                                <span className="ag-report-mobile-card-label">Status:</span>
+                                <select
+                                  className="ag-tracker-select text-xs py-0.5 px-1.5 w-auto"
+                                  value={acct.latestLineStatus || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        status: e.target.value as LineStatus,
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <option value="">(—)</option>
+                                  <option value="In use">In use</option>
+                                  <option value="Low">Low</option>
+                                  <option value="Out">Out</option>
+                                </select>
+                              </div>
+
+                              <div className="ag-report-mobile-card-row">
+                                <span className="ag-report-mobile-card-label">Last Used:</span>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="datetime-local"
+                                    className="ag-tracker-input text-xs py-0.5 px-1 w-[140px]"
+                                    value={acct.latestUsedIso || ""}
+                                    onChange={(e) => {
+                                      if (onUpdateAccountData) {
+                                        onUpdateAccountData(acct.accountName, {
+                                          usedOn: e.target.value,
+                                        })
+                                      }
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                    onClick={() =>
+                                      handleUsedOnQuickChoice(acct.accountName, "now")
+                                    }
+                                  >
+                                    <Zap className="h-3 w-3 text-amber-400" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="ag-report-mobile-card-row">
+                                <span className="ag-report-mobile-card-label">Notes:</span>
+                                <input
+                                  type="text"
+                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1"
+                                  placeholder="Notes..."
+                                  value={acct.notes || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        notes: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -926,12 +1069,36 @@ function AgAccountTrackerReportsInner({
             <div className="ag-report-tab-content">
               <div className="ag-report-section">
                 <div className="ag-report-section-header">
-                  <h3 className="ag-report-section-title">
-                    Next Available Accounts ({orderedAccounts.length})
-                  </h3>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400 hidden sm:inline">
-                      Edits save instantly • Re-sorts on blur
+                    <h3 className="ag-report-section-title">
+                      Next Available Accounts ({orderedAccounts.length})
+                    </h3>
+                    {/* ACCORDION EXPAND / COLLAPSE ALL BUTTONS */}
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <button
+                        type="button"
+                        className="ag-tracker-btn text-xs py-0.5 px-2"
+                        onClick={handleExpandAllReportRows}
+                        title="Expand all 8 account rows for full editing"
+                      >
+                        <ChevronDown className="h-3 w-3" />
+                        <span>Expand All</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="ag-tracker-btn text-xs py-0.5 px-2"
+                        onClick={handleCollapseAllReportRows}
+                        title="Collapse all 8 account rows"
+                      >
+                        <ChevronUp className="h-3 w-3" />
+                        <span>Collapse All</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400 hidden md:inline">
+                      Click any row to expand / edit details
                     </span>
                     <button
                       type="button"
@@ -961,291 +1128,388 @@ function AgAccountTrackerReportsInner({
                     <thead>
                       <tr>
                         <th style={{ width: "36px" }}>#</th>
-                        <th style={{ width: "130px" }}>Account</th>
-                        <th style={{ width: "105px" }}>Status</th>
-                        <th style={{ width: "220px" }}>Next Available</th>
+                        <th style={{ width: "140px" }}>Account</th>
+                        <th style={{ width: "110px" }}>Status</th>
+                        <th style={{ width: "230px" }}>Next Available</th>
                         <th style={{ width: "140px" }}>Availability</th>
-                        <th style={{ width: "220px" }}>Used On</th>
+                        <th style={{ width: "230px" }}>Used On</th>
                         <th style={{ width: "200px" }}>Notes</th>
+                        <th style={{ width: "50px", textAlign: "center" }}>Act</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {orderedAccounts.map((acct, idx) => (
-                        <tr key={acct.accountName} className="ag-report-tr">
-                          <td className="text-muted text-xs">{idx + 1}</td>
-                          <td className="font-bold text-white text-xs">
-                            {acct.accountName}
-                          </td>
+                      {orderedAccounts.map((acct, idx) => {
+                        const isExpanded = Boolean(expandedReportRows[acct.accountName])
 
-                          {/* Editable Status */}
-                          <td>
-                            <select
-                              aria-label={`Status for ${acct.accountName}`}
-                              className="ag-tracker-select text-xs py-0.5 px-1.5"
-                              value={acct.latestLineStatus || ""}
-                              onChange={(e) => {
-                                if (onUpdateAccountData) {
-                                  onUpdateAccountData(acct.accountName, {
-                                    status: e.target.value as LineStatus,
-                                  })
-                                }
-                              }}
-                              onBlur={handleFieldBlur}
+                        if (!isExpanded) {
+                          // COLLAPSED ACCORDION ROW
+                          return (
+                            <tr
+                              key={acct.accountName}
+                              className="ag-report-tr ag-report-tr-collapsed cursor-pointer"
+                              onClick={() => toggleReportRow(acct.accountName)}
+                              title="Click to expand and edit account"
                             >
-                              <option value="">(—)</option>
-                              <option value="In use">In use</option>
-                              <option value="Low">Low</option>
-                              <option value="Out">Out</option>
-                            </select>
-                          </td>
+                              <td className="text-muted text-xs">{idx + 1}</td>
+                              <td className="font-bold text-xs">
+                                <div className="flex items-center gap-1.5 ag-report-account-name">
+                                  <ChevronDown className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                                  <span>{acct.accountName}</span>
+                                </div>
+                              </td>
+                              <td>{renderLineStatusBadge(acct.latestLineStatus)}</td>
+                              <td className="text-xs">
+                                {acct.latestNextAvailableIso
+                                  ? formatDisplayDateTime(acct.latestNextAvailableIso)
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
+                              <td>
+                                <span
+                                  className={`ag-report-badge ag-report-badge-${acct.nextStatusType}`}
+                                >
+                                  {acct.nextStatusLabel}
+                                </span>
+                              </td>
+                              <td className="text-xs">
+                                {acct.latestUsedIso
+                                  ? formatDisplayDateTime(acct.latestUsedIso)
+                                  : <span className="text-gray-400">—</span>}
+                              </td>
+                              <td className="text-xs text-gray-400 truncate max-w-[200px]">
+                                {acct.notes || <span className="text-gray-500">—</span>}
+                              </td>
+                              <td style={{ textAlign: "center" }}>
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn text-xs py-0.5 px-1.5 text-blue-400 hover:text-blue-300"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    toggleReportRow(acct.accountName)
+                                  }}
+                                  title="Expand row"
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          )
+                        }
 
-                          {/* Editable Next Available */}
-                          <td>
-                            <div className="flex items-center gap-1">
+                        // EXPANDED ACCORDION ROW (Full In-Place Editor)
+                        return (
+                          <tr
+                            key={acct.accountName}
+                            className="ag-report-tr ag-report-tr-expanded bg-blue-500/5"
+                          >
+                            <td className="text-muted text-xs">{idx + 1}</td>
+                            <td className="font-bold text-xs">
+                              <div
+                                className="flex items-center gap-1.5 ag-report-account-name cursor-pointer"
+                                onClick={() => toggleReportRow(acct.accountName)}
+                                title="Click to collapse"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                                <span>{acct.accountName}</span>
+                              </div>
+                            </td>
+
+                            {/* Editable Status */}
+                            <td>
                               <select
-                                aria-label="Quick Choice Next Available"
-                                className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
-                                defaultValue=""
+                                aria-label={`Status for ${acct.accountName}`}
+                                className="ag-tracker-select text-xs py-0.5 px-1.5"
+                                value={acct.latestLineStatus || ""}
                                 onChange={(e) => {
-                                  handleNextAvailableQuickChoice(
-                                    acct.accountName,
-                                    e.target.value
-                                  )
-                                  e.target.value = ""
+                                  if (onUpdateAccountData) {
+                                    onUpdateAccountData(acct.accountName, {
+                                      status: e.target.value as LineStatus,
+                                    })
+                                  }
                                 }}
                                 onBlur={handleFieldBlur}
                               >
-                                <option value="" disabled>
-                                  Quick…
-                                </option>
-                                <option value="ready-now">Ready now</option>
-                                <option value="+2h">+2 hrs</option>
-                                <option value="+4h">+4 hrs</option>
-                                <option value="+8h">+8 hrs</option>
-                                <option value="+12h">+12 hrs</option>
-                                <option value="+24h">+24 hrs</option>
-                                <option value="clear">Clear</option>
+                                <option value="">(—)</option>
+                                <option value="In use">In use</option>
+                                <option value="Low">Low</option>
+                                <option value="Out">Out</option>
                               </select>
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon p-1"
-                                onClick={() =>
-                                  handleNextAvailableQuickChoice(
-                                    acct.accountName,
-                                    "+24h"
-                                  )
-                                }
-                                title="Set +24h"
-                              >
-                                <Clock className="h-3 w-3 text-sky-400" />
-                              </button>
-                              <input
-                                type="datetime-local"
-                                className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
-                                value={acct.latestNextAvailableIso || ""}
-                                onChange={(e) => {
-                                  if (onUpdateAccountData) {
-                                    onUpdateAccountData(acct.accountName, {
-                                      nextAvailable: e.target.value,
-                                    })
-                                  }
-                                }}
-                                onBlur={handleFieldBlur}
-                              />
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Availability Badge */}
-                          <td>
-                            <span
-                              className={`ag-report-badge ag-report-badge-${acct.nextStatusType}`}
-                            >
-                              {acct.nextStatusLabel}
-                            </span>
-                          </td>
-
-                          {/* Editable Used On */}
-                          <td>
-                            <div className="flex items-center gap-1">
-                              <select
-                                aria-label="Quick Choice Used On"
-                                className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
-                                defaultValue=""
-                                onChange={(e) => {
-                                  handleUsedOnQuickChoice(
-                                    acct.accountName,
-                                    e.target.value
-                                  )
-                                  e.target.value = ""
-                                }}
-                                onBlur={handleFieldBlur}
-                              >
-                                <option value="" disabled>
-                                  Quick…
-                                </option>
-                                <option value="now">Now</option>
-                                <option value="today-9am">Today 9am</option>
-                                <option value="yesterday">Yesterday</option>
-                                <option value="clear">Clear</option>
-                              </select>
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon p-1"
-                                onClick={() =>
-                                  handleUsedOnQuickChoice(acct.accountName, "now")
-                                }
-                                title="Stamp current time"
-                              >
-                                <Zap className="h-3 w-3 text-amber-400" />
-                              </button>
-                              <input
-                                type="datetime-local"
-                                className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
-                                value={acct.latestUsedIso || ""}
-                                onChange={(e) => {
-                                  if (onUpdateAccountData) {
-                                    onUpdateAccountData(acct.accountName, {
-                                      usedOn: e.target.value,
-                                    })
-                                  }
-                                }}
-                                onBlur={handleFieldBlur}
-                              />
-                            </div>
-                          </td>
-
-                          {/* Editable Notes Cell with Maximize2 */}
-                          <td>
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1 min-w-0"
-                                placeholder="Notes..."
-                                value={acct.notes || ""}
-                                onChange={(e) => {
-                                  if (onUpdateAccountData) {
-                                    onUpdateAccountData(acct.accountName, {
-                                      notes: e.target.value,
-                                    })
-                                  }
-                                }}
-                                onBlur={handleFieldBlur}
-                              />
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon p-1 shrink-0"
-                                onClick={() => {
-                                  if (onOpenNotesEditor) {
-                                    onOpenNotesEditor(
-                                      `${acct.accountName} – Notes`,
-                                      acct.notes || "",
-                                      (newVal) => {
-                                        if (onUpdateAccountData) {
-                                          onUpdateAccountData(acct.accountName, {
-                                            notes: newVal,
-                                          })
-                                        }
-                                      }
+                            {/* Editable Next Available */}
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  aria-label="Quick Choice Next Available"
+                                  className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    handleNextAvailableQuickChoice(
+                                      acct.accountName,
+                                      e.target.value
+                                    )
+                                    e.target.value = ""
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                >
+                                  <option value="" disabled>
+                                    Quick…
+                                  </option>
+                                  <option value="ready-now">Ready now</option>
+                                  <option value="+2h">+2 hrs</option>
+                                  <option value="+4h">+4 hrs</option>
+                                  <option value="+8h">+8 hrs</option>
+                                  <option value="+12h">+12 hrs</option>
+                                  <option value="+24h">+24 hrs</option>
+                                  <option value="clear">Clear</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                  onClick={() =>
+                                    handleNextAvailableQuickChoice(
+                                      acct.accountName,
+                                      "+24h"
                                     )
                                   }
-                                }}
-                                title="Open full notes editor"
+                                  title="Set +24h"
+                                >
+                                  <Clock className="h-3 w-3 text-sky-400" />
+                                </button>
+                                <input
+                                  type="datetime-local"
+                                  className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
+                                  value={acct.latestNextAvailableIso || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        nextAvailable: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                />
+                              </div>
+                            </td>
+
+                            {/* Availability Badge */}
+                            <td>
+                              <span
+                                className={`ag-report-badge ag-report-badge-${acct.nextStatusType}`}
                               >
-                                <Maximize2 className="h-3 w-3 text-gray-300" />
+                                {acct.nextStatusLabel}
+                              </span>
+                            </td>
+
+                            {/* Editable Used On */}
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  aria-label="Quick Choice Used On"
+                                  className="ag-tracker-select text-xs py-0.5 px-1 w-[80px]"
+                                  defaultValue=""
+                                  onChange={(e) => {
+                                    handleUsedOnQuickChoice(
+                                      acct.accountName,
+                                      e.target.value
+                                    )
+                                    e.target.value = ""
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                >
+                                  <option value="" disabled>
+                                    Quick…
+                                  </option>
+                                  <option value="now">Now</option>
+                                  <option value="today-9am">Today 9am</option>
+                                  <option value="yesterday">Yesterday</option>
+                                  <option value="clear">Clear</option>
+                                </select>
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                  onClick={() =>
+                                    handleUsedOnQuickChoice(acct.accountName, "now")
+                                  }
+                                  title="Stamp current time"
+                                >
+                                  <Zap className="h-3 w-3 text-amber-400" />
+                                </button>
+                                <input
+                                  type="datetime-local"
+                                  className="ag-tracker-input text-xs py-0.5 px-1 w-[125px]"
+                                  value={acct.latestUsedIso || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        usedOn: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                />
+                              </div>
+                            </td>
+
+                            {/* Editable Notes Cell with Maximize2 */}
+                            <td>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1 min-w-0"
+                                  placeholder="Notes..."
+                                  value={acct.notes || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        notes: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                  onBlur={handleFieldBlur}
+                                />
+                                <button
+                                  type="button"
+                                  className="ag-tracker-btn ag-tracker-btn-icon p-1 shrink-0"
+                                  onClick={() => {
+                                    if (onOpenNotesEditor) {
+                                      onOpenNotesEditor(
+                                        `${acct.accountName} – Notes`,
+                                        acct.notes || "",
+                                        (newVal) => {
+                                          if (onUpdateAccountData) {
+                                            onUpdateAccountData(acct.accountName, {
+                                              notes: newVal,
+                                            })
+                                          }
+                                        }
+                                      )
+                                    }
+                                  }}
+                                  title="Open full notes editor"
+                                >
+                                  <Maximize2 className="h-3 w-3 text-gray-400 hover:text-white" />
+                                </button>
+                              </div>
+                            </td>
+
+                            <td style={{ textAlign: "center" }}>
+                              <button
+                                type="button"
+                                className="ag-tracker-btn-icon text-gray-400 hover:text-white p-1"
+                                onClick={() => toggleReportRow(acct.accountName)}
+                                title="Collapse row"
+                              >
+                                <ChevronUp className="h-3.5 w-3.5" />
                               </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        )
+                      })}
                     </tbody>
                   </table>
 
                   {/* Mobile Card List (< 768px) */}
                   <div className="ag-report-mobile-cards">
-                    {orderedAccounts.map((acct, idx) => (
-                      <div key={acct.accountName} className="ag-report-mobile-card">
-                        <div className="ag-report-mobile-card-top">
-                          <span className="font-bold text-white">
-                            #{idx + 1} {acct.accountName}
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            {renderLineStatusBadge(acct.latestLineStatus)}
-                            <span
-                              className={`ag-report-badge ag-report-badge-${acct.nextStatusType}`}
-                            >
-                              {acct.nextStatusLabel}
-                            </span>
-                          </div>
-                        </div>
+                    {orderedAccounts.map((acct, idx) => {
+                      const isExpanded = Boolean(expandedReportRows[acct.accountName])
 
-                        <div className="ag-report-mobile-card-row">
-                          <span className="ag-report-mobile-card-label">Next Available:</span>
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="datetime-local"
-                              className="ag-tracker-input text-xs py-0.5 px-1 w-[140px]"
-                              value={acct.latestNextAvailableIso || ""}
-                              onChange={(e) => {
-                                if (onUpdateAccountData) {
-                                  onUpdateAccountData(acct.accountName, {
-                                    nextAvailable: e.target.value,
-                                  })
-                                }
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="ag-tracker-btn ag-tracker-btn-icon p-1"
-                              onClick={() =>
-                                handleNextAvailableQuickChoice(
-                                  acct.accountName,
-                                  "+24h"
-                                )
-                              }
-                            >
-                              <Clock className="h-3 w-3 text-sky-400" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="ag-report-mobile-card-row">
-                          <span className="ag-report-mobile-card-label">Status:</span>
-                          <select
-                            className="ag-tracker-select text-xs py-0.5 px-1.5 w-auto"
-                            value={acct.latestLineStatus || ""}
-                            onChange={(e) => {
-                              if (onUpdateAccountData) {
-                                onUpdateAccountData(acct.accountName, {
-                                  status: e.target.value as LineStatus,
-                                })
-                              }
-                            }}
+                      return (
+                        <div key={acct.accountName} className="ag-report-mobile-card">
+                          <div
+                            className="ag-report-mobile-card-top cursor-pointer"
+                            onClick={() => toggleReportRow(acct.accountName)}
                           >
-                            <option value="">(—)</option>
-                            <option value="In use">In use</option>
-                            <option value="Low">Low</option>
-                            <option value="Out">Out</option>
-                          </select>
-                        </div>
+                            <span className="font-bold ag-report-account-name flex items-center gap-1.5">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-blue-400" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-blue-400" />
+                              )}
+                              #{idx + 1} {acct.accountName}
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              {renderLineStatusBadge(acct.latestLineStatus)}
+                              <span
+                                className={`ag-report-badge ag-report-badge-${acct.nextStatusType}`}
+                              >
+                                {acct.nextStatusLabel}
+                              </span>
+                            </div>
+                          </div>
 
-                        <div className="ag-report-mobile-card-row">
-                          <span className="ag-report-mobile-card-label">Notes:</span>
-                          <input
-                            type="text"
-                            className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1"
-                            placeholder="Notes..."
-                            value={acct.notes || ""}
-                            onChange={(e) => {
-                              if (onUpdateAccountData) {
-                                onUpdateAccountData(acct.accountName, {
-                                  notes: e.target.value,
-                                })
-                              }
-                            }}
-                          />
+                          {isExpanded && (
+                            <div className="mt-2.5 pt-2 border-t border-white/10 space-y-2">
+                              <div className="ag-report-mobile-card-row">
+                                <span className="ag-report-mobile-card-label">Next Available:</span>
+                                <div className="flex items-center gap-1">
+                                  <input
+                                    type="datetime-local"
+                                    className="ag-tracker-input text-xs py-0.5 px-1 w-[140px]"
+                                    value={acct.latestNextAvailableIso || ""}
+                                    onChange={(e) => {
+                                      if (onUpdateAccountData) {
+                                        onUpdateAccountData(acct.accountName, {
+                                          nextAvailable: e.target.value,
+                                        })
+                                      }
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                    onClick={() =>
+                                      handleNextAvailableQuickChoice(
+                                        acct.accountName,
+                                        "+24h"
+                                      )
+                                    }
+                                  >
+                                    <Clock className="h-3 w-3 text-sky-400" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="ag-report-mobile-card-row">
+                                <span className="ag-report-mobile-card-label">Status:</span>
+                                <select
+                                  className="ag-tracker-select text-xs py-0.5 px-1.5 w-auto"
+                                  value={acct.latestLineStatus || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        status: e.target.value as LineStatus,
+                                      })
+                                    }
+                                  }}
+                                >
+                                  <option value="">(—)</option>
+                                  <option value="In use">In use</option>
+                                  <option value="Low">Low</option>
+                                  <option value="Out">Out</option>
+                                </select>
+                              </div>
+
+                              <div className="ag-report-mobile-card-row">
+                                <span className="ag-report-mobile-card-label">Notes:</span>
+                                <input
+                                  type="text"
+                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1"
+                                  placeholder="Notes..."
+                                  value={acct.notes || ""}
+                                  onChange={(e) => {
+                                    if (onUpdateAccountData) {
+                                      onUpdateAccountData(acct.accountName, {
+                                        notes: e.target.value,
+                                      })
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               </div>

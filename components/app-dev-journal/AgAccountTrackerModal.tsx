@@ -159,8 +159,10 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
 
   const migratedTrackers = rawObj.trackers.map((tr: any) => ({
     ...tr,
-    rows: (tr.rows || []).map((row: any) => ({
+    rows: (tr.rows || []).map((row: any, rIdx: number) => ({
       ...row,
+      id: row.id || `row-${rIdx}-${(row.label || `acct-${rIdx}`).replace(/\s+/g, "_")}`,
+      label: row.label || DEFAULT_ROW_LABELS[rIdx] || `Account ${rIdx + 1}`,
       lines: (row.lines || []).map((line: any) => {
         let { usedOn, notes, nextAvailableDate, nextAvailable, status } = line
         let currentNotes = notes || ""
@@ -1155,9 +1157,13 @@ function AgAccountTrackerModalInner({
     }
   }
 
-  const toggleRowExpand = (rowId: string) => {
+  const getRowKey = (row: any, rIdx: number): string => {
+    return row.id || `row-${rIdx}-${(row.label || `acct-${rIdx}`).replace(/\s+/g, "_")}`
+  }
+
+  const toggleRowExpand = (rowKey: string) => {
     setExpandedRows((prev) => {
-      const next = { ...prev, [rowId]: !prev[rowId] }
+      const next = { ...prev, [rowKey]: !prev[rowKey] }
       saveExpandedRows(next)
       return next
     })
@@ -1165,8 +1171,8 @@ function AgAccountTrackerModalInner({
 
   const handleExpandAll = () => {
     const next: Record<string, boolean> = {}
-    currentTracker.rows.forEach((r) => {
-      next[r.id] = true
+    currentTracker.rows.forEach((r, idx) => {
+      next[getRowKey(r, idx)] = true
     })
     setExpandedRows(next)
     saveExpandedRows(next)
@@ -1174,8 +1180,8 @@ function AgAccountTrackerModalInner({
 
   const handleCollapseAll = () => {
     const next: Record<string, boolean> = {}
-    currentTracker.rows.forEach((r) => {
-      next[r.id] = false
+    currentTracker.rows.forEach((r, idx) => {
+      next[getRowKey(r, idx)] = false
     })
     setExpandedRows(next)
     saveExpandedRows(next)
@@ -1549,7 +1555,8 @@ function AgAccountTrackerModalInner({
                 </thead>
                 <tbody>
                   {currentTracker.rows.map((row, rIdx) => {
-                    const isCollapsed = !expandedRows[row.id]
+                    const rowKey = getRowKey(row, rIdx)
+                    const isCollapsed = !expandedRows[rowKey]
                     let displayLine =
                       row.lines[0] || {
                         googleAccount: "",
@@ -1576,17 +1583,20 @@ function AgAccountTrackerModalInner({
                     if (isCollapsed) {
                       return (
                         <tr
-                          key={row.id}
+                          key={rowKey}
                           className={`ag-tracker-tr ag-tracker-row-collapsed ${statusBorderClass}`}
-                          onClick={() => toggleRowExpand(row.id)}
+                          onClick={() => toggleRowExpand(rowKey)}
                           title="Click anywhere to expand row"
                         >
                           {/* Row Label */}
-                          <td className="ag-tracker-td font-semibold text-white">
-                            <div className="flex items-center justify-between gap-1.5">
-                              <span>{row.label}</span>
+                          <td className="ag-tracker-td font-semibold">
+                            <div className="flex items-center gap-2">
+                              <div className="p-1 rounded bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 shrink-0">
+                                <ChevronDown className="h-4 w-4" />
+                              </div>
+                              <span className="ag-tracker-row-title font-bold text-sm">{row.label}</span>
                               {row.lines.length > 1 && (
-                                <span className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-gray-300">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-gray-400">
                                   {row.lines.length} lines
                                 </span>
                               )}
@@ -1594,8 +1604,8 @@ function AgAccountTrackerModalInner({
                           </td>
 
                           {/* Google Account */}
-                          <td className="ag-tracker-td font-medium text-gray-200">
-                            {displayLine.googleAccount || <span className="text-gray-500">—</span>}
+                          <td className="ag-tracker-td font-medium ag-tracker-row-account">
+                            {displayLine.googleAccount || <span className="text-gray-400">—</span>}
                           </td>
 
                           {/* Used On / Status */}
@@ -1636,14 +1646,14 @@ function AgAccountTrackerModalInner({
                           <td className="ag-tracker-td" style={{ textAlign: "center" }}>
                             <button
                               type="button"
-                              className="ag-tracker-btn-icon text-gray-400 hover:text-white"
+                              className="ag-tracker-btn text-xs py-0.5 px-2 text-blue-400 hover:text-blue-300 font-semibold"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                toggleRowExpand(row.id)
+                                toggleRowExpand(rowKey)
                               }}
                               title="Expand row"
                             >
-                              <ChevronDown className="h-4 w-4" />
+                              Expand
                             </button>
                           </td>
                         </tr>
@@ -1651,7 +1661,7 @@ function AgAccountTrackerModalInner({
                     }
 
                     return (
-                      <React.Fragment key={row.id}>
+                      <React.Fragment key={rowKey}>
                         {row.lines.map((line, lIdx) => (
                           <tr key={line.id} className={`ag-tracker-tr ${lIdx === 0 ? statusBorderClass : ""}`}>
                             {/* Row Label (spans all lines of this row) */}
@@ -1661,8 +1671,16 @@ function AgAccountTrackerModalInner({
                                 rowSpan={row.lines.length}
                               >
                                 <div className="flex items-center justify-between gap-1">
+                                  <button
+                                    type="button"
+                                    className="p-1 rounded bg-gray-500/10 text-gray-400 hover:text-white shrink-0"
+                                    onClick={() => toggleRowExpand(rowKey)}
+                                    title="Collapse row"
+                                  >
+                                    <ChevronUp className="h-4 w-4" />
+                                  </button>
                                   <input
-                                    className="ag-tracker-row-label-input flex-1 min-w-0"
+                                    className="ag-tracker-row-label-input flex-1 min-w-0 font-bold"
                                     value={row.label}
                                     title="Click to edit row label"
                                     onChange={(e) => {
@@ -1674,14 +1692,6 @@ function AgAccountTrackerModalInner({
                                       })
                                     }}
                                   />
-                                  <button
-                                    type="button"
-                                    className="ag-tracker-btn-icon text-gray-400 hover:text-white p-0.5 shrink-0"
-                                    onClick={() => toggleRowExpand(row.id)}
-                                    title="Collapse row"
-                                  >
-                                    <ChevronUp className="h-3.5 w-3.5" />
-                                  </button>
                                 </div>
                                 <div style={{ marginTop: "4px" }}>
                                   <button
@@ -1924,7 +1934,8 @@ function AgAccountTrackerModalInner({
               </div>
 
               {currentTracker.rows.map((row, rIdx) => {
-                const isCollapsed = !expandedRows[row.id]
+                const rowKey = getRowKey(row, rIdx)
+                const isCollapsed = !expandedRows[rowKey]
                 let displayLine =
                   row.lines[0] || {
                     googleAccount: "",
@@ -1949,14 +1960,14 @@ function AgAccountTrackerModalInner({
                 if (isCollapsed) {
                   return (
                     <div
-                      key={row.id}
+                      key={rowKey}
                       className={`ag-tracker-mobile-row-card ag-tracker-mobile-row-collapsed ${statusBorderClass}`}
-                      onClick={() => toggleRowExpand(row.id)}
+                      onClick={() => toggleRowExpand(rowKey)}
                       style={{ cursor: "pointer", padding: "0.5rem 0.75rem" }}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-bold text-white text-sm truncate">{row.label}</span>
+                          <span className="font-bold ag-tracker-row-title text-sm truncate">{row.label}</span>
                           {displayLine.googleAccount && (
                             <span className="text-xs text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded truncate">
                               {displayLine.googleAccount}
@@ -1988,7 +1999,7 @@ function AgAccountTrackerModalInner({
                 }
 
                 return (
-                  <div key={row.id} className={`ag-tracker-mobile-row-card ${statusBorderClass}`}>
+                  <div key={rowKey} className={`ag-tracker-mobile-row-card ${statusBorderClass}`}>
                     <div className="ag-tracker-mobile-row-header">
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <input
@@ -2007,7 +2018,7 @@ function AgAccountTrackerModalInner({
                         <button
                           type="button"
                           className="ag-tracker-btn-icon text-gray-400 hover:text-white p-1"
-                          onClick={() => toggleRowExpand(row.id)}
+                          onClick={() => toggleRowExpand(rowKey)}
                           title="Collapse card"
                         >
                           <ChevronUp className="h-4 w-4" />
