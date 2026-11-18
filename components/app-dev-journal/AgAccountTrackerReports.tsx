@@ -128,6 +128,7 @@ export interface AgAccountTrackerReportsProps {
     }
   ) => void
   onOpenNotesEditor?: (title: string, value: string, onSave: (val: string) => void) => void
+  theme?: string
 }
 
 function AgAccountTrackerReportsInner({
@@ -136,7 +137,20 @@ function AgAccountTrackerReportsInner({
   trackers,
   onUpdateAccountData,
   onOpenNotesEditor,
+  theme: propTheme,
 }: AgAccountTrackerReportsProps) {
+  const [theme, setTheme] = useState<string>(() => {
+    if (propTheme) return propTheme
+    try {
+      const raw = localStorage.getItem("journal-settings")
+      if (raw) return JSON.parse(raw).theme || "dark"
+    } catch {}
+    return "dark"
+  })
+
+  useEffect(() => {
+    if (propTheme) setTheme(propTheme)
+  }, [propTheme])
   const [activeTab, setActiveTab] = useState<"used" | "nextAvailable">("used")
   const [prefs, setPrefs] = useState<ReportPrefs>(loadReportPrefs)
   const [nowMs, setNowMs] = useState(Date.now())
@@ -508,7 +522,7 @@ function AgAccountTrackerReportsInner({
       aria-modal="true"
       aria-label="AG Account Tracker Reports"
     >
-      <div className="ag-report-dialog" onClick={(e) => e.stopPropagation()}>
+      <div className={`ag-report-dialog journal-theme-${theme}`} onClick={(e) => e.stopPropagation()}>
         {/* HEADER BAR */}
         <header className="ag-report-header">
           <div className="ag-report-header-left">

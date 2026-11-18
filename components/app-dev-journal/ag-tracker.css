@@ -796,6 +796,264 @@
 }
 
 /* ==========================================================================
+   THEME SELECTOR DROPDOWN (in Tracker header)
+   ========================================================================== */
+.journal-root .ag-theme-menu-dropdown {
+  background-color: var(--card, #1e1e1e);
+  color: var(--foreground, #f3f4f6);
+  border: 1px solid var(--border, rgba(255,255,255,0.18));
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  min-width: 130px;
+}
+
+.journal-root .ag-theme-menu-item {
+  background: transparent;
+  color: var(--foreground, #f3f4f6);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.journal-root .ag-theme-menu-item:hover {
+  background-color: var(--accent, rgba(255,255,255,0.08));
+}
+
+.journal-root .ag-theme-menu-item.active {
+  background-color: rgba(56,189,248,0.1);
+}
+
+/* Light theme dropdown overrides */
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-theme-menu-dropdown {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-theme-menu-item {
+  color: #0f172a;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-theme-menu-item:hover {
+  background-color: #f1f5f9;
+}
+
+/* OLED theme dropdown overrides */
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-theme-menu-dropdown {
+  background-color: #000000;
+  color: #ffffff;
+  border-color: #262626;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-theme-menu-item {
+  color: #ffffff;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-theme-menu-item:hover {
+  background-color: #111111;
+}
+
+/* Cyberpunk theme dropdown overrides */
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-theme-menu-dropdown {
+  background-color: #0a0a1a;
+  color: #00ffcc;
+  border-color: #ff007f;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-theme-menu-item {
+  color: #00ffcc;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-theme-menu-item:hover {
+  background-color: rgba(0,255,204,0.08);
+}
+
+/* ==========================================================================
+   INLINE THEME OVERRIDES — applied directly on the dialog element
+   These fire for all 4 themes regardless of .journal-root class state
+   ========================================================================== */
+
+/* --- LIGHT theme on all tracker dialogs --- */
+.journal-root .ag-tracker-dialog.journal-theme-light,
+.journal-root .ag-report-dialog.journal-theme-light,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light,
+.journal-root .ag-quick-log-card.journal-theme-light,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-light {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #e2e8f0 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-header,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-tabs-bar,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-appname-card,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-table-container,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-bottom-notes,
+.journal-root .ag-report-dialog.journal-theme-light .ag-report-header,
+.journal-root .ag-report-dialog.journal-theme-light .ag-report-content,
+.journal-root .ag-quick-log-card.journal-theme-light .ag-tracker-modal-dialog-header,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .ag-tracker-modal-dialog-header,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .ag-tracker-modal-dialog-body,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-light .ag-tracker-fullscreen-header {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-input,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-select,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-notes-textarea,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-bottom-notes-textarea,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-options-list,
+.journal-root .ag-quick-log-card.journal-theme-light .ag-tracker-select,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .ag-tracker-input,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-light .ag-tracker-fullscreen-textarea,
+.journal-root .ag-report-dialog.journal-theme-light select,
+.journal-root .ag-report-dialog.journal-theme-light input {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-btn,
+.journal-root .ag-quick-log-card.journal-theme-light .ag-tracker-btn,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .ag-tracker-btn,
+.journal-root .ag-report-dialog.journal-theme-light .ag-tracker-btn,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-light .ag-tracker-btn {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .text-white,
+.journal-root .ag-report-dialog.journal-theme-light .text-white,
+.journal-root .ag-quick-log-card.journal-theme-light .text-white,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .text-white {
+  color: #0f172a !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .text-gray-200,
+.journal-root .ag-tracker-dialog.journal-theme-light .text-gray-300,
+.journal-root .ag-tracker-dialog.journal-theme-light .text-gray-400,
+.journal-root .ag-tracker-dialog.journal-theme-light .text-gray-500,
+.journal-root .ag-report-dialog.journal-theme-light .text-gray-200,
+.journal-root .ag-report-dialog.journal-theme-light .text-gray-300,
+.journal-root .ag-report-dialog.journal-theme-light .text-gray-400,
+.journal-root .ag-report-dialog.journal-theme-light .text-gray-500,
+.journal-root .ag-quick-log-card.journal-theme-light .text-gray-400,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .text-gray-400,
+.journal-root .ag-tracker-modal-dialog.journal-theme-light .text-gray-500 {
+  color: #475569 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-report-account-name,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-row-title,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-row-account,
+.journal-root .ag-report-dialog.journal-theme-light .ag-report-account-name {
+  color: #0f172a !important;
+}
+
+.journal-root .ag-report-dialog.journal-theme-light td {
+  color: #0f172a !important;
+}
+
+/* --- OLED theme on all tracker dialogs --- */
+.journal-root .ag-tracker-dialog.journal-theme-oled,
+.journal-root .ag-report-dialog.journal-theme-oled,
+.journal-root .ag-tracker-modal-dialog.journal-theme-oled,
+.journal-root .ag-quick-log-card.journal-theme-oled,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-oled {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #262626 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-header,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-tabs-bar,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-appname-card,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-table-container,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-bottom-notes,
+.journal-root .ag-report-dialog.journal-theme-oled .ag-report-header,
+.journal-root .ag-quick-log-card.journal-theme-oled .ag-tracker-modal-dialog-header,
+.journal-root .ag-tracker-modal-dialog.journal-theme-oled .ag-tracker-modal-dialog-header,
+.journal-root .ag-tracker-modal-dialog.journal-theme-oled .ag-tracker-modal-dialog-body,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-oled .ag-tracker-fullscreen-header {
+  background-color: #050505 !important;
+  border-color: #262626 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-input,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-select,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-notes-textarea,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-bottom-notes-textarea,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-options-list,
+.journal-root .ag-quick-log-card.journal-theme-oled .ag-tracker-select,
+.journal-root .ag-tracker-modal-dialog.journal-theme-oled .ag-tracker-input,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-oled .ag-tracker-fullscreen-textarea {
+  background-color: #0a0a0a !important;
+  border-color: #333333 !important;
+  color: #ffffff !important;
+}
+
+/* --- CYBERPUNK theme on all tracker dialogs --- */
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk,
+.journal-root .ag-report-dialog.journal-theme-cyberpunk,
+.journal-root .ag-tracker-modal-dialog.journal-theme-cyberpunk,
+.journal-root .ag-quick-log-card.journal-theme-cyberpunk,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-cyberpunk {
+  background-color: #0a0a14 !important;
+  color: #00ffcc !important;
+  border-color: #ff007f !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-header,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-tabs-bar,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-appname-card,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-table-container,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-bottom-notes,
+.journal-root .ag-report-dialog.journal-theme-cyberpunk .ag-report-header,
+.journal-root .ag-quick-log-card.journal-theme-cyberpunk .ag-tracker-modal-dialog-header,
+.journal-root .ag-tracker-modal-dialog.journal-theme-cyberpunk .ag-tracker-modal-dialog-header,
+.journal-root .ag-tracker-modal-dialog.journal-theme-cyberpunk .ag-tracker-modal-dialog-body,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-cyberpunk .ag-tracker-fullscreen-header {
+  background-color: #121224 !important;
+  border-color: #ff007f !important;
+  color: #00ffcc !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-input,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-select,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-notes-textarea,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-bottom-notes-textarea,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-options-list,
+.journal-root .ag-quick-log-card.journal-theme-cyberpunk .ag-tracker-select,
+.journal-root .ag-tracker-modal-dialog.journal-theme-cyberpunk .ag-tracker-input,
+.journal-root .ag-tracker-fullscreen-editor.journal-theme-cyberpunk .ag-tracker-fullscreen-textarea {
+  background-color: #06060c !important;
+  border-color: #00ffcc !important;
+  color: #00ffcc !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-btn,
+.journal-root .ag-quick-log-card.journal-theme-cyberpunk .ag-tracker-btn,
+.journal-root .ag-tracker-modal-dialog.journal-theme-cyberpunk .ag-tracker-btn,
+.journal-root .ag-report-dialog.journal-theme-cyberpunk .ag-tracker-btn {
+  border-color: #00ffcc !important;
+  color: #00ffcc !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-tab,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-tab.active {
+  color: #00ffcc !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-tab.active {
+  border-bottom-color: #ff007f !important;
+}
+
+/* ==========================================================================
    PRINT STYLES
    Prints only the clean table & notes matching the original PDF on US Letter
    ========================================================================== */

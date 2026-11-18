@@ -33,6 +33,71 @@ export default function AppDevJournalInner() {
   const [isTrackerOpen, setIsTrackerOpen] = useState(false)
   const [mountKey, setMountKey] = useState(0)
 
+  // Current theme synchronized with journal-settings in localStorage
+  const [theme, setTheme] = useState<string>(() => {
+    try {
+      const raw = localStorage.getItem("journal-settings")
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed.theme) return parsed.theme
+      }
+    } catch {}
+    return "dark"
+  })
+
+  const handleThemeChange = useCallback((newTheme: string) => {
+    setTheme(newTheme)
+    try {
+      const raw = localStorage.getItem("journal-settings")
+      const current = raw ? JSON.parse(raw) : {}
+      current.theme = newTheme
+      localStorage.setItem("journal-settings", JSON.stringify(current))
+    } catch {}
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("slh_journal_theme_changed", { detail: { theme: newTheme } }))
+      window.dispatchEvent(new CustomEvent("slh_remount_journal"))
+    }
+  }, [])
+
+  // Keep .journal-root classes in sync with active theme
+  useEffect(() => {
+    const rootEl = rootRef.current
+    if (!rootEl) return
+    rootEl.classList.remove("journal-theme-dark", "journal-theme-light", "journal-theme-oled", "journal-theme-cyberpunk")
+    rootEl.classList.add(`journal-theme-${theme}`)
+    rootEl.classList.toggle("journal-theme-light", theme === "light")
+  }, [theme])
+
+  // Sync theme when external storage / settings changes
+  useEffect(() => {
+    const handleThemeEvent = (e: any) => {
+      if (e?.detail?.theme && e.detail.theme !== theme) {
+        setTheme(e.detail.theme)
+      }
+    }
+    const checkStoredTheme = () => {
+      try {
+        const raw = localStorage.getItem("journal-settings")
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed.theme && parsed.theme !== theme) {
+            setTheme(parsed.theme)
+          }
+        }
+      } catch {}
+    }
+
+    window.addEventListener("slh_journal_theme_changed", handleThemeEvent)
+    window.addEventListener("storage", checkStoredTheme)
+    window.addEventListener("slh_open_ag_tracker", checkStoredTheme)
+
+    return () => {
+      window.removeEventListener("slh_journal_theme_changed", handleThemeEvent)
+      window.removeEventListener("storage", checkStoredTheme)
+      window.removeEventListener("slh_open_ag_tracker", checkStoredTheme)
+    }
+  }, [theme])
+
   // Notify parent/shell when tracker opens or closes
   const handleOpenTracker = useCallback(() => {
     setIsTrackerOpen(true)
@@ -150,13 +215,15 @@ export default function AppDevJournalInner() {
       */}
       <div
         ref={rootRef}
-        className="journal-root"
+        className={`journal-root journal-theme-${theme} ${theme === "light" ? "journal-theme-light" : ""}`}
         style={{ isolation: "isolate" }}
       >
         <App key={mountKey} />
         <AgAccountTrackerModal
           isOpen={isTrackerOpen}
           onClose={handleCloseTracker}
+          theme={theme}
+          onThemeChange={handleThemeChange}
         />
       </div>
     </GoogleOAuthProvider>
