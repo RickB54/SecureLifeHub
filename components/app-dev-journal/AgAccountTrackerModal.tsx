@@ -13,7 +13,13 @@ import {
   Edit2,
   FileSpreadsheet,
   Maximize2,
+  BarChart3,
+  Zap,
+  RotateCcw,
+  History,
+  AlertCircle,
 } from "lucide-react"
+import AgAccountTrackerReports from "./AgAccountTrackerReports"
 
 // Default row labels from the printable PDF
 export const DEFAULT_ROW_LABELS = [
@@ -28,12 +34,17 @@ export const DEFAULT_ROW_LABELS = [
 ]
 
 const STORAGE_KEY = "slh-ag-account-tracker-v1"
+const HISTORY_STORAGE_KEY = "slh-ag-tracker-history"
+const CARRYOVER_STORAGE_KEY = "slh-ag-tracker-carryover"
+
+export type LineStatus = "In use" | "Low" | "Out" | ""
 
 export interface TrackerRowLine {
   id: string
   googleAccount: string
   usedOn: string // Stored as ISO local string (YYYY-MM-DDTHH:mm)
   nextAvailable: string // Stored as ISO local string (YYYY-MM-DDTHH:mm)
+  status?: LineStatus
   notes: string
   isCustomGoogleAccount?: boolean
 }
@@ -54,6 +65,7 @@ export interface AccountTracker {
 
 export interface TrackerOptions {
   customGoogleAccounts: string[]
+  accountResetHours?: Record<string, number>
 }
 
 export interface AgTrackerStorageData {
@@ -63,7 +75,7 @@ export interface AgTrackerStorageData {
 }
 
 // Convert Date to local ISO string (YYYY-MM-DDTHH:mm)
-function toLocalIsoString(d: Date): string {
+export function toLocalIsoString(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0")
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
@@ -99,6 +111,7 @@ function createDefaultLines(): TrackerRowLine[] {
       googleAccount: "",
       usedOn: "",
       nextAvailable: "",
+      status: "",
       notes: "",
     },
     {
@@ -106,6 +119,7 @@ function createDefaultLines(): TrackerRowLine[] {
       googleAccount: "",
       usedOn: "",
       nextAvailable: "",
+      status: "",
       notes: "",
     },
   ]
@@ -136,7 +150,7 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
         createDefaultTracker(3),
       ],
       activeTrackerIndex: 0,
-      options: { customGoogleAccounts: [] },
+      options: { customGoogleAccounts: [], accountResetHours: {} },
     }
   }
 
@@ -145,7 +159,7 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
     rows: (tr.rows || []).map((row: any) => ({
       ...row,
       lines: (row.lines || []).map((line: any) => {
-        let { usedOn, notes, nextAvailableDate, nextAvailable } = line
+        let { usedOn, notes, nextAvailableDate, nextAvailable, status } = line
         let currentNotes = notes || ""
 
         // Check if usedOn is an old app name (not a date string)
@@ -158,7 +172,6 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
           }
         }
 
-        // Migrate nextAvailable
         const nextVal = nextAvailable || nextAvailableDate || ""
 
         return {
@@ -166,6 +179,7 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
           googleAccount: line.googleAccount || "",
           usedOn: usedOn || "",
           nextAvailable: nextVal,
+          status: status || "",
           notes: currentNotes,
           isCustomGoogleAccount: Boolean(line.isCustomGoogleAccount),
         }
@@ -180,6 +194,7 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
       customGoogleAccounts: Array.isArray(rawObj.options?.customGoogleAccounts)
         ? rawObj.options.customGoogleAccounts
         : [],
+      accountResetHours: rawObj.options?.accountResetHours || {},
     },
   }
 }
@@ -207,6 +222,7 @@ function getInitialData(): AgTrackerStorageData {
     activeTrackerIndex: 0,
     options: {
       customGoogleAccounts: [],
+      accountResetHours: {},
     },
   }
 }
@@ -231,6 +247,15 @@ export default function AgAccountTrackerModal({
   const [data, setData] = useState<AgTrackerStorageData>(getInitialData)
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving">("saved")
   const [manageOptionsOpen, setManageOptionsOpen] = useState(false)
+  const [reportsOpen, setReportsOpen] = useState(false)
+  const [quickLogOpen, setQuickLogOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  const [quickLogAccount, setQuickLogAccount] = useState("")
+  const [quickLogResetChoice, setQuickLogResetChoice] = useState("default")
+  const [quickLogCustomHours, setQuickLogCustomHours] = useState(24)
+  const [toast, setToast] = useState<{ message: string; account: string } | null>(null)
+
   const [newOptionInput, setNewOptionInput] = useState("")
   const [editingOption, setEditingOption] = useState<{ original: string; current: string } | null>(null)
   const [fullScreenNotes, setFullScreenNotes] = useState<FullScreenNotesState | null>(null)
@@ -259,6 +284,13 @@ export default function AgAccountTrackerModal({
     const custom = data.options.customGoogleAccounts || []
     return Array.from(new Set([...base, ...custom]))
   }, [data.options.customGoogleAccounts])
+
+  // Set initial quick log account
+  useEffect(() => {
+    if (googleAccountOptions.length > 0 && !quickLogAccount) {
+      setQuickLogAccount(googleAccountOptions[0])
+    }
+  }, [googleAccountOptions, quickLogAccount])
 
   // Debounced auto-save (500ms)
   const triggerSave = useCallback((newData: AgTrackerStorageData) => {
@@ -300,12 +332,28 @@ export default function AgAccountTrackerModal({
     onClose()
   }, [data, onClose])
 
-  // Escape key handler: closes full-screen editor -> manage options -> tracker
+  // Escape key handler: closes sub-dialogs first -> then tracker
   useEffect(() => {
     if (!isOpen) return
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (toast !== null) {
+          setToast(null)
+          return
+        }
+        if (quickLogOpen) {
+          setQuickLogOpen(false)
+          return
+        }
+        if (historyOpen) {
+          setHistoryOpen(false)
+          return
+        }
+        if (reportsOpen) {
+          setReportsOpen(false)
+          return
+        }
         if (fullScreenNotes !== null) {
           setFullScreenNotes(null)
           return
@@ -320,7 +368,7 @@ export default function AgAccountTrackerModal({
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, fullScreenNotes, manageOptionsOpen, handleImmediateClose])
+  }, [isOpen, toast, quickLogOpen, historyOpen, reportsOpen, fullScreenNotes, manageOptionsOpen, handleImmediateClose])
 
   // Active tracker
   const activeIndex = Math.min(
@@ -337,6 +385,100 @@ export default function AgAccountTrackerModal({
       return { ...prev, trackers: newTrackers }
     })
   }
+
+  // Account Readiness & Currently Active Calculation across all trackers
+  const { readyCount, currentlyActiveAccount, bestNextAccount } = useMemo(() => {
+    const nowMs = Date.now()
+    const allAccounts = googleAccountOptions
+
+    let activeAccount = ""
+    let latestActiveTime = 0
+
+    // Gather latest times for all accounts
+    const stats = allAccounts.map((acct) => {
+      let timesUsed = 0
+      let latestUsedMs = 0
+      let latestNextMs = 0
+      let latestLineStatus = ""
+
+      for (const tr of data.trackers) {
+        for (const row of tr.rows || []) {
+          for (const line of row.lines || []) {
+            const lineAcct = line.googleAccount?.trim() || row.label.trim()
+            if (lineAcct === acct) {
+              if (line.usedOn) {
+                timesUsed++
+                const uTime = new Date(line.usedOn).getTime()
+                if (uTime > latestUsedMs) {
+                  latestUsedMs = uTime
+                  latestLineStatus = line.status || ""
+                }
+              } else if (line.status && !latestLineStatus) {
+                latestLineStatus = line.status
+              }
+
+              if (line.nextAvailable) {
+                const nTime = new Date(line.nextAvailable).getTime()
+                if (nTime > latestNextMs) {
+                  latestNextMs = nTime
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Check if currently active (In use or Low, and not Out)
+      if (
+        (latestLineStatus === "In use" || latestLineStatus === "Low") &&
+        latestUsedMs > latestActiveTime
+      ) {
+        latestActiveTime = latestUsedMs
+        activeAccount = acct
+      }
+
+      const isReadyNow =
+        (latestNextMs > 0 && latestNextMs <= nowMs) ||
+        (latestNextMs === 0 && timesUsed === 0)
+
+      return {
+        acct,
+        timesUsed,
+        latestUsedMs,
+        latestNextMs,
+        isReadyNow,
+      }
+    })
+
+    const readyNowAccounts = stats.filter((s) => s.isReadyNow)
+
+    // Best pick logic: Ready now, preferring never-used, then the one used longest ago
+    let best = ""
+    if (readyNowAccounts.length > 0) {
+      const neverUsed = readyNowAccounts.filter((s) => s.timesUsed === 0)
+      if (neverUsed.length > 0) {
+        best = neverUsed[0].acct
+      } else {
+        readyNowAccounts.sort((a, b) => a.latestUsedMs - b.latestUsedMs)
+        best = readyNowAccounts[0].acct
+      }
+    } else {
+      // If none ready now, pick soonest ready
+      const waiting = stats.filter((s) => s.latestNextMs > nowMs)
+      if (waiting.length > 0) {
+        waiting.sort((a, b) => a.latestNextMs - b.latestNextMs)
+        best = waiting[0].acct
+      } else if (allAccounts.length > 0) {
+        best = allAccounts[0]
+      }
+    }
+
+    return {
+      readyCount: readyNowAccounts.length,
+      currentlyActiveAccount: activeAccount,
+      bestNextAccount: best,
+    }
+  }, [googleAccountOptions, data.trackers])
 
   // Add new tracker tab
   const handleAddTracker = () => {
@@ -391,6 +533,7 @@ export default function AgAccountTrackerModal({
           googleAccount: "",
           usedOn: "",
           nextAvailable: "",
+          status: "",
           notes: "",
         },
       ]
@@ -405,13 +548,13 @@ export default function AgAccountTrackerModal({
       const newRows = [...tracker.rows]
       const targetRow = { ...newRows[rowIndex] }
       if (targetRow.lines.length <= 1) {
-        // Clear instead of removing
         targetRow.lines = [
           {
             id: "l-" + Math.random().toString(36).substring(2, 9),
             googleAccount: "",
             usedOn: "",
             nextAvailable: "",
+            status: "",
             notes: "",
           },
         ]
@@ -455,7 +598,6 @@ export default function AgAccountTrackerModal({
     } else if (choice === "Clear") {
       nextVal = ""
     } else if (choice === "Custom date/time") {
-      // Leave value unchanged, user will edit the datetime-local picker
       return
     }
 
@@ -500,10 +642,328 @@ export default function AgAccountTrackerModal({
     handleUpdateLine(rowIndex, lineIndex, "nextAvailable", nextVal)
   }
 
-  // Export JSON
+  // QUICK LOG ACTIONS
+  const handleQuickLogStarted = (accountName: string) => {
+    if (!accountName) return
+    const nowIso = toLocalIsoString(new Date())
+
+    updateCurrentTracker((tr) => {
+      const newRows = [...tr.rows]
+      // Find row matching accountName or default
+      let targetRowIdx = newRows.findIndex(
+        (r) => r.label.trim().toLowerCase() === accountName.trim().toLowerCase()
+      )
+      if (targetRowIdx === -1) targetRowIdx = 0
+
+      const targetRow = { ...newRows[targetRowIdx] }
+      const newLines = [...targetRow.lines]
+
+      // Check if an empty line exists in this row
+      const emptyLineIdx = newLines.findIndex(
+        (l) => !l.usedOn && !l.googleAccount && !l.status
+      )
+
+      if (emptyLineIdx !== -1) {
+        newLines[emptyLineIdx] = {
+          ...newLines[emptyLineIdx],
+          googleAccount: accountName,
+          usedOn: nowIso,
+          status: "In use",
+        }
+      } else {
+        newLines.push({
+          id: "l-" + Math.random().toString(36).substring(2, 9),
+          googleAccount: accountName,
+          usedOn: nowIso,
+          nextAvailable: "",
+          status: "In use",
+          notes: "",
+        })
+      }
+
+      targetRow.lines = newLines
+      newRows[targetRowIdx] = targetRow
+      return { ...tr, rows: newRows }
+    })
+
+    setQuickLogOpen(false)
+    setToast(null)
+  }
+
+  const handleQuickLogOutOfTokens = (accountName: string) => {
+    if (!accountName) return
+    const now = new Date()
+    const nowIso = toLocalIsoString(now)
+
+    // Calculate reset hours
+    let resetHours = data.options?.accountResetHours?.[accountName] ?? 24
+    if (quickLogResetChoice === "5") resetHours = 5
+    else if (quickLogResetChoice === "12") resetHours = 12
+    else if (quickLogResetChoice === "24") resetHours = 24
+    else if (quickLogResetChoice === "72") resetHours = 72
+    else if (quickLogResetChoice === "168") resetHours = 168
+    else if (quickLogResetChoice === "custom") resetHours = quickLogCustomHours || 24
+
+    const nextAvailDate = new Date(now.getTime() + resetHours * 3600 * 1000)
+    const nextAvailIso = toLocalIsoString(nextAvailDate)
+
+    updateCurrentTracker((tr) => {
+      const newRows = [...tr.rows]
+      let targetRowIdx = newRows.findIndex(
+        (r) => r.label.trim().toLowerCase() === accountName.trim().toLowerCase()
+      )
+      if (targetRowIdx === -1) targetRowIdx = 0
+
+      const targetRow = { ...newRows[targetRowIdx] }
+      const newLines = [...targetRow.lines]
+
+      // Check if latest line for this account is "In use"
+      let foundInUseIdx = -1
+      for (let i = newLines.length - 1; i >= 0; i--) {
+        const line = newLines[i]
+        const lineAcct = line.googleAccount?.trim() || targetRow.label.trim()
+        if (lineAcct === accountName && line.status === "In use") {
+          foundInUseIdx = i
+          break
+        }
+      }
+
+      if (foundInUseIdx !== -1) {
+        newLines[foundInUseIdx] = {
+          ...newLines[foundInUseIdx],
+          status: "Out",
+          nextAvailable: nextAvailIso,
+        }
+      } else {
+        newLines.push({
+          id: "l-" + Math.random().toString(36).substring(2, 9),
+          googleAccount: accountName,
+          usedOn: nowIso,
+          nextAvailable: nextAvailIso,
+          status: "Out",
+          notes: "",
+        })
+      }
+
+      targetRow.lines = newLines
+      newRows[targetRowIdx] = targetRow
+      return { ...tr, rows: newRows }
+    })
+
+    setQuickLogOpen(false)
+
+    // Trigger toast recommending next account
+    if (bestNextAccount && bestNextAccount !== accountName) {
+      setToast({
+        message: `Switch to: ${bestNextAccount}`,
+        account: bestNextAccount,
+      })
+    }
+  }
+
+  const handleQuickLogRunningLow = (accountName: string) => {
+    if (!accountName) return
+    const nowIso = toLocalIsoString(new Date())
+
+    updateCurrentTracker((tr) => {
+      const newRows = [...tr.rows]
+      let targetRowIdx = newRows.findIndex(
+        (r) => r.label.trim().toLowerCase() === accountName.trim().toLowerCase()
+      )
+      if (targetRowIdx === -1) targetRowIdx = 0
+
+      const targetRow = { ...newRows[targetRowIdx] }
+      const newLines = [...targetRow.lines]
+
+      // Check if latest line for this account is "In use"
+      let foundInUseIdx = -1
+      for (let i = newLines.length - 1; i >= 0; i--) {
+        const line = newLines[i]
+        const lineAcct = line.googleAccount?.trim() || targetRow.label.trim()
+        if (lineAcct === accountName && line.status === "In use") {
+          foundInUseIdx = i
+          break
+        }
+      }
+
+      if (foundInUseIdx !== -1) {
+        newLines[foundInUseIdx] = {
+          ...newLines[foundInUseIdx],
+          status: "Low",
+        }
+      } else {
+        newLines.push({
+          id: "l-" + Math.random().toString(36).substring(2, 9),
+          googleAccount: accountName,
+          usedOn: nowIso,
+          nextAvailable: "",
+          status: "Low",
+          notes: "",
+        })
+      }
+
+      targetRow.lines = newLines
+      newRows[targetRowIdx] = targetRow
+      return { ...tr, rows: newRows }
+    })
+
+    setQuickLogOpen(false)
+  }
+
+  // NEW CYCLE WORKFLOW
+  const handleStartNewCycle = () => {
+    const confirmed = window.confirm(
+      "Start a new cycle? Entries will be archived and the lines cleared. Each account's last used, next available, and status are carried over so the reports keep working."
+    )
+    if (!confirmed) return
+
+    const now = new Date()
+    const dateStr = now.toISOString().split("T")[0]
+    const archiveFilename = `AG-Tracker-Archive-${dateStr}.json`
+
+    // 1. Auto-download JSON backup
+    try {
+      const archiveData = {
+        archiveDate: now.toISOString(),
+        archiveFilename,
+        trackers: data.trackers,
+        options: data.options,
+      }
+      const blob = new Blob([JSON.stringify(archiveData, null, 2)], {
+        type: "application/json",
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = archiveFilename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.warn("Archive download warning:", err)
+    }
+
+    // 2. Save snapshot in localStorage "slh-ag-tracker-history" (keep 10 most recent)
+    try {
+      const existingHistoryRaw = localStorage.getItem(HISTORY_STORAGE_KEY)
+      let historyList = existingHistoryRaw ? JSON.parse(existingHistoryRaw) : []
+      if (!Array.isArray(historyList)) historyList = []
+
+      const newSnapshot = {
+        id: "snapshot-" + Date.now(),
+        date: now.toISOString(),
+        archiveFilename,
+        data: JSON.parse(JSON.stringify(data)),
+      }
+      historyList.unshift(newSnapshot)
+      historyList = historyList.slice(0, 10)
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(historyList))
+    } catch (err) {
+      console.error("Failed to save tracker history snapshot:", err)
+    }
+
+    // 3. Save each account's latest Used On, Next Available, status, and appName in "slh-ag-tracker-carryover"
+    try {
+      const carryOverMap: Record<string, any> = {}
+      for (const acct of googleAccountOptions) {
+        let latestUsedMs = 0
+        let latestUsedIso = ""
+        let latestUsedApp = ""
+        let latestNextMs = 0
+        let latestNextIso = ""
+        let latestStatus = ""
+
+        for (const tr of data.trackers) {
+          const appName = tr.appName || tr.title
+          for (const row of tr.rows || []) {
+            for (const line of row.lines || []) {
+              const lineAcct = line.googleAccount?.trim() || row.label.trim()
+              if (lineAcct === acct) {
+                if (line.usedOn) {
+                  const uTime = new Date(line.usedOn).getTime()
+                  if (uTime > latestUsedMs) {
+                    latestUsedMs = uTime
+                    latestUsedIso = line.usedOn
+                    latestUsedApp = appName
+                    latestStatus = line.status || ""
+                  }
+                } else if (line.status && !latestStatus) {
+                  latestStatus = line.status
+                }
+
+                if (line.nextAvailable) {
+                  const nTime = new Date(line.nextAvailable).getTime()
+                  if (nTime > latestNextMs) {
+                    latestNextMs = nTime
+                    latestNextIso = line.nextAvailable
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (latestUsedIso || latestNextIso || latestStatus) {
+          carryOverMap[acct] = {
+            accountName: acct,
+            usedOn: latestUsedIso,
+            nextAvailable: latestNextIso,
+            status: latestStatus,
+            appName: latestUsedApp,
+          }
+        }
+      }
+      localStorage.setItem(CARRYOVER_STORAGE_KEY, JSON.stringify(carryOverMap))
+    } catch (err) {
+      console.error("Failed to save carryover data:", err)
+    }
+
+    // 4. Clear every line in every tracker, keeping App Names, row labels, dropdown options, and settings
+    const clearedTrackers: AccountTracker[] = data.trackers.map((tr) => ({
+      ...tr,
+      rows: tr.rows.map((row) => ({
+        ...row,
+        lines: createDefaultLines(),
+      })),
+      trackerNotes: "",
+    }))
+
+    const newData: AgTrackerStorageData = {
+      ...data,
+      trackers: clearedTrackers,
+    }
+
+    setData(newData)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newData))
+    setSaveStatus("saved")
+    alert("New cycle started! Lines cleared and accounts carried over.")
+  }
+
+  // Restore history snapshot
+  const handleRestoreSnapshot = (snapshotData: AgTrackerStorageData) => {
+    if (!window.confirm("Restore this cycle? Current tracker data will be replaced.")) return
+
+    setData(snapshotData)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshotData))
+    setSaveStatus("saved")
+    setHistoryOpen(false)
+    alert("Cycle restored successfully.")
+  }
+
+  // Export JSON (Includes History & Carryover)
   const handleExportJson = () => {
     try {
-      const jsonStr = JSON.stringify(data, null, 2)
+      const historyData = JSON.parse(localStorage.getItem(HISTORY_STORAGE_KEY) || "[]")
+      const carryOverData = JSON.parse(localStorage.getItem(CARRYOVER_STORAGE_KEY) || "{}")
+
+      const exportPayload = {
+        ...data,
+        history: historyData,
+        carryover: carryOverData,
+      }
+
+      const jsonStr = JSON.stringify(exportPayload, null, 2)
       const blob = new Blob([jsonStr], { type: "application/json" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -518,7 +978,7 @@ export default function AgAccountTrackerModal({
     }
   }
 
-  // Import JSON
+  // Import JSON (Restores History & Carryover if present)
   const handleImportJson = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -537,6 +997,15 @@ export default function AgAccountTrackerModal({
         }
 
         const migrated = migrateStorageData(parsed)
+
+        // Restore history & carryover if present
+        if (Array.isArray(parsed.history)) {
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(parsed.history))
+        }
+        if (parsed.carryover && typeof parsed.carryover === "object") {
+          localStorage.setItem(CARRYOVER_STORAGE_KEY, JSON.stringify(parsed.carryover))
+        }
+
         setData(migrated)
         localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
         setSaveStatus("saved")
@@ -555,7 +1024,7 @@ export default function AgAccountTrackerModal({
     window.print()
   }
 
-  // Manage Google Account Options
+  // Manage Google Account Options & Reset Hours
   const handleAddCustomGoogleAccount = () => {
     const trimmed = newOptionInput.trim()
     if (!trimmed) return
@@ -568,6 +1037,10 @@ export default function AgAccountTrackerModal({
         options: {
           ...prev.options,
           customGoogleAccounts: [...existing, trimmed],
+          accountResetHours: {
+            ...(prev.options.accountResetHours || {}),
+            [trimmed]: 24,
+          },
         },
       }
     })
@@ -577,34 +1050,30 @@ export default function AgAccountTrackerModal({
   const handleDeleteCustomGoogleAccount = (optToDelete: string) => {
     updateData((prev) => {
       const existing = prev.options.customGoogleAccounts || []
+      const updatedHours = { ...(prev.options.accountResetHours || {}) }
+      delete updatedHours[optToDelete]
       return {
         ...prev,
         options: {
           ...prev.options,
           customGoogleAccounts: existing.filter((item) => item !== optToDelete),
+          accountResetHours: updatedHours,
         },
       }
     })
   }
 
-  const handleRenameCustomGoogleAccount = (oldVal: string, newVal: string) => {
-    const trimmed = newVal.trim()
-    if (!trimmed || trimmed === oldVal) {
-      setEditingOption(null)
-      return
-    }
-
-    updateData((prev) => {
-      const existing = prev.options.customGoogleAccounts || []
-      return {
-        ...prev,
-        options: {
-          ...prev.options,
-          customGoogleAccounts: existing.map((item) => (item === oldVal ? trimmed : item)),
+  const handleUpdateResetHours = (accountName: string, hours: number) => {
+    updateData((prev) => ({
+      ...prev,
+      options: {
+        ...prev.options,
+        accountResetHours: {
+          ...(prev.options.accountResetHours || {}),
+          [accountName]: Math.max(1, hours || 24),
         },
-      }
-    })
-    setEditingOption(null)
+      },
+    }))
   }
 
   // Handle Full-Screen Notes Editing
@@ -649,6 +1118,17 @@ export default function AgAccountTrackerModal({
 
   if (!isOpen) return null
 
+  // Load history list when history modal opens
+  const historyList = useMemo(() => {
+    if (!historyOpen || typeof window === "undefined") return []
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  }, [historyOpen])
+
   return (
     <>
       {/* Centered Dialog Backdrop Container */}
@@ -673,6 +1153,27 @@ export default function AgAccountTrackerModal({
           className="ag-tracker-dialog"
           onClick={(e) => e.stopPropagation()}
         >
+          {/* TOAST NOTIFICATION */}
+          {toast && (
+            <div className="ag-toast-container">
+              <span>{toast.message}</span>
+              <button
+                type="button"
+                className="ag-toast-btn"
+                onClick={() => handleQuickLogStarted(toast.account)}
+              >
+                Log started
+              </button>
+              <button
+                type="button"
+                className="ag-tracker-btn-icon text-gray-400 hover:text-white"
+                onClick={() => setToast(null)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           {/* DIALOG HEADER */}
           <header className="ag-tracker-header">
             <div className="ag-tracker-header-left">
@@ -680,6 +1181,7 @@ export default function AgAccountTrackerModal({
                 <FileSpreadsheet className="h-5 w-5 text-blue-400" />
                 AG Account Tracker
               </h2>
+
               <span
                 className={`ag-tracker-save-badge ${saveStatus === "saving" ? "saving" : "saved"}`}
                 title={saveStatus === "saving" ? "Saving changes..." : "All changes saved locally"}
@@ -692,9 +1194,68 @@ export default function AgAccountTrackerModal({
                   </>
                 )}
               </span>
+
+              {/* Currently Using Chip (Hidden on mobile) */}
+              {currentlyActiveAccount && (
+                <div className="ag-tracker-active-chip hidden sm:inline-flex">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  Currently using: <strong className="text-white">{currentlyActiveAccount}</strong>
+                </div>
+              )}
             </div>
 
             <div className="ag-tracker-header-actions">
+              {/* QUICK LOG BUTTON */}
+              <button
+                type="button"
+                className="ag-tracker-btn ag-quick-log-trigger-btn font-bold text-amber-300 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20"
+                onClick={() => setQuickLogOpen(true)}
+                title="Quick log account status (Started, Out of tokens, Low)"
+                aria-label="Quick Log"
+              >
+                <Zap className="h-4 w-4 text-amber-400 fill-amber-400" />
+                <span>Quick Log</span>
+              </button>
+
+              {/* REPORTS BUTTON WITH READY NOW COUNT BADGE */}
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={() => setReportsOpen(true)}
+                title="View account usage and next available reports"
+                aria-label="Reports"
+              >
+                <BarChart3 className="h-4 w-4" />
+                <span>Reports</span>
+                <span className="ag-report-count-badge">
+                  {readyCount} ready
+                </span>
+              </button>
+
+              {/* NEW CYCLE BUTTON */}
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={handleStartNewCycle}
+                title="Archive current cycle and clear entries while preserving account statuses"
+                aria-label="New Cycle"
+              >
+                <RotateCcw className="h-4 w-4 text-sky-400" />
+                <span>New Cycle</span>
+              </button>
+
+              {/* HISTORY BUTTON */}
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={() => setHistoryOpen(true)}
+                title="View and restore past cycles"
+                aria-label="History"
+              >
+                <History className="h-4 w-4 text-purple-400" />
+                <span>History</span>
+              </button>
+
               <button
                 type="button"
                 className="ag-tracker-btn"
@@ -837,9 +1398,9 @@ export default function AgAccountTrackerModal({
                   <tr>
                     <th className="ag-tracker-th" style={{ width: "110px" }}>Row</th>
                     <th className="ag-tracker-th" style={{ width: "165px" }}>Google Account</th>
-                    <th className="ag-tracker-th" style={{ width: "165px" }}>Used On</th>
-                    <th className="ag-tracker-th" style={{ width: "165px" }}>Next Available</th>
-                    <th className="ag-tracker-th" style={{ width: "360px" }}>Notes</th>
+                    <th className="ag-tracker-th" style={{ width: "190px" }}>Used On / Status</th>
+                    <th className="ag-tracker-th" style={{ width: "175px" }}>Next Available</th>
+                    <th className="ag-tracker-th" style={{ width: "350px" }}>Notes</th>
                     <th className="ag-tracker-th" style={{ width: "45px", textAlign: "center" }}>Act</th>
                   </tr>
                 </thead>
@@ -936,7 +1497,7 @@ export default function AgAccountTrackerModal({
                             )}
                           </td>
 
-                          {/* Used On Column: Quick Choice dropdown + datetime-local picker */}
+                          {/* Used On + Status Column */}
                           <td className="ag-tracker-td">
                             <div className="ag-tracker-datetime-group">
                               <select
@@ -944,7 +1505,7 @@ export default function AgAccountTrackerModal({
                                 defaultValue=""
                                 onChange={(e) => {
                                   handleUsedOnChoice(rIdx, lIdx, e.target.value)
-                                  e.target.value = "" // Reset back to Quick Choice…
+                                  e.target.value = ""
                                 }}
                               >
                                 <option value="" disabled>Quick Choice…</option>
@@ -960,6 +1521,37 @@ export default function AgAccountTrackerModal({
                                   handleUpdateLine(rIdx, lIdx, "usedOn", e.target.value)
                                 }
                               />
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.25rem", marginTop: "2px" }}>
+                                {line.status ? (
+                                  <span
+                                    className={`ag-status-badge ${
+                                      line.status === "In use"
+                                        ? "ag-status-inuse"
+                                        : line.status === "Low"
+                                        ? "ag-status-low"
+                                        : "ag-status-out"
+                                    }`}
+                                  >
+                                    {line.status}
+                                  </span>
+                                ) : (
+                                  <span />
+                                )}
+                                <select
+                                  aria-label="Change status"
+                                  className="ag-tracker-select"
+                                  style={{ width: "auto", minWidth: "80px", padding: "0.2rem 0.4rem", fontSize: "0.75rem" }}
+                                  value={line.status || ""}
+                                  onChange={(e) =>
+                                    handleUpdateLine(rIdx, lIdx, "status", e.target.value)
+                                  }
+                                >
+                                  <option value="">(Status)</option>
+                                  <option value="In use">In use</option>
+                                  <option value="Low">Low</option>
+                                  <option value="Out">Out</option>
+                                </select>
+                              </div>
                               {line.usedOn && (
                                 <span className="ag-tracker-datetime-display">
                                   {formatDisplayDateTime(line.usedOn)}
@@ -968,7 +1560,7 @@ export default function AgAccountTrackerModal({
                             </div>
                           </td>
 
-                          {/* Next Available Column: Quick Choice dropdown + datetime-local picker */}
+                          {/* Next Available Column */}
                           <td className="ag-tracker-td">
                             <div className="ag-tracker-datetime-group">
                               <select
@@ -976,7 +1568,7 @@ export default function AgAccountTrackerModal({
                                 defaultValue=""
                                 onChange={(e) => {
                                   handleNextAvailableChoice(rIdx, lIdx, e.target.value)
-                                  e.target.value = "" // Reset back to Quick Choice…
+                                  e.target.value = ""
                                 }}
                               >
                                 <option value="" disabled>Quick Choice…</option>
@@ -1006,7 +1598,7 @@ export default function AgAccountTrackerModal({
                             </div>
                           </td>
 
-                          {/* Notes Column: Fixed 340px wide by 150px high, scrollbar, resize handle + Maximize2 button */}
+                          {/* Notes Column */}
                           <td className="ag-tracker-td">
                             <div className="ag-tracker-notes-wrapper">
                               <button
@@ -1131,9 +1723,24 @@ export default function AgAccountTrackerModal({
                         )}
                       </div>
 
-                      {/* Used On */}
+                      {/* Used On + Status */}
                       <div className="ag-tracker-mobile-field">
-                        <label className="ag-tracker-mobile-label">Used On:</label>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <label className="ag-tracker-mobile-label">Used On / Status:</label>
+                          {line.status && (
+                            <span
+                              className={`ag-status-badge ${
+                                line.status === "In use"
+                                  ? "ag-status-inuse"
+                                  : line.status === "Low"
+                                  ? "ag-status-low"
+                                  : "ag-status-out"
+                              }`}
+                            >
+                              {line.status}
+                            </span>
+                          )}
+                        </div>
                         <select
                           className="ag-tracker-select"
                           defaultValue=""
@@ -1155,6 +1762,21 @@ export default function AgAccountTrackerModal({
                             handleUpdateLine(rIdx, lIdx, "usedOn", e.target.value)
                           }
                         />
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                          <select
+                            aria-label="Line status"
+                            className="ag-tracker-select"
+                            value={line.status || ""}
+                            onChange={(e) =>
+                              handleUpdateLine(rIdx, lIdx, "status", e.target.value)
+                            }
+                          >
+                            <option value="">(No status)</option>
+                            <option value="In use">In use</option>
+                            <option value="Low">Low</option>
+                            <option value="Out">Out</option>
+                          </select>
+                        </div>
                         {line.usedOn && (
                           <span className="ag-tracker-datetime-display">
                             {formatDisplayDateTime(line.usedOn)}
@@ -1199,7 +1821,7 @@ export default function AgAccountTrackerModal({
                         )}
                       </div>
 
-                      {/* Notes with Maximize2 button */}
+                      {/* Notes with Maximize2 */}
                       <div className="ag-tracker-mobile-field">
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <label className="ag-tracker-mobile-label">Notes:</label>
@@ -1241,7 +1863,7 @@ export default function AgAccountTrackerModal({
               ))}
             </section>
 
-            {/* BOTTOM TRACKER NOTES (Fixed 150px high, scrollbar, resize handle + Maximize2) */}
+            {/* BOTTOM TRACKER NOTES */}
             <section className="ag-tracker-bottom-notes">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <label htmlFor="ag-tracker-bottom-notes-input" className="ag-tracker-bottom-notes-label">
@@ -1270,7 +1892,7 @@ export default function AgAccountTrackerModal({
               </div>
             </section>
 
-            {/* PRINT ONLY CLEAN AREA (Formatted for US Letter matching original PDF) */}
+            {/* PRINT ONLY CLEAN AREA */}
             <div className="ag-tracker-print-area" style={{ display: "none" }}>
               <div className="ag-tracker-print-header">
                 <span className="ag-tracker-print-title">AG Account Tracker</span>
@@ -1284,7 +1906,7 @@ export default function AgAccountTrackerModal({
                   <tr>
                     <th className="ag-tracker-print-th" style={{ width: "12%" }}>Row</th>
                     <th className="ag-tracker-print-th" style={{ width: "20%" }}>Google Account</th>
-                    <th className="ag-tracker-print-th" style={{ width: "18%" }}>Used On</th>
+                    <th className="ag-tracker-print-th" style={{ width: "18%" }}>Used On / Status</th>
                     <th className="ag-tracker-print-th" style={{ width: "18%" }}>Next Available</th>
                     <th className="ag-tracker-print-th" style={{ width: "32%" }}>Notes</th>
                   </tr>
@@ -1304,7 +1926,8 @@ export default function AgAccountTrackerModal({
                         )}
                         <td className="ag-tracker-print-td">{line.googleAccount || "—"}</td>
                         <td className="ag-tracker-print-td">
-                          {formatDisplayDateTime(line.usedOn) || "—"}
+                          {formatDisplayDateTime(line.usedOn) || "—"}{" "}
+                          {line.status && `[${line.status}]`}
                         </td>
                         <td className="ag-tracker-print-td">
                           {formatDisplayDateTime(line.nextAvailable) || "—"}
@@ -1331,7 +1954,194 @@ export default function AgAccountTrackerModal({
         </div>
       </div>
 
-      {/* FULL-SCREEN NOTES EDITOR (Covering everything, z-[999999]) */}
+      {/* QUICK LOG POPUP DIALOG */}
+      {quickLogOpen && (
+        <div
+          className="ag-tracker-modal-dialog-overlay"
+          onClick={() => setQuickLogOpen(false)}
+        >
+          <div
+            className="ag-quick-log-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="ag-tracker-modal-dialog-header">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <Zap className="h-4 w-4 text-amber-400 fill-amber-400" />
+                Quick Log Account Status
+              </h3>
+              <button
+                type="button"
+                className="ag-tracker-btn ag-tracker-btn-icon"
+                onClick={() => setQuickLogOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-4 flex flex-col gap-4">
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+                  Select Account:
+                </label>
+                <select
+                  className="ag-tracker-select font-semibold text-base py-2"
+                  value={quickLogAccount}
+                  onChange={(e) => setQuickLogAccount(e.target.value)}
+                >
+                  {googleAccountOptions.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-2.5">
+                {/* 1. STARTED USING */}
+                <button
+                  type="button"
+                  className="ag-quick-log-btn-big ag-quick-log-btn-green"
+                  onClick={() => handleQuickLogStarted(quickLogAccount)}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                  <span>Started using</span>
+                </button>
+
+                {/* 2. OUT OF TOKENS */}
+                <div className="flex flex-col gap-1.5 p-2.5 rounded-lg border border-red-500/25 bg-red-500/5">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="ag-quick-log-btn-big ag-quick-log-btn-red flex-1"
+                      onClick={() => handleQuickLogOutOfTokens(quickLogAccount)}
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                      <span>Out of tokens</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs text-gray-400 whitespace-nowrap">Reset in:</span>
+                    <select
+                      className="ag-tracker-select text-xs py-1"
+                      value={quickLogResetChoice}
+                      onChange={(e) => setQuickLogResetChoice(e.target.value)}
+                    >
+                      <option value="default">
+                        {data.options?.accountResetHours?.[quickLogAccount] ?? 24}h (Account Default)
+                      </option>
+                      <option value="5">5 hours</option>
+                      <option value="12">12 hours</option>
+                      <option value="24">24 hours</option>
+                      <option value="72">3 days (72h)</option>
+                      <option value="168">7 days (168h)</option>
+                      <option value="custom">Custom hours...</option>
+                    </select>
+                    {quickLogResetChoice === "custom" && (
+                      <input
+                        type="number"
+                        className="ag-tracker-input text-xs w-16 py-1"
+                        min="1"
+                        value={quickLogCustomHours}
+                        onChange={(e) => setQuickLogCustomHours(Number(e.target.value))}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. RUNNING LOW */}
+                <button
+                  type="button"
+                  className="ag-quick-log-btn-big ag-quick-log-btn-amber"
+                  onClick={() => handleQuickLogRunningLow(quickLogAccount)}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  <span>Running low</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY MODAL DIALOG */}
+      {historyOpen && (
+        <div
+          className="ag-tracker-modal-dialog-overlay"
+          onClick={() => setHistoryOpen(false)}
+        >
+          <div
+            className="ag-tracker-modal-dialog"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="ag-tracker-modal-dialog-header">
+              <h3 className="text-base font-bold flex items-center gap-2">
+                <History className="h-4 w-4 text-purple-400" />
+                Past Cycle Archives
+              </h3>
+              <button
+                type="button"
+                className="ag-tracker-btn ag-tracker-btn-icon"
+                onClick={() => setHistoryOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="ag-tracker-modal-dialog-body">
+              {historyList.length === 0 ? (
+                <div className="text-sm text-gray-500 p-4 text-center">
+                  No archived cycles saved yet. Use &quot;New Cycle&quot; to archive and start fresh.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {historyList.map((item, idx) => (
+                    <div key={item.id || idx} className="ag-history-item">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-white">
+                          {item.archiveFilename || `Cycle ${idx + 1}`}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(item.date).toLocaleString()}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="ag-tracker-btn ag-tracker-btn-primary"
+                        onClick={() => handleRestoreSnapshot(item.data)}
+                      >
+                        Restore
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                padding: "0.75rem 1.25rem",
+                borderTop: "1px solid var(--border, rgba(255, 255, 255, 0.1))",
+              }}
+            >
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={() => setHistoryOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULL-SCREEN NOTES EDITOR */}
       {fullScreenNotes !== null && (
         <div className="ag-tracker-fullscreen-editor" role="dialog" aria-modal="true">
           <div className="ag-tracker-fullscreen-header">
@@ -1401,80 +2211,37 @@ export default function AgAccountTrackerModal({
 
               <div>
                 <p className="text-xs font-semibold text-gray-400 mb-2">
-                  Custom Saved Options (Persisted Across Sessions):
+                  Account Reset Times (Hours until tokens recover):
                 </p>
                 <div className="ag-tracker-options-list">
-                  {(data.options.customGoogleAccounts || []).length === 0 ? (
-                    <div className="text-xs text-gray-500 p-2 text-center">
-                      No custom options added yet.
-                    </div>
-                  ) : (
-                    data.options.customGoogleAccounts.map((opt) => (
-                      <div key={opt} className="ag-tracker-option-item">
-                        {editingOption?.original === opt ? (
-                          <div style={{ display: "flex", gap: "0.25rem", flex: 1 }}>
-                            <input
-                              className="ag-tracker-input"
-                              value={editingOption.current}
-                              onChange={(e) =>
-                                setEditingOption({ original: opt, current: e.target.value })
-                              }
-                              autoFocus
-                            />
-                            <button
-                              type="button"
-                              className="ag-tracker-btn ag-tracker-btn-primary"
-                              onClick={() =>
-                                handleRenameCustomGoogleAccount(opt, editingOption.current)
-                              }
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              className="ag-tracker-btn"
-                              onClick={() => setEditingOption(null)}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-sm">{opt}</span>
-                            <div style={{ display: "flex", gap: "0.25rem" }}>
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-icon"
-                                onClick={() =>
-                                  setEditingOption({ original: opt, current: opt })
-                                }
-                                title="Rename option"
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                className="ag-tracker-btn ag-tracker-btn-danger ag-tracker-btn-icon"
-                                onClick={() => handleDeleteCustomGoogleAccount(opt)}
-                                title="Delete option"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </>
+                  {googleAccountOptions.map((opt) => (
+                    <div key={opt} className="ag-tracker-option-item">
+                      <span className="text-sm font-semibold">{opt}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs text-gray-400">Reset:</span>
+                        <input
+                          type="number"
+                          className="ag-tracker-input text-xs w-16 py-1 text-center"
+                          min="1"
+                          value={data.options?.accountResetHours?.[opt] ?? 24}
+                          onChange={(e) =>
+                            handleUpdateResetHours(opt, Number(e.target.value))
+                          }
+                        />
+                        <span className="text-xs text-gray-400">hrs</span>
+                        {!(DEFAULT_ROW_LABELS.includes(opt)) && (
+                          <button
+                            type="button"
+                            className="ag-tracker-btn ag-tracker-btn-danger ag-tracker-btn-icon ml-1"
+                            onClick={() => handleDeleteCustomGoogleAccount(opt)}
+                            title="Delete custom option"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         )}
                       </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold text-gray-400 mb-1">
-                  Default / Built-in Options:
-                </p>
-                <div className="text-xs text-gray-500">
-                  {DEFAULT_ROW_LABELS.join(", ")}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1498,6 +2265,13 @@ export default function AgAccountTrackerModal({
           </div>
         </div>
       )}
+
+      {/* REPORTS POPUP DIALOG */}
+      <AgAccountTrackerReports
+        isOpen={reportsOpen}
+        onClose={() => setReportsOpen(false)}
+        trackers={data.trackers}
+      />
     </>
   )
 }

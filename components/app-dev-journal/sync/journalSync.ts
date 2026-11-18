@@ -17,7 +17,6 @@ export const SYNCED_KEYS = [
   "journal-shared-options",
   "journal-settings",
   "journal-last-record",
-  "securityPin",
   "journal-screenshot-nov-2026-imported",
   "journal-cover-corrections-v1",
   "journal-backup-2026-11-16",
@@ -25,6 +24,7 @@ export const SYNCED_KEYS = [
 
 export const EXCLUDED_PREFIXES = [
   "slh-ag-account-tracker",
+  "slh-ag-tracker",
   "slh-journal-sync",
   "slh-journal-backup",
   "google_",
@@ -150,6 +150,16 @@ class JournalSyncService {
   }
 
   private isSyncedKey(key: string): boolean {
+    const lower = key.toLowerCase()
+    // Security check: never sync any key whose name contains pin, password, token, or secret
+    if (
+      lower.includes("pin") ||
+      lower.includes("password") ||
+      lower.includes("token") ||
+      lower.includes("secret")
+    ) {
+      return false
+    }
     if (EXCLUDED_PREFIXES.some((prefix) => key.startsWith(prefix))) return false
     return (SYNCED_KEYS as readonly string[]).includes(key)
   }
