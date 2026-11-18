@@ -1552,3 +1552,236 @@
   background-color: var(--background, #121212);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
 }
+
+/* ============================================================ */
+/* SCOPED COMPACT LAYOUT OVERRIDES (Journal & Tracker)           */
+/* ============================================================ */
+
+/* 1. Journal Bottom Navigation: ONE SHORT ROW (~36px), icon beside label */
+.journal-root nav.journal-bottom-nav {
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 0.5rem !important;
+  overflow: hidden !important;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.15)) !important;
+  background-color: var(--card, #121212) !important;
+}
+
+.journal-root nav.journal-bottom-nav > div {
+  height: 100% !important;
+  max-width: 900px !important;
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(6, 1fr) !important;
+  align-items: center !important;
+}
+
+.journal-root nav.journal-bottom-nav button {
+  height: 36px !important;
+  min-height: 36px !important;
+  padding: 0 0.4rem !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+}
+
+.journal-root nav.journal-bottom-nav button svg {
+  width: 14px !important;
+  height: 14px !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.journal-root nav.journal-bottom-nav button span {
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+  margin-top: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Mobile: 44px tap targets, icon only with smaller footprint */
+@media (max-width: 640px) {
+  .journal-root nav.journal-bottom-nav {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+  }
+  .journal-root nav.journal-bottom-nav button {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+  .journal-root nav.journal-bottom-nav button span {
+    display: none !important;
+  }
+  .journal-root nav.journal-bottom-nav button svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+}
+
+/* Adjust journal bottom padding so content doesn't hide behind it */
+.journal-root .pb-20 {
+  padding-bottom: 2.75rem !important;
+}
+
+/* 2. AG Tracker Dialog Max-Height (leaving space for top bar and bottom nav) */
+.journal-root .ag-tracker-dialog {
+  max-height: calc(100vh - 41px - 36px - 14px) !important;
+}
+@media (max-width: 640px) {
+  .journal-root .ag-tracker-dialog {
+    max-height: calc(100vh - 41px - 44px - 8px) !important;
+  }
+}
+
+/* 3. Tracker Top Bar: Single Row on Desktop, Tight Paddings, Responsive Icon-Only */
+.journal-root .ag-tracker-header {
+  padding: 0.35rem 0.75rem !important;
+  flex-wrap: nowrap !important;
+  gap: 0.5rem !important;
+}
+
+.journal-root .ag-tracker-header-left {
+  flex-shrink: 0 !important;
+  gap: 0.5rem !important;
+}
+
+.journal-root .ag-tracker-title {
+  font-size: 0.95rem !important;
+  white-space: nowrap !important;
+}
+
+.journal-root .ag-tracker-header-actions {
+  flex-wrap: nowrap !important;
+  gap: 0.35rem !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+.journal-root .ag-tracker-header-actions::-webkit-scrollbar {
+  display: none !important;
+}
+
+.journal-root .ag-tracker-tabs-bar {
+  padding: 0.25rem 0.75rem !important;
+  min-height: auto !important;
+}
+
+.journal-root .ag-tracker-appname-card {
+  padding: 0.35rem 0.75rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+@media (max-width: 900px) {
+  .journal-root .ag-tracker-header-actions .ag-tracker-btn span:not(.ag-report-count-badge) {
+    display: none !important;
+  }
+  .journal-root .ag-tracker-header-actions .ag-tracker-btn {
+    padding: 0.35rem 0.45rem !important;
+  }
+}
+
+/* ============================================================ */
+/* COLLAPSIBLE ACCORDION ROWS                                   */
+/* ============================================================ */
+
+.journal-root .ag-tracker-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.journal-root .ag-tracker-row-collapsed {
+  height: 44px !important;
+  min-height: 44px !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.journal-root .ag-tracker-row-collapsed:hover {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.journal-root .ag-tracker-row-collapsed td {
+  padding: 0.35rem 0.65rem !important;
+  vertical-align: middle !important;
+}
+
+/* Colored left borders for status highlight */
+.journal-root .ag-tracker-row-inuse {
+  border-left: 4px solid #10b981 !important; /* emerald-500 */
+}
+
+.journal-root .ag-tracker-row-low {
+  border-left: 4px solid #f59e0b !important; /* amber-500 */
+}
+
+.journal-root .ag-tracker-row-out {
+  border-left: 4px solid #f43f5e !important; /* rose-500 */
+}
+
+.journal-root .ag-tracker-mobile-row-collapsed {
+  transition: background-color 0.15s ease;
+}
+.journal-root .ag-tracker-mobile-row-collapsed:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Print layout: ALWAYS expand all rows */
+@media print {
+  .journal-root .ag-tracker-row-collapsed {
+    display: none !important;
+  }
+  .journal-root .ag-tracker-table-toolbar {
+    display: none !important;
+  }
+}
+
+/* ============================================================ */
+/* EDITABLE COMPACT REPORTS                                     */
+/* ============================================================ */
+
+.journal-root .ag-report-dialog {
+  height: 92vh !important;
+  max-height: 92vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.journal-root .ag-report-main {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  padding: 0.5rem 0.85rem !important;
+}
+
+.journal-root .ag-report-summary-strip {
+  padding: 0.35rem 0.65rem !important;
+  margin-bottom: 0.5rem !important;
+  gap: 0.65rem !important;
+}
+
+.journal-root .ag-report-stat-card {
+  padding: 0.25rem 0.5rem !important;
+}
+
+.journal-root .ag-report-stat-value {
+  font-size: 1.1rem !important;
+}
+
+.journal-root .ag-report-tr {
+  height: 40px !important;
+  min-height: 40px !important;
+}
+
+.journal-root .ag-report-tr td {
+  padding: 0.25rem 0.45rem !important;
+  vertical-align: middle !important;
+}

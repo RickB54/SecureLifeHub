@@ -18,8 +18,11 @@ import {
   RotateCcw,
   History,
   AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import AgAccountTrackerReports from "./AgAccountTrackerReports"
+import TrackerErrorBoundary from "./TrackerErrorBoundary"
 
 // Default row labels from the printable PDF
 export const DEFAULT_ROW_LABELS = [
@@ -238,9 +241,30 @@ interface FullScreenNotesState {
   rowIndex?: number
   lineIndex?: number
   isTrackerNotes?: boolean
+  customCallback?: (val: string) => void
 }
 
-export default function AgAccountTrackerModal({
+const EXPANDED_ROWS_KEY = "slh-ag-tracker-expanded-rows"
+
+function loadExpandedRows(): Record<string, boolean> {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(EXPANDED_ROWS_KEY)
+      if (raw) return JSON.parse(raw)
+    } catch {}
+  }
+  return {}
+}
+
+function saveExpandedRows(map: Record<string, boolean>) {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(EXPANDED_ROWS_KEY, JSON.stringify(map))
+    } catch {}
+  }
+}
+
+function AgAccountTrackerModalInner({
   isOpen,
   onClose,
 }: AgAccountTrackerModalProps) {
@@ -250,6 +274,8 @@ export default function AgAccountTrackerModal({
   const [reportsOpen, setReportsOpen] = useState(false)
   const [quickLogOpen, setQuickLogOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
+
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>(loadExpandedRows)
 
   const [quickLogAccount, setQuickLogAccount] = useState("")
   const [quickLogResetChoice, setQuickLogResetChoice] = useState("default")
@@ -262,6 +288,17 @@ export default function AgAccountTrackerModal({
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Load history list unconditionally at top
+  const historyList = useMemo(() => {
+    if (!historyOpen || typeof window === "undefined") return []
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+      return raw ? JSON.parse(raw) : []
+    } catch {
+      return []
+    }
+  }, [historyOpen])
 
   // Load project app names from Journal's localStorage key "projects"
   const journalAppNames = useMemo(() => {
@@ -1101,7 +1138,9 @@ export default function AgAccountTrackerModal({
     if (!fullScreenNotes) return
     setFullScreenNotes((prev) => (prev ? { ...prev, value: newVal } : null))
 
-    if (fullScreenNotes.isTrackerNotes) {
+    if (fullScreenNotes.customCallback) {
+      fullScreenNotes.customCallback(newVal)
+    } else if (fullScreenNotes.isTrackerNotes) {
       updateCurrentTracker((tr) => ({ ...tr, trackerNotes: newVal }))
     } else if (
       typeof fullScreenNotes.rowIndex === "number" &&
@@ -1116,18 +1155,95 @@ export default function AgAccountTrackerModal({
     }
   }
 
-  if (!isOpen) return null
+  const toggleRowExpand = (rowId: string) => {
+    setExpandedRows((prev) => {
+      const next = { ...prev, [rowId]: !prev[rowId] }
+      saveExpandedRows(next)
+      return next
+    })
+  }
 
-  // Load history list when history modal opens
-  const historyList = useMemo(() => {
-    if (!historyOpen || typeof window === "undefined") return []
-    try {
-      const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
-      return raw ? JSON.parse(raw) : []
-    } catch {
-      return []
-    }
-  }, [historyOpen])
+  const handleExpandAll = () => {
+    const next: Record<string, boolean> = {}
+    currentTracker.rows.forEach((r) => {
+      next[r.id] = true
+    })
+    setExpandedRows(next)
+    saveExpandedRows(next)
+  }
+
+  const handleCollapseAll = () => {
+    const next: Record<string, boolean> = {}
+    currentTracker.rows.forEach((r) => {
+      next[r.id] = false
+    })
+    setExpandedRows(next)
+    saveExpandedRows(next)
+  }
+
+  const handleUpdateAccountFromReport = useCallback(
+    (
+      accountName: string,
+      updates: {
+        status?: LineStatus
+        usedOn?: string
+        nextAvailable?: string
+        notes?: string
+      }
+    ) => {
+      updateCurrentTracker((tr) => {
+        let targetRowIndex = -1
+        let targetLineIndex = -1
+
+        for (let r = 0; r < tr.rows.length; r++) {
+          for (let l = 0; l < tr.rows[r].lines.length; l++) {
+            const line = tr.rows[r].lines[l]
+            const lineAccount = line.googleAccount?.trim() || tr.rows[r].label?.trim()
+            if (lineAccount === accountName) {
+              targetRowIndex = r
+              targetLineIndex = l
+              break
+            }
+          }
+          if (targetRowIndex !== -1) break
+        }
+
+        if (targetRowIndex === -1) {
+          const r = tr.rows.findIndex((row) => row.label.trim() === accountName.trim())
+          if (r !== -1) {
+            targetRowIndex = r
+            targetLineIndex = 0
+          }
+        }
+
+        const newRows = tr.rows.map((r) => ({
+          ...r,
+          lines: r.lines.map((l) => ({ ...l })),
+        }))
+
+        if (targetRowIndex !== -1 && targetLineIndex !== -1) {
+          const line = newRows[targetRowIndex].lines[targetLineIndex]
+          if (updates.status !== undefined) line.status = updates.status
+          if (updates.usedOn !== undefined) line.usedOn = updates.usedOn
+          if (updates.nextAvailable !== undefined) line.nextAvailable = updates.nextAvailable
+          if (updates.notes !== undefined) line.notes = updates.notes
+          if (!line.googleAccount) line.googleAccount = accountName
+        } else if (newRows.length > 0) {
+          newRows[0].lines.push({
+            id: `line-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            googleAccount: accountName,
+            usedOn: updates.usedOn || "",
+            nextAvailable: updates.nextAvailable || "",
+            status: updates.status || "",
+            notes: updates.notes || "",
+          })
+        }
+
+        return { ...tr, rows: newRows }
+      })
+    },
+    [updateCurrentTracker]
+  )
 
   return (
     <>
@@ -1393,6 +1509,33 @@ export default function AgAccountTrackerModal({
 
             {/* DESKTOP TABLE VIEW (Strictly 768px and wider) */}
             <section className="ag-tracker-table-container">
+              {/* TABLE TOOLBAR: EXPAND / COLLAPSE ALL */}
+              <div className="ag-tracker-table-toolbar">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="ag-tracker-btn text-xs py-1 px-2.5"
+                    onClick={handleExpandAll}
+                    title="Expand all account rows"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    <span>Expand All</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ag-tracker-btn text-xs py-1 px-2.5"
+                    onClick={handleCollapseAll}
+                    title="Collapse all account rows"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                    <span>Collapse All</span>
+                  </button>
+                </div>
+                <span className="text-xs text-gray-400 hidden sm:inline">
+                  Click any row to expand / edit details
+                </span>
+              </div>
+
               <table className="ag-tracker-table">
                 <thead>
                   <tr>
@@ -1405,41 +1548,153 @@ export default function AgAccountTrackerModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {currentTracker.rows.map((row, rIdx) => (
-                    <React.Fragment key={row.id}>
-                      {row.lines.map((line, lIdx) => (
-                        <tr key={line.id} className="ag-tracker-tr">
-                          {/* Row Label (spans all lines of this row) */}
-                          {lIdx === 0 && (
-                            <td
-                              className="ag-tracker-td ag-tracker-row-label-cell"
-                              rowSpan={row.lines.length}
-                            >
-                              <input
-                                className="ag-tracker-row-label-input"
-                                value={row.label}
-                                title="Click to edit row label"
-                                onChange={(e) => {
-                                  const newLabel = e.target.value
-                                  updateCurrentTracker((tr) => {
-                                    const newRows = [...tr.rows]
-                                    newRows[rIdx] = { ...newRows[rIdx], label: newLabel }
-                                    return { ...tr, rows: newRows }
-                                  })
-                                }}
-                              />
-                              <div style={{ marginTop: "4px" }}>
-                                <button
-                                  type="button"
-                                  className="ag-tracker-btn ag-tracker-add-line-btn"
-                                  onClick={() => handleAddLine(rIdx)}
-                                  title="Add another line to this row"
+                  {currentTracker.rows.map((row, rIdx) => {
+                    const isCollapsed = !expandedRows[row.id]
+                    let displayLine =
+                      row.lines[0] || {
+                        googleAccount: "",
+                        usedOn: "",
+                        nextAvailable: "",
+                        status: "",
+                        notes: "",
+                      }
+                    for (const l of row.lines) {
+                      if (l.usedOn || l.status || l.nextAvailable) {
+                        displayLine = l
+                      }
+                    }
+                    const rowStatus = displayLine.status || ""
+                    const statusBorderClass =
+                      rowStatus === "In use"
+                        ? "ag-tracker-row-inuse"
+                        : rowStatus === "Low"
+                        ? "ag-tracker-row-low"
+                        : rowStatus === "Out"
+                        ? "ag-tracker-row-out"
+                        : ""
+
+                    if (isCollapsed) {
+                      return (
+                        <tr
+                          key={row.id}
+                          className={`ag-tracker-tr ag-tracker-row-collapsed ${statusBorderClass}`}
+                          onClick={() => toggleRowExpand(row.id)}
+                          title="Click anywhere to expand row"
+                        >
+                          {/* Row Label */}
+                          <td className="ag-tracker-td font-semibold text-white">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <span>{row.label}</span>
+                              {row.lines.length > 1 && (
+                                <span className="text-[10px] px-1 py-0.5 rounded bg-white/10 text-gray-300">
+                                  {row.lines.length} lines
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Google Account */}
+                          <td className="ag-tracker-td font-medium text-gray-200">
+                            {displayLine.googleAccount || <span className="text-gray-500">—</span>}
+                          </td>
+
+                          {/* Used On / Status */}
+                          <td className="ag-tracker-td">
+                            <div className="flex items-center gap-1.5">
+                              {displayLine.status && (
+                                <span
+                                  className={`ag-status-badge ${
+                                    displayLine.status === "In use"
+                                      ? "ag-status-inuse"
+                                      : displayLine.status === "Low"
+                                      ? "ag-status-low"
+                                      : "ag-status-out"
+                                  }`}
                                 >
-                                  <Plus className="h-3 w-3" /> Line
-                                </button>
-                              </div>
-                            </td>
-                          )}
+                                  {displayLine.status}
+                                </span>
+                              )}
+                              <span className="text-xs text-gray-300">
+                                {displayLine.usedOn ? formatDisplayDateTime(displayLine.usedOn) : "—"}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Next Available */}
+                          <td className="ag-tracker-td text-xs text-gray-300">
+                            {displayLine.nextAvailable ? formatDisplayDateTime(displayLine.nextAvailable) : "—"}
+                          </td>
+
+                          {/* Notes Preview */}
+                          <td className="ag-tracker-td">
+                            <span className="text-xs text-gray-400 truncate block max-w-[320px]">
+                              {displayLine.notes || "—"}
+                            </span>
+                          </td>
+
+                          {/* Chevron Action */}
+                          <td className="ag-tracker-td" style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              className="ag-tracker-btn-icon text-gray-400 hover:text-white"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleRowExpand(row.id)
+                              }}
+                              title="Expand row"
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    }
+
+                    return (
+                      <React.Fragment key={row.id}>
+                        {row.lines.map((line, lIdx) => (
+                          <tr key={line.id} className={`ag-tracker-tr ${lIdx === 0 ? statusBorderClass : ""}`}>
+                            {/* Row Label (spans all lines of this row) */}
+                            {lIdx === 0 && (
+                              <td
+                                className="ag-tracker-td ag-tracker-row-label-cell"
+                                rowSpan={row.lines.length}
+                              >
+                                <div className="flex items-center justify-between gap-1">
+                                  <input
+                                    className="ag-tracker-row-label-input flex-1 min-w-0"
+                                    value={row.label}
+                                    title="Click to edit row label"
+                                    onChange={(e) => {
+                                      const newLabel = e.target.value
+                                      updateCurrentTracker((tr) => {
+                                        const newRows = [...tr.rows]
+                                        newRows[rIdx] = { ...newRows[rIdx], label: newLabel }
+                                        return { ...tr, rows: newRows }
+                                      })
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="ag-tracker-btn-icon text-gray-400 hover:text-white p-0.5 shrink-0"
+                                    onClick={() => toggleRowExpand(row.id)}
+                                    title="Collapse row"
+                                  >
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                                <div style={{ marginTop: "4px" }}>
+                                  <button
+                                    type="button"
+                                    className="ag-tracker-btn ag-tracker-add-line-btn"
+                                    onClick={() => handleAddLine(rIdx)}
+                                    title="Add another line to this row"
+                                  >
+                                    <Plus className="h-3 w-3" /> Line
+                                  </button>
+                                </div>
+                              </td>
+                            )}
 
                           {/* Google Account Column */}
                           <td className="ag-tracker-td">
@@ -1639,37 +1894,133 @@ export default function AgAccountTrackerModal({
                         </tr>
                       ))}
                     </React.Fragment>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </section>
 
             {/* MOBILE CARDS VIEW (< 768px strictly) */}
             <section className="ag-tracker-mobile-cards">
-              {currentTracker.rows.map((row, rIdx) => (
-                <div key={row.id} className="ag-tracker-mobile-row-card">
-                  <div className="ag-tracker-mobile-row-header">
-                    <input
-                      className="ag-tracker-row-label-input"
-                      style={{ textAlign: "left", fontSize: "1rem" }}
-                      value={row.label}
-                      onChange={(e) => {
-                        const newLabel = e.target.value
-                        updateCurrentTracker((tr) => {
-                          const newRows = [...tr.rows]
-                          newRows[rIdx] = { ...newRows[rIdx], label: newLabel }
-                          return { ...tr, rows: newRows }
-                        })
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="ag-tracker-btn ag-tracker-add-line-btn"
-                      onClick={() => handleAddLine(rIdx)}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="ag-tracker-btn text-xs py-1 px-2.5"
+                    onClick={handleExpandAll}
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    <span>Expand All</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="ag-tracker-btn text-xs py-1 px-2.5"
+                    onClick={handleCollapseAll}
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                    <span>Collapse All</span>
+                  </button>
+                </div>
+              </div>
+
+              {currentTracker.rows.map((row, rIdx) => {
+                const isCollapsed = !expandedRows[row.id]
+                let displayLine =
+                  row.lines[0] || {
+                    googleAccount: "",
+                    usedOn: "",
+                    nextAvailable: "",
+                    status: "",
+                    notes: "",
+                  }
+                for (const l of row.lines) {
+                  if (l.usedOn || l.status || l.nextAvailable) displayLine = l
+                }
+                const rowStatus = displayLine.status || ""
+                const statusBorderClass =
+                  rowStatus === "In use"
+                    ? "ag-tracker-row-inuse"
+                    : rowStatus === "Low"
+                    ? "ag-tracker-row-low"
+                    : rowStatus === "Out"
+                    ? "ag-tracker-row-out"
+                    : ""
+
+                if (isCollapsed) {
+                  return (
+                    <div
+                      key={row.id}
+                      className={`ag-tracker-mobile-row-card ag-tracker-mobile-row-collapsed ${statusBorderClass}`}
+                      onClick={() => toggleRowExpand(row.id)}
+                      style={{ cursor: "pointer", padding: "0.5rem 0.75rem" }}
                     >
-                      <Plus className="h-3.5 w-3.5" /> Add Line
-                    </button>
-                  </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-white text-sm truncate">{row.label}</span>
+                          {displayLine.googleAccount && (
+                            <span className="text-xs text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded truncate">
+                              {displayLine.googleAccount}
+                            </span>
+                          )}
+                          {displayLine.status && (
+                            <span
+                              className={`ag-status-badge text-[11px] ${
+                                displayLine.status === "In use"
+                                  ? "ag-status-inuse"
+                                  : displayLine.status === "Low"
+                                  ? "ag-status-low"
+                                  : "ag-status-out"
+                              }`}
+                            >
+                              {displayLine.status}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[11px] text-gray-400">
+                            {displayLine.usedOn ? formatDisplayDateTime(displayLine.usedOn) : "—"}
+                          </span>
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div key={row.id} className={`ag-tracker-mobile-row-card ${statusBorderClass}`}>
+                    <div className="ag-tracker-mobile-row-header">
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <input
+                          className="ag-tracker-row-label-input"
+                          style={{ textAlign: "left", fontSize: "1rem" }}
+                          value={row.label}
+                          onChange={(e) => {
+                            const newLabel = e.target.value
+                            updateCurrentTracker((tr) => {
+                              const newRows = [...tr.rows]
+                              newRows[rIdx] = { ...newRows[rIdx], label: newLabel }
+                              return { ...tr, rows: newRows }
+                            })
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="ag-tracker-btn-icon text-gray-400 hover:text-white p-1"
+                          onClick={() => toggleRowExpand(row.id)}
+                          title="Collapse card"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        className="ag-tracker-btn ag-tracker-add-line-btn"
+                        onClick={() => handleAddLine(rIdx)}
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add Line
+                      </button>
+                    </div>
 
                   {row.lines.map((line, lIdx) => (
                     <div key={line.id} className="ag-tracker-mobile-line-block">
@@ -1860,7 +2211,8 @@ export default function AgAccountTrackerModal({
                     </div>
                   ))}
                 </div>
-              ))}
+              )
+            })}
             </section>
 
             {/* BOTTOM TRACKER NOTES */}
@@ -2271,7 +2623,25 @@ export default function AgAccountTrackerModal({
         isOpen={reportsOpen}
         onClose={() => setReportsOpen(false)}
         trackers={data.trackers}
+        onUpdateAccountData={handleUpdateAccountFromReport}
+        onOpenNotesEditor={(title, value, onSave) => {
+          setFullScreenNotes({
+            title,
+            value,
+            customCallback: onSave,
+          })
+        }}
       />
     </>
+  )
+}
+
+export default function AgAccountTrackerModal(props: AgAccountTrackerModalProps) {
+  if (!props.isOpen) return null
+
+  return (
+    <TrackerErrorBoundary>
+      <AgAccountTrackerModalInner {...props} />
+    </TrackerErrorBoundary>
   )
 }
