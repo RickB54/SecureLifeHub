@@ -4,13 +4,13 @@
    Uses Journal theme CSS variables for seamless theme matching (dark/light/oled/cyberpunk).
    ========================================================================== */
 
-/* Centered Dialog Backdrop Container (Top Bar in Shell remains visible above top: 41px) */
+/* Centered Dialog Backdrop Container (Top Bar in Shell remains visible above top: 41px, Bottom Nav visible below) */
 .journal-root .ag-tracker-backdrop {
   position: fixed;
   top: 41px;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: 36px !important;
   z-index: 45;
   background-color: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(4px);
@@ -19,6 +19,12 @@
   justify-content: center;
   padding: 12px;
   overflow: hidden;
+}
+@media (max-width: 640px) {
+  .journal-root .ag-tracker-backdrop {
+    bottom: 44px !important;
+    padding: 6px;
+  }
 }
 
 /* Centered Dialog Window */
@@ -1557,7 +1563,7 @@
 /* SCOPED COMPACT LAYOUT OVERRIDES (Journal & Tracker)           */
 /* ============================================================ */
 
-/* 1. Journal Bottom Navigation: ONE SHORT ROW (~36px), icon beside label */
+/* 1. Journal Bottom Navigation: ONE SHORT ROW (~36px), 7 items (Home, AG Tracker, Favorites, Hidden, To-Do, Ideas, Settings) */
 .journal-root nav.journal-bottom-nav {
   height: 36px !important;
   min-height: 36px !important;
@@ -1569,6 +1575,7 @@
   overflow: hidden !important;
   border-top: 1px solid var(--border, rgba(255, 255, 255, 0.15)) !important;
   background-color: var(--card, #121212) !important;
+  z-index: 50 !important;
 }
 
 .journal-root nav.journal-bottom-nav > div {
@@ -1576,19 +1583,20 @@
   max-width: 900px !important;
   width: 100% !important;
   display: grid !important;
-  grid-template-columns: repeat(6, 1fr) !important;
+  grid-template-columns: repeat(7, 1fr) !important;
   align-items: center !important;
 }
 
 .journal-root nav.journal-bottom-nav button {
   height: 36px !important;
   min-height: 36px !important;
-  padding: 0 0.4rem !important;
+  padding: 0 0.25rem !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 0.35rem !important;
+  gap: 0.25rem !important;
+  min-width: 0 !important;
 }
 
 .journal-root nav.journal-bottom-nav button svg {
@@ -1606,23 +1614,51 @@
   white-space: nowrap !important;
 }
 
-/* Mobile: 44px tap targets, icon only with smaller footprint */
+.journal-root nav.journal-bottom-nav button[aria-current="page"] {
+  color: var(--journal-label, #38bdf8) !important;
+  font-weight: 600 !important;
+}
+
+.journal-root nav.journal-bottom-nav button[aria-current="page"] svg {
+  color: var(--journal-label, #38bdf8) !important;
+}
+
+/* Tablet & mid-mobile: 44px tap targets, compact label under icon */
 @media (max-width: 640px) {
   .journal-root nav.journal-bottom-nav {
     height: 44px !important;
     min-height: 44px !important;
     max-height: 44px !important;
+    padding: 0 0.25rem !important;
   }
   .journal-root nav.journal-bottom-nav button {
     height: 44px !important;
     min-height: 44px !important;
+    flex-direction: column !important;
+    gap: 0.15rem !important;
+    padding: 2px 0 !important;
   }
+  .journal-root nav.journal-bottom-nav button svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+  .journal-root nav.journal-bottom-nav button span {
+    font-size: 0.6rem !important;
+    display: block !important;
+  }
+}
+
+/* Very narrow mobile (< 400px): hide labels, keep icons with min 44px tap target */
+@media (max-width: 400px) {
   .journal-root nav.journal-bottom-nav button span {
     display: none !important;
   }
   .journal-root nav.journal-bottom-nav button svg {
     width: 18px !important;
     height: 18px !important;
+  }
+  .journal-root nav.journal-bottom-nav button {
+    min-width: 44px !important;
   }
 }
 
