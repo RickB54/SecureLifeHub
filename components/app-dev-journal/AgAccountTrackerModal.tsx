@@ -46,6 +46,7 @@ const HISTORY_STORAGE_KEY = "slh-ag-tracker-history"
 const CARRYOVER_STORAGE_KEY = "slh-ag-tracker-carryover"
 export const AGENTS_STORAGE_KEY = "slh-ag-tracker-agents"
 const NOTES_MIGRATED_KEY = "slh-ag-tracker-notes-migrated"
+const OUT_MIGRATED_KEY = "slh-ag-tracker-out-migrated-v1"
 const NOTES_EXPANDED_KEY = "slh-ag-tracker-notes-expanded"
 const EXPANDED_ROWS_KEY = "slh-ag-tracker-expanded-rows"
 const DAY_FILTER_KEY = "slh-ag-tracker-dayfilter"
@@ -280,12 +281,15 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
           else migratedAgent = ""
         }
 
+        let lineStatus = status || ""
+        if (lineStatus === "Out") lineStatus = "Done"
+
         return {
           id: line.id || "l-" + Math.random().toString(36).substring(2, 9),
           googleAccount: line.googleAccount || "",
           usedOn: usedOn || "",
           nextAvailable: nextVal,
-          status: status || "",
+          status: lineStatus as LineStatus,
           notes: currentNotes,
           isCustomGoogleAccount: Boolean(line.isCustomGoogleAccount),
           agent: migratedAgent,
@@ -304,6 +308,89 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
       accountResetHours: rawObj.options?.accountResetHours || {},
     },
   }
+}
+
+// Convert any status === "Out" to "Done" recursively in object/arrays
+function convertOutToDoneInObject(obj: any): any {
+  if (!obj) return obj
+  if (Array.isArray(obj)) {
+    return obj.map(convertOutToDoneInObject)
+  }
+  if (typeof obj === "object") {
+    const res: Record<string, any> = {}
+    for (const k of Object.keys(obj)) {
+      if (k === "status" && obj[k] === "Out") {
+        res[k] = "Done"
+      } else {
+        res[k] = convertOutToDoneInObject(obj[k])
+      }
+    }
+    return res
+  }
+  return obj
+}
+
+// One-time migration: every saved line, History snapshot, and carry-over record with status Out becomes Done
+function checkAndMigrateOutStatus(storageData: AgTrackerStorageData): AgTrackerStorageData {
+  if (typeof window === "undefined") return storageData
+  try {
+    const alreadyMigrated = localStorage.getItem(OUT_MIGRATED_KEY)
+    if (alreadyMigrated === "true") return storageData
+
+    // 1. Migrate current trackers
+    let hasAnyChanges = false
+    const updatedTrackers = storageData.trackers.map((tracker) => ({
+      ...tracker,
+      rows: (tracker.rows || []).map((row) => ({
+        ...row,
+        lines: (row.lines || []).map((line) => {
+          if (line.status === "Out") {
+            hasAnyChanges = true
+            return { ...line, status: "Done" as LineStatus }
+          }
+          return line
+        }),
+      })),
+    }))
+
+    // 2. Migrate History snapshots
+    try {
+      const historyRaw = localStorage.getItem(HISTORY_STORAGE_KEY)
+      if (historyRaw) {
+        const historyArr = JSON.parse(historyRaw)
+        if (Array.isArray(historyArr)) {
+          const updatedHistory = historyArr.map((item: any) => convertOutToDoneInObject(item))
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updatedHistory))
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to migrate history snapshots from Out to Done:", e)
+    }
+
+    // 3. Migrate Carryover data
+    try {
+      const carryoverRaw = localStorage.getItem(CARRYOVER_STORAGE_KEY)
+      if (carryoverRaw) {
+        const carryoverObj = JSON.parse(carryoverRaw)
+        if (carryoverObj && typeof carryoverObj === "object") {
+          const updatedCarryover = convertOutToDoneInObject(carryoverObj)
+          localStorage.setItem(CARRYOVER_STORAGE_KEY, JSON.stringify(updatedCarryover))
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to migrate carryover data from Out to Done:", e)
+    }
+
+    localStorage.setItem(OUT_MIGRATED_KEY, "true")
+    if (hasAnyChanges) {
+      const nextData = { ...storageData, trackers: updatedTrackers }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData))
+      return nextData
+    }
+  } catch (err) {
+    console.warn("Failed Out->Done status migration:", err)
+  }
+  return storageData
 }
 
 // One-time migration: append non-empty line notes to Tracker Notes as [Account – Agent – MM-DD-YYYY]: text
@@ -356,7 +443,8 @@ function getInitialData(): AgTrackerStorageData {
       if (stored) {
         const parsed = JSON.parse(stored)
         const migrated = migrateStorageData(parsed)
-        return checkAndMigrateLineNotes(migrated)
+        const notesMigrated = checkAndMigrateLineNotes(migrated)
+        return checkAndMigrateOutStatus(notesMigrated)
       }
     } catch (err) {
       console.warn("Failed to read tracker data from localStorage:", err)
@@ -414,13 +502,13 @@ function saveExpandedRows(map: Record<string, boolean>) {
 // ============================================================
 function renderStatusBadge(status: string | undefined) {
   if (!status) return <span className="ag-status-empty-chip">Status</span>
+  const displayStatus = status === "Out" ? "Done" : status
   const cls =
-    status === "In use" ? "ag-status-badge ag-status-inuse"
-    : status === "Low" ? "ag-status-badge ag-status-low"
-    : status === "Out" ? "ag-status-badge ag-status-out"
-    : status === "Done" ? "ag-status-badge ag-status-done"
+    displayStatus === "In use" ? "ag-status-badge ag-status-inuse"
+    : displayStatus === "Low" ? "ag-status-badge ag-status-low"
+    : displayStatus === "Done" ? "ag-status-badge ag-status-done"
     : "ag-status-badge"
-  return <span className={cls}>{status}</span>
+  return <span className={cls}>{displayStatus}</span>
 }
 
 // ============================================================
@@ -459,8 +547,7 @@ function StatusPopupMenu({
   const options: { label: string; value: string; color: string }[] = [
     { label: "In use", value: "In use", color: "#34d399" },
     { label: "Low", value: "Low", color: "#fbbf24" },
-    { label: "Out", value: "Out", color: "#f87171" },
-    { label: "Done", value: "Done", color: "#a5b4fc" },
+    { label: "Done", value: "Done", color: "#f87171" },
     { label: "Clear", value: "", color: "#9ca3af" },
   ]
 
@@ -964,7 +1051,6 @@ function ExpandedRowSection({
               <option value="">(Status)</option>
               <option value="In use">In use</option>
               <option value="Low">Low</option>
-              <option value="Out">Out</option>
               <option value="Done">Done</option>
             </select>
           </div>
@@ -1307,18 +1393,18 @@ function AgAccountTrackerModalInner({
 
       const geminiUsedToday = geminiLatest && isToday(geminiLatest.usedOn)
       const claudeUsedToday = claudeLatest && isToday(claudeLatest.usedOn)
-      const geminiDoneOrOut = geminiLatest && (geminiLatest.status === "Out" || geminiLatest.status === "Done")
-      const claudeDoneOrOut = claudeLatest && (claudeLatest.status === "Out" || claudeLatest.status === "Done")
+      const geminiDone = geminiLatest && geminiLatest.status === "Done"
+      const claudeDone = claudeLatest && claudeLatest.status === "Done"
 
-      if (geminiUsedToday && !claudeUsedToday && !claudeDoneOrOut) {
+      if (geminiUsedToday && !claudeUsedToday && !claudeDone) {
         finishChips.push({ account: row.label, agent: "Claude" })
-      } else if (claudeUsedToday && !geminiUsedToday && !geminiDoneOrOut) {
+      } else if (claudeUsedToday && !geminiUsedToday && !geminiDone) {
         finishChips.push({ account: row.label, agent: "Gemini" })
       }
 
       if (!nextAccount && !anyUsedToday) {
-        const allDoneOrOut = row.lines.every((l) => l.status === "Out" || l.status === "Done")
-        if (!allDoneOrOut) nextAccount = row.label
+        const allDone = row.lines.every((l) => l.status === "Done")
+        if (!allDone) nextAccount = row.label
       }
     }
 
@@ -1330,9 +1416,9 @@ function AgAccountTrackerModalInner({
     if (dayFilter === "all") return currentTracker.rows
     return currentTracker.rows.filter((row) => {
       const anyUsedToday = row.lines.some((l) => l.usedOn && isToday(l.usedOn))
-      const allDoneOrOut = row.lines.every((l) => l.status === "Out" || l.status === "Done")
+      const allDone = row.lines.every((l) => l.status === "Done")
       if (dayFilter === "used-today") return anyUsedToday
-      if (dayFilter === "not-used-today") return !anyUsedToday && !allDoneOrOut
+      if (dayFilter === "not-used-today") return !anyUsedToday && !allDone
       if (dayFilter === "finish-today") {
         const agentNames = ["Gemini", "Claude"]
         const linesByAgent: Record<string, TrackerRowLine[]> = {}
@@ -1341,10 +1427,10 @@ function AgAccountTrackerModalInner({
         const claudeLatest = linesByAgent["Claude"].sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]
         const geminiUsedToday = geminiLatest && isToday(geminiLatest.usedOn)
         const claudeUsedToday = claudeLatest && isToday(claudeLatest.usedOn)
-        const geminiDoneOrOut = geminiLatest && (geminiLatest.status === "Out" || geminiLatest.status === "Done")
-        const claudeDoneOrOut = claudeLatest && (claudeLatest.status === "Out" || claudeLatest.status === "Done")
-        return (geminiUsedToday && !claudeUsedToday && !claudeDoneOrOut) ||
-               (claudeUsedToday && !geminiUsedToday && !geminiDoneOrOut)
+        const geminiDone = geminiLatest && geminiLatest.status === "Done"
+        const claudeDone = claudeLatest && claudeLatest.status === "Done"
+        return (geminiUsedToday && !claudeUsedToday && !claudeDone) ||
+               (claudeUsedToday && !geminiUsedToday && !geminiDone)
       }
       return true
     })
@@ -1428,7 +1514,15 @@ function AgAccountTrackerModalInner({
       const newRows = [...tracker.rows]
       const targetRow = { ...newRows[rowIndex] }
       const newLines = [...targetRow.lines]
-      newLines[lineIndex] = { ...newLines[lineIndex], [field]: value }
+      const updatedLine = { ...newLines[lineIndex], [field]: value }
+      if (field === "status" && value === "Done" && !updatedLine.nextAvailable) {
+        const now = new Date()
+        const acctName = updatedLine.googleAccount?.trim() || targetRow.label.trim()
+        const resetHours = data.options?.accountResetHours?.[acctName] ?? 24
+        const nextDate = new Date(now.getTime() + resetHours * 3600 * 1000)
+        updatedLine.nextAvailable = toLocalIsoString(nextDate)
+      }
+      newLines[lineIndex] = updatedLine
       targetRow.lines = newLines
       newRows[rowIndex] = targetRow
       return { ...tracker, rows: newRows }
@@ -1461,7 +1555,7 @@ function AgAccountTrackerModalInner({
   }
 
   // Quick Status change with rules:
-  // "In use fills an empty Used On with now. Out fills an empty Next Available with now + account reset hours. Never overwrite an existing date."
+  // "In use fills an empty Used On with now. Done fills an empty Next Available with now + account reset hours. Never overwrite an existing date."
   const handleStatusChangeWithRules = (rIdx: number, agentName: string, newStatus: string) => {
     const now = new Date()
     const nowIso = toLocalIsoString(now)
@@ -1481,7 +1575,7 @@ function AgAccountTrackerModalInner({
         if (newStatus === "In use" && !line.usedOn) {
           line.usedOn = nowIso
         }
-        if (newStatus === "Out" && !line.nextAvailable) {
+        if (newStatus === "Done" && !line.nextAvailable) {
           const acctName = line.googleAccount?.trim() || targetRow.label.trim()
           const resetHours = data.options?.accountResetHours?.[acctName] ?? 24
           const nextDate = new Date(now.getTime() + resetHours * 3600 * 1000)
@@ -1492,7 +1586,7 @@ function AgAccountTrackerModalInner({
         let usedOn = ""
         let nextAvailable = ""
         if (newStatus === "In use") usedOn = nowIso
-        if (newStatus === "Out") {
+        if (newStatus === "Done") {
           const acctName = targetRow.label.trim()
           const resetHours = data.options?.accountResetHours?.[acctName] ?? 24
           const nextDate = new Date(now.getTime() + resetHours * 3600 * 1000)
@@ -1552,8 +1646,9 @@ function AgAccountTrackerModalInner({
     })
   }
 
-  // Done button: status Done (creates line if none)
+  // Done button: status Done (creates line if none, fills Next Available with now + reset hours if empty)
   const handleDoneAgent = (rIdx: number, agentName: string) => {
+    const now = new Date()
     updateCurrentTracker((tracker) => {
       const newRows = [...tracker.rows]
       const targetRow = { ...newRows[rIdx] }
@@ -1565,13 +1660,24 @@ function AgAccountTrackerModalInner({
       }
 
       if (agentLineIdx !== -1) {
-        newLines[agentLineIdx] = { ...newLines[agentLineIdx], status: "Done" }
+        const line = { ...newLines[agentLineIdx] }
+        line.status = "Done"
+        if (!line.nextAvailable) {
+          const acctName = line.googleAccount?.trim() || targetRow.label.trim()
+          const resetHours = data.options?.accountResetHours?.[acctName] ?? 24
+          const nextDate = new Date(now.getTime() + resetHours * 3600 * 1000)
+          line.nextAvailable = toLocalIsoString(nextDate)
+        }
+        newLines[agentLineIdx] = line
       } else {
+        const acctName = targetRow.label.trim()
+        const resetHours = data.options?.accountResetHours?.[acctName] ?? 24
+        const nextDate = new Date(now.getTime() + resetHours * 3600 * 1000)
         newLines.push({
           id: "l-" + Math.random().toString(36).substring(2, 9),
           googleAccount: "",
           usedOn: "",
-          nextAvailable: "",
+          nextAvailable: toLocalIsoString(nextDate),
           status: "Done",
           notes: "",
           agent: agentName,
@@ -1631,9 +1737,9 @@ function AgAccountTrackerModalInner({
         if (lineAcct === accountName && line.status === "In use") { foundInUseIdx = i; break }
       }
       if (foundInUseIdx !== -1) {
-        newLines[foundInUseIdx] = { ...newLines[foundInUseIdx], status: "Out", nextAvailable: nextAvailIso }
+        newLines[foundInUseIdx] = { ...newLines[foundInUseIdx], status: "Done", nextAvailable: nextAvailIso }
       } else {
-        newLines.push({ id: "l-" + Math.random().toString(36).substring(2, 9), googleAccount: accountName, usedOn: nowIso, nextAvailable: nextAvailIso, status: "Out", notes: "", agent: "" })
+        newLines.push({ id: "l-" + Math.random().toString(36).substring(2, 9), googleAccount: accountName, usedOn: nowIso, nextAvailable: nextAvailIso, status: "Done", notes: "", agent: "" })
       }
       targetRow.lines = newLines; newRows[targetRowIdx] = targetRow
       return { ...tr, rows: newRows }
@@ -1784,8 +1890,14 @@ function AgAccountTrackerModalInner({
           if (fileInputRef.current) fileInputRef.current.value = ""; return
         }
         const migrated = migrateStorageData(parsed)
-        if (Array.isArray(parsed.history)) localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(parsed.history))
-        if (parsed.carryover && typeof parsed.carryover === "object") localStorage.setItem(CARRYOVER_STORAGE_KEY, JSON.stringify(parsed.carryover))
+        if (Array.isArray(parsed.history)) {
+          const migratedHistory = convertOutToDoneInObject(parsed.history)
+          localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(migratedHistory))
+        }
+        if (parsed.carryover && typeof parsed.carryover === "object") {
+          const migratedCarryover = convertOutToDoneInObject(parsed.carryover)
+          localStorage.setItem(CARRYOVER_STORAGE_KEY, JSON.stringify(migratedCarryover))
+        }
         setData(migrated); localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
         setSaveStatus("saved"); alert("AG Account Tracker data imported successfully!")
       } catch (err) { alert("Failed to import file: " + String(err)) }
@@ -1931,11 +2043,11 @@ function AgAccountTrackerModalInner({
     const claudeLatest = claudeLines.sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]
     const geminiUsedToday = geminiLatest && isToday(geminiLatest.usedOn)
     const claudeUsedToday = claudeLatest && isToday(claudeLatest.usedOn)
-    const geminiDoneOrOut = geminiLatest && (geminiLatest.status === "Out" || geminiLatest.status === "Done")
-    const claudeDoneOrOut = claudeLatest && (claudeLatest.status === "Out" || claudeLatest.status === "Done")
+    const geminiDone = geminiLatest && geminiLatest.status === "Done"
+    const claudeDone = claudeLatest && claudeLatest.status === "Done"
     let finishTag = ""
-    if (geminiUsedToday && !claudeUsedToday && !claudeDoneOrOut) finishTag = "Claude"
-    else if (claudeUsedToday && !geminiUsedToday && !geminiDoneOrOut) finishTag = "Gemini"
+    if (geminiUsedToday && !claudeUsedToday && !claudeDone) finishTag = "Claude"
+    else if (claudeUsedToday && !geminiUsedToday && !geminiDone) finishTag = "Gemini"
 
     const isNextAccount = todayStripData.nextAccount === row.label
     const extraLines = row.lines.length - 2

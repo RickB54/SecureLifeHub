@@ -198,7 +198,7 @@ export default function AgAccountTrackerHelpModal({
                 </div>
                 <div>
                   <h4 className="font-bold text-sm text-foreground mb-1">
-                    Quota Exhausted — Log Out of Tokens
+                    Quota Exhausted — Log Done
                   </h4>
                   <p className="text-gray-400 mb-2">
                     When Antigravity hits its daily rate limit:
@@ -208,7 +208,7 @@ export default function AgAccountTrackerHelpModal({
                     <li>Choose your reset duration (default 24h, 12h, 5h, or custom).</li>
                   </ol>
                   <p className="mt-2 text-gray-400">
-                    Status turns red <span className="text-red-400 font-semibold">&quot;Out&quot;</span>, and the system automatically calculates the exact <strong>Next Available</strong> date and time, starting the live recovery countdown.
+                    Status turns red <span className="text-red-400 font-semibold">&quot;Done&quot;</span>, and the system automatically calculates the exact <strong>Next Available</strong> date and time, starting the live recovery countdown.
                   </p>
                 </div>
               </div>
@@ -347,8 +347,8 @@ export default function AgAccountTrackerHelpModal({
 
                 <div className="p-2.5 rounded-lg border border-red-500/30 bg-red-500/10 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500 text-white">Out</span>
-                    <span className="font-semibold text-red-300">Quota exhausted</span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500 text-white">Done</span>
+                    <span className="font-semibold text-red-300">Quota exhausted / Done</span>
                   </div>
                   <span className="text-gray-300">Tokens depleted; recovery clock is actively counting down</span>
                 </div>

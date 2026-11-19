@@ -511,10 +511,7 @@ function AgAccountTrackerReportsInner({
     if (status === "Low") {
       return <span className="ag-status-badge ag-status-low">Low</span>
     }
-    if (status === "Out") {
-      return <span className="ag-status-badge ag-status-out">Out</span>
-    }
-    if (status === "Done") {
+    if (status === "Done" || status === "Out") {
       return <span className="ag-status-badge ag-status-done">Done</span>
     }
     return <span className="ag-report-badge ag-report-badge-nodate">{status}</span>
@@ -815,7 +812,6 @@ function AgAccountTrackerReportsInner({
                                 <option value="">(—)</option>
                                 <option value="In use">In use</option>
                                 <option value="Low">Low</option>
-                                <option value="Out">Out</option>
                                 <option value="Done">Done</option>
                               </select>
                             </td>
@@ -998,7 +994,6 @@ function AgAccountTrackerReportsInner({
                                   <option value="">(—)</option>
                                   <option value="In use">In use</option>
                                   <option value="Low">Low</option>
-                                  <option value="Out">Out</option>
                                   <option value="Done">Done</option>
                                 </select>
                               </div>
@@ -1214,7 +1209,6 @@ function AgAccountTrackerReportsInner({
                                 <option value="">(—)</option>
                                 <option value="In use">In use</option>
                                 <option value="Low">Low</option>
-                                <option value="Out">Out</option>
                                 <option value="Done">Done</option>
                               </select>
                             </td>
@@ -1427,7 +1421,6 @@ function AgAccountTrackerReportsInner({
                                   <option value="">(—)</option>
                                   <option value="In use">In use</option>
                                   <option value="Low">Low</option>
-                                  <option value="Out">Out</option>
                                   <option value="Done">Done</option>
                                 </select>
                               </div>

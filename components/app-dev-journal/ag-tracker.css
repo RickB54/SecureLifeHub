@@ -2671,10 +2671,11 @@ nav.journal-bottom-nav {
 /* ============================================================
    16-ROW VIEW, AGENTS, DAY TRACKING, STATUS POPUP STYLES
    ============================================================ */
-.journal-root .ag-status-done {
-  background-color: rgba(99, 102, 241, 0.2) !important;
-  color: #a5b4fc !important;
-  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+.journal-root .ag-status-done,
+.journal-root .ag-status-out {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
 }
 
 .journal-root .ag-subrow {
