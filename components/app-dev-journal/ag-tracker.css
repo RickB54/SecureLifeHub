@@ -2358,7 +2358,26 @@ nav.journal-bottom-nav {
 }
 
 /* 3. Tracker Top Bar: Fully Responsive — no cut-off in PC, tablet, or mobile */
+.journal-root .ag-tracker-dialog {
+  --ag-header-height: 44px;
+}
+
+@media (max-width: 1400px) {
+  .journal-root .ag-tracker-dialog {
+    --ag-header-height: 80px;
+  }
+}
+
+@media (max-width: 768px) {
+  .journal-root .ag-tracker-dialog {
+    --ag-header-height: 110px;
+  }
+}
+
 .journal-root .ag-tracker-header {
+  height: auto !important;
+  min-height: 44px !important;
+  max-height: none !important;
   padding: 0.35rem 0.65rem !important;
   display: flex !important;
   flex-wrap: wrap !important;
@@ -2366,7 +2385,8 @@ nav.journal-bottom-nav {
   justify-content: space-between !important;
   gap: 0.35rem !important;
   row-gap: 0.35rem !important;
-  min-height: auto !important;
+  position: relative !important;
+  z-index: 50 !important;
 }
 
 .journal-root .ag-tracker-header-left {
@@ -2502,7 +2522,10 @@ nav.journal-bottom-nav {
   align-items: center;
   justify-content: space-between;
   padding: 0.25rem 0.5rem;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0 !important;
+  position: sticky !important;
+  top: var(--ag-header-height, auto) !important;
+  z-index: 20 !important;
 }
 
 .journal-root .ag-tracker-row-collapsed {
@@ -2863,9 +2886,106 @@ nav.journal-bottom-nav {
 /* Today strip & chips */
 .journal-root .ag-today-strip {
   scrollbar-width: none;
+  position: sticky !important;
+  top: calc(var(--ag-header-height, auto) + 30px) !important;
+  z-index: 15 !important;
+  margin-bottom: 0 !important;
 }
 .journal-root .ag-today-strip::-webkit-scrollbar {
   display: none;
+}
+
+/* ════════════════════════════════════════════════════════════
+   TOOLBAR & TODAY STRIP: THEME MATCHING & DARK NAVY BACKGROUND
+   ════════════════════════════════════════════════════════════ */
+
+/* Default / Dark theme: Dark navy matching the dialog, crisp light text */
+.journal-root .ag-tracker-table-toolbar,
+.journal-root .ag-today-strip {
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-dark .ag-tracker-table-toolbar,
+.journal-root .ag-tracker-dialog.journal-theme-dark .ag-today-strip {
+  background-color: #0f1424 !important;
+  color: #f3f4f6 !important;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2) !important;
+}
+
+/* OLED Theme */
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-tracker-table-toolbar,
+.journal-root .ag-tracker-dialog.journal-theme-oled .ag-today-strip {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid #262626 !important;
+}
+
+/* Cyberpunk Theme */
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-tracker-table-toolbar,
+.journal-root .ag-tracker-dialog.journal-theme-cyberpunk .ag-today-strip {
+  background-color: #0a0a14 !important;
+  color: #00ffcc !important;
+  border-bottom: 1px solid rgba(0, 255, 204, 0.25) !important;
+}
+
+/* Light Theme */
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-table-toolbar,
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-today-strip {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+}
+
+/* Full opacity buttons and chips */
+.journal-root .ag-tracker-table-toolbar .ag-tracker-btn,
+.journal-root .ag-today-strip .ag-today-chip {
+  opacity: 1 !important;
+}
+
+/* Toolbar buttons (Expand All, Collapse All) */
+.journal-root .ag-tracker-table-toolbar .ag-tracker-btn:not(.text-emerald-400) {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  opacity: 1 !important;
+}
+
+.journal-root .ag-tracker-table-toolbar .ag-tracker-btn:not(.text-emerald-400):hover {
+  background-color: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+}
+
+/* Toolbar select dropdown (Day filter) */
+.journal-root .ag-tracker-table-toolbar .ag-tracker-select {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  opacity: 1 !important;
+}
+
+.journal-root .ag-tracker-table-toolbar .ag-tracker-select option {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+}
+
+/* Light theme overrides for toolbar controls */
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-table-toolbar .ag-tracker-btn:not(.text-emerald-400) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-table-toolbar .ag-tracker-select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.journal-root .ag-tracker-dialog.journal-theme-light .ag-tracker-table-toolbar .ag-tracker-select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
 }
 
 .journal-root .ag-today-chip {
