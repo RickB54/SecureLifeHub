@@ -927,7 +927,7 @@ function AgentSubRow({
   const nextAvailTdRef = useRef<HTMLTableCellElement>(null)
 
   return (
-    <tr className="ag-subrow">
+    <>
       {/* Agent name */}
       <td className="ag-subrow-td" style={{ width: "70px", minWidth: "70px", maxWidth: "70px", whiteSpace: "nowrap" }}>
         <span
@@ -1033,7 +1033,7 @@ function AgentSubRow({
           </button>
         </div>
       </td>
-    </tr>
+    </>
   )
 }
 
