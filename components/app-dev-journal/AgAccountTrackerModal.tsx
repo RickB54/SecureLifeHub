@@ -2,6 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { createPortal } from "react-dom"
 import {
   X,
   Plus,
@@ -776,6 +777,109 @@ function AgentCombobox({
 }
 
 // ============================================================
+// DATE EDIT POPOVER — portal-rendered, anchored to clicked cell
+// ============================================================
+function DateEditPopover({
+  field,
+  initialVal,
+  pos,
+  onSave,
+  onClose,
+}: {
+  field: "usedOn" | "nextAvailable"
+  initialVal: string
+  pos: { top: number; left: number }
+  onSave: (val: string) => void
+  onClose: () => void
+}) {
+  const popRef = useRef<HTMLDivElement>(null)
+  const [dtVal, setDtVal] = useState(initialVal)
+
+  useEffect(() => {
+    function onMouseDown(e: MouseEvent) {
+      if (popRef.current && !popRef.current.contains(e.target as Node)) onClose()
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose()
+    }
+    document.addEventListener("mousedown", onMouseDown)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [onClose])
+
+  function applyPreset(preset: string) {
+    const now = new Date()
+    let d: Date | null = null
+    if (preset === "Time-Stamp") d = now
+    else if (preset === "In 1 hour") d = new Date(now.getTime() + 3600000)
+    else if (preset === "In 6 hours") d = new Date(now.getTime() + 6 * 3600000)
+    else if (preset === "In 12 hours") d = new Date(now.getTime() + 12 * 3600000)
+    else if (preset === "In 24 hours") d = new Date(now.getTime() + 24 * 3600000)
+    else if (preset === "Tomorrow (same time)") d = new Date(now.getTime() + 24 * 3600000)
+    else if (preset === "In 7 days") d = new Date(now.getTime() + 7 * 24 * 3600000)
+    else if (preset === "Clear") { onSave(""); onClose(); return }
+    if (d) { const v = toLocalIsoString(d); setDtVal(v); onSave(v); onClose() }
+  }
+
+  const usedOnPresets = ["Time-Stamp", "Clear"]
+  const nextAvailPresets = ["Time-Stamp", "In 1 hour", "In 6 hours", "In 12 hours", "In 24 hours", "Tomorrow (same time)", "In 7 days", "Clear"]
+  const presets = field === "usedOn" ? usedOnPresets : nextAvailPresets
+
+  const safeTop = Math.min(pos.top, window.innerHeight - 220)
+  const safeLeft = Math.min(pos.left, window.innerWidth - 240)
+
+  const root = (typeof document !== "undefined" && (document.querySelector(".journal-root") as HTMLElement | null)) || document.body
+
+  return createPortal(
+    <div
+      ref={popRef}
+      className="ag-date-popover"
+      style={{ position: "fixed", top: safeTop, left: safeLeft, zIndex: 100003 }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <div style={{ fontSize: "0.7rem", fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {field === "usedOn" ? "Used On" : "Next Available"}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+          {presets.map((p) => (
+            <button
+              key={p}
+              type="button"
+              className="ag-tracker-btn"
+              style={{ fontSize: "0.7rem", padding: "2px 7px", whiteSpace: "nowrap" }}
+              onClick={() => applyPreset(p)}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          <input
+            type="datetime-local"
+            className="ag-tracker-input"
+            style={{ fontSize: "0.7rem", padding: "2px 4px", flex: 1 }}
+            value={dtVal}
+            onChange={(e) => setDtVal(e.target.value)}
+          />
+          <button
+            type="button"
+            className="ag-tracker-btn ag-tracker-btn-primary"
+            style={{ fontSize: "0.7rem", padding: "2px 8px", whiteSpace: "nowrap" }}
+            onClick={() => { if (dtVal) { onSave(dtVal); onClose() } }}
+          >
+            Set
+          </button>
+        </div>
+      </div>
+    </div>,
+    root
+  )
+}
+
+// ============================================================
 // COMPACT SUB-ROW for a single agent in an account block
 // ============================================================
 function AgentSubRow({
@@ -785,6 +889,7 @@ function AgentSubRow({
   onStartAgent,
   onDoneAgent,
   onOpenStatusMenu,
+  onEditDate,
 }: {
   agentName: string
   row: TrackerRow
@@ -792,6 +897,7 @@ function AgentSubRow({
   onStartAgent: (rIdx: number, agentName: string) => void
   onDoneAgent: (rIdx: number, agentName: string) => void
   onOpenStatusMenu: (rIdx: number, agentName: string, rect: DOMRect) => void
+  onEditDate: (rIdx: number, agentName: string, field: "usedOn" | "nextAvailable", rect: DOMRect) => void
 }) {
   const agentLines = row.lines.filter((l) => l.agent === agentName)
   // Newest non-empty Used On
@@ -817,10 +923,13 @@ function AgentSubRow({
 
   const statusBtnRef = useRef<HTMLButtonElement>(null)
 
+  const usedOnTdRef = useRef<HTMLTableCellElement>(null)
+  const nextAvailTdRef = useRef<HTMLTableCellElement>(null)
+
   return (
     <tr className="ag-subrow">
       {/* Agent name */}
-      <td className="ag-subrow-td" style={{ width: "72px", minWidth: "72px", maxWidth: "72px", whiteSpace: "nowrap" }}>
+      <td className="ag-subrow-td" style={{ width: "70px", minWidth: "70px", maxWidth: "70px", whiteSpace: "nowrap" }}>
         <span
           style={{
             fontSize: "0.8125rem",
@@ -833,7 +942,7 @@ function AgentSubRow({
       </td>
 
       {/* Status badge - clickable opens menu */}
-      <td className="ag-subrow-td" style={{ width: "88px", minWidth: "88px" }}>
+      <td className="ag-subrow-td" style={{ width: "90px", minWidth: "90px", maxWidth: "90px" }}>
         <button
           ref={statusBtnRef}
           type="button"
@@ -849,10 +958,20 @@ function AgentSubRow({
         </button>
       </td>
 
-      {/* Used On + day chip (nowrap, full date MM-DD-YYYY h:mm AM/PM) */}
-      <td className="ag-subrow-td" style={{ width: "175px", minWidth: "175px", whiteSpace: "nowrap" }}>
+      {/* Used On + day chip — click to edit */}
+      <td
+        ref={usedOnTdRef}
+        className="ag-subrow-td ag-date-clickable"
+        style={{ width: "220px", minWidth: "220px", maxWidth: "220px", whiteSpace: "nowrap" }}
+        title="Click to edit Used On date"
+        onClick={() => {
+          if (usedOnTdRef.current) {
+            onEditDate(rIdx, agentName, "usedOn", usedOnTdRef.current.getBoundingClientRect())
+          }
+        }}
+      >
         {!newestUsedOn ? (
-          <span className="text-gray-600">—</span>
+          <span style={{ color: "#4b5563" }}>—</span>
         ) : (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", flexWrap: "nowrap" }}>
             <span style={{ fontSize: "0.8125rem", fontWeight: 500, whiteSpace: "nowrap" }}>
@@ -867,10 +986,20 @@ function AgentSubRow({
         )}
       </td>
 
-      {/* Next Available + ready chip (nowrap, full date MM-DD-YYYY h:mm AM/PM) */}
-      <td className="ag-subrow-td" style={{ width: "200px", minWidth: "200px", whiteSpace: "nowrap" }}>
+      {/* Next Available + ready chip — click to edit */}
+      <td
+        ref={nextAvailTdRef}
+        className="ag-subrow-td ag-date-clickable"
+        style={{ width: "270px", minWidth: "270px", maxWidth: "270px", whiteSpace: "nowrap" }}
+        title="Click to edit Next Available date"
+        onClick={() => {
+          if (nextAvailTdRef.current) {
+            onEditDate(rIdx, agentName, "nextAvailable", nextAvailTdRef.current.getBoundingClientRect())
+          }
+        }}
+      >
         {!newestNextAvail ? (
-          <span className="text-gray-600">—</span>
+          <span style={{ color: "#4b5563" }}>—</span>
         ) : (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", flexWrap: "nowrap" }}>
             <span style={{ fontSize: "0.8125rem", fontWeight: 500, whiteSpace: "nowrap" }}>
@@ -884,7 +1013,7 @@ function AgentSubRow({
       </td>
 
       {/* Start / Done buttons */}
-      <td className="ag-subrow-td" style={{ width: "60px", minWidth: "60px" }}>
+      <td className="ag-subrow-td" style={{ width: "90px", minWidth: "90px", maxWidth: "90px" }}>
         <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
           <button
             type="button"
@@ -1183,6 +1312,13 @@ function AgAccountTrackerModalInner({
 
   const [newOptionInput, setNewOptionInput] = useState("")
   const [fullScreenNotes, setFullScreenNotes] = useState<FullScreenNotesState | null>(null)
+  const [dateEditPopover, setDateEditPopover] = useState<{
+    rIdx: number
+    agentName: string
+    field: "usedOn" | "nextAvailable"
+    initialVal: string
+    pos: { top: number; left: number }
+  } | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -1293,6 +1429,7 @@ function AgAccountTrackerModalInner({
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (dateEditPopover !== null) { setDateEditPopover(null); return }
         if (statusMenu !== null) { setStatusMenu(null); return }
         if (toast !== null) { setToast(null); return }
         if (helpOpen) { setHelpOpen(false); return }
@@ -1306,7 +1443,7 @@ function AgAccountTrackerModalInner({
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, statusMenu, toast, quickLogOpen, historyOpen, reportsOpen, fullScreenNotes, manageOptionsOpen, helpOpen, handleImmediateClose])
+  }, [isOpen, dateEditPopover, statusMenu, toast, quickLogOpen, historyOpen, reportsOpen, fullScreenNotes, manageOptionsOpen, helpOpen, handleImmediateClose])
 
   // Active tracker
   const activeIndex = Math.min(Math.max(0, data.activeTrackerIndex), Math.max(0, data.trackers.length - 1))
@@ -1690,6 +1827,80 @@ function AgAccountTrackerModalInner({
     })
   }
 
+  // Date edit popover — open
+  const handleEditDate = useCallback(
+    (rIdx: number, agentName: string, field: "usedOn" | "nextAvailable", rect: DOMRect) => {
+      const tracker = data.trackers[data.activeTrackerIndex]
+      if (!tracker) return
+      const row = tracker.rows[rIdx]
+      if (!row) return
+      const agentLines = row.lines.filter((l) => l.agent === agentName)
+      let currentVal = ""
+      if (field === "usedOn") {
+        for (const l of agentLines) if (l.usedOn && (!currentVal || l.usedOn > currentVal)) currentVal = l.usedOn
+      } else {
+        for (const l of agentLines) if (l.nextAvailable && (!currentVal || l.nextAvailable > currentVal)) currentVal = l.nextAvailable
+      }
+      setDateEditPopover({
+        rIdx,
+        agentName,
+        field,
+        initialVal: currentVal,
+        pos: { top: rect.bottom + 4, left: rect.left },
+      })
+    },
+    [data]
+  )
+
+  // Date edit popover — save
+  const handleSaveDateEdit = useCallback(
+    (rIdx: number, agentName: string, field: "usedOn" | "nextAvailable", val: string) => {
+      updateCurrentTracker((tracker) => {
+        const newRows = tracker.rows.map((r) => ({ ...r, lines: r.lines.map((l) => ({ ...l })) }))
+        const row = newRows[rIdx]
+        if (!row) return tracker
+        const agentLines = row.lines.filter((l) => l.agent === agentName)
+        // Find the line that owns the displayed date (or last agent line, or create new)
+        let targetLineIdx = -1
+        if (field === "usedOn") {
+          let best = ""
+          for (let i = 0; i < row.lines.length; i++) {
+            const l = row.lines[i]
+            if (l.agent === agentName && l.usedOn && (!best || l.usedOn > best)) { best = l.usedOn; targetLineIdx = i }
+          }
+        } else {
+          let best = ""
+          for (let i = 0; i < row.lines.length; i++) {
+            const l = row.lines[i]
+            if (l.agent === agentName && l.nextAvailable && (!best || l.nextAvailable > best)) { best = l.nextAvailable; targetLineIdx = i }
+          }
+        }
+        if (targetLineIdx === -1) {
+          // Fall back to any agent line
+          for (let i = 0; i < row.lines.length; i++) {
+            if (row.lines[i].agent === agentName) { targetLineIdx = i; break }
+          }
+        }
+        if (targetLineIdx === -1) {
+          // Create a new line for this agent
+          row.lines.push({
+            id: "l-" + Math.random().toString(36).substring(2, 9),
+            googleAccount: "",
+            usedOn: field === "usedOn" ? val : "",
+            nextAvailable: field === "nextAvailable" ? val : "",
+            status: "",
+            notes: "",
+            agent: agentName,
+          })
+        } else {
+          row.lines[targetLineIdx] = { ...row.lines[targetLineIdx], [field]: val }
+        }
+        return { ...tracker, rows: newRows }
+      })
+    },
+    [updateCurrentTracker]
+  )
+
   // Quick Log
   const handleQuickLogStarted = (accountName: string) => {
     if (!accountName) return
@@ -2062,7 +2273,7 @@ function AgAccountTrackerModalInner({
           <td
             className="ag-subrow-account-cell"
             rowSpan={isExpanded ? 1 : 2}
-            style={{ verticalAlign: "middle", width: "110px", minWidth: "110px", maxWidth: "110px" }}
+            style={{ verticalAlign: "middle", width: "150px", minWidth: "150px", maxWidth: "150px" }}
           >
             <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -2111,6 +2322,7 @@ function AgAccountTrackerModalInner({
               const currentStatus = row.lines.filter((l) => l.agent === ag).sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]?.status || ""
               setStatusMenu({ rIdx: ri, agentName: ag, currentStatus, pos: { top: rect.bottom + 2, left: rect.left } })
             }}
+            onEditDate={handleEditDate}
           />
         </tr>
 
@@ -2126,6 +2338,7 @@ function AgAccountTrackerModalInner({
               const currentStatus = row.lines.filter((l) => l.agent === ag).sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]?.status || ""
               setStatusMenu({ rIdx: ri, agentName: ag, currentStatus, pos: { top: rect.bottom + 2, left: rect.left } })
             }}
+            onEditDate={handleEditDate}
           />
         </tr>
 
@@ -2523,12 +2736,12 @@ function AgAccountTrackerModalInner({
               {/* Sticky Column Headers (26px) */}
               <thead>
                 <tr style={{ position: "sticky", top: 0, zIndex: 12, background: "var(--card, #1a1a1a)", height: "26px" }}>
-                  <th className="ag-tracker-th" style={{ width: "110px", fontSize: "0.75rem", padding: "2px 6px" }}>Row</th>
-                  <th className="ag-tracker-th" style={{ width: "72px", fontSize: "0.75rem", padding: "2px 6px" }}>Agent</th>
-                  <th className="ag-tracker-th" style={{ width: "88px", fontSize: "0.75rem", padding: "2px 6px" }}>Status</th>
-                  <th className="ag-tracker-th" style={{ width: "175px", fontSize: "0.75rem", padding: "2px 6px" }}>Used On</th>
-                  <th className="ag-tracker-th" style={{ width: "200px", fontSize: "0.75rem", padding: "2px 6px" }}>Next Available</th>
-                  <th className="ag-tracker-th" style={{ width: "60px", fontSize: "0.75rem", padding: "2px 6px" }}>Act</th>
+                  <th className="ag-tracker-th" style={{ width: "150px", minWidth: "150px", maxWidth: "150px", fontSize: "0.75rem", padding: "2px 6px" }}>Row</th>
+                  <th className="ag-tracker-th" style={{ width: "70px", minWidth: "70px", maxWidth: "70px", fontSize: "0.75rem", padding: "2px 6px" }}>Agent</th>
+                  <th className="ag-tracker-th" style={{ width: "90px", minWidth: "90px", maxWidth: "90px", fontSize: "0.75rem", padding: "2px 6px" }}>Status</th>
+                  <th className="ag-tracker-th" style={{ width: "220px", minWidth: "220px", maxWidth: "220px", fontSize: "0.75rem", padding: "2px 6px" }}>Used On</th>
+                  <th className="ag-tracker-th" style={{ width: "270px", minWidth: "270px", maxWidth: "270px", fontSize: "0.75rem", padding: "2px 6px" }}>Next Available</th>
+                  <th className="ag-tracker-th" style={{ width: "90px", minWidth: "90px", maxWidth: "90px", fontSize: "0.75rem", padding: "2px 6px" }}>Act</th>
                 </tr>
               </thead>
 
@@ -2691,6 +2904,17 @@ function AgAccountTrackerModalInner({
             handleStatusChangeWithRules(statusMenu.rIdx, statusMenu.agentName, status)
           }}
           onClose={() => setStatusMenu(null)}
+        />
+      )}
+
+      {/* Date Edit Popover */}
+      {dateEditPopover && (
+        <DateEditPopover
+          field={dateEditPopover.field}
+          initialVal={dateEditPopover.initialVal}
+          pos={dateEditPopover.pos}
+          onSave={(val) => handleSaveDateEdit(dateEditPopover.rIdx, dateEditPopover.agentName, dateEditPopover.field, val)}
+          onClose={() => setDateEditPopover(null)}
         />
       )}
 

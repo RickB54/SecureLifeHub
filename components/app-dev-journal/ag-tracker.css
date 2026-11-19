@@ -3042,3 +3042,25 @@ nav.journal-bottom-nav {
   min-height: 34px;
 }
 
+/* ── Clickable date cells in main view ── */
+.journal-root .ag-date-clickable {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s ease;
+}
+.journal-root .ag-date-clickable:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Date edit popover ── */
+.journal-root .ag-date-popover,
+.ag-date-popover {
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 10px 12px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
