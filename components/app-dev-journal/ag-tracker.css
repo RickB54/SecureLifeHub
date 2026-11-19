@@ -31,8 +31,8 @@
 
 /* Centered Dialog Window */
 .journal-root .ag-tracker-dialog {
-  width: min(96vw, 1200px);
-  max-height: calc(100vh - 41px - 24px);
+  width: min(98vw, 1400px);
+  max-height: 96vh;
   background-color: var(--background, #121212);
   color: var(--foreground, #f3f4f6);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
@@ -2667,3 +2667,257 @@ nav.journal-bottom-nav {
 .journal-root .journal-theme-light .ag-report-table td {
   color: #0f172a !important;
 }
+
+/* ============================================================
+   16-ROW VIEW, AGENTS, DAY TRACKING, STATUS POPUP STYLES
+   ============================================================ */
+.journal-root .ag-status-done {
+  background-color: rgba(99, 102, 241, 0.2) !important;
+  color: #a5b4fc !important;
+  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+}
+
+.journal-root .ag-subrow {
+  height: 28px !important;
+  min-height: 28px !important;
+  line-height: 1.2 !important;
+}
+
+.journal-root .ag-subrow-td {
+  padding: 2px 6px !important;
+  font-size: 12px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  overflow: hidden;
+}
+
+.journal-root .ag-subrow-account-cell {
+  padding: 4px 8px !important;
+  vertical-align: middle !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.journal-root .ag-status-trigger-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.journal-root .ag-status-empty-chip {
+  font-size: 11px;
+  color: #6b7280;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  padding: 1px 7px;
+  transition: all 0.15s;
+}
+
+.journal-root .ag-status-empty-chip:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #d1d5db;
+}
+
+/* Status popup menu */
+.journal-root .ag-status-popup-menu,
+.ag-status-popup-menu {
+  background: var(--card, #1e1e1e);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  padding: 4px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.journal-root .ag-status-popup-item,
+.ag-status-popup-item {
+  background: transparent;
+  border: none;
+  color: var(--foreground, #f3f4f6);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+
+.journal-root .ag-status-popup-item:hover,
+.ag-status-popup-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.journal-root .ag-status-popup-item.active,
+.ag-status-popup-item.active {
+  background: rgba(59, 130, 246, 0.2);
+  font-weight: 700;
+}
+
+/* Day chip */
+.journal-root .ag-day-chip {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.journal-root .ag-day-today {
+  background: rgba(59, 130, 246, 0.2) !important;
+  color: #60a5fa !important;
+  border: 1px solid rgba(59, 130, 246, 0.35) !important;
+}
+
+.journal-root .ag-day-yesterday {
+  background: rgba(156, 163, 175, 0.15) !important;
+  color: #9ca3af !important;
+  border: 1px solid rgba(156, 163, 175, 0.25) !important;
+}
+
+/* Ready chip */
+.journal-root .ag-ready-chip {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+}
+
+.journal-root .ag-chip-green {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+
+.journal-root .ag-chip-amber {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+.journal-root .ag-chip-red {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+}
+
+/* Row markers & borders */
+.journal-root .ag-row-blue-border {
+  border-left: 3px solid #3b82f6 !important;
+}
+
+@keyframes ag-highlight-flash {
+  0% { background-color: rgba(59, 130, 246, 0.35); }
+  100% { background-color: transparent; }
+}
+
+.journal-root .ag-row-highlight {
+  animation: ag-highlight-flash 1.5s ease-out !important;
+}
+
+/* Sub-row action buttons */
+.journal-root .ag-subrow-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.journal-root .ag-subrow-btn-start {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #34d399 !important;
+}
+
+.journal-root .ag-subrow-btn-start:hover {
+  background: rgba(16, 185, 129, 0.35) !important;
+}
+
+.journal-root .ag-subrow-btn-done {
+  background: rgba(99, 102, 241, 0.2) !important;
+  color: #a5b4fc !important;
+}
+
+.journal-root .ag-subrow-btn-done:hover {
+  background: rgba(99, 102, 241, 0.35) !important;
+}
+
+/* Today strip & chips */
+.journal-root .ag-today-strip {
+  scrollbar-width: none;
+}
+.journal-root .ag-today-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.journal-root .ag-today-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  line-height: 1.2;
+}
+
+.journal-root .ag-today-chip-blue {
+  background: rgba(59, 130, 246, 0.2) !important;
+  color: #93c5fd !important;
+  border: 1px solid rgba(59, 130, 246, 0.3) !important;
+}
+
+.journal-root .ag-today-chip-amber {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fcd34d !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.journal-root .ag-today-chip-green {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.journal-root .ag-today-chip-grey {
+  background: rgba(156, 163, 175, 0.15) !important;
+  color: #d1d5db !important;
+  border: 1px solid rgba(156, 163, 175, 0.25) !important;
+}
+
+/* Expanded line editor */
+.journal-root .ag-expanded-section {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journal-root .ag-expanded-line-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+  min-height: 34px;
+}
+

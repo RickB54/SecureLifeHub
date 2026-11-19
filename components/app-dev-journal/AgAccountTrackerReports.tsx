@@ -21,6 +21,7 @@ import {
   LineStatus,
   DEFAULT_ROW_LABELS,
   formatDisplayDateTime,
+  dayChip,
 } from "./AgAccountTrackerModal"
 import AgAccountTrackerHelpModal from "./AgAccountTrackerHelpModal"
 import TrackerErrorBoundary from "./TrackerErrorBoundary"
@@ -513,6 +514,9 @@ function AgAccountTrackerReportsInner({
     if (status === "Out") {
       return <span className="ag-status-badge ag-status-out">Out</span>
     }
+    if (status === "Done") {
+      return <span className="ag-status-badge ag-status-done">Done</span>
+    }
     return <span className="ag-report-badge ag-report-badge-nodate">{status}</span>
   }
 
@@ -708,7 +712,6 @@ function AgAccountTrackerReportsInner({
                         <th style={{ width: "230px" }}>Used On</th>
                         <th style={{ width: "120px" }}>Time Since</th>
                         <th style={{ width: "230px" }}>Next Available</th>
-                        <th style={{ width: "200px" }}>Notes</th>
                         <th style={{ width: "50px", textAlign: "center" }}>Act</th>
                       </tr>
                     </thead>
@@ -734,9 +737,18 @@ function AgAccountTrackerReportsInner({
                               </td>
                               <td>{renderLineStatusBadge(acct.latestLineStatus)}</td>
                               <td className="text-xs">
-                                {acct.latestUsedIso
-                                  ? formatDisplayDateTime(acct.latestUsedIso)
-                                  : <span className="text-gray-400">—</span>}
+                                {acct.latestUsedIso ? (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <span>{formatDisplayDateTime(acct.latestUsedIso)}</span>
+                                    {dayChip(acct.latestUsedIso) && (
+                                      <span className={`ag-day-chip ${dayChip(acct.latestUsedIso) === "Today" ? "ag-day-today" : "ag-day-yesterday"}`}>
+                                        {dayChip(acct.latestUsedIso)}
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
                               </td>
                               <td>
                                 <span
@@ -749,9 +761,6 @@ function AgAccountTrackerReportsInner({
                                 {acct.latestNextAvailableIso
                                   ? formatDisplayDateTime(acct.latestNextAvailableIso)
                                   : <span className="text-gray-400">—</span>}
-                              </td>
-                              <td className="text-xs text-gray-400 truncate max-w-[200px]">
-                                {acct.notes || <span className="text-gray-500">—</span>}
                               </td>
                               <td style={{ textAlign: "center" }}>
                                 <button
@@ -807,6 +816,7 @@ function AgAccountTrackerReportsInner({
                                 <option value="In use">In use</option>
                                 <option value="Low">Low</option>
                                 <option value="Out">Out</option>
+                                <option value="Done">Done</option>
                               </select>
                             </td>
 
@@ -925,48 +935,6 @@ function AgAccountTrackerReportsInner({
                               </div>
                             </td>
 
-                            {/* Editable Notes Cell with Maximize2 */}
-                            <td>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="text"
-                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1 min-w-0"
-                                  placeholder="Notes..."
-                                  value={acct.notes || ""}
-                                  onChange={(e) => {
-                                    if (onUpdateAccountData) {
-                                      onUpdateAccountData(acct.accountName, {
-                                        notes: e.target.value,
-                                      })
-                                    }
-                                  }}
-                                  onBlur={handleFieldBlur}
-                                />
-                                <button
-                                  type="button"
-                                  className="ag-tracker-btn ag-tracker-btn-icon p-1 shrink-0"
-                                  onClick={() => {
-                                    if (onOpenNotesEditor) {
-                                      onOpenNotesEditor(
-                                        `${acct.accountName} – Notes`,
-                                        acct.notes || "",
-                                        (newVal) => {
-                                          if (onUpdateAccountData) {
-                                            onUpdateAccountData(acct.accountName, {
-                                              notes: newVal,
-                                            })
-                                          }
-                                        }
-                                      )
-                                    }
-                                  }}
-                                  title="Open full notes editor"
-                                >
-                                  <Maximize2 className="h-3 w-3 text-gray-400 hover:text-white" />
-                                </button>
-                              </div>
-                            </td>
-
                             <td style={{ textAlign: "center" }}>
                               <button
                                 type="button"
@@ -1031,6 +999,7 @@ function AgAccountTrackerReportsInner({
                                   <option value="In use">In use</option>
                                   <option value="Low">Low</option>
                                   <option value="Out">Out</option>
+                                  <option value="Done">Done</option>
                                 </select>
                               </div>
 
@@ -1059,23 +1028,6 @@ function AgAccountTrackerReportsInner({
                                     <Zap className="h-3 w-3 text-amber-400" />
                                   </button>
                                 </div>
-                              </div>
-
-                              <div className="ag-report-mobile-card-row">
-                                <span className="ag-report-mobile-card-label">Notes:</span>
-                                <input
-                                  type="text"
-                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1"
-                                  placeholder="Notes..."
-                                  value={acct.notes || ""}
-                                  onChange={(e) => {
-                                    if (onUpdateAccountData) {
-                                      onUpdateAccountData(acct.accountName, {
-                                        notes: e.target.value,
-                                      })
-                                    }
-                                  }}
-                                />
                               </div>
                             </div>
                           )}
@@ -1159,7 +1111,6 @@ function AgAccountTrackerReportsInner({
                         <th style={{ width: "230px" }}>Next Available</th>
                         <th style={{ width: "140px" }}>Availability</th>
                         <th style={{ width: "230px" }}>Used On</th>
-                        <th style={{ width: "200px" }}>Notes</th>
                         <th style={{ width: "50px", textAlign: "center" }}>Act</th>
                       </tr>
                     </thead>
@@ -1197,12 +1148,18 @@ function AgAccountTrackerReportsInner({
                                 </span>
                               </td>
                               <td className="text-xs">
-                                {acct.latestUsedIso
-                                  ? formatDisplayDateTime(acct.latestUsedIso)
-                                  : <span className="text-gray-400">—</span>}
-                              </td>
-                              <td className="text-xs text-gray-400 truncate max-w-[200px]">
-                                {acct.notes || <span className="text-gray-500">—</span>}
+                                {acct.latestUsedIso ? (
+                                  <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <span>{formatDisplayDateTime(acct.latestUsedIso)}</span>
+                                    {dayChip(acct.latestUsedIso) && (
+                                      <span className={`ag-day-chip ${dayChip(acct.latestUsedIso) === "Today" ? "ag-day-today" : "ag-day-yesterday"}`}>
+                                        {dayChip(acct.latestUsedIso)}
+                                      </span>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">—</span>
+                                )}
                               </td>
                               <td style={{ textAlign: "center" }}>
                                 <button
@@ -1258,6 +1215,7 @@ function AgAccountTrackerReportsInner({
                                 <option value="In use">In use</option>
                                 <option value="Low">Low</option>
                                 <option value="Out">Out</option>
+                                <option value="Done">Done</option>
                               </select>
                             </td>
 
@@ -1376,48 +1334,6 @@ function AgAccountTrackerReportsInner({
                               </div>
                             </td>
 
-                            {/* Editable Notes Cell with Maximize2 */}
-                            <td>
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="text"
-                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1 min-w-0"
-                                  placeholder="Notes..."
-                                  value={acct.notes || ""}
-                                  onChange={(e) => {
-                                    if (onUpdateAccountData) {
-                                      onUpdateAccountData(acct.accountName, {
-                                        notes: e.target.value,
-                                      })
-                                    }
-                                  }}
-                                  onBlur={handleFieldBlur}
-                                />
-                                <button
-                                  type="button"
-                                  className="ag-tracker-btn ag-tracker-btn-icon p-1 shrink-0"
-                                  onClick={() => {
-                                    if (onOpenNotesEditor) {
-                                      onOpenNotesEditor(
-                                        `${acct.accountName} – Notes`,
-                                        acct.notes || "",
-                                        (newVal) => {
-                                          if (onUpdateAccountData) {
-                                            onUpdateAccountData(acct.accountName, {
-                                              notes: newVal,
-                                            })
-                                          }
-                                        }
-                                      )
-                                    }
-                                  }}
-                                  title="Open full notes editor"
-                                >
-                                  <Maximize2 className="h-3 w-3 text-gray-400 hover:text-white" />
-                                </button>
-                              </div>
-                            </td>
-
                             <td style={{ textAlign: "center" }}>
                               <button
                                 type="button"
@@ -1512,24 +1428,8 @@ function AgAccountTrackerReportsInner({
                                   <option value="In use">In use</option>
                                   <option value="Low">Low</option>
                                   <option value="Out">Out</option>
+                                  <option value="Done">Done</option>
                                 </select>
-                              </div>
-
-                              <div className="ag-report-mobile-card-row">
-                                <span className="ag-report-mobile-card-label">Notes:</span>
-                                <input
-                                  type="text"
-                                  className="ag-tracker-input text-xs py-0.5 px-1.5 flex-1"
-                                  placeholder="Notes..."
-                                  value={acct.notes || ""}
-                                  onChange={(e) => {
-                                    if (onUpdateAccountData) {
-                                      onUpdateAccountData(acct.accountName, {
-                                        notes: e.target.value,
-                                      })
-                                    }
-                                  }}
-                                />
                               </div>
                             </div>
                           )}
