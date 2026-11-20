@@ -26,7 +26,11 @@ import {
   CheckCircle,
   Calendar,
   StickyNote,
+  AppWindow,
+  Copy,
+  ExternalLink,
 } from "lucide-react"
+import { formatDate } from "./journal/dates"
 import AgAccountTrackerReports from "./AgAccountTrackerReports"
 import AgAccountTrackerHelpModal from "./AgAccountTrackerHelpModal"
 import TrackerErrorBoundary from "./TrackerErrorBoundary"
@@ -1309,6 +1313,478 @@ function ExpandedRowSection({
 }
 
 // ============================================================
+// CURRENT APP MODAL & HELPERS
+// ============================================================
+function parseRequestDateMs(val?: string): number {
+  if (!val) return 0
+  const m = String(val).match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/)
+  if (m) {
+    const d = new Date(Number(m[3]), Number(m[1]) - 1, Number(m[2]))
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime()
+  }
+  const d = new Date(val)
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime()
+}
+
+function toLocalHostHref(val: string): string {
+  if (!val || val.trim() === "" || val === "—") return ""
+  const t = val.trim()
+  if (/^https?:\/\//i.test(t)) return t
+  if (/^\d+$/.test(t)) return `http://localhost:${t}`
+  if (/^localhost/i.test(t)) return `http://${t}`
+  return `http://${t}`
+}
+
+function toPublishedHref(val: string): string {
+  if (!val || val.trim() === "" || val === "—") return ""
+  const t = val.trim()
+  if (/^https?:\/\//i.test(t)) return t
+  return `https://${t}`
+}
+
+interface CurrentAppModalProps {
+  isOpen: boolean
+  onClose: () => void
+  theme?: string
+}
+
+export function CurrentAppModal({ isOpen, onClose, theme = "dark" }: CurrentAppModalProps) {
+  const [projects, setProjects] = useState<any[]>([])
+  const [selectedId, setSelectedId] = useState<string>("")
+  const [copiedField, setCopiedField] = useState<string | null>(null)
+  const copyTimerRef = useRef<any>(null)
+
+  // Escape key handler: closes ONLY this popup and stops propagation
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown, true)
+    return () => window.removeEventListener("keydown", handleKeyDown, true)
+  }, [isOpen, onClose])
+
+  // Fresh read from localStorage whenever dialog opens
+  useEffect(() => {
+    if (!isOpen) return
+    let projs: any[] = []
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("projects") : null
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) projs = parsed
+      }
+    } catch {}
+    setProjects(projs)
+
+    if (projs.length > 0) {
+      const lastId = typeof window !== "undefined" ? localStorage.getItem("journal-last-record") : null
+      let target = lastId ? projs.find((p) => p.id === lastId) : null
+      if (!target) {
+        // Sort by newest Last Request Date (currentRequestDate)
+        const sorted = [...projs].sort((a, b) => {
+          return parseRequestDateMs(b.currentRequestDate) - parseRequestDateMs(a.currentRequestDate)
+        })
+        target = sorted[0] || projs[0]
+      }
+      setSelectedId(target?.id || projs[0]?.id || "")
+    } else {
+      setSelectedId("")
+    }
+  }, [isOpen])
+
+  // Cleanup copy timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    }
+  }, [])
+
+  if (!isOpen) return null
+
+  const root =
+    (typeof document !== "undefined" &&
+      (document.querySelector(".journal-root") as HTMLElement | null)) ||
+    (typeof document !== "undefined" ? document.body : null)
+
+  if (!root) return null
+
+  const selectedProject = projects.find((p) => p.id === selectedId) || projects[0]
+
+  const handleCopy = (text: string, fieldKey: string) => {
+    if (!text || text === "—") return
+    try {
+      if (navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).catch(() => {})
+      } else {
+        const ta = document.createElement("textarea")
+        ta.value = text
+        ta.style.position = "fixed"
+        ta.style.opacity = "0"
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand("copy")
+        document.body.removeChild(ta)
+      }
+    } catch {}
+    setCopiedField(fieldKey)
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => {
+      setCopiedField(null)
+    }, 1600)
+  }
+
+  // Format fields for selected project
+  const platformsStr = Array.isArray(selectedProject?.platforms)
+    ? selectedProject.platforms.filter(Boolean).join(", ")
+    : (selectedProject?.platforms || "")
+  const aiAgentsStr = Array.isArray(selectedProject?.aiAgents)
+    ? selectedProject.aiAgents.filter(Boolean).join(", ")
+    : (selectedProject?.aiAgents || "")
+  const keepStr = Array.isArray(selectedProject?.googleKeepAccounts)
+    ? selectedProject.googleKeepAccounts.filter(Boolean).join(", ")
+    : (selectedProject?.googleKeepAccounts || "")
+  const accountsStr = Array.isArray(selectedProject?.userNames)
+    ? selectedProject.userNames.filter(Boolean).join(", ")
+    : (selectedProject?.userNames || "")
+  const cloudStr = Array.isArray(selectedProject?.cloudServices)
+    ? selectedProject.cloudServices.filter(Boolean).join("; ")
+    : (selectedProject?.cloudServices || "")
+
+  const formattedDate = selectedProject?.currentRequestDate
+    ? (formatDate(selectedProject.currentRequestDate) || selectedProject.currentRequestDate)
+    : ""
+
+  const localHostVal = selectedProject?.localHost || ""
+  const localHostLink = toLocalHostHref(localHostVal)
+
+  const publishedVal = selectedProject?.publishedUrl || ""
+  const publishedLink = toPublishedHref(publishedVal)
+
+  const previewDirVal = selectedProject?.previewUrl || ""
+
+  return createPortal(
+    <div
+      className="ag-tracker-modal-dialog-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Current App"
+      style={{ zIndex: 100060 }}
+    >
+      <div
+        className={`ag-tracker-modal-dialog ag-current-app-dialog journal-theme-${theme}`}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "min(92vw, 760px)",
+          maxHeight: "85vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+        }}
+      >
+        {/* HEADER */}
+        <div className="ag-tracker-modal-dialog-header">
+          <div className="flex items-center gap-2">
+            <AppWindow className="h-5 w-5 text-sky-400" />
+            <h3 className="text-base font-bold text-white tracking-wide">
+              Current App
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {projects.length > 0 && (
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="ag-switch-app-select"
+                  className="text-xs text-slate-300 font-medium whitespace-nowrap"
+                >
+                  Switch app:
+                </label>
+                <select
+                  id="ag-switch-app-select"
+                  className="ag-tracker-select"
+                  value={selectedId}
+                  onChange={(e) => setSelectedId(e.target.value)}
+                  style={{
+                    fontSize: "0.8rem",
+                    padding: "0.2rem 0.5rem",
+                    maxWidth: "240px",
+                    height: "26px",
+                  }}
+                  title="Switch viewed app (view-only)"
+                >
+                  {projects.map((p, idx) => (
+                    <option key={p.id || idx} value={p.id}>
+                      {p.appName || `App #${idx + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              type="button"
+              className="ag-tracker-btn ag-tracker-btn-icon"
+              onClick={onClose}
+              title="Close (Esc)"
+              style={{ height: "26px", width: "26px" }}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* BODY */}
+        <div className="ag-current-app-body">
+          {projects.length === 0 ? (
+            <div style={{ padding: "3rem 1.5rem", textAlign: "center", color: "#94a3b8", fontSize: "1rem" }}>
+              No apps in the Journal yet.
+            </div>
+          ) : (
+            <div className="ag-current-app-card">
+              <div className="ag-current-app-grid">
+                {/* LEFT COLUMN */}
+                <div>
+                  {/* Title */}
+                  <div className="ag-current-app-row ag-current-app-row-header">
+                    <h2
+                      className="text-xl font-bold text-white truncate"
+                      title={selectedProject?.appName || "Untitled App"}
+                      style={{ fontSize: "1.25rem", margin: 0 }}
+                    >
+                      {selectedProject?.appName || "Untitled App"}
+                    </h2>
+                  </div>
+
+                  {/* Platforms */}
+                  <div className="ag-current-app-row">
+                    <div className="flex items-baseline gap-1.5 min-w-0" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#3b82f6" }} className="font-semibold flex-shrink-0">
+                        Platforms:
+                      </span>
+                      <span className="text-slate-100 break-words">
+                        {platformsStr || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AI Agents */}
+                  <div className="ag-current-app-row">
+                    <div className="flex items-baseline gap-1.5 min-w-0" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#3b82f6" }} className="font-semibold flex-shrink-0">
+                        AI Agents:
+                      </span>
+                      <span className="text-slate-100 break-words">
+                        {aiAgentsStr || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Google Keep */}
+                  <div className="ag-current-app-row">
+                    <div className="flex items-baseline gap-1.5 min-w-0" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#eab308" }} className="font-semibold flex-shrink-0">
+                        Google Keep:
+                      </span>
+                      <span className="text-slate-100 break-words">
+                        {keepStr || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Google Account */}
+                  <div className="ag-current-app-row" style={{ borderBottom: "none" }}>
+                    <div className="flex items-baseline gap-1.5 min-w-0" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#c084fc" }} className="font-semibold flex-shrink-0">
+                        Google Account:
+                      </span>
+                      <span className="text-slate-100 break-words">
+                        {accountsStr || "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN */}
+                <div>
+                  {/* Last Request Date */}
+                  <div className="ag-current-app-row ag-current-app-row-header">
+                    <div className="flex items-baseline gap-1.5 min-w-0" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#eab308" }} className="font-semibold flex-shrink-0">
+                        Last Request Date:
+                      </span>
+                      <span className="text-slate-100 truncate">
+                        {formattedDate || "—"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Project Dir */}
+                  <div className="ag-current-app-row">
+                    <div className="flex items-baseline gap-1.5 min-w-0 flex-1" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#f97316" }} className="font-semibold flex-shrink-0">
+                        Project Dir:
+                      </span>
+                      <span className="text-slate-100 break-all">
+                        {previewDirVal || "—"}
+                      </span>
+                    </div>
+                    {previewDirVal ? (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(previewDirVal, "dir")}
+                        className="ag-current-app-copy-btn flex-shrink-0"
+                        title="Copy Project Dir"
+                        aria-label="Copy Project Dir"
+                      >
+                        {copiedField === "dir" ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span className="text-xs text-emerald-400 font-medium">Copied</span>
+                          </>
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* Local Host */}
+                  <div className="ag-current-app-row">
+                    <div className="flex items-baseline gap-1.5 min-w-0 flex-1" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#2dd4bf" }} className="font-semibold flex-shrink-0">
+                        Local Host:
+                      </span>
+                      {localHostLink ? (
+                        <a
+                          href={localHostLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-100 hover:underline hover:text-teal-300 break-all inline-flex items-center gap-1 group"
+                          title={`Open ${localHostLink} in new tab`}
+                        >
+                          <span>{localHostVal}</span>
+                          <ExternalLink className="h-3.5 w-3.5 text-teal-400/80 group-hover:text-teal-300 flex-shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="text-slate-100 break-all">
+                          {localHostVal || "—"}
+                        </span>
+                      )}
+                    </div>
+                    {localHostVal ? (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(localHostVal, "localhost")}
+                        className="ag-current-app-copy-btn flex-shrink-0"
+                        title="Copy Local Host"
+                        aria-label="Copy Local Host"
+                      >
+                        {copiedField === "localhost" ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span className="text-xs text-emerald-400 font-medium">Copied</span>
+                          </>
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* Published URL */}
+                  <div className="ag-current-app-row">
+                    <div className="flex items-baseline gap-1.5 min-w-0 flex-1" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#f87171" }} className="font-semibold flex-shrink-0">
+                        Published URL:
+                      </span>
+                      {publishedLink ? (
+                        <a
+                          href={publishedLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-100 hover:underline hover:text-rose-300 break-all inline-flex items-center gap-1 group"
+                          title={`Open ${publishedLink} in new tab`}
+                        >
+                          <span>{publishedVal}</span>
+                          <ExternalLink className="h-3.5 w-3.5 text-rose-400/80 group-hover:text-rose-300 flex-shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="text-slate-100 break-all">
+                          {publishedVal || "—"}
+                        </span>
+                      )}
+                    </div>
+                    {publishedVal ? (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(publishedVal, "published")}
+                        className="ag-current-app-copy-btn flex-shrink-0"
+                        title="Copy Published URL"
+                        aria-label="Copy Published URL"
+                      >
+                        {copiedField === "published" ? (
+                          <>
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                            <span className="text-xs text-emerald-400 font-medium">Copied</span>
+                          </>
+                        ) : (
+                          <Copy className="h-3.5 w-3.5" />
+                        )}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {/* Cloud Services */}
+                  <div className="ag-current-app-row" style={{ borderBottom: "none" }}>
+                    <div className="flex items-baseline gap-1.5 min-w-0" style={{ fontSize: "16px" }}>
+                      <span style={{ color: "#3b82f6" }} className="font-semibold flex-shrink-0">
+                        Cloud Services:
+                      </span>
+                      <span className="text-slate-100 break-words">
+                        {cloudStr || "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* FOOTER */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0.75rem 1.25rem",
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+            backgroundColor: "rgba(15, 23, 42, 0.8)",
+            fontSize: "0.75rem",
+            color: "#94a3b8",
+          }}
+        >
+          <span>Pulled live from your Dev Journal records.</span>
+          <button
+            type="button"
+            className="ag-tracker-btn"
+            onClick={onClose}
+            style={{ fontSize: "0.75rem", padding: "0.2rem 0.6rem" }}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>,
+    root
+  )
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
 function AgAccountTrackerModalInner({
@@ -1336,6 +1812,7 @@ function AgAccountTrackerModalInner({
   const [quickLogOpen, setQuickLogOpen] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [currentAppOpen, setCurrentAppOpen] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>(loadExpandedRows)
 
   const [notesExpanded, setNotesExpanded] = useState<boolean>(() => {
@@ -3112,6 +3589,16 @@ function AgAccountTrackerModalInner({
               </button>
               <button
                 type="button"
+                className="ag-tracker-btn ag-btn-utility ag-btn-current-app"
+                onClick={() => setCurrentAppOpen(true)}
+                title="Show the app I'm working on"
+                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
+              >
+                <AppWindow className="h-3.5 w-3.5 text-sky-400" />
+                <span>Current App</span>
+              </button>
+              <button
+                type="button"
                 className="ag-tracker-btn font-semibold text-emerald-400 border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20"
                 onClick={() => setHelpOpen(true)}
                 title="Help"
@@ -3676,6 +4163,9 @@ function AgAccountTrackerModalInner({
 
       {/* HELP */}
       <AgAccountTrackerHelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} theme={theme} />
+
+      {/* CURRENT APP */}
+      <CurrentAppModal isOpen={currentAppOpen} onClose={() => setCurrentAppOpen(false)} theme={theme} />
     </>
   )
 }
