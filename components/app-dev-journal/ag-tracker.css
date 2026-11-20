@@ -3064,3 +3064,121 @@ nav.journal-bottom-nav {
   max-width: 320px;
 }
 
+
+/* ── Notes panel dark navy background (all themes) ── */
+.journal-root .ag-notes-panel {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+.journal-root .ag-notes-panel * {
+  color: inherit;
+  opacity: 1 !important;
+}
+.journal-root .ag-notes-panel .ag-tracker-btn {
+  background-color: #1e293b !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: #f1f5f9 !important;
+  opacity: 1 !important;
+}
+.journal-root .ag-notes-panel .ag-tracker-btn:hover {
+  background-color: #334155 !important;
+}
+.journal-root .ag-tracker-bottom-notes-textarea {
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+/* Light theme override */
+.journal-root.journal-theme-light .ag-notes-panel,
+.journal-root .journal-theme-light .ag-notes-panel {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border-top: 1px solid #cbd5e1 !important;
+}
+.journal-root.journal-theme-light .ag-notes-panel .ag-tracker-btn,
+.journal-root .journal-theme-light .ag-notes-panel .ag-tracker-btn {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.journal-root.journal-theme-light .ag-tracker-bottom-notes-textarea,
+.journal-root .journal-theme-light .ag-tracker-bottom-notes-textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+/* OLED Theme */
+.journal-root.journal-theme-oled .ag-notes-panel,
+.journal-root .journal-theme-oled .ag-notes-panel {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+.journal-root.journal-theme-oled .ag-tracker-bottom-notes-textarea,
+.journal-root .journal-theme-oled .ag-tracker-bottom-notes-textarea {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 1px solid #333333 !important;
+}
+/* Cyberpunk Theme */
+.journal-root.journal-theme-cyberpunk .ag-notes-panel,
+.journal-root .journal-theme-cyberpunk .ag-notes-panel {
+  background-color: #18052e !important;
+  color: #fdf4ff !important;
+}
+.journal-root.journal-theme-cyberpunk .ag-tracker-bottom-notes-textarea,
+.journal-root .journal-theme-cyberpunk .ag-tracker-bottom-notes-textarea {
+  background-color: #110022 !important;
+  color: #fdf4ff !important;
+  border: 1px solid rgba(236, 72, 153, 0.3) !important;
+}
+
+/* ── Full-screen editor dark & visible header ── */
+.journal-root .ag-tracker-fullscreen-editor {
+  position: fixed !important;
+  top: 48px !important;
+  bottom: 40px !important;
+  left: 12px !important;
+  right: 12px !important;
+  z-index: 999999 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 1rem 1.25rem !important;
+  overflow: hidden !important;
+}
+.journal-root .ag-tracker-fullscreen-header {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 1 !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+.journal-root .ag-tracker-fullscreen-textarea {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+}
+.journal-root.journal-theme-light .ag-tracker-fullscreen-editor,
+.journal-root .journal-theme-light .ag-tracker-fullscreen-editor {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+.journal-root.journal-theme-light .ag-tracker-fullscreen-textarea,
+.journal-root .journal-theme-light .ag-tracker-fullscreen-textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}

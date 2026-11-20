@@ -25,6 +25,7 @@ import {
   Play,
   CheckCircle,
   Calendar,
+  StickyNote,
 } from "lucide-react"
 import AgAccountTrackerReports from "./AgAccountTrackerReports"
 import AgAccountTrackerHelpModal from "./AgAccountTrackerHelpModal"
@@ -51,6 +52,8 @@ const OUT_MIGRATED_KEY = "slh-ag-tracker-out-migrated-v1"
 const NOTES_EXPANDED_KEY = "slh-ag-tracker-notes-expanded"
 const EXPANDED_ROWS_KEY = "slh-ag-tracker-expanded-rows"
 const DAY_FILTER_KEY = "slh-ag-tracker-dayfilter"
+const SORT_MODE_KEY = "slh-ag-tracker-sort"
+const ACTIVE_TAB_KEY = "slh-ag-tracker-activetab"
 
 const DEFAULT_AGENTS = ["Gemini", "Claude"]
 
@@ -79,6 +82,7 @@ export interface AccountTracker {
   appName: string
   rows: TrackerRow[]
   trackerNotes: string
+  day?: string
 }
 
 export interface TrackerOptions {
@@ -235,6 +239,7 @@ function createDefaultTracker(index: number): AccountTracker {
       lines: createDefaultLines(),
     })),
     trackerNotes: "",
+    day: toLocalIsoString(new Date()).slice(0, 10),
   }
 }
 
@@ -300,7 +305,20 @@ function migrateStorageData(rawObj: any): AgTrackerStorageData {
   }))
 
   return {
-    trackers: migratedTrackers,
+    trackers: migratedTrackers
+      .map((tr: any) => {
+        if (tr.day) return tr
+        // Find newest usedOn date across all lines
+        let newestDate = ""
+        for (const row of tr.rows || []) {
+          for (const line of row.lines || []) {
+            if (line.usedOn && line.usedOn > newestDate) newestDate = line.usedOn
+          }
+        }
+        const day = newestDate ? newestDate.slice(0, 10) : toLocalIsoString(new Date()).slice(0, 10)
+        return { ...tr, day }
+      })
+      .sort((a: any, b: any) => (a.day || "").localeCompare(b.day || "")),
     activeTrackerIndex: typeof rawObj.activeTrackerIndex === "number" ? rawObj.activeTrackerIndex : 0,
     options: {
       customGoogleAccounts: Array.isArray(rawObj.options?.customGoogleAccounts)
@@ -445,7 +463,17 @@ function getInitialData(): AgTrackerStorageData {
         const parsed = JSON.parse(stored)
         const migrated = migrateStorageData(parsed)
         const notesMigrated = checkAndMigrateLineNotes(migrated)
-        return checkAndMigrateOutStatus(notesMigrated)
+        const res = checkAndMigrateOutStatus(notesMigrated)
+
+        // Check if an active tab was remembered
+        const rememberedTabId = localStorage.getItem(ACTIVE_TAB_KEY)
+        if (rememberedTabId && Array.isArray(res.trackers)) {
+          const foundIdx = res.trackers.findIndex((t: any) => t.id === rememberedTabId)
+          if (foundIdx >= 0) {
+            res.activeTrackerIndex = foundIdx
+          }
+        }
+        return res
       }
     } catch (err) {
       console.warn("Failed to read tracker data from localStorage:", err)
@@ -488,6 +516,24 @@ function loadExpandedRows(): Record<string, boolean> {
     } catch {}
   }
   return {}
+}
+
+function getTabDisplayName(tracker: AccountTracker): string {
+  const dayDate = tracker.day ? tracker.day : toLocalIsoString(new Date()).slice(0, 10)
+  const parts = dayDate.split("-")
+  const dayFormatted = parts.length === 3 ? `${parts[1]}-${parts[2]}-${parts[0]}` : dayDate
+  const app = tracker.appName?.trim() || ""
+  if (!app) return dayFormatted
+  const appTruncated = app.length > 14 ? app.slice(0, 14) + "…" : app
+  return `${dayFormatted} – ${appTruncated}`
+}
+
+function getTabFullTitle(tracker: AccountTracker): string {
+  const dayDate = tracker.day ? tracker.day : toLocalIsoString(new Date()).slice(0, 10)
+  const parts = dayDate.split("-")
+  const dayFormatted = parts.length === 3 ? `${parts[1]}-${parts[2]}-${parts[0]}` : dayDate
+  const app = tracker.appName?.trim() || ""
+  return app ? `${dayFormatted} – ${app}` : dayFormatted
 }
 
 function saveExpandedRows(map: Record<string, boolean>) {
@@ -890,6 +936,7 @@ function AgentSubRow({
   onDoneAgent,
   onOpenStatusMenu,
   onEditDate,
+  onNoteIcon,
 }: {
   agentName: string
   row: TrackerRow
@@ -898,6 +945,7 @@ function AgentSubRow({
   onDoneAgent: (rIdx: number, agentName: string) => void
   onOpenStatusMenu: (rIdx: number, agentName: string, rect: DOMRect) => void
   onEditDate: (rIdx: number, agentName: string, field: "usedOn" | "nextAvailable", rect: DOMRect) => void
+  onNoteIcon: (rIdx: number, agentName: string) => void
 }) {
   const agentLines = row.lines.filter((l) => l.agent === agentName)
   // Newest non-empty Used On
@@ -1030,6 +1078,15 @@ function AgentSubRow({
             onClick={() => onDoneAgent(rIdx, agentName)}
           >
             <CheckCircle className="h-3 w-3" />
+          </button>
+          <button
+            type="button"
+            className="ag-subrow-btn"
+            title={`Add note for ${row.label} – ${agentName}`}
+            style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: "4px", padding: "2px 3px", cursor: "pointer", display: "flex", alignItems: "center" }}
+            onClick={() => onNoteIcon && onNoteIcon(rIdx, agentName)}
+          >
+            <StickyNote className="h-3 w-3" style={{ color: "#a78bfa" }} />
           </button>
         </div>
       </td>
@@ -1295,6 +1352,11 @@ function AgAccountTrackerModalInner({
     return "all"
   })
 
+  const [sortMode, setSortMode] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem(SORT_MODE_KEY) || "manual"
+    return "manual"
+  })
+
   const [customAgents, setCustomAgents] = useState<string[]>(loadCustomAgents)
   const [nowTick, setNowTick] = useState(Date.now())
   const [highlightRowKey, setHighlightRowKey] = useState<string | null>(null)
@@ -1382,6 +1444,13 @@ function AgAccountTrackerModalInner({
     }
   }, [dayFilter])
 
+  // Save sort mode
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(SORT_MODE_KEY, sortMode)
+    }
+  }, [sortMode])
+
   // Save notes expanded state
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1448,6 +1517,13 @@ function AgAccountTrackerModalInner({
   // Active tracker
   const activeIndex = Math.min(Math.max(0, data.activeTrackerIndex), Math.max(0, data.trackers.length - 1))
   const currentTracker = data.trackers[activeIndex] || data.trackers[0]
+
+  // Save active tab to localStorage
+  useEffect(() => {
+    if (currentTracker?.id && typeof window !== "undefined") {
+      localStorage.setItem(ACTIVE_TAB_KEY, currentTracker.id)
+    }
+  }, [currentTracker?.id])
 
   const updateCurrentTracker = (updater: (prev: AccountTracker) => AccountTracker) => {
     updateData((prev) => {
@@ -1573,6 +1649,58 @@ function AgAccountTrackerModalInner({
     })
   }, [currentTracker.rows, dayFilter, nowTick])
 
+  // Sort logic across accounts
+  const sortedFilteredRows = useMemo(() => {
+    if (sortMode === "manual") return filteredRows
+
+    const getTimestamps = (row: TrackerRow) => {
+      let latestUsed = ""
+      let latestNext = ""
+      for (const line of row.lines) {
+        if (line.usedOn && (!latestUsed || line.usedOn > latestUsed)) {
+          latestUsed = line.usedOn
+        }
+        if (line.nextAvailable && (!latestNext || line.nextAvailable > latestNext)) {
+          latestNext = line.nextAvailable
+        }
+      }
+      return { latestUsed, latestNext }
+    }
+
+    const rowsWithMeta = filteredRows.map((row, origIdx) => ({
+      row,
+      origIdx,
+      ...getTimestamps(row),
+    }))
+
+    rowsWithMeta.sort((a, b) => {
+      if (sortMode === "used-oldest") {
+        if (!a.latestUsed && !b.latestUsed) return a.origIdx - b.origIdx
+        if (!a.latestUsed) return -1
+        if (!b.latestUsed) return 1
+        const cmp = a.latestUsed.localeCompare(b.latestUsed)
+        return cmp !== 0 ? cmp : a.origIdx - b.origIdx
+      }
+      if (sortMode === "used-newest") {
+        if (!a.latestUsed && !b.latestUsed) return a.origIdx - b.origIdx
+        if (!a.latestUsed) return 1
+        if (!b.latestUsed) return -1
+        const cmp = b.latestUsed.localeCompare(a.latestUsed)
+        return cmp !== 0 ? cmp : a.origIdx - b.origIdx
+      }
+      if (sortMode === "next-soonest") {
+        if (!a.latestNext && !b.latestNext) return a.origIdx - b.origIdx
+        if (!a.latestNext) return 1
+        if (!b.latestNext) return -1
+        const cmp = a.latestNext.localeCompare(b.latestNext)
+        return cmp !== 0 ? cmp : a.origIdx - b.origIdx
+      }
+      return a.origIdx - b.origIdx
+    })
+
+    return rowsWithMeta.map((item) => item.row)
+  }, [filteredRows, sortMode])
+
   // Scroll and highlight row helper
   const triggerRowHighlight = useCallback((rowKey: string) => {
     setHighlightRowKey(rowKey)
@@ -1585,12 +1713,65 @@ function AgAccountTrackerModalInner({
     }, 1500)
   }, [])
 
+  // Freeze order during active editing (when popover or status menu is open)
+  const [displayRows, setDisplayRows] = useState(sortedFilteredRows)
+  const prevRowsOrderRef = useRef<string[]>([])
+
+  useEffect(() => {
+    if (statusMenu === null && dateEditPopover === null) {
+      setDisplayRows(sortedFilteredRows)
+      // Check if order changed and highlight accounts that moved
+      const newOrder = sortedFilteredRows.map((r) => r.label)
+      const prevOrder = prevRowsOrderRef.current
+      if (prevOrder.length > 0 && prevOrder.join(",") !== newOrder.join(",")) {
+        for (let i = 0; i < newOrder.length; i++) {
+          if (newOrder[i] !== prevOrder[i]) {
+            const actualIdx = currentTracker.rows.findIndex((r) => r.label === newOrder[i])
+            if (actualIdx >= 0) {
+              const rKey = `row-${actualIdx}-${newOrder[i].replace(/\s+/g, "_")}`
+              triggerRowHighlight(rKey)
+              break
+            }
+          }
+        }
+      }
+      prevRowsOrderRef.current = newOrder
+    }
+  }, [sortedFilteredRows, statusMenu, dateEditPopover, currentTracker.rows, triggerRowHighlight])
+
   // Handlers
   const handleAddTracker = () => {
     updateData((prev) => {
       const nextIndex = prev.trackers.length
       const newTracker = createDefaultTracker(nextIndex)
-      return { ...prev, trackers: [...prev.trackers, newTracker], activeTrackerIndex: nextIndex }
+      newTracker.day = toLocalIsoString(new Date()).slice(0, 10)
+
+      // Carry over Next Available from the current or most recent tracker
+      const srcTracker = prev.trackers[prev.activeTrackerIndex] || prev.trackers[prev.trackers.length - 1]
+      if (srcTracker) {
+        newTracker.rows = newTracker.rows.map((newRow) => {
+          const srcRow = srcTracker.rows.find((r) => r.label.trim() === newRow.label.trim())
+          if (!srcRow) return newRow
+          let bestNext = ""
+          for (const line of srcRow.lines) {
+            if (line.nextAvailable && (!bestNext || line.nextAvailable > bestNext)) {
+              bestNext = line.nextAvailable
+            }
+          }
+          if (bestNext) {
+            const updatedLines = [...newRow.lines]
+            updatedLines[0] = { ...updatedLines[0], nextAvailable: bestNext }
+            return { ...newRow, lines: updatedLines }
+          }
+          return newRow
+        })
+      }
+
+      const updatedTrackers = [...prev.trackers, newTracker]
+      // Sort trackers by day (oldest left, newest right)
+      updatedTrackers.sort((a, b) => (a.day || "").localeCompare(b.day || ""))
+      const newActiveIdx = updatedTrackers.findIndex((t) => t.id === newTracker.id)
+      return { ...prev, trackers: updatedTrackers, activeTrackerIndex: newActiveIdx >= 0 ? newActiveIdx : nextIndex }
     })
   }
 
@@ -2117,7 +2298,361 @@ function AgAccountTrackerModalInner({
     reader.readAsText(file)
   }
 
-  const handlePrint = () => window.print()
+  const handleDayChange = useCallback(
+    (newDay: string) => {
+      const currentId = currentTracker.id
+      updateData((prev) => {
+        const updated = prev.trackers.map((tr) => (tr.id === currentId ? { ...tr, day: newDay } : tr))
+        // Re-order tabs by day: oldest on left, newest on right
+        updated.sort((a, b) => (a.day || "").localeCompare(b.day || ""))
+        const newActiveIdx = updated.findIndex((tr) => tr.id === currentId)
+        return {
+          ...prev,
+          trackers: updated,
+          activeTrackerIndex: newActiveIdx >= 0 ? newActiveIdx : 0,
+        }
+      })
+    },
+    [currentTracker?.id, updateData]
+  )
+
+  const handleNoteIcon = useCallback(
+    (rIdx: number, agentName: string) => {
+      const row = currentTracker.rows[rIdx]
+      if (!row) return
+      const todayStr = getTodayFormatted()
+      const header = `[${row.label} – ${todayStr}]:`
+      const existing = currentTracker.trackerNotes || ""
+
+      // Only one timestamp per account per day
+      if (!existing.includes(`[${row.label} – ${todayStr}`)) {
+        const sep = existing.trim() ? (existing.endsWith("\n") ? "\n" : "\n\n") : ""
+        const updated = existing + sep + header + " "
+        updateCurrentTracker((tr) => ({ ...tr, trackerNotes: updated }))
+      }
+      setNotesExpanded(true)
+      setTimeout(() => {
+        if (notesTextareaRef.current) {
+          notesTextareaRef.current.focus()
+          const len = notesTextareaRef.current.value.length
+          notesTextareaRef.current.setSelectionRange(len, len)
+        }
+      }, 60)
+    },
+    [currentTracker, updateCurrentTracker]
+  )
+
+  const handlePrintPdf = useCallback(() => {
+    const win = window.open("", "_blank")
+    if (!win) {
+      alert("Please allow popups in your browser to view and print the PDF report.")
+      return
+    }
+
+    const allTrackers = data.trackers
+
+    const buildTrackerHtml = (tracker: AccountTracker) => {
+      const dayDate = tracker.day ? tracker.day : toLocalIsoString(new Date()).slice(0, 10)
+      const parts = dayDate.split("-")
+      const dayFormatted = parts.length === 3 ? `${parts[1]}-${parts[2]}-${parts[0]}` : dayDate
+      const appTitle = tracker.appName ? `${dayFormatted} – ${tracker.appName}` : dayFormatted
+
+      const getTimestamps = (row: TrackerRow) => {
+        let latestUsed = ""
+        let latestNext = ""
+        for (const line of row.lines) {
+          if (line.usedOn && (!latestUsed || line.usedOn > latestUsed)) latestUsed = line.usedOn
+          if (line.nextAvailable && (!latestNext || line.nextAvailable > latestNext)) latestNext = line.nextAvailable
+        }
+        return { latestUsed, latestNext }
+      }
+
+      const rowsCopy = [...tracker.rows].map((row, origIdx) => ({
+        row,
+        origIdx,
+        ...getTimestamps(row),
+      }))
+
+      if (sortMode === "used-oldest") {
+        rowsCopy.sort((a, b) => {
+          if (!a.latestUsed && !b.latestUsed) return a.origIdx - b.origIdx
+          if (!a.latestUsed) return -1
+          if (!b.latestUsed) return 1
+          const cmp = a.latestUsed.localeCompare(b.latestUsed)
+          return cmp !== 0 ? cmp : a.origIdx - b.origIdx
+        })
+      } else if (sortMode === "used-newest") {
+        rowsCopy.sort((a, b) => {
+          if (!a.latestUsed && !b.latestUsed) return a.origIdx - b.origIdx
+          if (!a.latestUsed) return 1
+          if (!b.latestUsed) return -1
+          const cmp = b.latestUsed.localeCompare(a.latestUsed)
+          return cmp !== 0 ? cmp : a.origIdx - b.origIdx
+        })
+      } else if (sortMode === "next-soonest") {
+        rowsCopy.sort((a, b) => {
+          if (!a.latestNext && !b.latestNext) return a.origIdx - b.origIdx
+          if (!a.latestNext) return 1
+          if (!b.latestNext) return -1
+          const cmp = a.latestNext.localeCompare(b.latestNext)
+          return cmp !== 0 ? cmp : a.origIdx - b.origIdx
+        })
+      }
+
+      const rowsHtml = rowsCopy
+        .map(({ row }, blockIdx) => {
+          const bgBand = blockIdx % 2 === 0 ? "#131d33" : "#1a2744"
+
+          const geminiLines = row.lines.filter((l) => l.agent === "Gemini")
+          const claudeLines = row.lines.filter((l) => l.agent === "Claude")
+
+          const getAgentData = (lines: TrackerRowLine[]) => {
+            let usedOn = ""
+            let nextAvail = ""
+            let status = ""
+            for (const l of lines) {
+              if (l.usedOn && (!usedOn || l.usedOn > usedOn)) usedOn = l.usedOn
+              if (l.nextAvailable && (!nextAvail || l.nextAvailable > nextAvail)) nextAvail = l.nextAvailable
+              if (l.status) status = l.status === "Out" ? "Done" : l.status
+            }
+            return { usedOn, nextAvail, status }
+          }
+
+          const gem = getAgentData(geminiLines)
+          const cld = getAgentData(claudeLines)
+
+          const formatBadge = (status: string) => {
+            if (!status) return `<span style="color:#64748b;font-size:11px;font-weight:600">Status</span>`
+            let bg = "rgba(100,116,139,0.2)"
+            let color = "#94a3b8"
+            let border = "rgba(100,116,139,0.3)"
+            if (status === "In use") {
+              bg = "rgba(16,185,129,0.2)"
+              color = "#6ee7b7"
+              border = "rgba(16,185,129,0.4)"
+            } else if (status === "Low") {
+              bg = "rgba(245,158,11,0.2)"
+              color = "#fcd34d"
+              border = "rgba(245,158,11,0.4)"
+            } else if (status === "Done") {
+              bg = "rgba(239,68,68,0.2)"
+              color = "#fca5a5"
+              border = "rgba(239,68,68,0.4)"
+            }
+            return `<span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:700;background:${bg};color:${color};border:1px solid ${border};letter-spacing:0.02em">${status.toUpperCase()}</span>`
+          }
+
+          const formatChip = (dateStr: string, isNext: boolean) => {
+            if (!dateStr) return `<span style="color:#64748b">—</span>`
+            const formatted = formatDisplayDateTime(dateStr)
+            if (!isNext) {
+              const dc = dayChip(dateStr)
+              const chipHtml = dc
+                ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:9999px;font-size:10px;font-weight:600;background:${
+                    dc === "Today" ? "rgba(59,130,246,0.25)" : "rgba(156,163,175,0.2)"
+                  };color:${dc === "Today" ? "#93c5fd" : "#d1d5db"};border:1px solid ${
+                    dc === "Today" ? "rgba(59,130,246,0.4)" : "rgba(156,163,175,0.3)"
+                  }">${dc}</span>`
+                : ""
+              return `<span style="font-size:12px;font-weight:500;white-space:nowrap">${formatted}${chipHtml}</span>`
+            } else {
+              const rc = readyChip(dateStr)
+              const chipHtml =
+                rc.label !== "—"
+                  ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:9999px;font-size:10px;font-weight:600;background:${
+                      rc.cls.includes("ready") ? "rgba(16,185,129,0.25)" : "rgba(239,68,68,0.25)"
+                    };color:${rc.cls.includes("ready") ? "#6ee7b7" : "#fca5a5"};border:1px solid ${
+                      rc.cls.includes("ready") ? "rgba(16,185,129,0.4)" : "rgba(239,68,68,0.4)"
+                    }">${rc.label}</span>`
+                  : ""
+              return `<span style="font-size:12px;font-weight:500;white-space:nowrap">${formatted}${chipHtml}</span>`
+            }
+          }
+
+          return `
+            <tr style="background:${bgBand}">
+              <td rowspan="2" style="width:150px;padding:6px 10px;border-bottom:1px solid #334155;border-right:1px solid #334155;vertical-align:middle;font-weight:700;font-size:13px;color:#ffffff">
+                ${row.label}
+              </td>
+              <td style="width:70px;padding:5px 8px;border-bottom:1px solid rgba(51,65,85,0.4);border-right:1px solid #334155;font-weight:700;font-size:12px;color:#60a5fa">
+                Gemini
+              </td>
+              <td style="width:90px;padding:5px 8px;border-bottom:1px solid rgba(51,65,85,0.4);border-right:1px solid #334155">
+                ${formatBadge(gem.status)}
+              </td>
+              <td style="width:220px;padding:5px 8px;border-bottom:1px solid rgba(51,65,85,0.4);border-right:1px solid #334155">
+                ${formatChip(gem.usedOn, false)}
+              </td>
+              <td style="width:270px;padding:5px 8px;border-bottom:1px solid rgba(51,65,85,0.4)">
+                ${formatChip(gem.nextAvail, true)}
+              </td>
+            </tr>
+            <tr style="background:${bgBand}">
+              <td style="width:70px;padding:5px 8px;border-bottom:1px solid #334155;border-right:1px solid #334155;font-weight:700;font-size:12px;color:#a78bfa">
+                Claude
+              </td>
+              <td style="width:90px;padding:5px 8px;border-bottom:1px solid #334155;border-right:1px solid #334155">
+                ${formatBadge(cld.status)}
+              </td>
+              <td style="width:220px;padding:5px 8px;border-bottom:1px solid #334155;border-right:1px solid #334155">
+                ${formatChip(cld.usedOn, false)}
+              </td>
+              <td style="width:270px;padding:5px 8px;border-bottom:1px solid #334155">
+                ${formatChip(cld.nextAvail, true)}
+              </td>
+            </tr>
+          `
+        })
+        .join("")
+
+      return `
+        <div class="tracker-page-block" data-tracker-id="${tracker.id}" style="padding:16px;max-width:980px;margin:0 auto 30px auto;background:#0f172a;border-radius:10px;border:1px solid #334155;box-shadow:0 10px 25px rgba(0,0,0,0.5)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid #334155">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px;font-weight:800;letter-spacing:-0.02em;color:#ffffff">AG ACCOUNT TRACKER</span>
+              <span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:9999px;background:rgba(59,130,246,0.2);color:#93c5fd;border:1px solid rgba(59,130,246,0.3)">${appTitle}</span>
+            </div>
+            <span style="font-size:12px;color:#94a3b8">Printed: ${new Date().toLocaleDateString()}</span>
+          </div>
+
+          <table style="width:100%;border-collapse:collapse;table-layout:fixed;border:1px solid #334155;border-radius:6px;overflow:hidden">
+            <thead>
+              <tr style="background:#090d16;color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">
+                <th style="width:150px;padding:8px;text-align:left;border-bottom:2px solid #334155;border-right:1px solid #334155">Row</th>
+                <th style="width:70px;padding:8px;text-align:left;border-bottom:2px solid #334155;border-right:1px solid #334155">Agent</th>
+                <th style="width:90px;padding:8px;text-align:left;border-bottom:2px solid #334155;border-right:1px solid #334155">Status</th>
+                <th style="width:220px;padding:8px;text-align:left;border-bottom:2px solid #334155;border-right:1px solid #334155">Used On</th>
+                <th style="width:270px;padding:8px;text-align:left;border-bottom:2px solid #334155">Next Available</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          ${
+            tracker.trackerNotes
+              ? `
+            <div style="margin-top:14px;padding:12px;background:#090d16;border-radius:6px;border:1px solid #334155">
+              <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em">Tracker Notes:</div>
+              <pre style="margin:0;font-size:12px;line-height:1.5;white-space:pre-wrap;font-family:inherit;color:#e2e8f0">${tracker.trackerNotes}</pre>
+            </div>
+          `
+              : ""
+          }
+        </div>
+      `
+    }
+
+    const currentTrackerOnly = buildTrackerHtml(currentTracker)
+    const allTrackersHtml = allTrackers.map((tr) => buildTrackerHtml(tr)).join("")
+
+    const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AG Account Tracker – PDF Report</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #060913;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .no-print {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .btn {
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: #1e293b;
+      color: #f1f5f9;
+      transition: all 0.15s ease;
+    }
+    .btn:hover { background: #334155; }
+    .btn-primary {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #ffffff;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-active {
+      background: rgba(59,130,246,0.3) !important;
+      border-color: #3b82f6 !important;
+      color: #93c5fd !important;
+    }
+    @media print {
+      body { padding: 0 !important; background: #0f172a !important; }
+      .no-print { display: none !important; }
+      .tracker-page-block {
+        page-break-after: always !important;
+        break-after: page !important;
+        margin: 0 !important;
+        padding: 16px !important;
+        border: none !important;
+        box-shadow: none !important;
+      }
+      .tracker-page-block:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="btn btn-primary" onclick="window.print()">🖨 Print / Save as PDF</button>
+      <span style="font-size:12px;color:#94a3b8">View:</span>
+      <button id="btn-all" class="btn btn-active" onclick="showAll()">All Blocks (${allTrackers.length})</button>
+      <button id="btn-current" class="btn" onclick="showCurrent()">Current Block Only</button>
+    </div>
+    <span style="font-size:12px;color:#94a3b8">Tip: In print preview, choose "Save as PDF" and check "Background graphics".</span>
+  </div>
+
+  <div id="container-all">${allTrackersHtml}</div>
+  <div id="container-current" style="display:none">${currentTrackerOnly}</div>
+
+  <script>
+    function showAll() {
+      document.getElementById('container-all').style.display = 'block';
+      document.getElementById('container-current').style.display = 'none';
+      document.getElementById('btn-all').classList.add('btn-active');
+      document.getElementById('btn-current').classList.remove('btn-active');
+    }
+    function showCurrent() {
+      document.getElementById('container-all').style.display = 'none';
+      document.getElementById('container-current').style.display = 'block';
+      document.getElementById('btn-current').classList.add('btn-active');
+      document.getElementById('btn-all').classList.remove('btn-active');
+    }
+  </script>
+</body>
+</html>`
+
+    win.document.open()
+    win.document.write(fullHtml)
+    win.document.close()
+  }, [data.trackers, currentTracker, sortMode])
 
   const handleAddCustomGoogleAccount = () => {
     const trimmed = newOptionInput.trim(); if (!trimmed) return
@@ -2323,6 +2858,7 @@ function AgAccountTrackerModalInner({
               setStatusMenu({ rIdx: ri, agentName: ag, currentStatus, pos: { top: rect.bottom + 2, left: rect.left } })
             }}
             onEditDate={handleEditDate}
+            onNoteIcon={handleNoteIcon}
           />
         </tr>
 
@@ -2339,6 +2875,7 @@ function AgAccountTrackerModalInner({
               setStatusMenu({ rIdx: ri, agentName: ag, currentStatus, pos: { top: rect.bottom + 2, left: rect.left } })
             }}
             onEditDate={handleEditDate}
+            onNoteIcon={handleNoteIcon}
           />
         </tr>
 
@@ -2416,7 +2953,8 @@ function AgAccountTrackerModalInner({
               <div className="ag-tracker-tabs-list" style={{ display: "flex", alignItems: "center", gap: "3px", flexShrink: 0 }}>
                 {data.trackers.map((tracker, idx) => {
                   const isActive = idx === activeIndex
-                  const displayName = tracker.appName ? `${idx + 1}. ${tracker.appName}` : `T${idx + 1}`
+                  const displayName = getTabDisplayName(tracker)
+                  const fullTitle = getTabFullTitle(tracker)
                   return (
                     <button
                       key={tracker.id}
@@ -2424,14 +2962,14 @@ function AgAccountTrackerModalInner({
                       className={`ag-tracker-tab ${isActive ? "active" : ""}`}
                       style={{ fontSize: "0.75rem", padding: "0.15rem 0.45rem", height: "24px" }}
                       onClick={() => updateData((prev) => ({ ...prev, activeTrackerIndex: idx }))}
-                      title={displayName}
+                      title={fullTitle}
                     >
-                      <span className="truncate max-w-[80px]">{displayName}</span>
+                      <span className="truncate max-w-[120px]">{displayName}</span>
                       {data.trackers.length > 1 && (
                         <span
                           className="ag-tracker-tab-close"
                           onClick={(e) => handleDeleteTracker(idx, e)}
-                          title={`Delete ${displayName}`}
+                          title={`Delete ${fullTitle}`}
                         >
                           <Trash2 className="h-2.5 w-2.5" />
                         </span>
@@ -2457,7 +2995,7 @@ function AgAccountTrackerModalInner({
                   id="ag-tracker-appname-input"
                   list="journal-app-names-datalist"
                   className="ag-tracker-input"
-                  style={{ fontSize: "0.75rem", padding: "0.15rem 0.4rem", height: "24px", width: "130px", minWidth: "80px" }}
+                  style={{ fontSize: "0.75rem", padding: "0.15rem 0.4rem", height: "24px", width: "90px", minWidth: "65px" }}
                   placeholder="App name..."
                   value={currentTracker.appName}
                   onChange={(e) => updateCurrentTracker((tr) => ({ ...tr, appName: e.target.value }))}
@@ -2477,6 +3015,15 @@ function AgAccountTrackerModalInner({
                     {journalAppNames.map((name) => <option key={name} value={name}>{name}</option>)}
                   </select>
                 )}
+                <input
+                  type="date"
+                  aria-label="Tracker Date"
+                  className="ag-tracker-input"
+                  style={{ fontSize: "0.7rem", padding: "0.1rem 0.25rem", height: "24px", width: "105px", flexShrink: 0 }}
+                  value={currentTracker.day || ""}
+                  onChange={(e) => handleDayChange(e.target.value)}
+                  title="Tracker day (changing re-orders tabs by day)"
+                />
               </div>
 
               <span
@@ -2536,12 +3083,12 @@ function AgAccountTrackerModalInner({
               <button
                 type="button"
                 className="ag-tracker-btn ag-btn-utility"
-                onClick={handlePrint}
-                title="Print"
+                onClick={handlePrintPdf}
+                title="Print or Save as PDF (full color report)"
                 style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
               >
                 <Printer className="h-3.5 w-3.5" />
-                <span>Print</span>
+                <span>PDF</span>
               </button>
               <button
                 type="button"
@@ -2639,6 +3186,18 @@ function AgAccountTrackerModalInner({
                 <option value="used-today">Used today</option>
                 <option value="not-used-today">Not used today</option>
                 <option value="finish-today">Finish today</option>
+              </select>
+              <select
+                className="ag-tracker-select"
+                style={{ fontSize: "0.75rem", padding: "0.1rem 0.4rem", height: "24px", width: "auto" }}
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value)}
+                title="Order accounts by when they were last used or when they're ready again."
+              >
+                <option value="manual">Sort: Manual order</option>
+                <option value="used-oldest">Last used: oldest first</option>
+                <option value="used-newest">Last used: newest first</option>
+                <option value="next-soonest">Next available: soonest first</option>
               </select>
             </div>
 
@@ -2741,13 +3300,13 @@ function AgAccountTrackerModalInner({
                   <th className="ag-tracker-th" style={{ width: "90px", minWidth: "90px", maxWidth: "90px", fontSize: "0.75rem", padding: "2px 6px" }}>Status</th>
                   <th className="ag-tracker-th" style={{ width: "220px", minWidth: "220px", maxWidth: "220px", fontSize: "0.75rem", padding: "2px 6px" }}>Used On</th>
                   <th className="ag-tracker-th" style={{ width: "270px", minWidth: "270px", maxWidth: "270px", fontSize: "0.75rem", padding: "2px 6px" }}>Next Available</th>
-                  <th className="ag-tracker-th" style={{ width: "90px", minWidth: "90px", maxWidth: "90px", fontSize: "0.75rem", padding: "2px 6px" }}>Act</th>
+                  <th className="ag-tracker-th" style={{ width: "90px", minWidth: "90px", maxWidth: "90px", fontSize: "0.75rem", padding: "2px 6px" }}>Action</th>
                 </tr>
               </thead>
 
               {/* 16 Compact Sub-Rows (8 accounts × 2 agents, 28-30px each) */}
               <tbody>
-                {filteredRows.map((row, rIdx) => {
+                {displayRows.map((row, rIdx) => {
                   const actualRIdx = currentTracker.rows.indexOf(row)
                   return renderCompactAccountRows(row, rIdx, actualRIdx >= 0 ? actualRIdx : rIdx)
                 })}
@@ -3040,8 +3599,11 @@ function AgAccountTrackerModalInner({
         <div className={`ag-tracker-fullscreen-editor journal-theme-${theme}`} role="dialog" aria-modal="true">
           <div className="ag-tracker-fullscreen-header">
             <h3 className="ag-tracker-fullscreen-title">{fullScreenNotes.title}</h3>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
               <button type="button" className="ag-tracker-btn ag-tracker-btn-primary" onClick={() => setFullScreenNotes(null)}>Done</button>
+              <button type="button" className="ag-tracker-btn ag-tracker-btn-icon" onClick={() => setFullScreenNotes(null)} title="Close">
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
           <textarea
