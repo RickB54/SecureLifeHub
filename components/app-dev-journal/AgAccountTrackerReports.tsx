@@ -102,6 +102,7 @@ function formatTimeRemaining(targetMs: number, nowMs: number): string {
 
 export interface AccountReportStat {
   accountName: string
+  agents: string[]
   timesUsed: number
   latestUsedIso: string
   latestUsedMs: number
@@ -205,6 +206,7 @@ function AgAccountTrackerReportsInner({
 
     const list: AccountReportStat[] = Array.from(accountNamesSet).map((accountName) => {
       let timesUsed = 0
+      const agentsSet = new Set<string>()
       let latestUsedIso = ""
       let latestUsedMs = 0
       let latestUsedApp = ""
@@ -221,6 +223,9 @@ function AgAccountTrackerReportsInner({
           for (const line of row.lines || []) {
             const lineAccount = line.googleAccount?.trim() || row.label?.trim()
             if (lineAccount === accountName) {
+              if (line.agent?.trim()) {
+                agentsSet.add(line.agent.trim())
+              }
               if (line.notes && !latestNotes) {
                 latestNotes = line.notes
               }
@@ -322,6 +327,7 @@ function AgAccountTrackerReportsInner({
 
       return {
         accountName,
+        agents: agentsSet.size > 0 ? Array.from(agentsSet) : ["Gemini", "Claude"],
         timesUsed,
         latestUsedIso,
         latestUsedMs,
@@ -958,14 +964,19 @@ function AgAccountTrackerReportsInner({
                             className="ag-report-mobile-card-top cursor-pointer"
                             onClick={() => toggleReportRow(acct.accountName)}
                           >
-                            <span className="font-bold ag-report-account-name flex items-center gap-1.5">
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-blue-400" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-blue-400" />
-                              )}
-                              #{idx + 1} {acct.accountName}
-                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-bold ag-report-account-name flex items-center gap-1.5">
+                                {isExpanded ? (
+                                  <ChevronUp className="h-4 w-4 text-blue-400" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 text-blue-400" />
+                                )}
+                                #{idx + 1} {acct.accountName}
+                              </span>
+                              <span className="text-[11px] text-gray-400 pl-5">
+                                Agents: {acct.agents.join(", ")}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-1.5">
                               {renderLineStatusBadge(acct.latestLineStatus)}
                               <span
@@ -976,12 +987,29 @@ function AgAccountTrackerReportsInner({
                             </div>
                           </div>
 
+                          <div className="text-xs text-gray-300 mt-1 pl-5 flex flex-col gap-1">
+                            <div>
+                              <span className="text-gray-400">Used On: </span>
+                              <span>{acct.latestUsedIso ? formatDisplayDateTime(acct.latestUsedIso) : "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-gray-400">Next Available: </span>
+                              <span>{acct.latestNextAvailableIso ? formatDisplayDateTime(acct.latestNextAvailableIso) : "—"}</span>
+                              {acct.nextStatusLabel && (
+                                <span className={`ag-report-badge ag-report-badge-${acct.nextStatusType} text-[10px] py-0 px-1`}>
+                                  {acct.nextStatusLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
                           {isExpanded && (
                             <div className="mt-2.5 pt-2 border-t border-white/10 space-y-2">
                               <div className="ag-report-mobile-card-row">
                                 <span className="ag-report-mobile-card-label">Status:</span>
                                 <select
-                                  className="ag-tracker-select text-xs py-0.5 px-1.5 w-auto"
+                                  className="ag-tracker-select text-sm py-1 px-2 w-auto"
+                                  style={{ minHeight: "44px", fontSize: "16px" }}
                                   value={acct.latestLineStatus || ""}
                                   onChange={(e) => {
                                     if (onUpdateAccountData) {
@@ -1003,7 +1031,8 @@ function AgAccountTrackerReportsInner({
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="datetime-local"
-                                    className="ag-tracker-input text-xs py-0.5 px-1 w-[140px]"
+                                    className="ag-tracker-input text-sm py-1 px-2 w-[160px]"
+                                    style={{ minHeight: "44px", fontSize: "16px" }}
                                     value={acct.latestUsedIso || ""}
                                     onChange={(e) => {
                                       if (onUpdateAccountData) {
@@ -1015,12 +1044,13 @@ function AgAccountTrackerReportsInner({
                                   />
                                   <button
                                     type="button"
-                                    className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                    className="ag-tracker-btn ag-tracker-btn-icon"
+                                    style={{ minWidth: "44px", minHeight: "44px" }}
                                     onClick={() =>
                                       handleUsedOnQuickChoice(acct.accountName, "now")
                                     }
                                   >
-                                    <Zap className="h-3 w-3 text-amber-400" />
+                                    <Zap className="h-4 w-4 text-amber-400" />
                                   </button>
                                 </div>
                               </div>
@@ -1355,14 +1385,19 @@ function AgAccountTrackerReportsInner({
                             className="ag-report-mobile-card-top cursor-pointer"
                             onClick={() => toggleReportRow(acct.accountName)}
                           >
-                            <span className="font-bold ag-report-account-name flex items-center gap-1.5">
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-blue-400" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-blue-400" />
-                              )}
-                              #{idx + 1} {acct.accountName}
-                            </span>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-bold ag-report-account-name flex items-center gap-1.5">
+                                {isExpanded ? (
+                                  <ChevronUp className="h-4 w-4 text-blue-400" />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 text-blue-400" />
+                                )}
+                                #{idx + 1} {acct.accountName}
+                              </span>
+                              <span className="text-[11px] text-gray-400 pl-5">
+                                Agents: {acct.agents.join(", ")}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-1.5">
                               {renderLineStatusBadge(acct.latestLineStatus)}
                               <span
@@ -1373,6 +1408,22 @@ function AgAccountTrackerReportsInner({
                             </div>
                           </div>
 
+                          <div className="text-xs text-gray-300 mt-1 pl-5 flex flex-col gap-1">
+                            <div>
+                              <span className="text-gray-400">Used On: </span>
+                              <span>{acct.latestUsedIso ? formatDisplayDateTime(acct.latestUsedIso) : "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-gray-400">Next Available: </span>
+                              <span>{acct.latestNextAvailableIso ? formatDisplayDateTime(acct.latestNextAvailableIso) : "—"}</span>
+                              {acct.nextStatusLabel && (
+                                <span className={`ag-report-badge ag-report-badge-${acct.nextStatusType} text-[10px] py-0 px-1`}>
+                                  {acct.nextStatusLabel}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
                           {isExpanded && (
                             <div className="mt-2.5 pt-2 border-t border-white/10 space-y-2">
                               <div className="ag-report-mobile-card-row">
@@ -1380,7 +1431,8 @@ function AgAccountTrackerReportsInner({
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="datetime-local"
-                                    className="ag-tracker-input text-xs py-0.5 px-1 w-[140px]"
+                                    className="ag-tracker-input text-sm py-1 px-2 w-[160px]"
+                                    style={{ minHeight: "44px", fontSize: "16px" }}
                                     value={acct.latestNextAvailableIso || ""}
                                     onChange={(e) => {
                                       if (onUpdateAccountData) {
@@ -1392,7 +1444,8 @@ function AgAccountTrackerReportsInner({
                                   />
                                   <button
                                     type="button"
-                                    className="ag-tracker-btn ag-tracker-btn-icon p-1"
+                                    className="ag-tracker-btn ag-tracker-btn-icon"
+                                    style={{ minWidth: "44px", minHeight: "44px" }}
                                     onClick={() =>
                                       handleNextAvailableQuickChoice(
                                         acct.accountName,
@@ -1400,7 +1453,7 @@ function AgAccountTrackerReportsInner({
                                       )
                                     }
                                   >
-                                    <Clock className="h-3 w-3 text-sky-400" />
+                                    <Clock className="h-4 w-4 text-sky-400" />
                                   </button>
                                 </div>
                               </div>
@@ -1408,7 +1461,8 @@ function AgAccountTrackerReportsInner({
                               <div className="ag-report-mobile-card-row">
                                 <span className="ag-report-mobile-card-label">Status:</span>
                                 <select
-                                  className="ag-tracker-select text-xs py-0.5 px-1.5 w-auto"
+                                  className="ag-tracker-select text-sm py-1 px-2 w-auto"
+                                  style={{ minHeight: "44px", fontSize: "16px" }}
                                   value={acct.latestLineStatus || ""}
                                   onChange={(e) => {
                                     if (onUpdateAccountData) {

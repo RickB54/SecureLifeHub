@@ -12,6 +12,7 @@ import {
   Upload,
   Check,
   Edit2,
+  Pencil,
   FileSpreadsheet,
   Maximize2,
   BarChart3,
@@ -128,6 +129,55 @@ export function formatDisplayDateTime(isoStr: string): string {
   hours = hours % 12 || 12
 
   return `${month}-${day}-${year} ${hours}:${minutes} ${ampm}`
+}
+
+// Format date-time without year: MM-DD h:mm AM/PM
+export function formatDisplayDateTimeNoYear(isoStr: string): string {
+  if (!isoStr) return ""
+  const parts = isoStr.split("T")
+  const datePart = parts[0]
+  const dateParts = datePart?.split("-")
+  if (!dateParts || dateParts.length !== 3) return isoStr
+  const month = dateParts[1]
+  const day = dateParts[2]
+  if (parts.length < 2 || !parts[1]) {
+    return `${month}-${day}`
+  }
+  const timeParts = parts[1].split(":")
+  let hours = parseInt(timeParts[0] || "0", 10)
+  const minutes = timeParts[1] || "00"
+  const ampm = hours >= 12 ? "PM" : "AM"
+  hours = hours % 12 || 12
+  return `${month}-${day} ${hours}:${minutes} ${ampm}`
+}
+
+// Compact date-time: MM-DD h:mmA/P (e.g. 11-20 4:29P)
+export function formatCompact(isoStr: string): string {
+  if (!isoStr) return ""
+  const parts = isoStr.split("T")
+  const datePart = parts[0]
+  const dateParts = datePart?.split("-")
+  if (!dateParts || dateParts.length !== 3) return isoStr
+  const month = dateParts[1]
+  const day = dateParts[2]
+  if (parts.length < 2 || !parts[1]) {
+    return `${month}-${day}`
+  }
+  const timeParts = parts[1].split(":")
+  let hours = parseInt(timeParts[0] || "0", 10)
+  const minutes = timeParts[1] || "00"
+  const ampm = hours >= 12 ? "P" : "A"
+  hours = hours % 12 || 12
+  return `${month}-${day} ${hours}:${minutes}${ampm}`
+}
+
+export function getPrevStatusIcon(status: string): string {
+  switch (status) {
+    case "Done": return "✕"
+    case "Low": return "⏱"
+    case "In use": return "●"
+    default: return "—"
+  }
 }
 
 // Format date only as MM-DD-YYYY
@@ -1785,6 +1835,525 @@ export function CurrentAppModal({ isOpen, onClose, theme = "dark" }: CurrentAppM
 }
 
 // ============================================================
+// DATA MENU POPOVER
+// ============================================================
+interface DataMenuPopoverProps {
+  isOpen: boolean
+  onClose: () => void
+  pos: { top: number; right: number } | null
+  onPrintPdf: () => void
+  onExportJson: () => void
+  onImportJson: () => void
+  onStartNewCycle: () => void
+  onOpenHistory: () => void
+}
+
+function DataMenuPopover({
+  isOpen,
+  onClose,
+  pos,
+  onPrintPdf,
+  onExportJson,
+  onImportJson,
+  onStartNewCycle,
+  onOpenHistory,
+}: DataMenuPopoverProps) {
+  const popRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (popRef.current && !popRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    document.addEventListener("mousedown", onMouseDown)
+    document.addEventListener("keydown", onKeyDown)
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown)
+      document.removeEventListener("keydown", onKeyDown)
+    }
+  }, [isOpen, onClose])
+
+  if (!isOpen || !pos) return null
+
+  const root =
+    (typeof document !== "undefined" && (document.querySelector(".journal-root") as HTMLElement | null)) ||
+    (typeof document !== "undefined" ? document.body : null)
+  if (!root) return null
+
+  const safeTop = Math.min(pos.top, window.innerHeight - 250)
+  const safeRight = Math.max(8, pos.right)
+
+  return createPortal(
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 100004 }}
+      onClick={onClose}
+    >
+      <div
+        ref={popRef}
+        className="ag-data-popover"
+        style={{
+          position: "fixed",
+          top: `${safeTop}px`,
+          right: `${safeRight}px`,
+          zIndex: 100005,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="ag-data-menu-item"
+          onClick={() => {
+            onClose()
+            onPrintPdf()
+          }}
+        >
+          <Printer className="h-4 w-4 text-slate-300" />
+          <span>Print / PDF</span>
+        </button>
+
+        <button
+          type="button"
+          className="ag-data-menu-item"
+          onClick={() => {
+            onClose()
+            onExportJson()
+          }}
+        >
+          <Download className="h-4 w-4 text-slate-300" />
+          <span>Export backup (JSON)</span>
+        </button>
+
+        <button
+          type="button"
+          className="ag-data-menu-item"
+          onClick={() => {
+            onClose()
+            onImportJson()
+          }}
+        >
+          <Upload className="h-4 w-4 text-slate-300" />
+          <span>Import backup (JSON)</span>
+        </button>
+
+        <div className="ag-data-menu-divider" />
+        <div className="ag-data-menu-section-label">Advanced</div>
+
+        <button
+          type="button"
+          className="ag-data-menu-item"
+          onClick={() => {
+            onClose()
+            onStartNewCycle()
+          }}
+        >
+          <RotateCcw className="h-4 w-4 text-sky-400" />
+          <span>New Cycle…</span>
+        </button>
+
+        <button
+          type="button"
+          className="ag-data-menu-item"
+          onClick={() => {
+            onClose()
+            onOpenHistory()
+          }}
+        >
+          <History className="h-4 w-4 text-purple-400" />
+          <span>History…</span>
+        </button>
+      </div>
+    </div>,
+    root
+  )
+}
+
+// ============================================================
+// DAY DETAILS MODAL / SHEET
+// ============================================================
+interface DayDetailsModalProps {
+  isOpen: boolean
+  onClose: () => void
+  currentTracker: AccountTracker
+  totalTrackers: number
+  journalAppNames: string[]
+  onUpdateAppName: (name: string) => void
+  onDayChange: (dateStr: string) => void
+  onDeleteCurrentDay: (e: React.MouseEvent) => void
+  onOpenManageDays: () => void
+  theme: string
+}
+
+function DayDetailsModal({
+  isOpen,
+  onClose,
+  currentTracker,
+  totalTrackers,
+  journalAppNames,
+  onUpdateAppName,
+  onDayChange,
+  onDeleteCurrentDay,
+  onOpenManageDays,
+  theme,
+}: DayDetailsModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!isOpen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  const root =
+    (typeof document !== "undefined" && (document.querySelector(".journal-root") as HTMLElement | null)) ||
+    (typeof document !== "undefined" ? document.body : null)
+  if (!root) return null
+
+  return createPortal(
+    <div
+      className="ag-tracker-modal-dialog-overlay"
+      onClick={onClose}
+      style={{ zIndex: 100003 }}
+    >
+      <div
+        ref={modalRef}
+        className={`ag-day-details-modal journal-theme-${theme}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Day details"
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "#ffffff", display: "flex", alignItems: "center", gap: "6px" }}>
+            <Calendar className="h-4 w-4 text-sky-400" />
+            <span>Day Details</span>
+          </h3>
+          <button
+            type="button"
+            className="ag-tracker-btn ag-tracker-btn-icon"
+            onClick={onClose}
+            style={{ width: "32px", height: "32px" }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9ca3af" }}>
+            App Name
+          </label>
+          <input
+            className="ag-tracker-input"
+            style={{ fontSize: "16px", padding: "0.5rem 0.65rem", minHeight: "44px" }}
+            placeholder="App name..."
+            value={currentTracker.appName || ""}
+            onChange={(e) => onUpdateAppName(e.target.value)}
+          />
+
+          {journalAppNames.length > 0 && (
+            <>
+              <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9ca3af", marginTop: "4px" }}>
+                Choose from Journal Apps
+              </label>
+              <select
+                className="ag-tracker-select"
+                style={{ fontSize: "16px", padding: "0.5rem 0.65rem", minHeight: "44px" }}
+                value={journalAppNames.includes(currentTracker.appName) ? currentTracker.appName : ""}
+                onChange={(e) => {
+                  if (e.target.value) onUpdateAppName(e.target.value)
+                }}
+              >
+                <option value="">(None)</option>
+                {journalAppNames.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+
+          <label style={{ fontSize: "0.75rem", fontWeight: 600, color: "#9ca3af", marginTop: "4px" }}>
+            Tracker Date
+          </label>
+          <input
+            type="date"
+            className="ag-tracker-input"
+            style={{ fontSize: "16px", padding: "0.5rem 0.65rem", minHeight: "44px" }}
+            value={currentTracker.day || ""}
+            onChange={(e) => onDayChange(e.target.value)}
+          />
+
+          <div style={{ marginTop: "8px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <button
+              type="button"
+              className="ag-tracker-btn ag-tracker-btn-danger"
+              style={{ minHeight: "44px", fontSize: "0.875rem", justifyContent: "center" }}
+              disabled={totalTrackers <= 1}
+              onClick={(e) => {
+                onDeleteCurrentDay(e)
+                onClose()
+              }}
+              title={totalTrackers <= 1 ? "Cannot delete the only day" : "Delete this day"}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span>Delete this day</span>
+            </button>
+
+            <div className="ag-data-menu-divider" />
+
+            <button
+              type="button"
+              className="ag-tracker-btn"
+              style={{ minHeight: "44px", fontSize: "0.875rem", justifyContent: "center" }}
+              onClick={() => {
+                onClose()
+                onOpenManageDays()
+              }}
+            >
+              <Calendar className="h-4 w-4 text-sky-400" />
+              <span>Manage days…</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    root
+  )
+}
+
+// ============================================================
+// MANAGE DAYS MODAL
+// ============================================================
+interface ManageDaysModalProps {
+  isOpen: boolean
+  onClose: () => void
+  trackers: AccountTracker[]
+  activeTrackerId: string
+  onDeleteDays: (idsToDelete: string[]) => void
+  theme: string
+}
+
+function ManageDaysModal({
+  isOpen,
+  onClose,
+  trackers,
+  activeTrackerId,
+  onDeleteDays,
+  theme,
+}: ManageDaysModalProps) {
+  const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    if (!isOpen) return
+    setSelectedIds({})
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [isOpen, onClose])
+
+  if (!isOpen) return null
+
+  const root =
+    (typeof document !== "undefined" && (document.querySelector(".journal-root") as HTMLElement | null)) ||
+    (typeof document !== "undefined" ? document.body : null)
+  if (!root) return null
+
+  // Sort newest first
+  const sorted = [...trackers].sort((a, b) => (b.day || "").localeCompare(a.day || ""))
+
+  const handleSelectAllExceptNewest7 = () => {
+    const next: Record<string, boolean> = {}
+    sorted.slice(7).forEach((t) => {
+      next[t.id] = true
+    })
+    setSelectedIds(next)
+  }
+
+  const selectedCount = Object.keys(selectedIds).filter((id) => selectedIds[id]).length
+
+  const handleDelete = () => {
+    if (selectedCount === 0) return
+    if (selectedCount >= trackers.length) {
+      alert("At least one day must be kept. You cannot delete all days.")
+      return
+    }
+
+    const confirmMsg = `Delete ${selectedCount} selected day${selectedCount > 1 ? "s" : ""}? This cannot be undone.`
+    if (!window.confirm(confirmMsg)) return
+
+    // Active day second confirm
+    if (selectedIds[activeTrackerId]) {
+      const activeTracker = trackers.find((t) => t.id === activeTrackerId)
+      const dayLabel = activeTracker?.day ? formatDisplayDateOnly(activeTracker.day) : "Active Day"
+      if (
+        !window.confirm(
+          `The currently active day (${dayLabel}) is included in the deletion. Are you sure you want to delete it as well?`
+        )
+      ) {
+        return
+      }
+    }
+
+    const idsToDelete = Object.keys(selectedIds).filter((id) => selectedIds[id])
+    onDeleteDays(idsToDelete)
+    onClose()
+  }
+
+  return createPortal(
+    <div
+      className="ag-tracker-modal-dialog-overlay"
+      onClick={onClose}
+      style={{ zIndex: 100004 }}
+    >
+      <div
+        className={`ag-manage-days-modal journal-theme-${theme}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Manage days"
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "#ffffff", display: "flex", alignItems: "center", gap: "6px" }}>
+            <Calendar className="h-4 w-4 text-sky-400" />
+            <span>Manage Days</span>
+          </h3>
+          <button
+            type="button"
+            className="ag-tracker-btn ag-tracker-btn-icon"
+            onClick={onClose}
+            style={{ width: "32px", height: "32px" }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div>
+          <button
+            type="button"
+            className="ag-tracker-btn"
+            style={{ fontSize: "0.8125rem", padding: "0.4rem 0.75rem", minHeight: "36px" }}
+            onClick={handleSelectAllExceptNewest7}
+          >
+            Select all except the newest 7
+          </button>
+        </div>
+
+        {/* Scrollable list of days */}
+        <div
+          style={{
+            maxHeight: "340px",
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "6px",
+            padding: "8px",
+            background: "rgba(0, 0, 0, 0.2)",
+          }}
+        >
+          {sorted.map((t) => {
+            const isChecked = Boolean(selectedIds[t.id])
+            const isActive = t.id === activeTrackerId
+            const dayFormatted = t.day ? formatDisplayDateOnly(t.day) : "No Date"
+
+            return (
+              <label
+                key={t.id}
+                className="ag-manage-day-item"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  background: isChecked ? "rgba(239, 68, 68, 0.1)" : "rgba(255, 255, 255, 0.03)",
+                  border: isChecked ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid rgba(255, 255, 255, 0.05)",
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={(e) => {
+                    const checked = e.target.checked
+                    setSelectedIds((prev) => ({
+                      ...prev,
+                      [t.id]: checked,
+                    }))
+                  }}
+                  style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                />
+                <span style={{ fontWeight: 600, fontSize: "0.875rem" }}>{dayFormatted}</span>
+                {t.appName && <span style={{ color: "#9ca3af", fontSize: "0.875rem" }}> – {t.appName}</span>}
+                {isActive && (
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      fontSize: "0.6875rem",
+                      padding: "1px 6px",
+                      borderRadius: "9999px",
+                      background: "rgba(59, 130, 246, 0.2)",
+                      color: "#60a5fa",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Active
+                  </span>
+                )}
+              </label>
+            )
+          })}
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginTop: "4px" }}>
+          <button
+            type="button"
+            className="ag-tracker-btn"
+            style={{ minHeight: "44px", flex: 1, fontSize: "0.875rem" }}
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="ag-tracker-btn ag-tracker-btn-danger"
+            style={{ minHeight: "44px", flex: 1, fontSize: "0.875rem" }}
+            disabled={selectedCount === 0}
+            onClick={handleDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+            <span>Delete selected ({selectedCount})</span>
+          </button>
+        </div>
+      </div>
+    </div>,
+    root
+  )
+}
+
+// ============================================================
 // MAIN COMPONENT
 // ============================================================
 function AgAccountTrackerModalInner({
@@ -1814,6 +2383,16 @@ function AgAccountTrackerModalInner({
   const [helpOpen, setHelpOpen] = useState(false)
   const [currentAppOpen, setCurrentAppOpen] = useState(false)
   const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>(loadExpandedRows)
+
+  const [dataMenuOpen, setDataMenuOpen] = useState(false)
+  const [dataMenuPos, setDataMenuPos] = useState<{ top: number; right: number } | null>(null)
+  const [dayDetailsOpen, setDayDetailsOpen] = useState(false)
+  const [detailsPos, setDetailsPos] = useState<{ top: number; left: number } | null>(null)
+  const [manageDaysOpen, setManageDaysOpen] = useState(false)
+
+  const dataBtnRef = useRef<HTMLButtonElement>(null)
+  const mobileDataBtnRef = useRef<HTMLButtonElement>(null)
+  const detailsBtnRef = useRef<HTMLButtonElement>(null)
 
   const [notesExpanded, setNotesExpanded] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -1975,6 +2554,9 @@ function AgAccountTrackerModalInner({
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (manageDaysOpen) { setManageDaysOpen(false); return }
+        if (dayDetailsOpen) { setDayDetailsOpen(false); return }
+        if (dataMenuOpen) { setDataMenuOpen(false); return }
         if (dateEditPopover !== null) { setDateEditPopover(null); return }
         if (statusMenu !== null) { setStatusMenu(null); return }
         if (toast !== null) { setToast(null); return }
@@ -1989,7 +2571,7 @@ function AgAccountTrackerModalInner({
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isOpen, dateEditPopover, statusMenu, toast, quickLogOpen, historyOpen, reportsOpen, fullScreenNotes, manageOptionsOpen, helpOpen, handleImmediateClose])
+  }, [isOpen, manageDaysOpen, dayDetailsOpen, dataMenuOpen, dateEditPopover, statusMenu, toast, quickLogOpen, historyOpen, reportsOpen, fullScreenNotes, manageOptionsOpen, helpOpen, handleImmediateClose])
 
   // Active tracker
   const activeIndex = Math.min(Math.max(0, data.activeTrackerIndex), Math.max(0, data.trackers.length - 1))
@@ -2009,6 +2591,99 @@ function AgAccountTrackerModalInner({
       return { ...prev, trackers: newTrackers }
     })
   }
+
+  // Sorted day options for Day dropdown (newest first)
+  const sortedDayOptions = useMemo(() => {
+    return data.trackers
+      .map((tracker, origIdx) => ({
+        origIdx,
+        id: tracker.id,
+        day: tracker.day || "",
+        appName: tracker.appName || "",
+        label: `${tracker.day ? formatDisplayDateOnly(tracker.day) : "No Date"}${tracker.appName ? ` – ${tracker.appName}` : ""}`,
+      }))
+      .sort((a, b) => (b.day || "").localeCompare(a.day || ""))
+  }, [data.trackers])
+
+  // Previous tracker (earliest day before current tracker)
+  const prevTracker = useMemo(() => {
+    if (!currentTracker?.day) return null
+    const earlier = data.trackers
+      .filter((t) => t.day && t.day < currentTracker.day)
+      .sort((a, b) => b.day.localeCompare(a.day))
+    return earlier[0] || null
+  }, [data.trackers, currentTracker?.day])
+
+  const getPrevAgentData = useCallback(
+    (accountLabel: string, agentName: string) => {
+      if (!prevTracker) return null
+      const pRow = prevTracker.rows?.find((r) => r.label.trim() === accountLabel.trim())
+      if (!pRow) return null
+      const pLine = pRow.lines
+        ?.filter((l) => l.agent === agentName)
+        .sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]
+      if (!pLine || (!pLine.usedOn && !pLine.status)) return null
+      return pLine
+    },
+    [prevTracker]
+  )
+
+  const getAccountLatestUsedOn = useCallback(
+    (accountLabel: string, currentRow: TrackerRow) => {
+      let latest = ""
+      for (const l of currentRow.lines) {
+        if (l.usedOn && (!latest || l.usedOn > latest)) latest = l.usedOn
+      }
+      if (latest) return latest
+      for (const tr of data.trackers) {
+        const r = tr.rows?.find((row) => row.label.trim() === accountLabel.trim())
+        if (r) {
+          for (const l of r.lines || []) {
+            if (l.usedOn && (!latest || l.usedOn > latest)) latest = l.usedOn
+          }
+        }
+      }
+      return latest
+    },
+    [data.trackers]
+  )
+
+  const handleOpenDataMenu = useCallback((el: HTMLElement) => {
+    const rect = el.getBoundingClientRect()
+    const top = rect.bottom + 4
+    const right = Math.max(8, window.innerWidth - rect.right)
+    setDataMenuPos({ top, right })
+    setDataMenuOpen(true)
+  }, [])
+
+  const handleOpenDayDetails = useCallback((el: HTMLElement) => {
+    const rect = el.getBoundingClientRect()
+    const top = rect.bottom + 4
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - 300))
+    setDetailsPos({ top, left })
+    setDayDetailsOpen(true)
+  }, [])
+
+  const handleDeleteDays = useCallback(
+    (idsToDelete: string[]) => {
+      updateData((prev) => {
+        const idSet = new Set(idsToDelete)
+        const newTrackers = prev.trackers.filter((t) => !idSet.has(t.id))
+        if (newTrackers.length === 0) return prev
+        let newActive = prev.activeTrackerIndex
+        if (newActive >= newTrackers.length) newActive = newTrackers.length - 1
+        const activeTracker = prev.trackers[prev.activeTrackerIndex]
+        if (activeTracker && idSet.has(activeTracker.id)) {
+          newActive = 0
+        } else if (activeTracker) {
+          const idx = newTrackers.findIndex((t) => t.id === activeTracker.id)
+          if (idx >= 0) newActive = idx
+        }
+        return { ...prev, trackers: newTrackers, activeTrackerIndex: newActive }
+      })
+    },
+    [updateData]
+  )
 
   // Account readiness calc
   const { readyCount, currentlyActiveAccount, bestNextAccount } = useMemo(() => {
@@ -3205,6 +3880,22 @@ function AgAccountTrackerModalInner({
     setExpandedRows(next); saveExpandedRows(next)
   }
 
+  const allExpanded = useMemo(() => {
+    if (currentTracker.rows.length === 0) return false
+    return currentTracker.rows.every((r, idx) => {
+      const key = getRowKey(r, idx)
+      return Boolean(expandedRows[key])
+    })
+  }, [currentTracker.rows, expandedRows])
+
+  const handleToggleExpandAll = useCallback(() => {
+    if (allExpanded) {
+      handleCollapseAll()
+    } else {
+      handleExpandAll()
+    }
+  }, [allExpanded, currentTracker.rows])
+
   const handleUpdateAccountFromReport = useCallback(
     (accountName: string, updates: { status?: LineStatus; usedOn?: string; nextAvailable?: string; notes?: string }) => {
       updateCurrentTracker((tr) => {
@@ -3297,7 +3988,7 @@ function AgAccountTrackerModalInner({
                 )}
               </div>
               <span style={{ fontSize: "0.65rem", color: latestUsedOn ? (isToday(latestUsedOn) ? "#60a5fa" : "#9ca3af") : "#4b5563", whiteSpace: "nowrap" }}>
-                {latestUsedOn ? `Last: ${formatDisplayDateTime(latestUsedOn)}` : "Never used"}
+                {latestUsedOn ? `Last: ${formatDisplayDateTimeNoYear(latestUsedOn)}` : "Never used"}
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: "3px", flexWrap: "wrap", marginTop: "1px" }}>
                 {finishTag && (
@@ -3414,10 +4105,9 @@ function AgAccountTrackerModalInner({
           )}
 
           {/* ══════════════════════════════════════════════════
-              ROW 1: COMBINED HEADER (44px)
-              Merged: Title + Tabs + App Name + Actions
+              ROW 1: PC HEADER (44px)
           ══════════════════════════════════════════════════ */}
-          <header className="ag-tracker-header" style={{ height: "44px", minHeight: "44px", maxHeight: "44px", flexShrink: 0, padding: "0 0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
+          <header className="ag-tracker-header ag-tracker-pc-only" style={{ height: "44px", minHeight: "44px", maxHeight: "44px", flexShrink: 0, padding: "0 0.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", minWidth: 0, flex: "1 1 auto" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
                 <FileSpreadsheet className="h-4 w-4 text-blue-400" />
@@ -3426,82 +4116,51 @@ function AgAccountTrackerModalInner({
                 </span>
               </div>
 
-              {/* Tabs list */}
-              <div className="ag-tracker-tabs-list" style={{ display: "flex", alignItems: "center", gap: "3px", flexShrink: 0 }}>
-                {data.trackers.map((tracker, idx) => {
-                  const isActive = idx === activeIndex
-                  const displayName = getTabDisplayName(tracker)
-                  const fullTitle = getTabFullTitle(tracker)
-                  return (
-                    <button
-                      key={tracker.id}
-                      type="button"
-                      className={`ag-tracker-tab ${isActive ? "active" : ""}`}
-                      style={{ fontSize: "0.75rem", padding: "0.15rem 0.45rem", height: "24px" }}
-                      onClick={() => updateData((prev) => ({ ...prev, activeTrackerIndex: idx }))}
-                      title={fullTitle}
-                    >
-                      <span className="truncate max-w-[120px]">{displayName}</span>
-                      {data.trackers.length > 1 && (
-                        <span
-                          className="ag-tracker-tab-close"
-                          onClick={(e) => handleDeleteTracker(idx, e)}
-                          title={`Delete ${fullTitle}`}
-                        >
-                          <Trash2 className="h-2.5 w-2.5" />
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-                <button
-                  type="button"
-                  className="ag-tracker-btn"
-                  onClick={handleAddTracker}
-                  title="Add a new tracker block"
-                  style={{ fontSize: "0.7rem", padding: "0.15rem 0.35rem", height: "24px" }}
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
+              {/* Day dropdown: lists all tabs as "MM-DD-YYYY – App name", newest first */}
+              <select
+                aria-label="Select tracker day"
+                className="ag-tracker-select"
+                style={{
+                  flex: "1 1 auto",
+                  minWidth: "140px",
+                  height: "26px",
+                  fontSize: "0.75rem",
+                  textOverflow: "ellipsis",
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                }}
+                value={activeIndex}
+                onChange={(e) => updateData((prev) => ({ ...prev, activeTrackerIndex: Number(e.target.value) }))}
+              >
+                {sortedDayOptions.map((opt) => (
+                  <option key={opt.id} value={opt.origIdx}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
 
-              {/* App Name input */}
-              <div style={{ display: "flex", alignItems: "center", gap: "3px", minWidth: 0, flexShrink: 1 }}>
-                <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--muted-foreground, #9ca3af)", whiteSpace: "nowrap" }}>App:</span>
-                <input
-                  id="ag-tracker-appname-input"
-                  list="journal-app-names-datalist"
-                  className="ag-tracker-input"
-                  style={{ fontSize: "0.75rem", padding: "0.15rem 0.4rem", height: "24px", width: "90px", minWidth: "65px" }}
-                  placeholder="App name..."
-                  value={currentTracker.appName}
-                  onChange={(e) => updateCurrentTracker((tr) => ({ ...tr, appName: e.target.value }))}
-                />
-                <datalist id="journal-app-names-datalist">
-                  {journalAppNames.map((name) => <option key={name} value={name} />)}
-                </datalist>
-                {journalAppNames.length > 0 && (
-                  <select
-                    aria-label="Pick from Journal Apps"
-                    className="ag-tracker-select"
-                    style={{ fontSize: "0.7rem", padding: "0.1rem 0.3rem", height: "24px", width: "auto" }}
-                    value={journalAppNames.includes(currentTracker.appName) ? currentTracker.appName : ""}
-                    onChange={(e) => { if (e.target.value) updateCurrentTracker((tr) => ({ ...tr, appName: e.target.value })) }}
-                  >
-                    <option value="">Choose...</option>
-                    {journalAppNames.map((name) => <option key={name} value={name}>{name}</option>)}
-                  </select>
-                )}
-                <input
-                  type="date"
-                  aria-label="Tracker Date"
-                  className="ag-tracker-input"
-                  style={{ fontSize: "0.7rem", padding: "0.1rem 0.25rem", height: "24px", width: "105px", flexShrink: 0 }}
-                  value={currentTracker.day || ""}
-                  onChange={(e) => handleDayChange(e.target.value)}
-                  title="Tracker day (changing re-orders tabs by day)"
-                />
-              </div>
+              {/* ✎ Day details button */}
+              <button
+                ref={detailsBtnRef}
+                type="button"
+                className="ag-tracker-btn"
+                onClick={(e) => handleOpenDayDetails(e.currentTarget)}
+                title="Day details (App name, date, delete)"
+                style={{ fontSize: "0.75rem", padding: "0.15rem 0.45rem", height: "26px", flexShrink: 0 }}
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+
+              {/* + Add tracker day button */}
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={handleAddTracker}
+                title="Add a new tracker day"
+                style={{ fontSize: "0.75rem", padding: "0.15rem 0.45rem", height: "26px", flexShrink: 0 }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
 
               <span
                 className={`ag-tracker-save-badge ${saveStatus === "saving" ? "saving" : "saved"}`}
@@ -3512,8 +4171,8 @@ function AgAccountTrackerModalInner({
               </span>
             </div>
 
-            {/* Action buttons (scroll horizontally on small widths, no wrap) */}
-            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, overflowX: "auto", whiteSpace: "nowrap" }}>
+            {/* PC Header action buttons: Quick Log | Reports | Current App | Data ▾ | Help */}
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", flexShrink: 0, whiteSpace: "nowrap" }}>
               <button
                 type="button"
                 className="ag-tracker-btn font-bold text-amber-300 border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20"
@@ -3539,56 +4198,6 @@ function AgAccountTrackerModalInner({
               </button>
               <button
                 type="button"
-                className="ag-tracker-btn ag-btn-utility"
-                onClick={handleStartNewCycle}
-                title="New Cycle"
-                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
-              >
-                <RotateCcw className="h-3.5 w-3.5 text-sky-400" />
-                <span>New Cycle</span>
-              </button>
-              <button
-                type="button"
-                className="ag-tracker-btn ag-btn-utility"
-                onClick={() => setHistoryOpen(true)}
-                title="History"
-                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
-              >
-                <History className="h-3.5 w-3.5 text-purple-400" />
-                <span>History</span>
-              </button>
-              <button
-                type="button"
-                className="ag-tracker-btn ag-btn-utility"
-                onClick={handlePrintPdf}
-                title="Print or Save as PDF (full color report)"
-                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
-              >
-                <Printer className="h-3.5 w-3.5" />
-                <span>PDF</span>
-              </button>
-              <button
-                type="button"
-                className="ag-tracker-btn ag-btn-utility"
-                onClick={handleExportJson}
-                title="Export JSON"
-                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Export</span>
-              </button>
-              <button
-                type="button"
-                className="ag-tracker-btn ag-btn-utility"
-                onClick={() => fileInputRef.current?.click()}
-                title="Import JSON"
-                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
-              >
-                <Upload className="h-3.5 w-3.5" />
-                <span>Import</span>
-              </button>
-              <button
-                type="button"
                 className="ag-tracker-btn ag-btn-utility ag-btn-current-app"
                 onClick={() => setCurrentAppOpen(true)}
                 title="Show the app I'm working on"
@@ -3596,6 +4205,17 @@ function AgAccountTrackerModalInner({
               >
                 <AppWindow className="h-3.5 w-3.5 text-sky-400" />
                 <span>Current App</span>
+              </button>
+              <button
+                ref={dataBtnRef}
+                type="button"
+                className="ag-tracker-btn ag-btn-utility"
+                onClick={(e) => handleOpenDataMenu(e.currentTarget)}
+                title="Data & Backup Options"
+                style={{ fontSize: "0.75rem", padding: "0.2rem 0.4rem", height: "26px" }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Data ▾</span>
               </button>
               <button
                 type="button"
@@ -3607,23 +4227,133 @@ function AgAccountTrackerModalInner({
                 <HelpCircle className="h-3.5 w-3.5 text-emerald-400" />
                 <span>Help</span>
               </button>
-              <button
-                type="button"
-                className="ag-tracker-btn ag-tracker-btn-icon"
-                onClick={handleImmediateClose}
-                title="Close (Esc)"
-                style={{ height: "26px", width: "26px" }}
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
           </header>
 
           {/* ══════════════════════════════════════════════════
-              ROW 2: PINNED TOOLBAR (30px sticky)
+              ROW 1: MOBILE HEADER (below 768px, 2 compact rows)
+          ══════════════════════════════════════════════════ */}
+          <div className="ag-tracker-header-mobile ag-tracker-mobile-only" style={{ flexShrink: 0, display: "flex", flexDirection: "column", backgroundColor: "#0b1120", borderBottom: "1px solid rgba(255, 255, 255, 0.08)" }}>
+            {/* Mobile Row 1: [Day dropdown] [✎ details] [+ add] [Saved dot] */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", padding: "6px 8px 3px" }}>
+              <select
+                aria-label="Select tracker day"
+                className="ag-tracker-select"
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  height: "36px",
+                  fontSize: "0.875rem",
+                  textOverflow: "ellipsis",
+                  overflow: "hidden",
+                  whiteSpace: "nowrap",
+                }}
+                value={activeIndex}
+                onChange={(e) => updateData((prev) => ({ ...prev, activeTrackerIndex: Number(e.target.value) }))}
+              >
+                {sortedDayOptions.map((opt) => (
+                  <option key={opt.id} value={opt.origIdx}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={(e) => handleOpenDayDetails(e.currentTarget)}
+                title="Day details"
+                style={{ width: "36px", height: "36px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                className="ag-tracker-btn"
+                onClick={handleAddTracker}
+                title="Add tracker day"
+                style={{ width: "36px", height: "36px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+
+              <span
+                style={{
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: saveStatus === "saving" ? "#f59e0b" : "#10b981",
+                  flexShrink: 0,
+                  boxShadow: saveStatus === "saving" ? "0 0 6px #f59e0b" : "0 0 6px #10b981",
+                }}
+                title={saveStatus === "saving" ? "Saving..." : "Saved locally"}
+              />
+            </div>
+
+            {/* Mobile Row 2: 5 equal buttons (>= 44px, 20px icon, 10px label): Log, Reports, App, Data, Help */}
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", width: "100%", padding: "3px 8px 6px" }}>
+              <button
+                type="button"
+                className="ag-tracker-btn font-bold text-amber-300 border-amber-500/30 bg-amber-500/10"
+                style={{ flex: 1, minHeight: "44px", height: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", padding: "2px" }}
+                onClick={() => setQuickLogOpen(true)}
+              >
+                <Zap className="h-5 w-5 text-amber-400 fill-amber-400" />
+                <span style={{ fontSize: "10px", lineHeight: 1 }}>Log</span>
+              </button>
+
+              <button
+                type="button"
+                className="ag-tracker-btn relative"
+                style={{ flex: 1, minHeight: "44px", height: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", padding: "2px" }}
+                onClick={() => setReportsOpen(true)}
+              >
+                <BarChart3 className="h-5 w-5 text-blue-400" />
+                <span style={{ fontSize: "10px", lineHeight: 1 }}>Reports</span>
+                <span className="ag-report-count-badge" style={{ position: "absolute", top: "2px", right: "2px", fontSize: "0.6rem", padding: "0 3px" }}>
+                  {readyCount}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="ag-tracker-btn ag-btn-utility"
+                style={{ flex: 1, minHeight: "44px", height: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", padding: "2px" }}
+                onClick={() => setCurrentAppOpen(true)}
+              >
+                <AppWindow className="h-5 w-5 text-sky-400" />
+                <span style={{ fontSize: "10px", lineHeight: 1 }}>App</span>
+              </button>
+
+              <button
+                ref={mobileDataBtnRef}
+                type="button"
+                className="ag-tracker-btn ag-btn-utility"
+                style={{ flex: 1, minHeight: "44px", height: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", padding: "2px" }}
+                onClick={(e) => handleOpenDataMenu(e.currentTarget)}
+              >
+                <Download className="h-5 w-5 text-indigo-400" />
+                <span style={{ fontSize: "10px", lineHeight: 1 }}>Data</span>
+              </button>
+
+              <button
+                type="button"
+                className="ag-tracker-btn text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
+                style={{ flex: 1, minHeight: "44px", height: "44px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "2px", padding: "2px" }}
+                onClick={() => setHelpOpen(true)}
+              >
+                <HelpCircle className="h-5 w-5 text-emerald-400" />
+                <span style={{ fontSize: "10px", lineHeight: 1 }}>Help</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════════════════
+              ROW 2: PC TOOLBAR (30px sticky)
           ══════════════════════════════════════════════════ */}
           <div
-            className="ag-tracker-table-toolbar"
+            className="ag-tracker-table-toolbar ag-tracker-pc-only"
             style={{
               height: "30px",
               minHeight: "30px",
@@ -3637,8 +4367,8 @@ function AgAccountTrackerModalInner({
               position: "sticky",
               top: 0,
               zIndex: 15,
-              backgroundColor: "var(--card, #1a1a1a)",
-              borderBottom: "1px solid var(--border, rgba(255,255,255,0.1))",
+              backgroundColor: "#0b1120",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
@@ -3646,21 +4376,11 @@ function AgAccountTrackerModalInner({
                 type="button"
                 className="ag-tracker-btn"
                 style={{ fontSize: "0.75rem", padding: "0.15rem 0.5rem", height: "24px" }}
-                onClick={handleExpandAll}
-                title="Expand all accounts"
+                onClick={handleToggleExpandAll}
+                title={allExpanded ? "Collapse all accounts" : "Expand all accounts"}
               >
-                <ChevronDown className="h-3 w-3" />
-                <span>Expand All</span>
-              </button>
-              <button
-                type="button"
-                className="ag-tracker-btn"
-                style={{ fontSize: "0.75rem", padding: "0.15rem 0.5rem", height: "24px" }}
-                onClick={handleCollapseAll}
-                title="Collapse all accounts"
-              >
-                <ChevronUp className="h-3 w-3" />
-                <span>Collapse All</span>
+                {allExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                <span>{allExpanded ? "Collapse all" : "Expand all"}</span>
               </button>
               <select
                 className="ag-tracker-select"
@@ -3687,18 +4407,61 @@ function AgAccountTrackerModalInner({
                 <option value="next-soonest">Next available: soonest first</option>
               </select>
             </div>
+          </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <button
-                type="button"
-                className="ag-tracker-btn text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-                style={{ fontSize: "0.75rem", padding: "0.15rem 0.5rem", height: "24px" }}
-                onClick={() => setHelpOpen(true)}
-              >
-                <HelpCircle className="h-3 w-3" />
-                <span>Process Guide</span>
-              </button>
-            </div>
+          {/* ══════════════════════════════════════════════════
+              ROW 2: MOBILE TOOLBAR (40px, one row)
+          ══════════════════════════════════════════════════ */}
+          <div
+            className="ag-tracker-toolbar-mobile ag-tracker-mobile-only"
+            style={{
+              height: "44px",
+              minHeight: "44px",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "0 0.5rem",
+              position: "sticky",
+              top: 0,
+              zIndex: 15,
+              backgroundColor: "#0b1120",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+            }}
+          >
+            <button
+              type="button"
+              className="ag-tracker-btn"
+              style={{ width: "40px", height: "40px", minWidth: "40px", minHeight: "40px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+              onClick={handleToggleExpandAll}
+              title={allExpanded ? "Collapse all accounts" : "Expand all accounts"}
+            >
+              {allExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            <select
+              className="ag-tracker-select"
+              style={{ height: "40px", fontSize: "0.8125rem", padding: "0 0.4rem", flex: 1, minWidth: 0 }}
+              value={dayFilter}
+              onChange={(e) => setDayFilter(e.target.value)}
+              title="Filter accounts"
+            >
+              <option value="all">Filter: All</option>
+              <option value="used-today">Used</option>
+              <option value="not-used-today">Not used</option>
+              <option value="finish-today">Finish</option>
+            </select>
+            <select
+              className="ag-tracker-select"
+              style={{ height: "40px", fontSize: "0.8125rem", padding: "0 0.4rem", flex: 1, minWidth: 0 }}
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value)}
+              title="Sort accounts"
+            >
+              <option value="manual">Sort: Manual</option>
+              <option value="used-oldest">Oldest</option>
+              <option value="used-newest">Newest</option>
+              <option value="next-soonest">Soonest</option>
+            </select>
           </div>
 
           {/* ══════════════════════════════════════════════════
@@ -3716,8 +4479,8 @@ function AgAccountTrackerModalInner({
               gap: "6px",
               padding: "0 0.75rem",
               overflowX: "auto",
-              backgroundColor: "var(--card, #1e1e1e)",
-              borderBottom: "1px solid var(--border, rgba(255,255,255,0.08))",
+              backgroundColor: "#0b1120",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
               position: "sticky",
               top: "30px",
               zIndex: 14,
@@ -3774,14 +4537,14 @@ function AgAccountTrackerModalInner({
           </div>
 
           {/* ══════════════════════════════════════════════════
-              MAIN TABLE: 26px header + 16 compact sub-rows
-              (NO Notes column - fits all 16 rows without scroll)
+              PC TABLE: 26px header + 16 compact sub-rows
+              (Strictly active at 768px and wider)
           ══════════════════════════════════════════════════ */}
-          <div style={{ flex: "1 1 auto", overflowY: "auto", overflowX: "auto", minHeight: 0 }}>
+          <div className="ag-tracker-pc-table-wrap ag-tracker-pc-only" style={{ flex: "1 1 auto", overflowY: "auto", overflowX: "auto", minHeight: 0, backgroundColor: "#0b1120" }}>
             <table className="ag-tracker-table" style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
               {/* Sticky Column Headers (26px) */}
               <thead>
-                <tr style={{ position: "sticky", top: 0, zIndex: 12, background: "var(--card, #1a1a1a)", height: "26px" }}>
+                <tr style={{ position: "sticky", top: 0, zIndex: 12, background: "#0b1120", height: "26px" }}>
                   <th className="ag-tracker-th" style={{ width: "150px", minWidth: "150px", maxWidth: "150px", fontSize: "0.75rem", padding: "2px 6px" }}>Row</th>
                   <th className="ag-tracker-th" style={{ width: "70px", minWidth: "70px", maxWidth: "70px", fontSize: "0.75rem", padding: "2px 6px" }}>Agent</th>
                   <th className="ag-tracker-th" style={{ width: "90px", minWidth: "90px", maxWidth: "90px", fontSize: "0.75rem", padding: "2px 6px" }}>Status</th>
@@ -3799,6 +4562,268 @@ function AgAccountTrackerModalInner({
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* ══════════════════════════════════════════════════
+              PHONE ACCOUNT CARDS (< 768px, no horizontal scroll)
+          ══════════════════════════════════════════════════ */}
+          <div className="ag-tracker-mobile-cards ag-tracker-mobile-only" style={{ flex: "1 1 auto", overflowY: "auto", overflowX: "hidden", minHeight: 0, padding: "8px", display: "flex", flexDirection: "column", gap: "8px", backgroundColor: "#0b1120" }}>
+            {displayRows.map((row, rIdx) => {
+              const actualRIdx = currentTracker.rows.indexOf(row)
+              const effectiveRIdx = actualRIdx >= 0 ? actualRIdx : rIdx
+              const rowKey = getRowKey(row, effectiveRIdx)
+              const isExpanded = Boolean(expandedRows[rowKey])
+              const latestUsedOn = getAccountLatestUsedOn(row.label, row)
+
+              const geminiLines = row.lines.filter((l) => l.agent === "Gemini")
+              const claudeLines = row.lines.filter((l) => l.agent === "Claude")
+              const geminiLatest = geminiLines.sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]
+              const claudeLatest = claudeLines.sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]
+              const geminiUsedToday = geminiLatest && isToday(geminiLatest.usedOn)
+              const claudeUsedToday = claudeLatest && isToday(claudeLatest.usedOn)
+              const geminiDone = geminiLatest && geminiLatest.status === "Done"
+              const claudeDone = claudeLatest && claudeLatest.status === "Done"
+              let finishTag = ""
+              if (geminiUsedToday && !claudeUsedToday && !claudeDone) finishTag = "Claude"
+              else if (claudeUsedToday && !geminiUsedToday && !geminiDone) finishTag = "Gemini"
+
+              const isNextAccount = todayStripData.nextAccount === row.label
+              const usedToday = row.lines.some((l) => l.usedOn && isToday(l.usedOn))
+              const agents = ["Gemini", "Claude"]
+
+              return (
+                <div
+                  key={`mobile-card-${rowKey}`}
+                  className={`ag-mobile-account-card ${usedToday ? "used-today-card" : ""}`}
+                  style={{
+                    background: "#111827",
+                    border: usedToday ? "1px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.12)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "8px",
+                    boxSizing: "border-box",
+                    width: "100%",
+                  }}
+                >
+                  {/* Header line: account name, Last: MM-DD h:mmA, tags, and 44px chevron */}
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", minWidth: 0, flex: 1 }}>
+                      <span style={{ fontWeight: 700, fontSize: "1rem", color: "#ffffff" }}>
+                        {row.label}
+                      </span>
+                      <span style={{ fontSize: "0.75rem", color: latestUsedOn ? (isToday(latestUsedOn) ? "#60a5fa" : "#9ca3af") : "#6b7280" }}>
+                        {latestUsedOn ? `Last: ${formatCompact(latestUsedOn)}` : "Never used"}
+                      </span>
+                      {finishTag && (
+                        <span style={{ fontSize: "0.65rem", padding: "1px 5px", background: "rgba(245, 158, 11, 0.2)", color: "#fcd34d", borderRadius: "3px" }}>
+                          Finish {finishTag}
+                        </span>
+                      )}
+                      {isNextAccount && (
+                        <span style={{ fontSize: "0.65rem", padding: "1px 5px", background: "rgba(16, 185, 129, 0.2)", color: "#6ee7b7", borderRadius: "3px" }}>
+                          Next
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => toggleRowExpand(rowKey)}
+                      style={{
+                        width: "44px",
+                        height: "44px",
+                        minWidth: "44px",
+                        minHeight: "44px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "transparent",
+                        border: "none",
+                        color: "#9ca3af",
+                        cursor: "pointer",
+                      }}
+                      title={isExpanded ? "Collapse row editor" : "Expand row editor"}
+                    >
+                      {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    </button>
+                  </div>
+
+                  {/* Two agent rows: Gemini, Claude */}
+                  {agents.map((ag) => {
+                    const agLines = row.lines.filter((l) => l.agent === ag)
+                    const latestLine = agLines.sort((a, b) => (b.usedOn || "").localeCompare(a.usedOn || ""))[0]
+                    const st = latestLine?.status || ""
+                    const usedOn = latestLine?.usedOn || ""
+                    const nextAvail = latestLine?.nextAvailable || ""
+                    const prevLine = getPrevAgentData(row.label, ag)
+
+                    const uChip = usedOn ? dayChip(usedOn) : ""
+                    const rChip = nextAvail ? readyChip(nextAvail) : null
+
+                    return (
+                      <div
+                        key={ag}
+                        style={{
+                          padding: "6px 8px",
+                          background: "rgba(255, 255, 255, 0.03)",
+                          borderRadius: "6px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "4px",
+                        }}
+                      >
+                        {/* Line 1: agent | status badge (tap = status menu) | ▶ ✓ (36px) */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span
+                              style={{
+                                fontSize: "0.875rem",
+                                fontWeight: 700,
+                                color: ag === "Gemini" ? "#60a5fa" : "#a78bfa",
+                                width: "55px",
+                              }}
+                            >
+                              {ag}
+                            </span>
+
+                            <button
+                              type="button"
+                              className={`ag-status-badge ${
+                                st === "In use"
+                                  ? "ag-status-in-use"
+                                  : st === "Low"
+                                  ? "ag-status-low"
+                                  : st === "Done"
+                                  ? "ag-status-done"
+                                  : "ag-status-empty"
+                              }`}
+                              style={{ fontSize: "0.75rem", padding: "2px 8px", minWidth: "60px", cursor: "pointer" }}
+                              onClick={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect()
+                                setStatusMenu({
+                                  rIdx: effectiveRIdx,
+                                  agentName: ag,
+                                  currentStatus: st,
+                                  pos: { top: rect.bottom + 2, left: Math.max(8, Math.min(rect.left, window.innerWidth - 180)) },
+                                })
+                              }}
+                              title="Click to change status"
+                            >
+                              {st ? st.toUpperCase() : "Status"}
+                            </button>
+                          </div>
+
+                          {/* Action buttons (36px) */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                            <button
+                              type="button"
+                              className="ag-tracker-btn ag-btn-action ag-btn-action-start"
+                              style={{ width: "36px", height: "36px", minWidth: "36px", minHeight: "36px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              onClick={() => handleStartAgent(effectiveRIdx, ag)}
+                              title="Start using this agent"
+                            >
+                              <Play className="h-4 w-4 fill-current" />
+                            </button>
+                            <button
+                              type="button"
+                              className="ag-tracker-btn ag-btn-action ag-btn-action-done"
+                              style={{ width: "36px", height: "36px", minWidth: "36px", minHeight: "36px", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
+                              onClick={() => handleDoneAgent(effectiveRIdx, ag)}
+                              title="Mark done / out of tokens"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Line 2 (dim, 12px): "Used 11-20 4:29P [day chip] · Next 11-21 4:29P [ready chip]" */}
+                        <div style={{ fontSize: "0.75rem", color: "#9ca3af", display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap" }}>
+                          <span>Used</span>
+                          <span
+                            style={{
+                              color: usedOn ? "#60a5fa" : "#6b7280",
+                              cursor: "pointer",
+                              textDecoration: usedOn ? "underline" : "none",
+                              textUnderlineOffset: "2px",
+                            }}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              handleEditDate(effectiveRIdx, ag, "usedOn", rect)
+                            }}
+                            title="Tap to edit timestamp"
+                          >
+                            {usedOn ? formatCompact(usedOn) : "—"}
+                          </span>
+                          {uChip && <span className="ag-day-chip" style={{ fontSize: "0.65rem", padding: "0 3px" }}>{uChip}</span>}
+
+                          <span style={{ color: "#4b5563" }}>·</span>
+
+                          <span>Next</span>
+                          <span
+                            style={{
+                              color: nextAvail ? "#a78bfa" : "#6b7280",
+                              cursor: "pointer",
+                              textDecoration: nextAvail ? "underline" : "none",
+                              textUnderlineOffset: "2px",
+                            }}
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              handleEditDate(effectiveRIdx, ag, "nextAvailable", rect)
+                            }}
+                            title="Tap to edit timestamp"
+                          >
+                            {nextAvail ? formatCompact(nextAvail) : "—"}
+                          </span>
+                          {rChip && rChip.label && (
+                            <span className={`ag-ready-chip ${rChip.cls}`} style={{ fontSize: "0.65rem", padding: "0 3px" }}>
+                              {rChip.label}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Line 3 (if Prev value exists): "Prev: ✕ 11-19 6:46P" */}
+                        {prevLine && (prevLine.status || prevLine.usedOn) && (
+                          <div style={{ fontSize: "0.75rem", color: "#6b7280", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span>Prev:</span>
+                            <span style={{ color: prevLine.status === "Done" ? "#ef4444" : prevLine.status === "Low" ? "#f59e0b" : "#10b981" }}>
+                              {getPrevStatusIcon(prevLine.status)}
+                            </span>
+                            <span>{prevLine.usedOn ? formatCompact(prevLine.usedOn) : "—"}</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+
+                  {/* Expanded editor inside card */}
+                  {isExpanded && (
+                    <div style={{ marginTop: "4px", borderTop: "1px solid rgba(255, 255, 255, 0.1)", paddingTop: "8px" }}>
+                      <ExpandedRowSection
+                        row={row}
+                        rIdx={effectiveRIdx}
+                        customAgents={customAgents}
+                        googleAccountOptions={googleAccountOptions}
+                        onAddLine={handleAddLine}
+                        onDeleteLine={handleDeleteLine}
+                        onUpdateLine={handleUpdateLine}
+                        onUsedOnChoice={handleUsedOnChoice}
+                        onNextAvailableChoice={handleNextAvailableChoice}
+                        onLabelChange={(ri, label) =>
+                          updateCurrentTracker((tr) => {
+                            const newRows = [...tr.rows]
+                            newRows[ri] = { ...newRows[ri], label }
+                            return { ...tr, rows: newRows }
+                          })
+                        }
+                        onCollapse={() => toggleRowExpand(rowKey)}
+                        onCustomAgentsChange={(agents) => setCustomAgents(agents)}
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {/* ══════════════════════════════════════════════════
@@ -4166,6 +5191,42 @@ function AgAccountTrackerModalInner({
 
       {/* CURRENT APP */}
       <CurrentAppModal isOpen={currentAppOpen} onClose={() => setCurrentAppOpen(false)} theme={theme} />
+
+      {/* DATA MENU POPOVER */}
+      <DataMenuPopover
+        isOpen={dataMenuOpen}
+        onClose={() => setDataMenuOpen(false)}
+        pos={dataMenuPos}
+        onPrintPdf={handlePrintPdf}
+        onExportJson={handleExportJson}
+        onImportJson={() => fileInputRef.current?.click()}
+        onStartNewCycle={handleStartNewCycle}
+        onOpenHistory={() => setHistoryOpen(true)}
+      />
+
+      {/* DAY DETAILS MODAL / SHEET */}
+      <DayDetailsModal
+        isOpen={dayDetailsOpen}
+        onClose={() => setDayDetailsOpen(false)}
+        currentTracker={currentTracker}
+        totalTrackers={data.trackers.length}
+        journalAppNames={journalAppNames}
+        onUpdateAppName={(name) => updateCurrentTracker((tr) => ({ ...tr, appName: name }))}
+        onDayChange={handleDayChange}
+        onDeleteCurrentDay={(e) => handleDeleteTracker(activeIndex, e)}
+        onOpenManageDays={() => setManageDaysOpen(true)}
+        theme={theme}
+      />
+
+      {/* MANAGE DAYS MODAL */}
+      <ManageDaysModal
+        isOpen={manageDaysOpen}
+        onClose={() => setManageDaysOpen(false)}
+        trackers={data.trackers}
+        activeTrackerId={currentTracker.id}
+        onDeleteDays={handleDeleteDays}
+        theme={theme}
+      />
     </>
   )
 }
