@@ -3483,3 +3483,135 @@ nav.journal-bottom-nav {
     flex-wrap: wrap !important;
   }
 }
+
+/* ============================================================ */
+/* PC TRACKER LAYOUT FIXES (>= 768px)                           */
+/* ============================================================ */
+@media (min-width: 768px) {
+  /* 1. Eliminate ~40px blank band between header and toolbar */
+  .journal-root .ag-tracker-dialog {
+    --ag-header-height: 44px !important;
+  }
+
+  .journal-root .ag-tracker-header.ag-tracker-pc-only {
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 0.5rem !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .journal-root .ag-tracker-header.ag-tracker-pc-only > div {
+    overflow: visible !important;
+  }
+
+  .journal-root .ag-tracker-table-toolbar.ag-tracker-pc-only {
+    position: static !important;
+    top: 0 !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 0.75rem !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .journal-root .ag-today-strip {
+    position: static !important;
+    top: 0 !important;
+    margin: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding: 0 0.75rem !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  /* 2. Day dropdown: height 34px, font-size 13px, padding 0 28px 0 10px, min-width 260px, readable options */
+  .journal-root .ag-tracker-header.ag-tracker-pc-only select.ag-tracker-select {
+    height: 34px !important;
+    line-height: normal !important;
+    padding: 0 28px 0 10px !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
+    flex: 1 1 auto !important;
+    min-width: 260px !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    background-color: #0f172a !important;
+    color: #f1f5f9 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 4px !important;
+  }
+
+  .journal-root .ag-tracker-header.ag-tracker-pc-only select.ag-tracker-select option {
+    background-color: #0f172a !important;
+    color: #f1f5f9 !important;
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+  }
+
+  /* 3. Sticky Column Header directly below Today strip & scroll container */
+  .journal-root div.ag-tracker-pc-table-wrap.ag-tracker-pc-only {
+    display: block !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  .journal-root .ag-tracker-pc-table-wrap table.ag-tracker-table {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+
+  .journal-root .ag-tracker-pc-table-wrap table.ag-tracker-table thead {
+    display: table-header-group !important;
+  }
+
+  .journal-root .ag-tracker-pc-table-wrap table.ag-tracker-table thead tr {
+    display: table-row !important;
+    height: 26px !important;
+  }
+
+  .journal-root .ag-tracker-pc-table-wrap table.ag-tracker-table th.ag-tracker-th {
+    display: table-cell !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important;
+    background-color: #0b1120 !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    padding: 2px 6px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+    line-height: normal !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+  }
+
+  .journal-root .ag-tracker-pc-table-wrap table.ag-tracker-table tbody tr:first-child td {
+    padding-top: 4px !important;
+  }
+}
+
