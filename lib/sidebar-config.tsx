@@ -1,4 +1,4 @@
-import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2, StickyNote, BookOpen } from "lucide-react"
+import { Activity, ChevronsDown, ChevronsUp, Home, Key, Wand2, CreditCard, User, Settings, ChevronDown, ChevronRight, FileText, Shield, Star, Car, Wrench, Briefcase, Users, Box, Globe, Smartphone, Book, Plane, Target, Image, Trash, Pill, PieChart as PieChartIcon, Sparkles, Database, Zap, CheckCircle2, StickyNote, BookOpen, Hospital } from "lucide-react"
 
 export const sidebarSections = [
     {
@@ -39,7 +39,7 @@ export const sidebarSections = [
         title: "Health & Fitness",
         color: "rose",
         items: [
-            { id: "type-health-records", label: "Health Hub", icon: <FileText className="h-4 w-4" /> },
+            { id: "type-health-records", label: "Health Hub", icon: <Hospital className="h-4 w-4" /> },
             { id: "type-medications", label: "Medications", icon: <Pill className="h-4 w-4" /> },
             { id: "type-health-ai", label: "Dr. AI", icon: <Sparkles className="h-4 w-4" /> },
             { id: "type-vitals", label: "Vitals", icon: <FileText className="h-4 w-4" /> },
