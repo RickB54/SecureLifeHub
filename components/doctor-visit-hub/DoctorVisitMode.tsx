@@ -21,9 +21,11 @@ import {
   HealthQuestion,
   HealthLetter,
   HealthReferral,
+  HealthVisitSummary,
   DoctorOption,
   VisitOption,
   MedicationSummary,
+  formatDateOnly,
 } from "./doctor-visit-types"
 
 interface DoctorVisitModeProps {
@@ -35,6 +37,7 @@ interface DoctorVisitModeProps {
   questions: HealthQuestion[]
   letters: HealthLetter[]
   referrals: HealthReferral[]
+  visitSummaries?: HealthVisitSummary[]
   theme?: string
 }
 
@@ -47,6 +50,7 @@ export default function DoctorVisitMode({
   questions,
   letters,
   referrals,
+  visitSummaries = [],
   theme = "dark",
 }: DoctorVisitModeProps) {
   const handlePrint = () => {
@@ -385,6 +389,29 @@ export default function DoctorVisitMode({
                   <p className="font-bold text-white">{r.specialist_name}</p>
                   <p className="text-xs text-purple-200">{r.specialty}</p>
                   {r.reason && <p className="text-xs text-gray-300 mt-1">{r.reason}</p>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* 7. VISIT SUMMARIES (Read-Only) */}
+        {visitSummaries.length > 0 && (
+          <section className="print-section p-6 rounded-2xl bg-zinc-950 border-2 border-white/20 space-y-4">
+            <span className="text-xs font-black tracking-widest uppercase text-blue-400 flex items-center gap-1.5">
+              <FileCheck2 className="h-4 w-4" /> Visit Summaries ({visitSummaries.length})
+            </span>
+            <div className="space-y-4">
+              {visitSummaries.map((s) => (
+                <div key={s.id} className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 className="font-bold text-white text-base md:text-lg">{s.title}</h3>
+                    <div className="text-xs text-gray-400 flex items-center gap-2">
+                      <span>{s.date_type ? `${s.date_type}: ` : ""}{formatDateOnly(s.date)}</span>
+                      {s.doctor_name && <span>&bull; Dr. {s.doctor_name}</span>}
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{s.summary_text}</p>
                 </div>
               ))}
             </div>

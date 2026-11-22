@@ -238,6 +238,7 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
       "type-visit-hub-letters": "letters",
       "type-visit-hub-referrals": "referrals",
       "type-visit-hub-questions": "questions",
+      "type-visit-hub-summary": "summary",
     }
     if (sectionMap[page]) {
       if (typeof window !== "undefined") {

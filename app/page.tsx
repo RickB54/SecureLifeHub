@@ -544,12 +544,14 @@ function HomeContent() {
       case "type-visit-hub-notes":
       case "type-visit-hub-letters":
       case "type-visit-hub-referrals":
-      case "type-visit-hub-questions": {
+      case "type-visit-hub-questions":
+      case "type-visit-hub-summary": {
         const sectionMap: Record<string, any> = {
           "type-visit-hub-notes": "notes",
           "type-visit-hub-letters": "letters",
           "type-visit-hub-referrals": "referrals",
           "type-visit-hub-questions": "questions",
+          "type-visit-hub-summary": "summary",
         }
         return (
           <DoctorVisitHub
@@ -558,6 +560,10 @@ function HomeContent() {
             onNavigateTab={(tab) => {
               if (typeof window !== "undefined") {
                 localStorage.setItem("slh-health-target-tab", tab)
+                const url = new URL(window.location.href)
+                url.searchParams.set("page", "type-health-records")
+                url.searchParams.set("tab", tab)
+                window.history.replaceState({}, "", url.toString())
               }
               handleNavigate("type-health-records")
             }}

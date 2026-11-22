@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2 } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -39,16 +39,52 @@ interface HealthDashboardProps {
     mockSettings?: Record<string, boolean>
 }
 
+// Helper to normalize and match Health Hub tab IDs and common aliases
+export const normalizeHealthTab = (tabStr?: string | null): any => {
+    if (!tabStr) return null
+    const lower = tabStr.toLowerCase().trim()
+    const map: Record<string, string> = {
+        "dr-ai": "ai",
+        "dr_ai": "ai",
+        "ai": "ai",
+        "medical-history": "records",
+        "medical_history": "records",
+        "history": "records",
+        "records": "records",
+        "my-doctors": "doctors",
+        "my_doctors": "doctors",
+        "doctor": "doctors",
+        "doctors": "doctors",
+        "visits": "appointments",
+        "appointments": "appointments",
+        "meds": "meds",
+        "medications": "meds",
+        "vitals": "vitals",
+        "timeline": "calendar",
+        "calendar": "calendar",
+        "checkin": "checkin",
+        "check-in": "checkin",
+        "dashboard": "dashboard",
+        "overview": "dashboard",
+    }
+    const target = map[lower] || lower
+    const valid = ["dashboard", "records", "meds", "vitals", "calendar", "appointments", "ai", "checkin", "doctors"]
+    return valid.includes(target) ? target : null
+}
+
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings, setActivePage }: HealthDashboardProps) {
     const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
         if (typeof window !== "undefined") {
-            const target = localStorage.getItem("slh-health-target-tab")
+            const urlParams = new URLSearchParams(window.location.search)
+            const fromUrl = normalizeHealthTab(urlParams.get("tab"))
+            if (fromUrl) return fromUrl
+            const target = normalizeHealthTab(localStorage.getItem("slh-health-target-tab"))
             if (target) {
                 localStorage.removeItem("slh-health-target-tab")
-                return target as any
+                return target
             }
         }
-        return initialTab as any
+        return (normalizeHealthTab(initialTab) || "dashboard") as any
     })
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
@@ -117,15 +153,22 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
     useEffect(() => {
         if (typeof window !== "undefined") {
-            const target = localStorage.getItem("slh-health-target-tab")
+            const urlParams = new URLSearchParams(window.location.search)
+            const fromUrl = normalizeHealthTab(urlParams.get("tab"))
+            if (fromUrl) {
+                setActiveTab(fromUrl)
+                return
+            }
+            const target = normalizeHealthTab(localStorage.getItem("slh-health-target-tab"))
             if (target) {
                 localStorage.removeItem("slh-health-target-tab")
-                setActiveTab(target as any)
+                setActiveTab(target)
                 return
             }
         }
         if (initialTab) {
-            setActiveTab(initialTab as any)
+            const normalized = normalizeHealthTab(initialTab)
+            if (normalized) setActiveTab(normalized)
         }
     }, [initialTab])
 
@@ -1067,6 +1110,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         { id: 'visit-hub-letters', label: 'Letters', icon: Mail, section: 'letters' },
                         { id: 'visit-hub-referrals', label: 'Referrals', icon: Share2, section: 'referrals' },
                         { id: 'visit-hub-questions', label: 'Questions', icon: HelpCircle, section: 'questions' },
+                        { id: 'visit-hub-summary', label: 'Visit Summary', icon: FileCheck2, section: 'summary' },
                         { id: 'records', label: 'Medical History', icon: FileText },
                         { id: 'meds', label: 'Meds', icon: Pill },
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },

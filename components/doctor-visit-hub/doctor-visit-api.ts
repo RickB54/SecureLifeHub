@@ -8,6 +8,7 @@ import {
   HealthNote,
   HealthLetter,
   HealthReferral,
+  HealthVisitSummary,
   DoctorOption,
   VisitOption,
   MedicationSummary,
@@ -387,7 +388,7 @@ export async function fetchHealthNotes(userId?: string): Promise<HealthNote[]> {
   try {
     const { data, error } = await supabase
       .from("health_notes")
-      .select("id, user_id, title, text, date, doctor_id, doctor_name, visit_id, created_at, updated_at")
+      .select("id, user_id, title, text, date, date_type, doctor_id, doctor_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -463,7 +464,7 @@ export async function fetchHealthLetters(userId?: string): Promise<HealthLetter[
   try {
     const { data, error } = await supabase
       .from("health_letters")
-      .select("id, user_id, doctor_id, doctor_name, visit_id, date, direction, status, notes, attachment_url, attachment_name, created_at, updated_at")
+      .select("id, user_id, doctor_id, doctor_name, visit_id, date, date_type, direction, status, notes, attachment_url, attachment_name, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -539,7 +540,7 @@ export async function fetchHealthReferrals(userId?: string): Promise<HealthRefer
   try {
     const { data, error } = await supabase
       .from("health_referrals")
-      .select("id, user_id, specialist_name, specialty, doctor_id, referred_by_doctor_id, referred_by_name, visit_id, reason, date, status, phone, notes, created_at, updated_at")
+      .select("id, user_id, specialist_name, specialty, doctor_id, referred_by_doctor_id, referred_by_name, visit_id, reason, date, date_type, status, phone, notes, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -597,6 +598,130 @@ export async function deleteHealthReferral(id: string, userId?: string): Promise
       await supabase.from("health_referrals").delete().eq("id", id).eq("user_id", userId)
     } catch (err) {
       console.warn("Supabase deleteHealthReferral error:", err)
+    }
+  }
+}
+
+// ==============================================================================
+// GIVEN TO DOCTOR STATUS UPDATE (Immediate row update)
+// ==============================================================================
+
+export async function updateItemGivenStatus(
+  table: "health_notes" | "health_letters" | "health_referrals" | "health_visit_summaries",
+  cacheKey: "notes" | "letters" | "referrals" | "visit_summaries",
+  id: string,
+  given_to_doctor: boolean,
+  given_method: string | null,
+  given_date: string | null,
+  userId?: string
+): Promise<void> {
+  // 1. Update localStorage cache
+  const cached = getCachedItem<any[]>(cacheKey, [])
+  const updated = cached.map((item) => {
+    if (item.id === id) {
+      return {
+        ...item,
+        given_to_doctor,
+        given_method,
+        given_date,
+        updated_at: new Date().toISOString(),
+      }
+    }
+    return item
+  })
+  setCachedItem(cacheKey, updated)
+
+  // 2. Immediate Supabase update if online
+  if (userId && navigator.onLine) {
+    try {
+      await supabase
+        .from(table)
+        .update({
+          given_to_doctor,
+          given_method,
+          given_date,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .eq("user_id", userId)
+    } catch (err) {
+      console.warn(`Supabase updateItemGivenStatus on ${table} error:`, err)
+    }
+  }
+}
+
+// ==============================================================================
+// HEALTH VISIT SUMMARIES
+// ==============================================================================
+
+export async function fetchVisitSummaries(userId?: string): Promise<HealthVisitSummary[]> {
+  const cached = getCachedItem<HealthVisitSummary[]>("visit_summaries", [])
+
+  if (!userId || (typeof window !== "undefined" && !navigator.onLine)) {
+    return cached
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("health_visit_summaries")
+      .select("id, user_id, title, summary_text, date, date_type, doctor_id, doctor_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
+      .eq("user_id", userId)
+      .order("date", { ascending: false })
+
+    if (!error && data) {
+      setCachedItem("visit_summaries", data)
+      return data
+    }
+  } catch (err) {
+    console.warn("Supabase fetchVisitSummaries error:", err)
+  }
+
+  return cached
+}
+
+export async function saveVisitSummary(
+  summary: Omit<HealthVisitSummary, "id"> & { id?: string },
+  userId?: string
+): Promise<HealthVisitSummary> {
+  const id = summary.id || crypto.randomUUID()
+  const completeSummary: HealthVisitSummary = {
+    ...summary,
+    id,
+    user_id: userId,
+    created_at: summary.created_at || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }
+
+  const cached = getCachedItem<HealthVisitSummary[]>("visit_summaries", [])
+  const exists = cached.some((i) => i.id === id)
+  const updated = exists ? cached.map((i) => (i.id === id ? completeSummary : i)) : [completeSummary, ...cached]
+  setCachedItem("visit_summaries", updated)
+
+  if (userId && navigator.onLine) {
+    try {
+      const { data, error } = await supabase
+        .from("health_visit_summaries")
+        .upsert(completeSummary)
+        .select()
+        .maybeSingle()
+      if (!error && data) return data
+    } catch (err) {
+      console.warn("Supabase saveVisitSummary error:", err)
+    }
+  }
+
+  return completeSummary
+}
+
+export async function deleteVisitSummary(id: string, userId?: string): Promise<void> {
+  const cached = getCachedItem<HealthVisitSummary[]>("visit_summaries", [])
+  setCachedItem("visit_summaries", cached.filter((i) => i.id !== id))
+
+  if (userId && navigator.onLine) {
+    try {
+      await supabase.from("health_visit_summaries").delete().eq("id", id).eq("user_id", userId)
+    } catch (err) {
+      console.warn("Supabase deleteVisitSummary error:", err)
     }
   }
 }

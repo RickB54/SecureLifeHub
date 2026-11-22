@@ -25,7 +25,7 @@ function DoctorVisitHubContent() {
           if (typeof window !== "undefined") {
             localStorage.setItem("slh-health-target-tab", tab)
           }
-          router.push("/?page=type-health-records")
+          router.push(`/?page=type-health-records&tab=${tab}`)
         }}
         theme="dark"
       />

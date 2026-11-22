@@ -46,9 +46,13 @@ import {
   HealthNote,
   HealthLetter,
   HealthReferral,
+  HealthVisitSummary,
   DoctorOption,
   VisitOption,
   MedicationSummary,
+  DATE_TYPE_OPTIONS,
+  formatDateOnly,
+  getTodayDateString,
 } from "./doctor-visit-types"
 import {
   fetchHealthProfile,
@@ -68,11 +72,15 @@ import {
   fetchHealthReferrals,
   saveHealthReferral,
   deleteHealthReferral,
+  fetchVisitSummaries,
+  saveVisitSummary,
+  deleteVisitSummary,
+  updateItemGivenStatus,
   fetchExistingDoctors,
   fetchExistingVisits,
   fetchExistingMedications,
-  getSelectedSectionsFromStorage,
   saveSelectedSectionsToStorage,
+  getSelectedSectionsFromStorage,
   getSavedPinHash,
   getLastCacheUpdated,
   compressAndUploadAttachment,
@@ -90,6 +98,8 @@ interface SectionToolbarProps {
   existingDoctors: DoctorOption[]
   includeStatus?: boolean
   searchPlaceholder?: string
+  givenFilter?: string
+  onGivenFilterChange?: (val: string) => void
 }
 
 function SectionToolbar({
@@ -102,6 +112,8 @@ function SectionToolbar({
   existingDoctors,
   includeStatus = false,
   searchPlaceholder = "Search...",
+  givenFilter,
+  onGivenFilterChange,
 }: SectionToolbarProps) {
   return (
     <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center text-xs">
@@ -115,7 +127,7 @@ function SectionToolbar({
           className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
         />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         <select
           value={doctorFilter}
           onChange={(e) => onDoctorFilterChange(e.target.value)}
@@ -128,6 +140,17 @@ function SectionToolbar({
             </option>
           ))}
         </select>
+        {onGivenFilterChange && (
+          <select
+            value={givenFilter || "all"}
+            onChange={(e) => onGivenFilterChange(e.target.value)}
+            className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none flex-1 sm:flex-initial"
+          >
+            <option value="all">All Given Status</option>
+            <option value="not_given">Not given</option>
+            <option value="given">Given</option>
+          </select>
+        )}
         <select
           value={sort}
           onChange={(e) => onSortChange(e.target.value)}
@@ -298,7 +321,15 @@ export default function DoctorVisitHub({
   const [noteDoctorFilter, setNoteDoctorFilter] = useState("all")
   const [noteModalOpen, setNoteModalOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<HealthNote | null>(null)
-  const [noteForm, setNoteForm] = useState({ title: "", text: "", date: new Date().toISOString().slice(0, 10), doctor_id: "", doctor_name: "", visit_id: "" })
+  const [noteForm, setNoteForm] = useState({
+    title: "",
+    text: "",
+    date: getTodayDateString(),
+    date_type: "Appointment date",
+    doctor_id: "",
+    doctor_name: "",
+    visit_id: "",
+  })
 
   const [letters, setLetters] = useState<HealthLetter[]>([])
   const [letterModalOpen, setLetterModalOpen] = useState(false)
@@ -307,7 +338,8 @@ export default function DoctorVisitHub({
     doctor_name: "",
     doctor_id: "",
     visit_id: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: getTodayDateString(),
+    date_type: "Letter date",
     direction: "received" as "sent" | "received",
     status: "needed" as "needed" | "requested" | "received" | "sent",
     notes: "",
@@ -327,10 +359,25 @@ export default function DoctorVisitHub({
     referred_by_doctor_id: "",
     visit_id: "",
     reason: "",
-    date: new Date().toISOString().slice(0, 10),
+    date: getTodayDateString(),
+    date_type: "Referral date",
     status: "needed" as "needed" | "requested" | "scheduled" | "seen",
     phone: "",
     notes: "",
+  })
+
+  // Visit Summaries State
+  const [visitSummaries, setVisitSummaries] = useState<HealthVisitSummary[]>([])
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false)
+  const [editingSummary, setEditingSummary] = useState<HealthVisitSummary | null>(null)
+  const [summaryForm, setSummaryForm] = useState({
+    title: "",
+    summary_text: "",
+    date: getTodayDateString(),
+    date_type: "Visit date",
+    doctor_id: "",
+    doctor_name: "",
+    visit_id: "",
   })
 
   // List Sections: Toolbar, Filters, Sorts, and Expanded States
@@ -351,6 +398,12 @@ export default function DoctorVisitHub({
     return "newest"
   })
   const [notesSearch, setNotesSearch] = useState("")
+  const [notesGivenFilter, setNotesGivenFilter] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_given_notes") || "all"
+    }
+    return "all"
+  })
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
 
   const [lettersSort, setLettersSort] = useState<string>(() => {
@@ -361,6 +414,12 @@ export default function DoctorVisitHub({
   })
   const [lettersSearch, setLettersSearch] = useState("")
   const [lettersDoctorFilter, setLettersDoctorFilter] = useState("all")
+  const [lettersGivenFilter, setLettersGivenFilter] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_given_letters") || "all"
+    }
+    return "all"
+  })
   const [expandedLetters, setExpandedLetters] = useState<Record<string, boolean>>({})
 
   const [referralsSort, setReferralsSort] = useState<string>(() => {
@@ -371,6 +430,12 @@ export default function DoctorVisitHub({
   })
   const [referralsSearch, setReferralsSearch] = useState("")
   const [referralsDoctorFilter, setReferralsDoctorFilter] = useState("all")
+  const [referralsGivenFilter, setReferralsGivenFilter] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_given_referrals") || "all"
+    }
+    return "all"
+  })
   const [expandedReferrals, setExpandedReferrals] = useState<Record<string, boolean>>({})
 
   const [visitsSort, setVisitsSort] = useState<string>(() => {
@@ -383,8 +448,24 @@ export default function DoctorVisitHub({
   const [visitsDoctorFilter, setVisitsDoctorFilter] = useState("all")
   const [expandedVisits, setExpandedVisits] = useState<Record<string, boolean>>({})
 
+  const [summariesSort, setSummariesSort] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_sort_summaries") || "newest"
+    }
+    return "newest"
+  })
+  const [summariesSearch, setSummariesSearch] = useState("")
+  const [summariesDoctorFilter, setSummariesDoctorFilter] = useState("all")
+  const [summariesGivenFilter, setSummariesGivenFilter] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_given_summaries") || "all"
+    }
+    return "all"
+  })
+  const [expandedSummaries, setExpandedSummaries] = useState<Record<string, boolean>>({})
+
   const handleSortChange = (
-    section: "questions" | "notes" | "letters" | "referrals" | "visits",
+    section: "questions" | "notes" | "letters" | "referrals" | "visits" | "summaries",
     val: string
   ) => {
     if (section === "questions") {
@@ -402,11 +483,85 @@ export default function DoctorVisitHub({
     } else if (section === "visits") {
       setVisitsSort(val)
       if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_visits", val)
+    } else if (section === "summaries") {
+      setSummariesSort(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_summaries", val)
+    }
+  }
+
+  const handleGivenFilterChange = (
+    section: "notes" | "letters" | "referrals" | "summaries",
+    val: string
+  ) => {
+    if (section === "notes") {
+      setNotesGivenFilter(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_given_notes", val)
+    } else if (section === "letters") {
+      setLettersGivenFilter(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_given_letters", val)
+    } else if (section === "referrals") {
+      setReferralsGivenFilter(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_given_referrals", val)
+    } else if (section === "summaries") {
+      setSummariesGivenFilter(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_given_summaries", val)
+    }
+  }
+
+  const handleUpdateGivenStatus = async (
+    table: "health_notes" | "health_letters" | "health_referrals" | "health_visit_summaries",
+    id: string,
+    given_to_doctor: boolean,
+    given_method?: "visit" | "portal" | null,
+    given_date?: string | null
+  ) => {
+    const method = given_to_doctor ? given_method || "visit" : null
+    const gDate = given_to_doctor ? given_date || getTodayDateString() : null
+
+    if (table === "health_notes") {
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, given_to_doctor, given_method: method, given_date: gDate } : n
+        )
+      )
+    } else if (table === "health_letters") {
+      setLetters((prev) =>
+        prev.map((l) =>
+          l.id === id ? { ...l, given_to_doctor, given_method: method, given_date: gDate } : l
+        )
+      )
+    } else if (table === "health_referrals") {
+      setReferrals((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, given_to_doctor, given_method: method, given_date: gDate } : r
+        )
+      )
+    } else if (table === "health_visit_summaries") {
+      setVisitSummaries((prev) =>
+        prev.map((s) =>
+          s.id === id ? { ...s, given_to_doctor, given_method: method, given_date: gDate } : s
+        )
+      )
+    }
+
+    const cacheKey =
+      table === "health_notes"
+        ? "notes"
+        : table === "health_letters"
+        ? "letters"
+        : table === "health_referrals"
+        ? "referrals"
+        : "visit_summaries"
+
+    try {
+      await updateItemGivenStatus(table, cacheKey, id, given_to_doctor, method, gDate, userId)
+    } catch (err) {
+      console.error("Failed to update given status:", err)
     }
   }
 
   const toggleExpand = (
-    section: "questions" | "notes" | "letters" | "referrals" | "visits",
+    section: "questions" | "notes" | "letters" | "referrals" | "visits" | "summaries",
     id: string
   ) => {
     if (section === "questions") {
@@ -419,11 +574,13 @@ export default function DoctorVisitHub({
       setExpandedReferrals((prev) => ({ ...prev, [id]: !prev[id] }))
     } else if (section === "visits") {
       setExpandedVisits((prev) => ({ ...prev, [id]: !prev[id] }))
+    } else if (section === "summaries") {
+      setExpandedSummaries((prev) => ({ ...prev, [id]: !prev[id] }))
     }
   }
 
   const toggleExpandAll = (
-    section: "questions" | "notes" | "letters" | "referrals" | "visits",
+    section: "questions" | "notes" | "letters" | "referrals" | "visits" | "summaries",
     ids: string[]
   ) => {
     if (ids.length === 0) return
@@ -452,6 +609,11 @@ export default function DoctorVisitHub({
       const next: Record<string, boolean> = {}
       if (!allExpanded) ids.forEach((id) => { next[id] = true })
       setExpandedVisits(next)
+    } else if (section === "summaries") {
+      const allExpanded = ids.every((id) => expandedSummaries[id])
+      const next: Record<string, boolean> = {}
+      if (!allExpanded) ids.forEach((id) => { next[id] = true })
+      setExpandedSummaries(next)
     }
   }
 
@@ -477,13 +639,13 @@ export default function DoctorVisitHub({
     }
     list.sort((a, b) => {
       if (questionsSort === "oldest") {
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        return (a.created_at || "").localeCompare(b.created_at || "")
       } else if (questionsSort === "doctor_asc") {
         return (a.doctor_name || "").localeCompare(b.doctor_name || "")
       } else if (questionsSort === "title_asc") {
         return a.question.localeCompare(b.question)
       } else {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        return (b.created_at || "").localeCompare(a.created_at || "")
       }
     })
     return list
@@ -501,6 +663,11 @@ export default function DoctorVisitHub({
           (n.doctor_name && n.doctor_name.toLowerCase() === docName)
       )
     }
+    if (notesGivenFilter === "given") {
+      list = list.filter((n) => n.given_to_doctor)
+    } else if (notesGivenFilter === "not_given") {
+      list = list.filter((n) => !n.given_to_doctor)
+    }
     if (notesSearch.trim()) {
       const qLower = notesSearch.toLowerCase()
       list = list.filter(
@@ -512,17 +679,17 @@ export default function DoctorVisitHub({
     }
     list.sort((a, b) => {
       if (notesSort === "oldest") {
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
+        return (a.date || "").localeCompare(b.date || "")
       } else if (notesSort === "doctor_asc") {
         return (a.doctor_name || "").localeCompare(b.doctor_name || "")
       } else if (notesSort === "title_asc") {
         return a.title.localeCompare(b.title)
       } else {
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
+        return (b.date || "").localeCompare(a.date || "")
       }
     })
     return list
-  }, [notes, noteDoctorFilter, notesSearch, notesSort, existingDoctors])
+  }, [notes, noteDoctorFilter, notesGivenFilter, notesSearch, notesSort, existingDoctors])
 
   // Filtered & Sorted Letters
   const filteredLetters = useMemo(() => {
@@ -536,6 +703,11 @@ export default function DoctorVisitHub({
           (l.doctor_name && l.doctor_name.toLowerCase() === docName)
       )
     }
+    if (lettersGivenFilter === "given") {
+      list = list.filter((l) => l.given_to_doctor)
+    } else if (lettersGivenFilter === "not_given") {
+      list = list.filter((l) => !l.given_to_doctor)
+    }
     if (lettersSearch.trim()) {
       const qLower = lettersSearch.toLowerCase()
       list = list.filter(
@@ -548,7 +720,7 @@ export default function DoctorVisitHub({
     }
     list.sort((a, b) => {
       if (lettersSort === "oldest") {
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
+        return (a.date || "").localeCompare(b.date || "")
       } else if (lettersSort === "doctor_asc") {
         return (a.doctor_name || "").localeCompare(b.doctor_name || "")
       } else if (lettersSort === "title_asc") {
@@ -556,11 +728,11 @@ export default function DoctorVisitHub({
       } else if (lettersSort === "status_asc") {
         return (a.status || "").localeCompare(b.status || "")
       } else {
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
+        return (b.date || "").localeCompare(a.date || "")
       }
     })
     return list
-  }, [letters, lettersDoctorFilter, lettersSearch, lettersSort, existingDoctors])
+  }, [letters, lettersDoctorFilter, lettersGivenFilter, lettersSearch, lettersSort, existingDoctors])
 
   // Filtered & Sorted Referrals
   const filteredReferrals = useMemo(() => {
@@ -576,6 +748,11 @@ export default function DoctorVisitHub({
           (r.referred_by_name && r.referred_by_name.toLowerCase().includes(docName))
       )
     }
+    if (referralsGivenFilter === "given") {
+      list = list.filter((r) => r.given_to_doctor)
+    } else if (referralsGivenFilter === "not_given") {
+      list = list.filter((r) => !r.given_to_doctor)
+    }
     if (referralsSearch.trim()) {
       const qLower = referralsSearch.toLowerCase()
       list = list.filter(
@@ -590,7 +767,7 @@ export default function DoctorVisitHub({
     }
     list.sort((a, b) => {
       if (referralsSort === "oldest") {
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
+        return (a.date || "").localeCompare(b.date || "")
       } else if (referralsSort === "doctor_asc") {
         return (a.specialist_name || a.referred_by_name || "").localeCompare(
           b.specialist_name || b.referred_by_name || ""
@@ -600,11 +777,11 @@ export default function DoctorVisitHub({
       } else if (referralsSort === "status_asc") {
         return (a.status || "").localeCompare(b.status || "")
       } else {
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
+        return (b.date || "").localeCompare(a.date || "")
       }
     })
     return list
-  }, [referrals, referralsDoctorFilter, referralsSearch, referralsSort, existingDoctors])
+  }, [referrals, referralsDoctorFilter, referralsGivenFilter, referralsSearch, referralsSort, existingDoctors])
 
   // Filtered & Sorted Visits
   const filteredVisits = useMemo(() => {
@@ -630,17 +807,57 @@ export default function DoctorVisitHub({
     }
     list.sort((a, b) => {
       if (visitsSort === "oldest") {
-        return new Date(a.date).getTime() - new Date(b.date).getTime()
+        return (a.date || "").localeCompare(b.date || "")
       } else if (visitsSort === "doctor_asc") {
         return (a.doctor || a.title || "").localeCompare(b.doctor || b.title || "")
       } else if (visitsSort === "title_asc") {
         return (a.title || a.doctor || "").localeCompare(b.title || b.doctor || "")
       } else {
-        return new Date(b.date).getTime() - new Date(a.date).getTime()
+        return (b.date || "").localeCompare(a.date || "")
       }
     })
     return list
   }, [existingVisits, visitsDoctorFilter, visitsSearch, visitsSort, existingDoctors])
+
+  // Filtered & Sorted Visit Summaries
+  const filteredVisitSummaries = useMemo(() => {
+    let list = [...visitSummaries]
+    if (summariesDoctorFilter !== "all") {
+      const selectedDoc = existingDoctors.find((d) => d.id === summariesDoctorFilter)
+      const docName = selectedDoc ? selectedDoc.name.toLowerCase() : ""
+      list = list.filter(
+        (s) =>
+          s.doctor_id === summariesDoctorFilter ||
+          (s.doctor_name && s.doctor_name.toLowerCase() === docName)
+      )
+    }
+    if (summariesGivenFilter === "given") {
+      list = list.filter((s) => s.given_to_doctor)
+    } else if (summariesGivenFilter === "not_given") {
+      list = list.filter((s) => !s.given_to_doctor)
+    }
+    if (summariesSearch.trim()) {
+      const qLower = summariesSearch.toLowerCase()
+      list = list.filter(
+        (s) =>
+          s.title.toLowerCase().includes(qLower) ||
+          s.summary_text.toLowerCase().includes(qLower) ||
+          (s.doctor_name && s.doctor_name.toLowerCase().includes(qLower))
+      )
+    }
+    list.sort((a, b) => {
+      if (summariesSort === "oldest") {
+        return (a.date || "").localeCompare(b.date || "")
+      } else if (summariesSort === "doctor_asc") {
+        return (a.doctor_name || "").localeCompare(b.doctor_name || "")
+      } else if (summariesSort === "title_asc") {
+        return a.title.localeCompare(b.title)
+      } else {
+        return (b.date || "").localeCompare(a.date || "")
+      }
+    })
+    return list
+  }, [visitSummaries, summariesDoctorFilter, summariesGivenFilter, summariesSearch, summariesSort, existingDoctors])
 
   // 6. Summary Initial Fetch (Low Egress: only 1 consolidated initial fetch)
   useEffect(() => {
@@ -725,6 +942,12 @@ export default function DoctorVisitHub({
       fetchHealthReferrals(userId).then(setReferrals)
     }
   }, [selectedSections, userId, referrals.length])
+
+  useEffect(() => {
+    if (selectedSections.includes("summary") && visitSummaries.length === 0) {
+      fetchVisitSummaries(userId).then(setVisitSummaries)
+    }
+  }, [selectedSections, userId, visitSummaries.length])
 
   // Count linked items per visit
   const visitItemCounts = useMemo(() => {
@@ -816,7 +1039,8 @@ export default function DoctorVisitHub({
       ...(editingNote ? { id: editingNote.id } : {}),
       title: noteForm.title.trim(),
       text: noteForm.text.trim(),
-      date: noteForm.date || new Date().toISOString().slice(0, 10),
+      date: noteForm.date || getTodayDateString(),
+      date_type: noteForm.date_type || "Appointment date",
       doctor_id: noteForm.doctor_id || null,
       doctor_name: doctorObj?.name || noteForm.doctor_name || "",
       visit_id: noteForm.visit_id || null,
@@ -840,7 +1064,8 @@ export default function DoctorVisitHub({
       doctor_name: doctorObj?.name || letterForm.doctor_name || "Doctor Letter",
       doctor_id: letterForm.doctor_id || null,
       visit_id: letterForm.visit_id || null,
-      date: letterForm.date || new Date().toISOString().slice(0, 10),
+      date: letterForm.date || getTodayDateString(),
+      date_type: letterForm.date_type || "Letter date",
       direction: letterForm.direction,
       status: letterForm.status,
       notes: letterForm.notes.trim(),
@@ -890,7 +1115,8 @@ export default function DoctorVisitHub({
       referred_by_name: refDoctorObj?.name || referralForm.referred_by_name.trim(),
       visit_id: referralForm.visit_id || null,
       reason: referralForm.reason.trim(),
-      date: referralForm.date || new Date().toISOString().slice(0, 10),
+      date: referralForm.date || getTodayDateString(),
+      date_type: referralForm.date_type || "Referral date",
       status: referralForm.status,
       phone: specDoctorObj?.phone || referralForm.phone.trim(),
       notes: referralForm.notes.trim(),
@@ -903,6 +1129,55 @@ export default function DoctorVisitHub({
     }
     setReferralModalOpen(false)
     setEditingReferral(null)
+  }
+
+  // Visit Summaries Handlers
+  const handleSaveSummarySubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!summaryForm.title.trim()) return
+    const doctorObj = existingDoctors.find((d) => d.id === summaryForm.doctor_id)
+    const payload = {
+      ...(editingSummary ? { id: editingSummary.id } : {}),
+      title: summaryForm.title.trim(),
+      summary_text: summaryForm.summary_text.trim(),
+      date: summaryForm.date || getTodayDateString(),
+      date_type: summaryForm.date_type || "Visit date",
+      doctor_id: summaryForm.doctor_id || null,
+      doctor_name: doctorObj?.name || summaryForm.doctor_name || "",
+      visit_id: summaryForm.visit_id || null,
+    }
+    const saved = await saveVisitSummary(payload, userId)
+    if (editingSummary) {
+      setVisitSummaries((prev) => prev.map((s) => (s.id === saved.id ? saved : s)))
+    } else {
+      setVisitSummaries((prev) => [saved, ...prev])
+    }
+    setSummaryModalOpen(false)
+    setEditingSummary(null)
+  }
+
+  const handleDeleteHealthNote = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this note?")) return
+    setNotes((prev) => prev.filter((n) => n.id !== id))
+    await deleteHealthNote(id, userId)
+  }
+
+  const handleDeleteLetter = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this letter?")) return
+    setLetters((prev) => prev.filter((l) => l.id !== id))
+    await deleteHealthLetter(id, userId)
+  }
+
+  const handleDeleteReferral = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this referral?")) return
+    setReferrals((prev) => prev.filter((r) => r.id !== id))
+    await deleteHealthReferral(id, userId)
+  }
+
+  const handleDeleteSummary = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this visit summary?")) return
+    setVisitSummaries((prev) => prev.filter((s) => s.id !== id))
+    await deleteVisitSummary(id, userId)
   }
 
   const handleNavigateToFullTab = (targetTab: string) => {
@@ -943,6 +1218,7 @@ export default function DoctorVisitHub({
         questions={questions}
         letters={letters}
         referrals={referrals}
+        visitSummaries={visitSummaries}
         theme={theme}
       />
     )
@@ -1016,6 +1292,135 @@ export default function DoctorVisitHub({
               Saved: {new Date(lastCacheDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: VISIT SUMMARY FORM                                      */}
+      {/* ============================================================== */}
+      {summaryModalOpen && (
+        <div
+          className="fixed inset-0 z-[100060] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setSummaryModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl text-white space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">
+                {editingSummary ? "Edit Visit Summary" : "New Visit Summary"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSummaryModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={summaryForm.title}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
+                  placeholder="e.g. Annual physical exam summary, Consultation recap"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={summaryForm.date}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={summaryForm.date_type}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
+                  <select
+                    value={summaryForm.doctor_id}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="">None / General</option>
+                    {existingDoctors.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
+                <select
+                  value={summaryForm.visit_id}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, visit_id: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="">None</option>
+                  {existingVisits.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {formatDateOnly(v.date)} - {v.doctor || v.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">
+                  What happened at the visit? (Clinical paste box) *
+                </label>
+                <textarea
+                  required
+                  rows={7}
+                  value={summaryForm.summary_text}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, summary_text: e.target.value })}
+                  placeholder="Paste doctor visit instructions, encounter recap, changes in therapy, test results discussed, or what happened at the visit..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white leading-relaxed custom-scrollbar font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSummaryModalOpen(false)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
+                >
+                  Save Summary
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
@@ -1113,14 +1518,9 @@ export default function DoctorVisitHub({
                   <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
                     <Clock className="h-4 w-4 text-blue-400 shrink-0" />
                     <span>
-                      {new Date(nextAppt.date).toLocaleDateString(undefined, {
-                        weekday: "short",
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "numeric",
-                        minute: "2-digit",
-                      })}
+                      {formatDateOnly(nextAppt.date)}
+                      {nextAppt.date.includes("T") &&
+                        ` at ${new Date(nextAppt.date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`}
                     </span>
                   </div>
 
@@ -1598,7 +1998,7 @@ export default function DoctorVisitHub({
                   filteredQuestions.map((q) => {
                     const isExpanded = !!expandedQuestions[q.id]
                     const dateStr = q.created_at
-                      ? new Date(q.created_at).toLocaleDateString()
+                      ? formatDateOnly(q.created_at)
                       : ""
                     return (
                       <div
@@ -1741,7 +2141,15 @@ export default function DoctorVisitHub({
                     type="button"
                     onClick={() => {
                       setEditingNote(null)
-                      setNoteForm({ title: "", text: "", date: new Date().toISOString().slice(0, 10), doctor_id: "", doctor_name: "", visit_id: "" })
+                      setNoteForm({
+                        title: "",
+                        text: "",
+                        date: getTodayDateString(),
+                        date_type: "Appointment date",
+                        doctor_id: "",
+                        doctor_name: "",
+                        visit_id: "",
+                      })
                       setNoteModalOpen(true)
                     }}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
@@ -1760,7 +2168,7 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort */}
+              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={notesSearch}
                 onSearchChange={setNotesSearch}
@@ -1770,6 +2178,8 @@ export default function DoctorVisitHub({
                 onSortChange={(val) => handleSortChange("notes", val)}
                 existingDoctors={existingDoctors}
                 searchPlaceholder="Search notes..."
+                givenFilter={notesGivenFilter}
+                onGivenFilterChange={(val) => handleGivenFilterChange("notes", val)}
               />
 
               {/* Notes List */}
@@ -1783,9 +2193,8 @@ export default function DoctorVisitHub({
                 ) : (
                   filteredNotes.map((n) => {
                     const isExpanded = !!expandedNotes[n.id]
-                    const dateStr = n.date
-                      ? new Date(n.date).toLocaleDateString()
-                      : ""
+                    const dateFormatted = formatDateOnly(n.date)
+                    const dateWithLabel = n.date_type ? `${n.date_type}: ${dateFormatted}` : dateFormatted
                     return (
                       <div
                         key={n.id}
@@ -1797,8 +2206,21 @@ export default function DoctorVisitHub({
                           className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
                         >
                           <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                            <span
+                              className={`text-xs md:text-sm font-bold truncate ${
+                                n.given_to_doctor ? "text-emerald-400" : "text-blue-400"
+                              }`}
+                            >
                               {n.title}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                                n.given_to_doctor
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                              }`}
+                            >
+                              {n.given_to_doctor ? `Given - ${n.given_method || "visit"}` : "Not given"}
                             </span>
                             {n.doctor_name && (
                               <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-400 shrink-0 truncate max-w-[120px]">
@@ -1807,7 +2229,7 @@ export default function DoctorVisitHub({
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            {dateStr && <span className="text-[11px] text-slate-400">{dateStr}</span>}
+                            {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -1821,7 +2243,7 @@ export default function DoctorVisitHub({
                           <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
                             <div className="flex items-start justify-between gap-3">
                               <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
-                                <span>{dateStr}</span>
+                                <span>{dateWithLabel}</span>
                                 {n.doctor_name && <span>&bull; Dr. {n.doctor_name}</span>}
                               </div>
                               <div className="flex items-center gap-1">
@@ -1834,6 +2256,7 @@ export default function DoctorVisitHub({
                                       title: n.title,
                                       text: n.text,
                                       date: n.date,
+                                      date_type: n.date_type || "Appointment date",
                                       doctor_id: n.doctor_id || "",
                                       doctor_name: n.doctor_name || "",
                                       visit_id: n.visit_id || "",
@@ -1858,6 +2281,62 @@ export default function DoctorVisitHub({
                                 </button>
                               </div>
                             </div>
+
+                            {/* Given to Doctor Tracker */}
+                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!n.given_to_doctor}
+                                  onChange={(e) =>
+                                    handleUpdateGivenStatus(
+                                      "health_notes",
+                                      n.id,
+                                      e.target.checked,
+                                      n.given_method || "visit",
+                                      n.given_date || getTodayDateString()
+                                    )
+                                  }
+                                  className="rounded border-slate-700 text-teal-600 focus:ring-0"
+                                />
+                                <span>Given to doctor</span>
+                              </label>
+                              {n.given_to_doctor && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <select
+                                    value={n.given_method || "visit"}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_notes",
+                                        n.id,
+                                        true,
+                                        e.target.value as "visit" | "portal",
+                                        n.given_date || getTodayDateString()
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  >
+                                    <option value="visit">At visit</option>
+                                    <option value="portal">Via portal</option>
+                                  </select>
+                                  <input
+                                    type="date"
+                                    value={n.given_date || getTodayDateString()}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_notes",
+                                        n.id,
+                                        true,
+                                        n.given_method || "visit",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  />
+                                </div>
+                              )}
+                            </div>
+
                             <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{n.text}</p>
                           </div>
                         )}
@@ -1924,7 +2403,8 @@ export default function DoctorVisitHub({
                         doctor_name: "",
                         doctor_id: "",
                         visit_id: "",
-                        date: new Date().toISOString().slice(0, 10),
+                        date: getTodayDateString(),
+                        date_type: "Letter date",
                         direction: "received",
                         status: "needed",
                         notes: "",
@@ -1949,7 +2429,7 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort */}
+              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={lettersSearch}
                 onSearchChange={setLettersSearch}
@@ -1960,6 +2440,8 @@ export default function DoctorVisitHub({
                 existingDoctors={existingDoctors}
                 includeStatus={true}
                 searchPlaceholder="Search letters..."
+                givenFilter={lettersGivenFilter}
+                onGivenFilterChange={(val) => handleGivenFilterChange("letters", val)}
               />
 
               {/* Letters List */}
@@ -1973,9 +2455,8 @@ export default function DoctorVisitHub({
                 ) : (
                   filteredLetters.map((l) => {
                     const isExpanded = !!expandedLetters[l.id]
-                    const dateStr = l.date
-                      ? new Date(l.date).toLocaleDateString()
-                      : ""
+                    const dateFormatted = formatDateOnly(l.date)
+                    const dateWithLabel = l.date_type ? `${l.date_type}: ${dateFormatted}` : dateFormatted
                     return (
                       <div
                         key={l.id}
@@ -1987,8 +2468,21 @@ export default function DoctorVisitHub({
                           className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                            <span
+                              className={`text-xs md:text-sm font-bold truncate ${
+                                l.given_to_doctor ? "text-emerald-400" : "text-blue-400"
+                              }`}
+                            >
                               {l.doctor_name || "Doctor Letter"}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                                l.given_to_doctor
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                              }`}
+                            >
+                              {l.given_to_doctor ? `Given - ${l.given_method || "visit"}` : "Not given"}
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
@@ -2004,7 +2498,7 @@ export default function DoctorVisitHub({
                             </span>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            {dateStr && <span className="text-[11px] text-slate-400">{dateStr}</span>}
+                            {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -2018,7 +2512,7 @@ export default function DoctorVisitHub({
                           <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
                             <div className="flex items-start justify-between gap-3 flex-wrap">
                               <div className="flex items-center gap-2 flex-wrap text-xs text-slate-400">
-                                <span>Date: {dateStr}</span>
+                                <span>{dateWithLabel}</span>
                                 <span>&bull; Direction: {l.direction}</span>
                                 <span>&bull; Status: {l.status}</span>
                               </div>
@@ -2033,6 +2527,7 @@ export default function DoctorVisitHub({
                                       doctor_id: l.doctor_id || "",
                                       visit_id: l.visit_id || "",
                                       date: l.date,
+                                      date_type: l.date_type || "Letter date",
                                       direction: l.direction,
                                       status: l.status,
                                       notes: l.notes,
@@ -2058,6 +2553,61 @@ export default function DoctorVisitHub({
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
+                            </div>
+
+                            {/* Given to Doctor Tracker */}
+                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!l.given_to_doctor}
+                                  onChange={(e) =>
+                                    handleUpdateGivenStatus(
+                                      "health_letters",
+                                      l.id,
+                                      e.target.checked,
+                                      l.given_method || "visit",
+                                      l.given_date || getTodayDateString()
+                                    )
+                                  }
+                                  className="rounded border-slate-700 text-amber-500 focus:ring-0"
+                                />
+                                <span>Given to doctor</span>
+                              </label>
+                              {l.given_to_doctor && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <select
+                                    value={l.given_method || "visit"}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_letters",
+                                        l.id,
+                                        true,
+                                        e.target.value as "visit" | "portal",
+                                        l.given_date || getTodayDateString()
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  >
+                                    <option value="visit">At visit</option>
+                                    <option value="portal">Via portal</option>
+                                  </select>
+                                  <input
+                                    type="date"
+                                    value={l.given_date || getTodayDateString()}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_letters",
+                                        l.id,
+                                        true,
+                                        l.given_method || "visit",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  />
+                                </div>
+                              )}
                             </div>
 
                             {l.notes && <p className="text-xs text-slate-300 leading-relaxed">{l.notes}</p>}
@@ -2145,7 +2695,8 @@ export default function DoctorVisitHub({
                         referred_by_doctor_id: "",
                         visit_id: "",
                         reason: "",
-                        date: new Date().toISOString().slice(0, 10),
+                        date: getTodayDateString(),
+                        date_type: "Referral date",
                         status: "needed",
                         phone: "",
                         notes: "",
@@ -2168,7 +2719,7 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort */}
+              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={referralsSearch}
                 onSearchChange={setReferralsSearch}
@@ -2179,6 +2730,8 @@ export default function DoctorVisitHub({
                 existingDoctors={existingDoctors}
                 includeStatus={true}
                 searchPlaceholder="Search referrals..."
+                givenFilter={referralsGivenFilter}
+                onGivenFilterChange={(val) => handleGivenFilterChange("referrals", val)}
               />
 
               {/* Referrals List */}
@@ -2192,9 +2745,8 @@ export default function DoctorVisitHub({
                 ) : (
                   filteredReferrals.map((r) => {
                     const isExpanded = !!expandedReferrals[r.id]
-                    const dateStr = r.date
-                      ? new Date(r.date).toLocaleDateString()
-                      : ""
+                    const dateFormatted = formatDateOnly(r.date)
+                    const dateWithLabel = r.date_type ? `${r.date_type}: ${dateFormatted}` : dateFormatted
                     return (
                       <div
                         key={r.id}
@@ -2206,8 +2758,21 @@ export default function DoctorVisitHub({
                           className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
                         >
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                            <span
+                              className={`text-xs md:text-sm font-bold truncate ${
+                                r.given_to_doctor ? "text-emerald-400" : "text-blue-400"
+                              }`}
+                            >
                               {r.specialist_name}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                                r.given_to_doctor
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                              }`}
+                            >
+                              {r.given_to_doctor ? `Given - ${r.given_method || "visit"}` : "Not given"}
                             </span>
                             {r.specialty && (
                               <span className="hidden sm:inline-flex text-xs text-rose-300 font-medium truncate max-w-[120px]">
@@ -2229,7 +2794,7 @@ export default function DoctorVisitHub({
                             </span>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            {dateStr && <span className="text-[11px] text-slate-400">{dateStr}</span>}
+                            {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -2244,7 +2809,7 @@ export default function DoctorVisitHub({
                             <div className="flex items-start justify-between gap-3 flex-wrap">
                               <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
                                 {r.specialty && <span className="text-rose-300 font-semibold">{r.specialty}</span>}
-                                <span>Date: {dateStr}</span>
+                                <span>{dateWithLabel}</span>
                                 {r.referred_by_name && <span>Referred by: Dr. {r.referred_by_name}</span>}
                                 {r.phone && <span>Phone: {r.phone}</span>}
                               </div>
@@ -2277,6 +2842,7 @@ export default function DoctorVisitHub({
                                       visit_id: r.visit_id || "",
                                       reason: r.reason,
                                       date: r.date,
+                                      date_type: r.date_type || "Referral date",
                                       status: r.status,
                                       phone: r.phone,
                                       notes: r.notes,
@@ -2300,6 +2866,61 @@ export default function DoctorVisitHub({
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
+                            </div>
+
+                            {/* Given to Doctor Tracker */}
+                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!r.given_to_doctor}
+                                  onChange={(e) =>
+                                    handleUpdateGivenStatus(
+                                      "health_referrals",
+                                      r.id,
+                                      e.target.checked,
+                                      r.given_method || "visit",
+                                      r.given_date || getTodayDateString()
+                                    )
+                                  }
+                                  className="rounded border-slate-700 text-rose-500 focus:ring-0"
+                                />
+                                <span>Given to doctor</span>
+                              </label>
+                              {r.given_to_doctor && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <select
+                                    value={r.given_method || "visit"}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_referrals",
+                                        r.id,
+                                        true,
+                                        e.target.value as "visit" | "portal",
+                                        r.given_date || getTodayDateString()
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  >
+                                    <option value="visit">At visit</option>
+                                    <option value="portal">Via portal</option>
+                                  </select>
+                                  <input
+                                    type="date"
+                                    value={r.given_date || getTodayDateString()}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_referrals",
+                                        r.id,
+                                        true,
+                                        r.given_method || "visit",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  />
+                                </div>
+                              )}
                             </div>
 
                             {r.reason && (
@@ -2402,13 +3023,7 @@ export default function DoctorVisitHub({
                   filteredVisits.map((v) => {
                     const isExpanded = !!expandedVisits[v.id]
                     const counts = visitItemCounts[v.id] || { notes: 0, letters: 0, referrals: 0 }
-                    const dateStr = v.date
-                      ? new Date(v.date).toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        })
-                      : "No date"
+                    const dateStr = formatDateOnly(v.date) || "No date"
                     return (
                       <div
                         key={v.id}
@@ -2491,6 +3106,266 @@ export default function DoctorVisitHub({
                   onClick={() => handleGoToNextSection("visits")}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
                 >
+                  <span>Next: Visit Summary</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* ============================================================== */}
+          {/* SECTION 8: VISIT SUMMARY                                       */}
+          {/* ============================================================== */}
+          {selectedSections.includes("summary") && (
+            <section
+              id="section-summary"
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
+                    <FileCheck2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base md:text-lg font-bold text-white">Visit Summary</h2>
+                    <p className="text-xs text-slate-400">Clinical visit summaries & doctor encounter notes</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "summaries",
+                        filteredVisitSummaries.map((s) => s.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredVisitSummaries.length > 0 &&
+                    filteredVisitSummaries.every((s) => expandedSummaries[s.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingSummary(null)
+                      setSummaryForm({
+                        title: "",
+                        summary_text: "",
+                        date: getTodayDateString(),
+                        date_type: "Visit date",
+                        doctor_id: "",
+                        doctor_name: "",
+                        visit_id: "",
+                      })
+                      setSummaryModalOpen(true)
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>New Summary</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateToFullTab("records")}
+                    className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
+                  >
+                    <span>Medical History</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
+              <SectionToolbar
+                search={summariesSearch}
+                onSearchChange={setSummariesSearch}
+                doctorFilter={summariesDoctorFilter}
+                onDoctorFilterChange={setSummariesDoctorFilter}
+                sort={summariesSort}
+                onSortChange={(val) => handleSortChange("summaries", val)}
+                existingDoctors={existingDoctors}
+                searchPlaceholder="Search visit summaries..."
+                givenFilter={summariesGivenFilter}
+                onGivenFilterChange={(val) => handleGivenFilterChange("summaries", val)}
+              />
+
+              {/* Summaries List */}
+              <div className="space-y-3">
+                {filteredVisitSummaries.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {visitSummaries.length === 0
+                      ? "No visit summaries recorded yet."
+                      : "No visit summaries match your filter."}
+                  </p>
+                ) : (
+                  filteredVisitSummaries.map((s) => {
+                    const isExpanded = !!expandedSummaries[s.id]
+                    const dateFormatted = formatDateOnly(s.date)
+                    const dateWithLabel = s.date_type ? `${s.date_type}: ${dateFormatted}` : dateFormatted
+                    return (
+                      <div
+                        key={s.id}
+                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
+                      >
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("summaries", s.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
+                        >
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <span
+                              className={`text-xs md:text-sm font-bold truncate ${
+                                s.given_to_doctor ? "text-emerald-400" : "text-blue-400"
+                              }`}
+                            >
+                              {s.title}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                                s.given_to_doctor
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-blue-500/15 text-blue-400 border border-blue-500/30"
+                              }`}
+                            >
+                              {s.given_to_doctor ? `Given - ${s.given_method || "visit"}` : "Not given"}
+                            </span>
+                            {s.doctor_name && (
+                              <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 shrink-0 truncate max-w-[120px]">
+                                Dr. {s.doctor_name}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                                <span>{dateWithLabel}</span>
+                                {s.doctor_name && <span>&bull; Dr. {s.doctor_name}</span>}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingSummary(s)
+                                    setSummaryForm({
+                                      title: s.title,
+                                      summary_text: s.summary_text,
+                                      date: s.date,
+                                      date_type: s.date_type || "Visit date",
+                                      doctor_id: s.doctor_id || "",
+                                      doctor_name: s.doctor_name || "",
+                                      visit_id: s.visit_id || "",
+                                    })
+                                    setSummaryModalOpen(true)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Edit summary"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteSummary(s.id)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Delete summary"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Given to Doctor Tracker */}
+                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+                              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={!!s.given_to_doctor}
+                                  onChange={(e) =>
+                                    handleUpdateGivenStatus(
+                                      "health_visit_summaries",
+                                      s.id,
+                                      e.target.checked,
+                                      s.given_method || "visit",
+                                      s.given_date || getTodayDateString()
+                                    )
+                                  }
+                                  className="rounded border-slate-700 text-cyan-500 focus:ring-0"
+                                />
+                                <span>Given to doctor</span>
+                              </label>
+                              {s.given_to_doctor && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <select
+                                    value={s.given_method || "visit"}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_visit_summaries",
+                                        s.id,
+                                        true,
+                                        e.target.value as "visit" | "portal",
+                                        s.given_date || getTodayDateString()
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  >
+                                    <option value="visit">At visit</option>
+                                    <option value="portal">Via portal</option>
+                                  </select>
+                                  <input
+                                    type="date"
+                                    value={s.given_date || getTodayDateString()}
+                                    onChange={(e) =>
+                                      handleUpdateGivenStatus(
+                                        "health_visit_summaries",
+                                        s.id,
+                                        true,
+                                        s.given_method || "visit",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-slate-200 text-xs"
+                                  />
+                                </div>
+                              )}
+                            </div>
+
+                            <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+                              {s.summary_text}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              {/* Bottom Next Section Button */}
+              <div className="pt-2 border-t border-slate-800 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleGoToNextSection("summary")}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                >
                   <span>Next: Next Appointment</span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
@@ -2538,7 +3413,7 @@ export default function DoctorVisitHub({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -2547,6 +3422,20 @@ export default function DoctorVisitHub({
                     onChange={(e) => setNoteForm({ ...noteForm, date: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={noteForm.date_type}
+                    onChange={(e) => setNoteForm({ ...noteForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Related Doctor</label>
@@ -2575,7 +3464,7 @@ export default function DoctorVisitHub({
                   <option value="">None</option>
                   {existingVisits.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.date ? new Date(v.date).toLocaleDateString() : ""} - {v.doctor || v.title}
+                      {formatDateOnly(v.date)} - {v.doctor || v.title}
                     </option>
                   ))}
                 </select>
@@ -2606,6 +3495,135 @@ export default function DoctorVisitHub({
                   className="px-4 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold"
                 >
                   Save Note
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: VISIT SUMMARY FORM                                      */}
+      {/* ============================================================== */}
+      {summaryModalOpen && (
+        <div
+          className="fixed inset-0 z-[100060] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setSummaryModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl text-white space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">
+                {editingSummary ? "Edit Visit Summary" : "New Visit Summary"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSummaryModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={summaryForm.title}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
+                  placeholder="e.g. Annual physical exam summary, Consultation recap"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={summaryForm.date}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={summaryForm.date_type}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
+                  <select
+                    value={summaryForm.doctor_id}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="">None / General</option>
+                    {existingDoctors.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
+                <select
+                  value={summaryForm.visit_id}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, visit_id: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="">None</option>
+                  {existingVisits.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {formatDateOnly(v.date)} - {v.doctor || v.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">
+                  What happened at the visit? (Clinical paste box) *
+                </label>
+                <textarea
+                  required
+                  rows={7}
+                  value={summaryForm.summary_text}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, summary_text: e.target.value })}
+                  placeholder="Paste doctor visit instructions, encounter recap, changes in therapy, test results discussed, or what happened at the visit..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white leading-relaxed custom-scrollbar font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSummaryModalOpen(false)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
+                >
+                  Save Summary
                 </button>
               </div>
             </form>
@@ -2667,7 +3685,7 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -2676,6 +3694,20 @@ export default function DoctorVisitHub({
                     onChange={(e) => setLetterForm({ ...letterForm, date: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={letterForm.date_type}
+                    onChange={(e) => setLetterForm({ ...letterForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Direction</label>
@@ -2754,6 +3786,135 @@ export default function DoctorVisitHub({
                   className="px-4 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold"
                 >
                   Save Letter
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: VISIT SUMMARY FORM                                      */}
+      {/* ============================================================== */}
+      {summaryModalOpen && (
+        <div
+          className="fixed inset-0 z-[100060] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setSummaryModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl text-white space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">
+                {editingSummary ? "Edit Visit Summary" : "New Visit Summary"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSummaryModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={summaryForm.title}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
+                  placeholder="e.g. Annual physical exam summary, Consultation recap"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={summaryForm.date}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={summaryForm.date_type}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
+                  <select
+                    value={summaryForm.doctor_id}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="">None / General</option>
+                    {existingDoctors.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
+                <select
+                  value={summaryForm.visit_id}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, visit_id: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="">None</option>
+                  {existingVisits.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {formatDateOnly(v.date)} - {v.doctor || v.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">
+                  What happened at the visit? (Clinical paste box) *
+                </label>
+                <textarea
+                  required
+                  rows={7}
+                  value={summaryForm.summary_text}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, summary_text: e.target.value })}
+                  placeholder="Paste doctor visit instructions, encounter recap, changes in therapy, test results discussed, or what happened at the visit..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white leading-relaxed custom-scrollbar font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSummaryModalOpen(false)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
+                >
+                  Save Summary
                 </button>
               </div>
             </form>
@@ -2851,7 +4012,7 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Referred By</label>
                   <select
@@ -2875,6 +4036,20 @@ export default function DoctorVisitHub({
                     onChange={(e) => setReferralForm({ ...referralForm, date: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={referralForm.date_type}
+                    onChange={(e) => setReferralForm({ ...referralForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Status</label>
@@ -2926,6 +4101,135 @@ export default function DoctorVisitHub({
                   className="px-4 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold"
                 >
                   Save Referral
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: VISIT SUMMARY FORM                                      */}
+      {/* ============================================================== */}
+      {summaryModalOpen && (
+        <div
+          className="fixed inset-0 z-[100060] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setSummaryModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl text-white space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">
+                {editingSummary ? "Edit Visit Summary" : "New Visit Summary"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setSummaryModalOpen(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={summaryForm.title}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
+                  placeholder="e.g. Annual physical exam summary, Consultation recap"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <input
+                    type="date"
+                    value={summaryForm.date}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
+                  <select
+                    value={summaryForm.date_type}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    {DATE_TYPE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
+                  <select
+                    value={summaryForm.doctor_id}
+                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="">None / General</option>
+                    {existingDoctors.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
+                <select
+                  value={summaryForm.visit_id}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, visit_id: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="">None</option>
+                  {existingVisits.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {formatDateOnly(v.date)} - {v.doctor || v.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">
+                  What happened at the visit? (Clinical paste box) *
+                </label>
+                <textarea
+                  required
+                  rows={7}
+                  value={summaryForm.summary_text}
+                  onChange={(e) => setSummaryForm({ ...summaryForm, summary_text: e.target.value })}
+                  placeholder="Paste doctor visit instructions, encounter recap, changes in therapy, test results discussed, or what happened at the visit..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white leading-relaxed custom-scrollbar font-mono text-[11px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setSummaryModalOpen(false)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
+                >
+                  Save Summary
                 </button>
               </div>
             </form>
