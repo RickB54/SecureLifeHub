@@ -21,6 +21,9 @@ import {
   Circle,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Search,
   Filter,
   Paperclip,
   Upload,
@@ -76,6 +79,70 @@ import {
 } from "./doctor-visit-api"
 import DoctorVisitMode from "./DoctorVisitMode"
 import DoctorVisitPinModal from "./DoctorVisitPinModal"
+
+interface SectionToolbarProps {
+  search: string
+  onSearchChange: (val: string) => void
+  doctorFilter: string
+  onDoctorFilterChange: (val: string) => void
+  sort: string
+  onSortChange: (val: string) => void
+  existingDoctors: DoctorOption[]
+  includeStatus?: boolean
+  searchPlaceholder?: string
+}
+
+function SectionToolbar({
+  search,
+  onSearchChange,
+  doctorFilter,
+  onDoctorFilterChange,
+  sort,
+  onSortChange,
+  existingDoctors,
+  includeStatus = false,
+  searchPlaceholder = "Search...",
+}: SectionToolbarProps) {
+  return (
+    <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center text-xs">
+      <div className="relative flex-1">
+        <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={searchPlaceholder}
+          className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <select
+          value={doctorFilter}
+          onChange={(e) => onDoctorFilterChange(e.target.value)}
+          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none flex-1 sm:flex-initial"
+        >
+          <option value="all">All Doctors</option>
+          {existingDoctors.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={sort}
+          onChange={(e) => onSortChange(e.target.value)}
+          className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none flex-1 sm:flex-initial"
+        >
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="doctor_asc">Doctor A-Z</option>
+          <option value="title_asc">Title A-Z</option>
+          {includeStatus && <option value="status_asc">Status</option>}
+        </select>
+      </div>
+    </div>
+  )
+}
 
 interface DoctorVisitHubProps {
   onClose: () => void
@@ -265,6 +332,315 @@ export default function DoctorVisitHub({
     phone: "",
     notes: "",
   })
+
+  // List Sections: Toolbar, Filters, Sorts, and Expanded States
+  const [questionsSort, setQuestionsSort] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_sort_questions") || "newest"
+    }
+    return "newest"
+  })
+  const [questionsSearch, setQuestionsSearch] = useState("")
+  const [questionsDoctorFilter, setQuestionsDoctorFilter] = useState("all")
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
+
+  const [notesSort, setNotesSort] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_sort_notes") || "newest"
+    }
+    return "newest"
+  })
+  const [notesSearch, setNotesSearch] = useState("")
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
+
+  const [lettersSort, setLettersSort] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_sort_letters") || "newest"
+    }
+    return "newest"
+  })
+  const [lettersSearch, setLettersSearch] = useState("")
+  const [lettersDoctorFilter, setLettersDoctorFilter] = useState("all")
+  const [expandedLetters, setExpandedLetters] = useState<Record<string, boolean>>({})
+
+  const [referralsSort, setReferralsSort] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_sort_referrals") || "newest"
+    }
+    return "newest"
+  })
+  const [referralsSearch, setReferralsSearch] = useState("")
+  const [referralsDoctorFilter, setReferralsDoctorFilter] = useState("all")
+  const [expandedReferrals, setExpandedReferrals] = useState<Record<string, boolean>>({})
+
+  const [visitsSort, setVisitsSort] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("slh_vh_sort_visits") || "newest"
+    }
+    return "newest"
+  })
+  const [visitsSearch, setVisitsSearch] = useState("")
+  const [visitsDoctorFilter, setVisitsDoctorFilter] = useState("all")
+  const [expandedVisits, setExpandedVisits] = useState<Record<string, boolean>>({})
+
+  const handleSortChange = (
+    section: "questions" | "notes" | "letters" | "referrals" | "visits",
+    val: string
+  ) => {
+    if (section === "questions") {
+      setQuestionsSort(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_questions", val)
+    } else if (section === "notes") {
+      setNotesSort(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_notes", val)
+    } else if (section === "letters") {
+      setLettersSort(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_letters", val)
+    } else if (section === "referrals") {
+      setReferralsSort(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_referrals", val)
+    } else if (section === "visits") {
+      setVisitsSort(val)
+      if (typeof window !== "undefined") localStorage.setItem("slh_vh_sort_visits", val)
+    }
+  }
+
+  const toggleExpand = (
+    section: "questions" | "notes" | "letters" | "referrals" | "visits",
+    id: string
+  ) => {
+    if (section === "questions") {
+      setExpandedQuestions((prev) => ({ ...prev, [id]: !prev[id] }))
+    } else if (section === "notes") {
+      setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }))
+    } else if (section === "letters") {
+      setExpandedLetters((prev) => ({ ...prev, [id]: !prev[id] }))
+    } else if (section === "referrals") {
+      setExpandedReferrals((prev) => ({ ...prev, [id]: !prev[id] }))
+    } else if (section === "visits") {
+      setExpandedVisits((prev) => ({ ...prev, [id]: !prev[id] }))
+    }
+  }
+
+  const toggleExpandAll = (
+    section: "questions" | "notes" | "letters" | "referrals" | "visits",
+    ids: string[]
+  ) => {
+    if (ids.length === 0) return
+    if (section === "questions") {
+      const allExpanded = ids.every((id) => expandedQuestions[id])
+      const next: Record<string, boolean> = {}
+      if (!allExpanded) ids.forEach((id) => { next[id] = true })
+      setExpandedQuestions(next)
+    } else if (section === "notes") {
+      const allExpanded = ids.every((id) => expandedNotes[id])
+      const next: Record<string, boolean> = {}
+      if (!allExpanded) ids.forEach((id) => { next[id] = true })
+      setExpandedNotes(next)
+    } else if (section === "letters") {
+      const allExpanded = ids.every((id) => expandedLetters[id])
+      const next: Record<string, boolean> = {}
+      if (!allExpanded) ids.forEach((id) => { next[id] = true })
+      setExpandedLetters(next)
+    } else if (section === "referrals") {
+      const allExpanded = ids.every((id) => expandedReferrals[id])
+      const next: Record<string, boolean> = {}
+      if (!allExpanded) ids.forEach((id) => { next[id] = true })
+      setExpandedReferrals(next)
+    } else if (section === "visits") {
+      const allExpanded = ids.every((id) => expandedVisits[id])
+      const next: Record<string, boolean> = {}
+      if (!allExpanded) ids.forEach((id) => { next[id] = true })
+      setExpandedVisits(next)
+    }
+  }
+
+  // Filtered & Sorted Questions
+  const filteredQuestions = useMemo(() => {
+    let list = [...questions]
+    if (questionsDoctorFilter !== "all") {
+      const selectedDoc = existingDoctors.find((d) => d.id === questionsDoctorFilter)
+      const docName = selectedDoc ? selectedDoc.name.toLowerCase() : ""
+      list = list.filter(
+        (q) =>
+          q.doctor_id === questionsDoctorFilter ||
+          (q.doctor_name && q.doctor_name.toLowerCase() === docName)
+      )
+    }
+    if (questionsSearch.trim()) {
+      const qLower = questionsSearch.toLowerCase()
+      list = list.filter(
+        (q) =>
+          q.question.toLowerCase().includes(qLower) ||
+          (q.doctor_name && q.doctor_name.toLowerCase().includes(qLower))
+      )
+    }
+    list.sort((a, b) => {
+      if (questionsSort === "oldest") {
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      } else if (questionsSort === "doctor_asc") {
+        return (a.doctor_name || "").localeCompare(b.doctor_name || "")
+      } else if (questionsSort === "title_asc") {
+        return a.question.localeCompare(b.question)
+      } else {
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+    return list
+  }, [questions, questionsDoctorFilter, questionsSearch, questionsSort, existingDoctors])
+
+  // Filtered & Sorted Notes
+  const filteredNotes = useMemo(() => {
+    let list = [...notes]
+    if (noteDoctorFilter !== "all") {
+      const selectedDoc = existingDoctors.find((d) => d.id === noteDoctorFilter)
+      const docName = selectedDoc ? selectedDoc.name.toLowerCase() : ""
+      list = list.filter(
+        (n) =>
+          n.doctor_id === noteDoctorFilter ||
+          (n.doctor_name && n.doctor_name.toLowerCase() === docName)
+      )
+    }
+    if (notesSearch.trim()) {
+      const qLower = notesSearch.toLowerCase()
+      list = list.filter(
+        (n) =>
+          n.title.toLowerCase().includes(qLower) ||
+          n.text.toLowerCase().includes(qLower) ||
+          (n.doctor_name && n.doctor_name.toLowerCase().includes(qLower))
+      )
+    }
+    list.sort((a, b) => {
+      if (notesSort === "oldest") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+      } else if (notesSort === "doctor_asc") {
+        return (a.doctor_name || "").localeCompare(b.doctor_name || "")
+      } else if (notesSort === "title_asc") {
+        return a.title.localeCompare(b.title)
+      } else {
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      }
+    })
+    return list
+  }, [notes, noteDoctorFilter, notesSearch, notesSort, existingDoctors])
+
+  // Filtered & Sorted Letters
+  const filteredLetters = useMemo(() => {
+    let list = [...letters]
+    if (lettersDoctorFilter !== "all") {
+      const selectedDoc = existingDoctors.find((d) => d.id === lettersDoctorFilter)
+      const docName = selectedDoc ? selectedDoc.name.toLowerCase() : ""
+      list = list.filter(
+        (l) =>
+          l.doctor_id === lettersDoctorFilter ||
+          (l.doctor_name && l.doctor_name.toLowerCase() === docName)
+      )
+    }
+    if (lettersSearch.trim()) {
+      const qLower = lettersSearch.toLowerCase()
+      list = list.filter(
+        (l) =>
+          (l.doctor_name && l.doctor_name.toLowerCase().includes(qLower)) ||
+          (l.notes && l.notes.toLowerCase().includes(qLower)) ||
+          (l.status && l.status.toLowerCase().includes(qLower)) ||
+          (l.attachment_name && l.attachment_name.toLowerCase().includes(qLower))
+      )
+    }
+    list.sort((a, b) => {
+      if (lettersSort === "oldest") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+      } else if (lettersSort === "doctor_asc") {
+        return (a.doctor_name || "").localeCompare(b.doctor_name || "")
+      } else if (lettersSort === "title_asc") {
+        return (a.doctor_name || "").localeCompare(b.doctor_name || "")
+      } else if (lettersSort === "status_asc") {
+        return (a.status || "").localeCompare(b.status || "")
+      } else {
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      }
+    })
+    return list
+  }, [letters, lettersDoctorFilter, lettersSearch, lettersSort, existingDoctors])
+
+  // Filtered & Sorted Referrals
+  const filteredReferrals = useMemo(() => {
+    let list = [...referrals]
+    if (referralsDoctorFilter !== "all") {
+      const selectedDoc = existingDoctors.find((d) => d.id === referralsDoctorFilter)
+      const docName = selectedDoc ? selectedDoc.name.toLowerCase() : ""
+      list = list.filter(
+        (r) =>
+          r.doctor_id === referralsDoctorFilter ||
+          r.referred_by_doctor_id === referralsDoctorFilter ||
+          (r.specialist_name && r.specialist_name.toLowerCase().includes(docName)) ||
+          (r.referred_by_name && r.referred_by_name.toLowerCase().includes(docName))
+      )
+    }
+    if (referralsSearch.trim()) {
+      const qLower = referralsSearch.toLowerCase()
+      list = list.filter(
+        (r) =>
+          r.specialist_name.toLowerCase().includes(qLower) ||
+          r.specialty.toLowerCase().includes(qLower) ||
+          (r.referred_by_name && r.referred_by_name.toLowerCase().includes(qLower)) ||
+          (r.reason && r.reason.toLowerCase().includes(qLower)) ||
+          (r.notes && r.notes.toLowerCase().includes(qLower)) ||
+          (r.status && r.status.toLowerCase().includes(qLower))
+      )
+    }
+    list.sort((a, b) => {
+      if (referralsSort === "oldest") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+      } else if (referralsSort === "doctor_asc") {
+        return (a.specialist_name || a.referred_by_name || "").localeCompare(
+          b.specialist_name || b.referred_by_name || ""
+        )
+      } else if (referralsSort === "title_asc") {
+        return a.specialist_name.localeCompare(b.specialist_name)
+      } else if (referralsSort === "status_asc") {
+        return (a.status || "").localeCompare(b.status || "")
+      } else {
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      }
+    })
+    return list
+  }, [referrals, referralsDoctorFilter, referralsSearch, referralsSort, existingDoctors])
+
+  // Filtered & Sorted Visits
+  const filteredVisits = useMemo(() => {
+    let list = [...existingVisits]
+    if (visitsDoctorFilter !== "all") {
+      const selectedDoc = existingDoctors.find((d) => d.id === visitsDoctorFilter)
+      const docName = selectedDoc ? selectedDoc.name.toLowerCase() : ""
+      list = list.filter(
+        (v) =>
+          (v.doctor && v.doctor.toLowerCase().includes(docName)) ||
+          (v.title && v.title.toLowerCase().includes(docName))
+      )
+    }
+    if (visitsSearch.trim()) {
+      const qLower = visitsSearch.toLowerCase()
+      list = list.filter(
+        (v) =>
+          (v.doctor && v.doctor.toLowerCase().includes(qLower)) ||
+          (v.title && v.title.toLowerCase().includes(qLower)) ||
+          (v.location && v.location.toLowerCase().includes(qLower)) ||
+          (v.notes && v.notes.toLowerCase().includes(qLower))
+      )
+    }
+    list.sort((a, b) => {
+      if (visitsSort === "oldest") {
+        return new Date(a.date).getTime() - new Date(b.date).getTime()
+      } else if (visitsSort === "doctor_asc") {
+        return (a.doctor || a.title || "").localeCompare(b.doctor || b.title || "")
+      } else if (visitsSort === "title_asc") {
+        return (a.title || a.doctor || "").localeCompare(b.title || b.doctor || "")
+      } else {
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      }
+    })
+    return list
+  }, [existingVisits, visitsDoctorFilter, visitsSearch, visitsSort, existingDoctors])
 
   // 6. Summary Initial Fetch (Low Egress: only 1 consolidated initial fetch)
   useEffect(() => {
@@ -1140,15 +1516,44 @@ export default function DoctorVisitHub({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleNavigateToFullTab("ai")}
-                  className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
-                >
-                  <span>Dr. AI Assistant</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "questions",
+                        filteredQuestions.map((q) => q.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredQuestions.length > 0 &&
+                    filteredQuestions.every((q) => expandedQuestions[q.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateToFullTab("ai")}
+                    className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
+                  >
+                    <span>Dr. AI Assistant</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
+
+              {/* Toolbar: Search, Doctor Filter, Sort */}
+              <SectionToolbar
+                search={questionsSearch}
+                onSearchChange={setQuestionsSearch}
+                doctorFilter={questionsDoctorFilter}
+                onDoctorFilterChange={setQuestionsDoctorFilter}
+                sort={questionsSort}
+                onSortChange={(val) => handleSortChange("questions", val)}
+                existingDoctors={existingDoctors}
+                searchPlaceholder="Search questions..."
+              />
 
               {/* Add Question Form */}
               <form onSubmit={handleAddQuestion} className="space-y-2">
@@ -1183,51 +1588,103 @@ export default function DoctorVisitHub({
 
               {/* Questions List */}
               <div className="space-y-2">
-                {questions.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">No questions yet. Add items you wish to discuss.</p>
+                {filteredQuestions.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {questions.length === 0
+                      ? "No questions yet. Add items you wish to discuss."
+                      : "No questions match your filter."}
+                  </p>
                 ) : (
-                  questions.map((q) => (
-                    <div
-                      key={q.id}
-                      className={`p-3 rounded-2xl border transition-all ${
-                        q.answered
-                          ? "bg-slate-950/40 border-slate-800/50 text-slate-500"
-                          : "bg-slate-950 border-slate-800 text-slate-200"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleQuestion(q)}
-                          className="flex items-start gap-2.5 flex-1 text-left cursor-pointer"
+                  filteredQuestions.map((q) => {
+                    const isExpanded = !!expandedQuestions[q.id]
+                    const dateStr = q.created_at
+                      ? new Date(q.created_at).toLocaleDateString()
+                      : ""
+                    return (
+                      <div
+                        key={q.id}
+                        className={`rounded-2xl border transition-all overflow-hidden ${
+                          q.answered
+                            ? "bg-slate-950/40 border-slate-800/50 text-slate-500"
+                            : "bg-slate-950 border-slate-800 text-slate-200"
+                        }`}
+                      >
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("questions", q.id)}
+                          className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
                         >
-                          {q.answered ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-400 mt-0.5 shrink-0" />
-                          ) : (
-                            <Circle className="h-4 w-4 text-slate-500 mt-0.5 shrink-0" />
-                          )}
-                          <div>
-                            <p className={`text-xs md:text-sm font-semibold ${q.answered ? "line-through text-slate-500" : "text-white"}`}>
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleQuestion(q)
+                              }}
+                              className="p-0.5 hover:scale-110 transition-transform shrink-0 cursor-pointer"
+                              title={q.answered ? "Mark unanswered" : "Mark answered"}
+                            >
+                              {q.answered ? (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                              ) : (
+                                <Circle className="h-4 w-4 text-slate-500 shrink-0" />
+                              )}
+                            </button>
+                            <span
+                              className={`text-xs md:text-sm font-semibold truncate ${
+                                q.answered ? "line-through text-slate-500" : "text-white"
+                              }`}
+                            >
                               {q.question}
-                            </p>
+                            </span>
                             {q.doctor_name && (
-                              <span className="text-[11px] text-indigo-400 block mt-0.5">
-                                For: {q.doctor_name}
+                              <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 shrink-0 truncate max-w-[120px]">
+                                Dr. {q.doctor_name}
                               </span>
                             )}
                           </div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteQuestion(q.id)}
-                          className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                          title="Delete question"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {dateStr && <span className="text-[11px] text-slate-500">{dateStr}</span>}
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="px-4 pb-3 pt-2 border-t border-slate-900 flex items-start justify-between gap-3">
+                            <div className="space-y-1 text-xs flex-1">
+                              <p className="text-slate-200 whitespace-pre-wrap">{q.question}</p>
+                              {q.doctor_name && (
+                                <span className="text-[11px] text-indigo-400 block">
+                                  Doctor: Dr. {q.doctor_name}
+                                </span>
+                              )}
+                              {dateStr && (
+                                <span className="text-[10px] text-slate-500 block">
+                                  Added: {dateStr}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteQuestion(q.id)
+                              }}
+                              className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors shrink-0"
+                              title="Delete question"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
 
@@ -1267,6 +1724,21 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "notes",
+                        filteredNotes.map((n) => n.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredNotes.length > 0 &&
+                    filteredNotes.every((n) => expandedNotes[n.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setEditingNote(null)
                       setNoteForm({ title: "", text: "", date: new Date().toISOString().slice(0, 10), doctor_id: "", doctor_name: "", visit_id: "" })
@@ -1288,76 +1760,110 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Filter by Doctor */}
-              <div className="flex items-center gap-2 text-xs">
-                <Filter className="h-3.5 w-3.5 text-slate-400" />
-                <span className="text-slate-400 font-medium">Filter doctor:</span>
-                <select
-                  value={noteDoctorFilter}
-                  onChange={(e) => setNoteDoctorFilter(e.target.value)}
-                  className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200"
-                >
-                  <option value="all">All Doctors</option>
-                  {existingDoctors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Toolbar: Search, Doctor Filter, Sort */}
+              <SectionToolbar
+                search={notesSearch}
+                onSearchChange={setNotesSearch}
+                doctorFilter={noteDoctorFilter}
+                onDoctorFilterChange={setNoteDoctorFilter}
+                sort={notesSort}
+                onSortChange={(val) => handleSortChange("notes", val)}
+                existingDoctors={existingDoctors}
+                searchPlaceholder="Search notes..."
+              />
 
               {/* Notes List */}
               <div className="space-y-3">
-                {notes
-                  .filter((n) => (noteDoctorFilter === "all" ? true : n.doctor_id === noteDoctorFilter))
-                  .length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">No health notes recorded yet.</p>
+                {filteredNotes.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {notes.length === 0
+                      ? "No health notes recorded yet."
+                      : "No notes match your filter."}
+                  </p>
                 ) : (
-                  notes
-                    .filter((n) => (noteDoctorFilter === "all" ? true : n.doctor_id === noteDoctorFilter))
-                    .map((n) => (
-                      <div key={n.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <h4 className="text-sm font-bold text-white">{n.title}</h4>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                              <span>{new Date(n.date).toLocaleDateString()}</span>
-                              {n.doctor_name && <span>&bull; Dr. {n.doctor_name}</span>}
-                            </div>
+                  filteredNotes.map((n) => {
+                    const isExpanded = !!expandedNotes[n.id]
+                    const dateStr = n.date
+                      ? new Date(n.date).toLocaleDateString()
+                      : ""
+                    return (
+                      <div
+                        key={n.id}
+                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
+                      >
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("notes", n.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
+                        >
+                          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                              {n.title}
+                            </span>
+                            {n.doctor_name && (
+                              <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-400 shrink-0 truncate max-w-[120px]">
+                                Dr. {n.doctor_name}
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingNote(n)
-                                setNoteForm({
-                                  title: n.title,
-                                  text: n.text,
-                                  date: n.date,
-                                  doctor_id: n.doctor_id || "",
-                                  doctor_name: n.doctor_name || "",
-                                  visit_id: n.visit_id || "",
-                                })
-                                setNoteModalOpen(true)
-                              }}
-                              className="p-1 text-slate-400 hover:text-white"
-                              title="Edit note"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteHealthNote(n.id)}
-                              className="p-1 text-slate-400 hover:text-rose-400"
-                              title="Delete note"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {dateStr && <span className="text-[11px] text-slate-400">{dateStr}</span>}
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
                           </div>
                         </div>
-                        <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{n.text}</p>
+
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                                <span>{dateStr}</span>
+                                {n.doctor_name && <span>&bull; Dr. {n.doctor_name}</span>}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingNote(n)
+                                    setNoteForm({
+                                      title: n.title,
+                                      text: n.text,
+                                      date: n.date,
+                                      doctor_id: n.doctor_id || "",
+                                      doctor_name: n.doctor_name || "",
+                                      visit_id: n.visit_id || "",
+                                    })
+                                    setNoteModalOpen(true)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Edit note"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteHealthNote(n.id)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Delete note"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            <p className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed">{n.text}</p>
+                          </div>
+                        )}
                       </div>
-                    ))
+                    )
+                  })
                 )}
               </div>
 
@@ -1397,6 +1903,21 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "letters",
+                        filteredLetters.map((l) => l.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredLetters.length > 0 &&
+                    filteredLetters.every((l) => expandedLetters[l.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setEditingLetter(null)
                       setLetterForm({
@@ -1428,22 +1949,49 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
+              {/* Toolbar: Search, Doctor Filter, Sort */}
+              <SectionToolbar
+                search={lettersSearch}
+                onSearchChange={setLettersSearch}
+                doctorFilter={lettersDoctorFilter}
+                onDoctorFilterChange={setLettersDoctorFilter}
+                sort={lettersSort}
+                onSortChange={(val) => handleSortChange("letters", val)}
+                existingDoctors={existingDoctors}
+                includeStatus={true}
+                searchPlaceholder="Search letters..."
+              />
+
               {/* Letters List */}
               <div className="space-y-3">
-                {letters.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">No letters logged yet.</p>
+                {filteredLetters.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {letters.length === 0
+                      ? "No letters logged yet."
+                      : "No letters match your filter."}
+                  </p>
                 ) : (
-                  letters.map((l) => (
-                    <div key={l.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold text-white">{l.doctor_name || "Doctor Letter"}</span>
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-300">
-                              {l.direction}
+                  filteredLetters.map((l) => {
+                    const isExpanded = !!expandedLetters[l.id]
+                    const dateStr = l.date
+                      ? new Date(l.date).toLocaleDateString()
+                      : ""
+                    return (
+                      <div
+                        key={l.id}
+                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
+                      >
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("letters", l.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                              {l.doctor_name || "Doctor Letter"}
                             </span>
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
                                 l.status === "received" || l.status === "sent"
                                   ? "bg-emerald-500/20 text-emerald-400"
                                   : "bg-amber-500/20 text-amber-400"
@@ -1451,62 +1999,88 @@ export default function DoctorVisitHub({
                             >
                               {l.status}
                             </span>
+                            <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/20 text-blue-300 shrink-0">
+                              {l.direction}
+                            </span>
                           </div>
-                          <span className="text-[11px] text-slate-400 mt-0.5 block">
-                            Date: {new Date(l.date).toLocaleDateString()}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {dateStr && <span className="text-[11px] text-slate-400">{dateStr}</span>}
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingLetter(l)
-                              setLetterForm({
-                                doctor_name: l.doctor_name || "",
-                                doctor_id: l.doctor_id || "",
-                                visit_id: l.visit_id || "",
-                                date: l.date,
-                                direction: l.direction,
-                                status: l.status,
-                                notes: l.notes,
-                                attachment_url: l.attachment_url || "",
-                                attachment_name: l.attachment_name || "",
-                              })
-                              setLetterModalOpen(true)
-                            }}
-                            className="p-1 text-slate-400 hover:text-white"
-                            title="Edit letter"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteLetter(l.id)}
-                            className="p-1 text-slate-400 hover:text-rose-400"
-                            title="Delete letter"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div className="flex items-center gap-2 flex-wrap text-xs text-slate-400">
+                                <span>Date: {dateStr}</span>
+                                <span>&bull; Direction: {l.direction}</span>
+                                <span>&bull; Status: {l.status}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingLetter(l)
+                                    setLetterForm({
+                                      doctor_name: l.doctor_name || "",
+                                      doctor_id: l.doctor_id || "",
+                                      visit_id: l.visit_id || "",
+                                      date: l.date,
+                                      direction: l.direction,
+                                      status: l.status,
+                                      notes: l.notes,
+                                      attachment_url: l.attachment_url || "",
+                                      attachment_name: l.attachment_name || "",
+                                    })
+                                    setLetterModalOpen(true)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Edit letter"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteLetter(l.id)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Delete letter"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {l.notes && <p className="text-xs text-slate-300 leading-relaxed">{l.notes}</p>}
+
+                            {l.attachment_url && (
+                              <div className="pt-1">
+                                <a
+                                  href={l.attachment_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 text-xs font-medium border border-slate-800"
+                                >
+                                  <Paperclip className="h-3.5 w-3.5" />
+                                  <span>{l.attachment_name || "View Attachment"}</span>
+                                </a>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
-
-                      {l.notes && <p className="text-xs text-slate-300">{l.notes}</p>}
-
-                      {l.attachment_url && (
-                        <div className="pt-1">
-                          <a
-                            href={l.attachment_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 text-xs font-medium border border-slate-800"
-                          >
-                            <Paperclip className="h-3.5 w-3.5" />
-                            <span>{l.attachment_name || "View Attachment"}</span>
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
 
@@ -1546,6 +2120,21 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "referrals",
+                        filteredReferrals.map((r) => r.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredReferrals.length > 0 &&
+                    filteredReferrals.every((r) => expandedReferrals[r.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => {
                       setEditingReferral(null)
                       setReferralForm({
@@ -1579,20 +2168,54 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
+              {/* Toolbar: Search, Doctor Filter, Sort */}
+              <SectionToolbar
+                search={referralsSearch}
+                onSearchChange={setReferralsSearch}
+                doctorFilter={referralsDoctorFilter}
+                onDoctorFilterChange={setReferralsDoctorFilter}
+                sort={referralsSort}
+                onSortChange={(val) => handleSortChange("referrals", val)}
+                existingDoctors={existingDoctors}
+                includeStatus={true}
+                searchPlaceholder="Search referrals..."
+              />
+
               {/* Referrals List */}
               <div className="space-y-3">
-                {referrals.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">No specialist referrals logged yet.</p>
+                {filteredReferrals.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {referrals.length === 0
+                      ? "No specialist referrals logged yet."
+                      : "No referrals match your filter."}
+                  </p>
                 ) : (
-                  referrals.map((r) => (
-                    <div key={r.id} className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                      <div className="flex items-start justify-between gap-3 flex-wrap">
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-bold text-white">{r.specialist_name}</span>
-                            {r.specialty && <span className="text-xs text-rose-300 font-medium">&bull; {r.specialty}</span>}
+                  filteredReferrals.map((r) => {
+                    const isExpanded = !!expandedReferrals[r.id]
+                    const dateStr = r.date
+                      ? new Date(r.date).toLocaleDateString()
+                      : ""
+                    return (
+                      <div
+                        key={r.id}
+                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
+                      >
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("referrals", r.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                              {r.specialist_name}
+                            </span>
+                            {r.specialty && (
+                              <span className="hidden sm:inline-flex text-xs text-rose-300 font-medium truncate max-w-[120px]">
+                                &bull; {r.specialty}
+                              </span>
+                            )}
                             <span
-                              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider ${
+                              className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
                                 r.status === "seen"
                                   ? "bg-emerald-500/20 text-emerald-400"
                                   : r.status === "scheduled"
@@ -1605,70 +2228,93 @@ export default function DoctorVisitHub({
                               {r.status}
                             </span>
                           </div>
-                          <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1 flex-wrap">
-                            <span>Date: {new Date(r.date).toLocaleDateString()}</span>
-                            {r.referred_by_name && <span>Referred by: {r.referred_by_name}</span>}
-                            {r.phone && <span>Phone: {r.phone}</span>}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {dateStr && <span className="text-[11px] text-slate-400">{dateStr}</span>}
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          {r.doctor_id && (
-                            <button
-                              type="button"
-                              onClick={() => handleNavigateToFullTab("doctors")}
-                              className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:text-blue-300 text-[11px] font-semibold border border-blue-500/20 flex items-center gap-1"
-                              title="Open doctor record in My Doctors tab"
-                            >
-                              <span>Open in My Doctors</span>
-                              <ExternalLink className="h-3 w-3" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingReferral(r)
-                              setReferralForm({
-                                specialist_name: r.specialist_name,
-                                specialty: r.specialty,
-                                doctor_id: r.doctor_id || "",
-                                referred_by_name: r.referred_by_name || "",
-                                referred_by_doctor_id: r.referred_by_doctor_id || "",
-                                visit_id: r.visit_id || "",
-                                reason: r.reason,
-                                date: r.date,
-                                status: r.status,
-                                phone: r.phone,
-                                notes: r.notes,
-                              })
-                              setReferralModalOpen(true)
-                            }}
-                            className="p-1 text-slate-400 hover:text-white"
-                            title="Edit referral"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteReferral(r.id)}
-                            className="p-1 text-slate-400 hover:text-rose-400"
-                            title="Delete referral"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div className="flex items-center gap-3 text-[11px] text-slate-400 flex-wrap">
+                                {r.specialty && <span className="text-rose-300 font-semibold">{r.specialty}</span>}
+                                <span>Date: {dateStr}</span>
+                                {r.referred_by_name && <span>Referred by: Dr. {r.referred_by_name}</span>}
+                                {r.phone && <span>Phone: {r.phone}</span>}
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                {r.doctor_id && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleNavigateToFullTab("doctors")
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 hover:text-blue-300 text-[11px] font-semibold border border-blue-500/20 flex items-center gap-1"
+                                    title="Open doctor record in My Doctors tab"
+                                  >
+                                    <span>Open in My Doctors</span>
+                                    <ExternalLink className="h-3 w-3" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setEditingReferral(r)
+                                    setReferralForm({
+                                      specialist_name: r.specialist_name,
+                                      specialty: r.specialty,
+                                      doctor_id: r.doctor_id || "",
+                                      referred_by_name: r.referred_by_name || "",
+                                      referred_by_doctor_id: r.referred_by_doctor_id || "",
+                                      visit_id: r.visit_id || "",
+                                      reason: r.reason,
+                                      date: r.date,
+                                      status: r.status,
+                                      phone: r.phone,
+                                      notes: r.notes,
+                                    })
+                                    setReferralModalOpen(true)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Edit referral"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteReferral(r.id)
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
+                                  title="Delete referral"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+
+                            {r.reason && (
+                              <p className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                                <strong className="text-slate-400 block mb-0.5">Reason:</strong>
+                                {r.reason}
+                              </p>
+                            )}
+
+                            {r.notes && <p className="text-xs text-slate-400 italic leading-relaxed">{r.notes}</p>}
+                          </div>
+                        )}
                       </div>
-
-                      {r.reason && (
-                        <p className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
-                          <strong className="text-slate-400 block mb-0.5">Reason:</strong>
-                          {r.reason}
-                        </p>
-                      )}
-
-                      {r.notes && <p className="text-xs text-slate-400 italic">{r.notes}</p>}
-                    </div>
-                  ))
+                    )
+                  })
                 )}
               </div>
 
@@ -1705,66 +2351,133 @@ export default function DoctorVisitHub({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleNavigateToFullTab("appointments")}
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                >
-                  <span>Go to full Visits tab</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "visits",
+                        filteredVisits.map((v) => v.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredVisits.length > 0 &&
+                    filteredVisits.every((v) => expandedVisits[v.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateToFullTab("appointments")}
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                  >
+                    <span>Go to full Visits tab</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
+
+              {/* Toolbar: Search, Doctor Filter, Sort */}
+              <SectionToolbar
+                search={visitsSearch}
+                onSearchChange={setVisitsSearch}
+                doctorFilter={visitsDoctorFilter}
+                onDoctorFilterChange={setVisitsDoctorFilter}
+                sort={visitsSort}
+                onSortChange={(val) => handleSortChange("visits", val)}
+                existingDoctors={existingDoctors}
+                searchPlaceholder="Search visits..."
+              />
 
               {/* Visits List */}
               <div className="space-y-3">
-                {existingVisits.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">No visits found in Health Hub.</p>
+                {filteredVisits.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {existingVisits.length === 0
+                      ? "No visits found in Health Hub."
+                      : "No visits match your filter."}
+                  </p>
                 ) : (
-                  existingVisits.slice(0, 10).map((v) => {
+                  filteredVisits.map((v) => {
+                    const isExpanded = !!expandedVisits[v.id]
                     const counts = visitItemCounts[v.id] || { notes: 0, letters: 0, referrals: 0 }
+                    const dateStr = v.date
+                      ? new Date(v.date).toLocaleDateString(undefined, {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })
+                      : "No date"
                     return (
                       <div
                         key={v.id}
-                        className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-start justify-between gap-3 flex-wrap"
+                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
                       >
-                        <div className="space-y-1">
-                          <h4 className="text-sm font-bold text-white">{v.doctor || v.title}</h4>
-                          <div className="flex items-center gap-2 text-xs text-slate-400">
-                            <span>
-                              {v.date
-                                ? new Date(v.date).toLocaleDateString(undefined, {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })
-                                : "No date"}
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("visits", v.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                              {v.doctor || v.title || "Visit"}
                             </span>
-                            {v.location && <span>&bull; {v.location}</span>}
+                            {v.location && (
+                              <span className="hidden sm:inline-flex text-xs text-slate-400 truncate max-w-[120px]">
+                                &bull; {v.location}
+                              </span>
+                            )}
                           </div>
-                          {v.notes && <p className="text-xs text-slate-300 line-clamp-2">{v.notes}</p>}
-
-                          {/* Linked Counts */}
-                          <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400">
-                            <span className="font-semibold text-slate-300">Linked items:</span>
-                            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-teal-300">
-                              {counts.notes} notes
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-300">
-                              {counts.letters} letters
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-rose-300">
-                              {counts.referrals} referrals
-                            </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[11px] text-slate-400">{dateStr}</span>
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleNavigateToFullTab("appointments")}
-                          className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 text-xs font-semibold border border-slate-800 transition-colors"
-                        >
-                          View in Visits
-                        </button>
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div className="space-y-1 text-xs">
+                                {v.location && (
+                                  <div className="text-slate-400 flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{v.location}</span>
+                                  </div>
+                                )}
+                                {v.notes && <p className="text-slate-300 leading-relaxed pt-1">{v.notes}</p>}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleNavigateToFullTab("appointments")
+                                }}
+                                className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 text-xs font-semibold border border-slate-800 transition-colors shrink-0"
+                              >
+                                View in Visits
+                              </button>
+                            </div>
+                            {/* Linked Counts */}
+                            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 flex-wrap">
+                              <span className="font-semibold text-slate-300">Linked items:</span>
+                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-teal-300">
+                                {counts.notes} notes
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-300">
+                                {counts.letters} letters
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-rose-300">
+                                {counts.referrals} referrals
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })
