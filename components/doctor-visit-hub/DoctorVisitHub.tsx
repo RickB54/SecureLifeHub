@@ -23,6 +23,8 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  ChevronsDown,
+  ChevronsUp,
   Search,
   Filter,
   Paperclip,
@@ -228,7 +230,8 @@ export default function DoctorVisitHub({
       }
     }
     const saved = getSelectedSectionsFromStorage()
-    return saved.length > 0 ? (saved as VisitHubSectionId[]) : ["nextAppt"]
+    const allIds = VISIT_HUB_SECTIONS.map((s) => s.id)
+    return saved.length > 0 ? (saved as VisitHubSectionId[]) : allIds
   })
 
   // Sync if initialSection changes
@@ -571,17 +574,17 @@ export default function DoctorVisitHub({
     id: string
   ) => {
     if (section === "questions") {
-      setExpandedQuestions((prev) => ({ ...prev, [id]: !prev[id] }))
+      setExpandedQuestions((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
     } else if (section === "notes") {
-      setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }))
+      setExpandedNotes((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
     } else if (section === "letters") {
-      setExpandedLetters((prev) => ({ ...prev, [id]: !prev[id] }))
+      setExpandedLetters((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
     } else if (section === "referrals") {
-      setExpandedReferrals((prev) => ({ ...prev, [id]: !prev[id] }))
+      setExpandedReferrals((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
     } else if (section === "visits") {
-      setExpandedVisits((prev) => ({ ...prev, [id]: !prev[id] }))
+      setExpandedVisits((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
     } else if (section === "summaries") {
-      setExpandedSummaries((prev) => ({ ...prev, [id]: !prev[id] }))
+      setExpandedSummaries((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
     }
   }
 
@@ -590,37 +593,58 @@ export default function DoctorVisitHub({
     ids: string[]
   ) => {
     if (ids.length === 0) return
-    if (section === "questions") {
-      const allExpanded = ids.every((id) => expandedQuestions[id])
+    const getTargetState = (currentMap: Record<string, boolean>) => {
+      const allExpanded = ids.every((id) => currentMap[id] !== false)
       const next: Record<string, boolean> = {}
-      if (!allExpanded) ids.forEach((id) => { next[id] = true })
-      setExpandedQuestions(next)
-    } else if (section === "notes") {
-      const allExpanded = ids.every((id) => expandedNotes[id])
-      const next: Record<string, boolean> = {}
-      if (!allExpanded) ids.forEach((id) => { next[id] = true })
-      setExpandedNotes(next)
-    } else if (section === "letters") {
-      const allExpanded = ids.every((id) => expandedLetters[id])
-      const next: Record<string, boolean> = {}
-      if (!allExpanded) ids.forEach((id) => { next[id] = true })
-      setExpandedLetters(next)
-    } else if (section === "referrals") {
-      const allExpanded = ids.every((id) => expandedReferrals[id])
-      const next: Record<string, boolean> = {}
-      if (!allExpanded) ids.forEach((id) => { next[id] = true })
-      setExpandedReferrals(next)
-    } else if (section === "visits") {
-      const allExpanded = ids.every((id) => expandedVisits[id])
-      const next: Record<string, boolean> = {}
-      if (!allExpanded) ids.forEach((id) => { next[id] = true })
-      setExpandedVisits(next)
-    } else if (section === "summaries") {
-      const allExpanded = ids.every((id) => expandedSummaries[id])
-      const next: Record<string, boolean> = {}
-      if (!allExpanded) ids.forEach((id) => { next[id] = true })
-      setExpandedSummaries(next)
+      ids.forEach((id) => { next[id] = !allExpanded })
+      return next
     }
+
+    if (section === "questions") {
+      setExpandedQuestions((prev) => getTargetState(prev))
+    } else if (section === "notes") {
+      setExpandedNotes((prev) => getTargetState(prev))
+    } else if (section === "letters") {
+      setExpandedLetters((prev) => getTargetState(prev))
+    } else if (section === "referrals") {
+      setExpandedReferrals((prev) => getTargetState(prev))
+    } else if (section === "visits") {
+      setExpandedVisits((prev) => getTargetState(prev))
+    } else if (section === "summaries") {
+      setExpandedSummaries((prev) => getTargetState(prev))
+    }
+  }
+
+  // Global Expand / Collapse All across all active sections
+  const handleToggleGlobalExpandAll = () => {
+    const qIds = filteredQuestions.map((q) => q.id)
+    const nIds = filteredNotes.map((n) => n.id)
+    const lIds = filteredLetters.map((l) => l.id)
+    const rIds = filteredReferrals.map((r) => r.id)
+    const sIds = filteredVisitSummaries.map((s) => s.id)
+    const vIds = filteredVisits.map((v) => v.id)
+
+    const allAreExpanded =
+      (qIds.length === 0 || qIds.every((id) => expandedQuestions[id] !== false)) &&
+      (nIds.length === 0 || nIds.every((id) => expandedNotes[id] !== false)) &&
+      (lIds.length === 0 || lIds.every((id) => expandedLetters[id] !== false)) &&
+      (rIds.length === 0 || rIds.every((id) => expandedReferrals[id] !== false)) &&
+      (sIds.length === 0 || sIds.every((id) => expandedSummaries[id] !== false)) &&
+      (vIds.length === 0 || vIds.every((id) => expandedVisits[id] !== false))
+
+    const targetVal = !allAreExpanded
+    const setAll = (ids: string[]) => {
+      const map: Record<string, boolean> = {}
+      ids.forEach((id) => { map[id] = targetVal })
+      return map
+    }
+
+    setExpandedQuestions(setAll(qIds))
+    setExpandedNotes(setAll(nIds))
+    setExpandedLetters(setAll(lIds))
+    setExpandedReferrals(setAll(rIds))
+    setExpandedSummaries(setAll(sIds))
+    setExpandedVisits(setAll(vIds))
   }
 
   // Filtered & Sorted Questions
@@ -1257,7 +1281,18 @@ export default function DoctorVisitHub({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Global Expand All / Collapse All Toggle Icon */}
+          <button
+            type="button"
+            onClick={handleToggleGlobalExpandAll}
+            className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all cursor-pointer"
+            title="Expand / Collapse all items in all sections"
+            aria-label="Expand or Collapse All"
+          >
+            <ChevronsDown className="h-4 w-4" />
+          </button>
+
           {/* PIN Lock Management Button */}
           <button
             type="button"
@@ -1431,8 +1466,8 @@ export default function DoctorVisitHub({
       )}
 
       {/* 2. STICKY ROW OF SECTION CHIPS (The Key Layout Requirement) */}
-      <nav className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-3 py-2.5 overflow-x-auto custom-scrollbar">
-        <div className="flex items-center gap-1.5 min-w-max">
+      <nav className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-2.5 py-1.5 sm:px-3 sm:py-2">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
           {VISIT_HUB_SECTIONS.map((sec) => {
             const isSelected = selectedSections.includes(sec.id)
             return (
@@ -1440,7 +1475,7 @@ export default function DoctorVisitHub({
                 key={sec.id}
                 type="button"
                 onClick={() => handleToggleChip(sec.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer select-none ${
+                className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
                   isSelected
                     ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
                     : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
@@ -1459,7 +1494,7 @@ export default function DoctorVisitHub({
           <button
             type="button"
             onClick={handleToggleAll}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer select-none ${
+            className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer select-none ${
               isAllSelected
                 ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
                 : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
@@ -1931,12 +1966,15 @@ export default function DoctorVisitHub({
                         filteredQuestions.map((q) => q.id)
                       )
                     }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title={filteredQuestions.length > 0 && filteredQuestions.every((q) => expandedQuestions[q.id] !== false) ? "Collapse all" : "Expand all"}
+                    aria-label={filteredQuestions.length > 0 && filteredQuestions.every((q) => expandedQuestions[q.id] !== false) ? "Collapse all" : "Expand all"}
                   >
-                    {filteredQuestions.length > 0 &&
-                    filteredQuestions.every((q) => expandedQuestions[q.id])
-                      ? "Collapse all"
-                      : "Expand all"}
+                    {filteredQuestions.length > 0 && filteredQuestions.every((q) => expandedQuestions[q.id] !== false) ? (
+                      <ChevronsUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsDown className="h-4 w-4" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -2002,7 +2040,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredQuestions.map((q) => {
-                    const isExpanded = !!expandedQuestions[q.id]
+                    const isExpanded = expandedQuestions[q.id] !== false
                     const dateStr = q.created_at
                       ? formatDateOnly(q.created_at)
                       : ""
@@ -2136,12 +2174,15 @@ export default function DoctorVisitHub({
                         filteredNotes.map((n) => n.id)
                       )
                     }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title={filteredNotes.length > 0 && filteredNotes.every((n) => expandedNotes[n.id] !== false) ? "Collapse all" : "Expand all"}
+                    aria-label={filteredNotes.length > 0 && filteredNotes.every((n) => expandedNotes[n.id] !== false) ? "Collapse all" : "Expand all"}
                   >
-                    {filteredNotes.length > 0 &&
-                    filteredNotes.every((n) => expandedNotes[n.id])
-                      ? "Collapse all"
-                      : "Expand all"}
+                    {filteredNotes.length > 0 && filteredNotes.every((n) => expandedNotes[n.id] !== false) ? (
+                      <ChevronsUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsDown className="h-4 w-4" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -2198,7 +2239,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredNotes.map((n) => {
-                    const isExpanded = !!expandedNotes[n.id]
+                    const isExpanded = expandedNotes[n.id] !== false
                     const dateFormatted = formatDateOnly(n.date)
                     const dateWithLabel = n.date_type ? `${n.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -2394,12 +2435,15 @@ export default function DoctorVisitHub({
                         filteredLetters.map((l) => l.id)
                       )
                     }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title={filteredLetters.length > 0 && filteredLetters.every((l) => expandedLetters[l.id] !== false) ? "Collapse all" : "Expand all"}
+                    aria-label={filteredLetters.length > 0 && filteredLetters.every((l) => expandedLetters[l.id] !== false) ? "Collapse all" : "Expand all"}
                   >
-                    {filteredLetters.length > 0 &&
-                    filteredLetters.every((l) => expandedLetters[l.id])
-                      ? "Collapse all"
-                      : "Expand all"}
+                    {filteredLetters.length > 0 && filteredLetters.every((l) => expandedLetters[l.id] !== false) ? (
+                      <ChevronsUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsDown className="h-4 w-4" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -2460,7 +2504,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredLetters.map((l) => {
-                    const isExpanded = !!expandedLetters[l.id]
+                    const isExpanded = expandedLetters[l.id] !== false
                     const dateFormatted = formatDateOnly(l.date)
                     const dateWithLabel = l.date_type ? `${l.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -2682,12 +2726,15 @@ export default function DoctorVisitHub({
                         filteredReferrals.map((r) => r.id)
                       )
                     }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title={filteredReferrals.length > 0 && filteredReferrals.every((r) => expandedReferrals[r.id] !== false) ? "Collapse all" : "Expand all"}
+                    aria-label={filteredReferrals.length > 0 && filteredReferrals.every((r) => expandedReferrals[r.id] !== false) ? "Collapse all" : "Expand all"}
                   >
-                    {filteredReferrals.length > 0 &&
-                    filteredReferrals.every((r) => expandedReferrals[r.id])
-                      ? "Collapse all"
-                      : "Expand all"}
+                    {filteredReferrals.length > 0 && filteredReferrals.every((r) => expandedReferrals[r.id] !== false) ? (
+                      <ChevronsUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsDown className="h-4 w-4" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -2750,7 +2797,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredReferrals.map((r) => {
-                    const isExpanded = !!expandedReferrals[r.id]
+                    const isExpanded = expandedReferrals[r.id] !== false
                     const dateFormatted = formatDateOnly(r.date)
                     const dateWithLabel = r.date_type ? `${r.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -2987,12 +3034,15 @@ export default function DoctorVisitHub({
                         filteredVisitSummaries.map((s) => s.id)
                       )
                     }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title={filteredVisitSummaries.length > 0 && filteredVisitSummaries.every((s) => expandedSummaries[s.id] !== false) ? "Collapse all" : "Expand all"}
+                    aria-label={filteredVisitSummaries.length > 0 && filteredVisitSummaries.every((s) => expandedSummaries[s.id] !== false) ? "Collapse all" : "Expand all"}
                   >
-                    {filteredVisitSummaries.length > 0 &&
-                    filteredVisitSummaries.every((s) => expandedSummaries[s.id])
-                      ? "Collapse all"
-                      : "Expand all"}
+                    {filteredVisitSummaries.length > 0 && filteredVisitSummaries.every((s) => expandedSummaries[s.id] !== false) ? (
+                      <ChevronsUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsDown className="h-4 w-4" />
+                    )}
                   </button>
                   <button
                     type="button"
@@ -3049,7 +3099,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredVisitSummaries.map((s) => {
-                    const isExpanded = !!expandedSummaries[s.id]
+                    const isExpanded = expandedSummaries[s.id] !== false
                     const dateFormatted = formatDateOnly(s.date)
                     const dateWithLabel = s.date_type ? `${s.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -3247,12 +3297,24 @@ export default function DoctorVisitHub({
                         filteredVisits.map((v) => v.id)
                       )
                     }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                    title={filteredVisits.length > 0 && filteredVisits.every((v) => expandedVisits[v.id] !== false) ? "Collapse all" : "Expand all"}
+                    aria-label={filteredVisits.length > 0 && filteredVisits.every((v) => expandedVisits[v.id] !== false) ? "Collapse all" : "Expand all"}
                   >
-                    {filteredVisits.length > 0 &&
-                    filteredVisits.every((v) => expandedVisits[v.id])
-                      ? "Collapse all"
-                      : "Expand all"}
+                    {filteredVisits.length > 0 && filteredVisits.every((v) => expandedVisits[v.id] !== false) ? (
+                      <ChevronsUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateToFullTab("appointments")}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all cursor-pointer shadow-sm"
+                    title="Schedule a new medical visit"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Schedule Visit</span>
                   </button>
                   <button
                     type="button"
@@ -3287,7 +3349,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredVisits.map((v) => {
-                    const isExpanded = !!expandedVisits[v.id]
+                    const isExpanded = expandedVisits[v.id] !== false
                     const counts = visitItemCounts[v.id] || { notes: 0, letters: 0, referrals: 0 }
                     const dateStr = formatDateOnly(v.date) || "No date"
                     return (

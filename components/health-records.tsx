@@ -72,6 +72,13 @@ export const normalizeHealthTab = (tabStr?: string | null): any => {
     return valid.includes(target) ? target : null
 }
 
+const getLocalDateTimeString = () => {
+    const d = new Date()
+    const offset = d.getTimezoneOffset()
+    const local = new Date(d.getTime() - offset * 60 * 1000)
+    return local.toISOString().slice(0, 16)
+}
+
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings, setActivePage }: HealthDashboardProps) {
     const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
         if (typeof window !== "undefined") {
@@ -334,10 +341,18 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }, [consolidatedRecords])
 
     const upcomingAppts = useMemo(() => {
-        return healthRecords.filter(r =>
-            r.item_metadata?.date &&
-            isAfter(new Date(r.item_metadata.date), new Date())
-        ).sort((a, b) => new Date(a.item_metadata.date).getTime() - new Date(b.item_metadata.date).getTime())
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        return healthRecords.filter(r => {
+            const isAppt =
+                r.item_metadata?.type === "Appointment" ||
+                r.category === "Appointments" ||
+                r.type === "appointment" ||
+                (r.title && r.title.toLowerCase().includes("appointment"))
+            if (!isAppt) return false
+            const d = r.item_metadata?.date ? new Date(r.item_metadata.date) : null
+            return d && d >= todayStart
+        }).sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
     }, [healthRecords])
 
     // --- ANALYTICS ---
@@ -967,13 +982,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 <div className="flex gap-2">
                     <button
                         onClick={() => {
+                            setEditingVital(null)
                             setApptFormData({
                                 title: "",
                                 notes: "",
                                 doctor: "",
                                 location: "",
                                 specialty: "",
-                                date: new Date().toISOString().slice(0, 16)
+                                date: getLocalDateTimeString()
                             })
                             setAddModalType('appointment')
                             setShowAddModal(true)
@@ -1078,7 +1094,68 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 </div>
             )}
 
-            <div className="p-4 md:p-8 pb-4">
+            {/* 1. MOBILE ONLY STICKY HEADER: Exact ONE-line layout with Dropdown + Doctor Visit Hub button */}
+            <div className="sm:hidden sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md px-3 py-2 border-b border-white/10 flex items-center justify-between gap-2">
+                <div className="relative flex-1 min-w-0">
+                    <select
+                        value={activeTab}
+                        onChange={(e) => {
+                            const val = e.target.value
+                            if (val === 'visit-hub') {
+                                if (typeof window !== "undefined") window.location.href = "/doctor-visit-hub"
+                                return
+                            }
+                            if (val.startsWith('section:')) {
+                                const sec = val.replace('section:', '')
+                                if (typeof window !== "undefined") window.location.href = `/doctor-visit-hub?section=${sec}`
+                                return
+                            }
+                            setActiveTab(val as any)
+                            if (typeof window !== "undefined") {
+                                const cleanUrl = new URL(window.location.href)
+                                cleanUrl.searchParams.delete("tab")
+                                window.history.replaceState({}, "", cleanUrl.toString())
+                            }
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white focus:outline-none focus:border-blue-500 appearance-none cursor-pointer truncate shadow-sm"
+                        style={{ colorScheme: 'dark' }}
+                    >
+                        <option value="dashboard">Overview</option>
+                        <option value="visit-hub">Visit Hub (Full)</option>
+                        <option value="section:notes">Notes (Visit Hub)</option>
+                        <option value="section:letters">Letters (Visit Hub)</option>
+                        <option value="section:referrals">Referrals (Visit Hub)</option>
+                        <option value="section:questions">Questions (Visit Hub)</option>
+                        <option value="section:summary">Visit Summary (Visit Hub)</option>
+                        <option value="records">Medical History</option>
+                        <option value="meds">Meds</option>
+                        <option value="ai">Dr. AI</option>
+                        <option value="vitals">Vitals</option>
+                        <option value="doctors">My Doctors</option>
+                        <option value="appointments">Visits</option>
+                        <option value="calendar">Timeline</option>
+                        <option value="checkin">Check-in</option>
+                    </select>
+                    <ChevronDown className="h-4 w-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (typeof window !== "undefined") {
+                            window.location.href = "/doctor-visit-hub"
+                        }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shrink-0 shadow-md shadow-teal-500/20 transition-all cursor-pointer"
+                    title="Open full-screen Doctor Visit Hub"
+                >
+                    <Stethoscope className="h-4 w-4" />
+                    <span>Doctor Visit Hub</span>
+                </button>
+            </div>
+
+            {/* 2. TABLET / DESKTOP HEADER: Full title and horizontal tabs */}
+            <div className="hidden sm:block p-4 md:p-8 pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                         <Activity className="h-8 w-8 text-blue-400" /> Health Hub
@@ -1351,53 +1428,80 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             ) : addModalType === 'appointment' ? (
                                 <form key="appointment-form" onSubmit={async (e: any) => {
                                     e.preventDefault()
+                                    if (!apptFormData.title.trim()) {
+                                        toast.error("Please provide a reason for the visit")
+                                        return
+                                    }
+
                                     const payload = {
                                         type: "note",
-                                        title: apptFormData.title,
+                                        title: apptFormData.title.trim(),
                                         category: "Health Records",
                                         item_metadata: {
                                             is_health_record: true,
                                             type: "Appointment",
-                                            date: apptFormData.date,
-                                            doctor: apptFormData.doctor,
-                                            location: apptFormData.location,
-                                            specialty: apptFormData.specialty,
-                                            notes: apptFormData.notes,
+                                            date: apptFormData.date || getLocalDateTimeString(),
+                                            doctor: apptFormData.doctor || "",
+                                            location: apptFormData.location || "",
+                                            specialty: apptFormData.specialty || "",
+                                            notes: apptFormData.notes || "",
                                         }
                                     }
 
-                                    if (editingVital) {
-                                        await updateItem(editingVital.id, payload)
-                                    } else {
-                                        await addItem(payload)
+                                    try {
+                                        if (editingVital && !editingVital._isDummy) {
+                                            await updateItem(editingVital.id, payload)
+                                            setIsolatedHealthRecords((prev) =>
+                                                prev ? prev.map((item) => (item.id === editingVital.id ? { ...item, ...payload } : item)) : null
+                                            )
+                                            toast.success("Appointment updated successfully")
+                                        } else {
+                                            const created = await addItem(payload)
+                                            if (created) {
+                                                setIsolatedHealthRecords((prev) => (prev ? [created, ...prev] : [created]))
+                                            }
+                                            toast.success("Appointment scheduled successfully")
 
-                                        // If user opted to add to Google Calendar and connected
-                                        if (isGCalConnected && addToGoogleCalendar && apptFormData.date) {
-                                            try {
-                                                const session = (await supabase.auth.getSession()).data.session
-                                                if (session?.access_token) {
-                                                    const startIso = new Date(apptFormData.date).toISOString()
-                                                    const endIso = new Date(new Date(apptFormData.date).getTime() + 60 * 60 * 1000).toISOString()
-                                                    const gcalRes = await fetch("/api/google-calendar/create-event", {
-                                                        method: "POST",
-                                                        headers: {
-                                                            Authorization: `Bearer ${session.access_token}`,
-                                                            "Content-Type": "application/json",
-                                                        },
-                                                        body: JSON.stringify({ start: startIso, end: endIso }),
-                                                    })
-                                                    const gcalData = await gcalRes.json()
-                                                    if (gcalData.success) {
-                                                        toast.success("Added to Google Calendar as 'Doctor appointment'")
+                                            // If user opted to add to Google Calendar and connected
+                                            if (isGCalConnected && addToGoogleCalendar && apptFormData.date) {
+                                                try {
+                                                    const session = (await supabase.auth.getSession()).data.session
+                                                    if (session?.access_token) {
+                                                        const startIso = new Date(apptFormData.date).toISOString()
+                                                        const endIso = new Date(new Date(apptFormData.date).getTime() + 60 * 60 * 1000).toISOString()
+                                                        const gcalRes = await fetch("/api/google-calendar/create-event", {
+                                                            method: "POST",
+                                                            headers: {
+                                                                Authorization: `Bearer ${session.access_token}`,
+                                                                "Content-Type": "application/json",
+                                                            },
+                                                            body: JSON.stringify({ start: startIso, end: endIso }),
+                                                        })
+                                                        const gcalData = await gcalRes.json()
+                                                        if (gcalData.success) {
+                                                            toast.success("Added to Google Calendar as 'Doctor appointment'")
+                                                        }
                                                     }
+                                                } catch (err) {
+                                                    console.warn("Failed to create Google Calendar event:", err)
                                                 }
-                                            } catch (err) {
-                                                console.warn("Failed to create Google Calendar event:", err)
                                             }
                                         }
+
+                                        // Background refresh
+                                        const { data: refreshed } = await supabase
+                                            .from("vault_items")
+                                            .select("*")
+                                            .or("category.in.(Health Records,Medications,Vitals,Health Insurance,Doctors,Medical),type.in.(health-record,medication,vital,doctor,health-insurance,health-checkin)")
+                                            .order("created_at", { ascending: false })
+                                        if (refreshed) setIsolatedHealthRecords(refreshed)
+
+                                        setShowAddModal(false)
+                                        setEditingVital(null)
+                                    } catch (err: any) {
+                                        console.error("Failed to schedule appointment:", err)
+                                        toast.error(err?.message || "Failed to schedule appointment")
                                     }
-                                    setShowAddModal(false)
-                                    setEditingVital(null)
                                 }} className="space-y-6">
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center mb-1">
