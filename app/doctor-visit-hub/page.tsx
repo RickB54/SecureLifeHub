@@ -1,15 +1,19 @@
 "use client"
 
-import React from "react"
-import { useRouter } from "next/navigation"
+import React, { Suspense } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import DoctorVisitHub from "@/components/doctor-visit-hub/DoctorVisitHub"
+import { VisitHubSectionId } from "@/components/doctor-visit-hub/doctor-visit-types"
 
-export default function DoctorVisitHubPage() {
+function DoctorVisitHubContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const sectionParam = searchParams.get("section") as VisitHubSectionId | null
 
   return (
     <main className="w-full h-screen bg-slate-950 overflow-hidden">
       <DoctorVisitHub
+        initialSection={sectionParam || undefined}
         onClose={() => {
           if (typeof window !== "undefined" && window.history.length > 1) {
             router.back()
@@ -26,5 +30,13 @@ export default function DoctorVisitHubPage() {
         theme="dark"
       />
     </main>
+  )
+}
+
+export default function DoctorVisitHubPage() {
+  return (
+    <Suspense fallback={<div className="w-full h-screen bg-slate-950" />}>
+      <DoctorVisitHubContent />
+    </Suspense>
   )
 }

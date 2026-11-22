@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -1063,6 +1063,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     {[
                         { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
                         { id: 'visit-hub', label: 'Visit Hub', icon: Stethoscope },
+                        { id: 'visit-hub-notes', label: 'Notes', icon: FileText, section: 'notes' },
+                        { id: 'visit-hub-letters', label: 'Letters', icon: Mail, section: 'letters' },
+                        { id: 'visit-hub-referrals', label: 'Referrals', icon: Share2, section: 'referrals' },
+                        { id: 'visit-hub-questions', label: 'Questions', icon: HelpCircle, section: 'questions' },
                         { id: 'records', label: 'Medical History', icon: FileText },
                         { id: 'meds', label: 'Meds', icon: Pill },
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },
@@ -1076,6 +1080,12 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             key={tab.id}
                             onClick={() => {
                                 if (tab.id === 'visit-hub') {
+                                    if (typeof window !== "undefined") {
+                                        const url = new URL(window.location.href)
+                                        url.searchParams.delete("section")
+                                        window.history.replaceState({}, "", url.toString())
+                                        localStorage.removeItem("slh-pending-visit-hub-section")
+                                    }
                                     if (setActivePage) {
                                         setActivePage("doctor-visit-hub")
                                     } else if (typeof window !== "undefined") {
@@ -1083,13 +1093,30 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     }
                                     return
                                 }
+                                if ((tab as any).section) {
+                                    const sec = (tab as any).section
+                                    if (typeof window !== "undefined") {
+                                        const url = new URL(window.location.href)
+                                        url.searchParams.set("section", sec)
+                                        window.history.replaceState({}, "", url.toString())
+                                        localStorage.setItem("slh-pending-visit-hub-section", sec)
+                                    }
+                                    if (setActivePage) {
+                                        setActivePage(`type-visit-hub-${sec}`)
+                                    } else if (typeof window !== "undefined") {
+                                        window.location.href = `/doctor-visit-hub?section=${sec}`
+                                    }
+                                    return
+                                }
                                 setActiveTab(tab.id as any)
                             }}
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 whitespace-nowrap ${tab.id === 'visit-hub'
                                 ? "bg-teal-600/25 text-teal-300 hover:bg-teal-600/40 border border-teal-500/30"
-                                : activeTab === tab.id
-                                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                    : theme === 'light' ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "text-gray-400 hover:text-white hover:bg-white/5"
+                                : (tab as any).section
+                                    ? "bg-teal-600/15 text-teal-300/90 hover:bg-teal-600/30 border border-teal-500/20"
+                                    : activeTab === tab.id
+                                        ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                        : theme === 'light' ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "text-gray-400 hover:text-white hover:bg-white/5"
                                 }`}
                         >
                             <tab.icon className="h-3.5 w-3.5" /> {tab.label}

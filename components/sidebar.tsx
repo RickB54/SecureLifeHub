@@ -233,6 +233,20 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
         localStorage.setItem("slh-health-target-tab", "dashboard")
       }
     }
+    const sectionMap: Record<string, string> = {
+      "type-visit-hub-notes": "notes",
+      "type-visit-hub-letters": "letters",
+      "type-visit-hub-referrals": "referrals",
+      "type-visit-hub-questions": "questions",
+    }
+    if (sectionMap[page]) {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("slh-pending-visit-hub-section", sectionMap[page])
+        const url = new URL(window.location.href)
+        url.searchParams.set("section", sectionMap[page])
+        window.history.replaceState({}, "", url.toString())
+      }
+    }
     setActivePage(page)
     setIsOpen(false)
   }

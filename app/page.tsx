@@ -541,8 +541,19 @@ function HomeContent() {
         return <AppDevJournalShell setActivePage={handleNavigate} theme={theme} />
       case "doctor-visit-hub":
       case "type-doctor-visit-hub":
+      case "type-visit-hub-notes":
+      case "type-visit-hub-letters":
+      case "type-visit-hub-referrals":
+      case "type-visit-hub-questions": {
+        const sectionMap: Record<string, any> = {
+          "type-visit-hub-notes": "notes",
+          "type-visit-hub-letters": "letters",
+          "type-visit-hub-referrals": "referrals",
+          "type-visit-hub-questions": "questions",
+        }
         return (
           <DoctorVisitHub
+            initialSection={sectionMap[activePage]}
             onClose={() => handleNavigate("type-health-records")}
             onNavigateTab={(tab) => {
               if (typeof window !== "undefined") {
@@ -553,6 +564,7 @@ function HomeContent() {
             theme={theme}
           />
         )
+      }
       case "type-medical":
         return (
           <HealthInsurance
@@ -700,7 +712,7 @@ function HomeContent() {
         onTouchEnd={handleTouchEnd}
       >
         {/* Header is hidden inside GDFT, App Dev Journal, and Doctor Visit Hub for a full-screen experience */}
-        {activePage !== "type-gdft" && activePage !== "type-app-dev-journal" && activePage !== "doctor-visit-hub" && activePage !== "type-doctor-visit-hub" && (
+        {activePage !== "type-gdft" && activePage !== "type-app-dev-journal" && !activePage.includes("doctor-visit-hub") && !activePage.startsWith("type-visit-hub-") && (
           <Header
             onLogout={handleLogout}
             onLock={() => setIsLocked(true)}
@@ -715,7 +727,7 @@ function HomeContent() {
             setIsFullscreen={setIsFullscreen}
           />
         )}
-        <div className={`flex flex-1 overflow-hidden ${activePage === "type-gdft" || activePage === "type-app-dev-journal" || activePage === "doctor-visit-hub" || activePage === "type-doctor-visit-hub" ? "pt-0" : "pt-16"}`}>
+        <div className={`flex flex-1 overflow-hidden ${activePage === "type-gdft" || activePage === "type-app-dev-journal" || activePage.includes("doctor-visit-hub") || activePage.startsWith("type-visit-hub-") ? "pt-0" : "pt-16"}`}>
           {/* Sidebar always rendered so hamburger menu works in fullscreen mode too */}
           <Sidebar
             activePage={activePage}
@@ -725,7 +737,7 @@ function HomeContent() {
             theme={theme}
             onOpenHelp={commonProps.onOpenHelp}
           />
-          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${activePage === "type-gdft" || activePage === "type-app-dev-journal" || activePage === "doctor-visit-hub" || activePage === "type-doctor-visit-hub" || isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
+          <main id="main-scroll-container" className={`flex-1 overflow-y-auto custom-scrollbar h-full ${activePage === "type-gdft" || activePage === "type-app-dev-journal" || activePage.includes("doctor-visit-hub") || activePage.startsWith("type-visit-hub-") || isFullscreen ? 'p-0 overscroll-contain' : 'p-4 md:p-6'}`}>
             {renderActivePage()}
           </main>
         </div>

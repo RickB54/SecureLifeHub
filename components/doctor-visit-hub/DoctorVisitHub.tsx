@@ -81,12 +81,14 @@ interface DoctorVisitHubProps {
   onClose: () => void
   onNavigateTab?: (tab: string) => void
   theme?: string
+  initialSection?: VisitHubSectionId
 }
 
 export default function DoctorVisitHub({
   onClose,
   onNavigateTab,
   theme = "dark",
+  initialSection,
 }: DoctorVisitHubProps) {
   const { user } = useAuth()
   const userId = user?.id
@@ -120,9 +122,39 @@ export default function DoctorVisitHub({
 
   // 4. Section Chips Multi-Select State
   const [selectedSections, setSelectedSections] = useState<VisitHubSectionId[]>(() => {
+    if (initialSection && VISIT_HUB_SECTIONS.some((s) => s.id === initialSection)) {
+      return [initialSection]
+    }
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const secParam = urlParams.get("section") as VisitHubSectionId
+      if (secParam && VISIT_HUB_SECTIONS.some((s) => s.id === secParam)) {
+        return [secParam]
+      }
+      const pendingSection = localStorage.getItem("slh-pending-visit-hub-section") as VisitHubSectionId
+      if (pendingSection && VISIT_HUB_SECTIONS.some((s) => s.id === pendingSection)) {
+        localStorage.removeItem("slh-pending-visit-hub-section")
+        return [pendingSection]
+      }
+    }
     const saved = getSelectedSectionsFromStorage()
     return saved.length > 0 ? (saved as VisitHubSectionId[]) : ["nextAppt"]
   })
+
+  // Sync if initialSection changes
+  useEffect(() => {
+    if (initialSection && VISIT_HUB_SECTIONS.some((s) => s.id === initialSection)) {
+      setSelectedSections([initialSection])
+      return
+    }
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search)
+      const secParam = urlParams.get("section") as VisitHubSectionId
+      if (secParam && VISIT_HUB_SECTIONS.some((s) => s.id === secParam)) {
+        setSelectedSections([secParam])
+      }
+    }
+  }, [initialSection])
 
   const handleToggleChip = (sectionId: VisitHubSectionId) => {
     setSelectedSections((prev) => {
