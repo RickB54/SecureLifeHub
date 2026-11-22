@@ -1095,7 +1095,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             )}
 
             {/* 1. MOBILE ONLY STICKY HEADER: Exact ONE-line layout with Dropdown + Doctor Visit Hub button */}
-            <div className="sm:hidden sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md px-3 py-2 border-b border-white/10 flex items-center justify-between gap-2">
+            <div className="md:hidden sticky top-0 z-30 bg-slate-950/95 backdrop-blur-md px-3 py-2 border-b border-white/10 flex items-center justify-between gap-2">
                 <div className="relative flex-1 min-w-0">
                     <select
                         value={activeTab}
@@ -1155,7 +1155,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             </div>
 
             {/* 2. TABLET / DESKTOP HEADER: Full title and horizontal tabs */}
-            <div className="hidden sm:block p-4 md:p-8 pb-4">
+            <div className="hidden md:block p-4 md:p-8 pb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                         <Activity className="h-8 w-8 text-blue-400" /> Health Hub

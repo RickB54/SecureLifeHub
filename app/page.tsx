@@ -504,7 +504,10 @@ function HomeContent() {
           moduleName={activePage.replace('type-', '').replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
           hashedPin={lockConfig.pin}
           theme={theme}
-          onSuccess={() => setUnlockedModules(prev => [...prev, activePage])}
+          onSuccess={() => {
+            setUnlockedModules(prev => [...prev, activePage])
+            try { sessionStorage.setItem("slh_unlocked_" + activePage, "true") } catch (e) {}
+          }}
           onCancel={handleBack} // Go back to previous page on cancel
         />
       )

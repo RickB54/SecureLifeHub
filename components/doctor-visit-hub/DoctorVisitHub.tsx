@@ -13,7 +13,6 @@ import {
   Share2,
   Stethoscope,
   Eye,
-  Lock,
   Plus,
   Trash2,
   Edit2,
@@ -25,6 +24,8 @@ import {
   ChevronUp,
   ChevronsDown,
   ChevronsUp,
+  ChevronsDownUp,
+  ChevronsUpDown,
   Search,
   Filter,
   Paperclip,
@@ -83,12 +84,10 @@ import {
   fetchExistingMedications,
   saveSelectedSectionsToStorage,
   getSelectedSectionsFromStorage,
-  getSavedPinHash,
   getLastCacheUpdated,
   compressAndUploadAttachment,
 } from "./doctor-visit-api"
 import DoctorVisitMode from "./DoctorVisitMode"
-import DoctorVisitPinModal from "./DoctorVisitPinModal"
 
 interface SectionToolbarProps {
   search: string
@@ -185,10 +184,23 @@ export default function DoctorVisitHub({
   const { user } = useAuth()
   const userId = user?.id
 
-  // 1. PIN Lock State
-  const [pinModalOpen, setPinModalOpen] = useState(false)
-  const [pinModalMode, setPinModalMode] = useState<"auth" | "manage">("auth")
-  const [isUnlocked, setIsUnlocked] = useState(() => !getSavedPinHash())
+  // 1. Expand/Collapse State (allExpanded controls all sections & items, default true)
+  const [allExpanded, setAllExpanded] = useState<boolean>(true)
+  const [sectionExpanded, setSectionExpanded] = useState<Record<string, boolean>>({})
+
+  const isSectionOpen = (secId: string) => {
+    if (sectionExpanded[secId] !== undefined) {
+      return sectionExpanded[secId]
+    }
+    return allExpanded
+  }
+
+  const toggleSection = (secId: string) => {
+    setSectionExpanded((prev) => ({
+      ...prev,
+      [secId]: !isSectionOpen(secId),
+    }))
+  }
 
   // 2. Visit Mode State
   const [visitModeActive, setVisitModeActive] = useState(false)
@@ -615,8 +627,13 @@ export default function DoctorVisitHub({
     }
   }
 
-  // Global Expand / Collapse All across all active sections
+  // Global Expand / Collapse All across all active sections & items
   const handleToggleGlobalExpandAll = () => {
+    const nextVal = !allExpanded
+    setAllExpanded(nextVal)
+    setSectionExpanded({}) // reset per-section manual overrides
+
+    // Also toggle all item cards inside sections
     const qIds = filteredQuestions.map((q) => q.id)
     const nIds = filteredNotes.map((n) => n.id)
     const lIds = filteredLetters.map((l) => l.id)
@@ -624,18 +641,9 @@ export default function DoctorVisitHub({
     const sIds = filteredVisitSummaries.map((s) => s.id)
     const vIds = filteredVisits.map((v) => v.id)
 
-    const allAreExpanded =
-      (qIds.length === 0 || qIds.every((id) => expandedQuestions[id] !== false)) &&
-      (nIds.length === 0 || nIds.every((id) => expandedNotes[id] !== false)) &&
-      (lIds.length === 0 || lIds.every((id) => expandedLetters[id] !== false)) &&
-      (rIds.length === 0 || rIds.every((id) => expandedReferrals[id] !== false)) &&
-      (sIds.length === 0 || sIds.every((id) => expandedSummaries[id] !== false)) &&
-      (vIds.length === 0 || vIds.every((id) => expandedVisits[id] !== false))
-
-    const targetVal = !allAreExpanded
     const setAll = (ids: string[]) => {
       const map: Record<string, boolean> = {}
-      ids.forEach((id) => { map[id] = targetVal })
+      ids.forEach((id) => { map[id] = nextVal })
       return map
     }
 
@@ -1221,21 +1229,6 @@ export default function DoctorVisitHub({
     }
   }
 
-  // If locked, show PIN lock
-  if (!isUnlocked) {
-    return (
-      <div className="fixed inset-0 z-[100030] bg-slate-950 flex items-center justify-center p-4">
-        <DoctorVisitPinModal
-          isOpen={true}
-          mode="auth"
-          onSuccess={() => setIsUnlocked(true)}
-          onClose={onClose}
-          theme={theme}
-        />
-      </div>
-    )
-  }
-
   // If Visit Mode active, show Visit Mode
   if (visitModeActive) {
     return (
@@ -1287,23 +1280,14 @@ export default function DoctorVisitHub({
             type="button"
             onClick={handleToggleGlobalExpandAll}
             className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all cursor-pointer"
-            title="Expand / Collapse all items in all sections"
-            aria-label="Expand or Collapse All"
+            title={allExpanded ? "Collapse all sections and items" : "Expand all sections and items"}
+            aria-label={allExpanded ? "Collapse all sections and items" : "Expand all sections and items"}
           >
-            <ChevronsDown className="h-4 w-4" />
-          </button>
-
-          {/* PIN Lock Management Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setPinModalMode("manage")
-              setPinModalOpen(true)
-            }}
-            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all cursor-pointer"
-            title="PIN Lock Settings"
-          >
-            <Lock className="h-4 w-4" />
+            {allExpanded ? (
+              <ChevronsDownUp className="h-4 w-4" />
+            ) : (
+              <ChevronsUpDown className="h-4 w-4" />
+            )}
           </button>
 
           {/* Visit Mode Toggle Button */}
@@ -1515,10 +1499,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("nextAppt") && (
             <section
               id="section-nextAppt"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("nextAppt") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("nextAppt") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("nextAppt")}
+                >
                   <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
                     <Calendar className="h-5 w-5" />
                   </div>
@@ -1528,17 +1517,34 @@ export default function DoctorVisitHub({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleNavigateToFullTab("appointments")}
-                  className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                >
-                  <span>Go to full tab (Visits)</span>
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection("nextAppt")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("nextAppt") ? "Collapse Next Appointment" : "Expand Next Appointment"}
+                    aria-label={isSectionOpen("nextAppt") ? "Collapse Next Appointment" : "Expand Next Appointment"}
+                  >
+                    {isSectionOpen("nextAppt") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsUpDown className="h-4 w-4" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateToFullTab("appointments")}
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                  >
+                    <span>Go to full tab (Visits)</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
 
-              {/* Appointment Card */}
+              {isSectionOpen("nextAppt") && (
+                <>
+                  {/* Appointment Card */}
               {nextAppt ? (
                 <div className="p-4 md:p-5 rounded-2xl bg-gradient-to-br from-blue-950/40 to-slate-900 border border-blue-500/30 space-y-3">
                   <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1685,7 +1691,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -1694,10 +1702,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("snapshot") && (
             <section
               id="section-snapshot"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("snapshot") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("snapshot") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("snapshot")}
+                >
                   <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
                     <Pill className="h-5 w-5" />
                   </div>
@@ -1707,7 +1720,20 @@ export default function DoctorVisitHub({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleSection("snapshot")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("snapshot") ? "Collapse Snapshot & Profile" : "Expand Snapshot & Profile"}
+                    aria-label={isSectionOpen("snapshot") ? "Collapse Snapshot & Profile" : "Expand Snapshot & Profile"}
+                  >
+                    {isSectionOpen("snapshot") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronsUpDown className="h-4 w-4" />
+                    )}
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleNavigateToFullTab("meds")}
@@ -1727,7 +1753,9 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Editable Profile Block */}
+              {isSectionOpen("snapshot") && (
+                <>
+                  {/* Editable Profile Block */}
               <div className="p-4 md:p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase tracking-wider text-slate-300">
@@ -1935,7 +1963,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -1944,10 +1974,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("questions") && (
             <section
               id="section-questions"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("questions") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("questions") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("questions")}
+                >
                   <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
                     <HelpCircle className="h-5 w-5" />
                   </div>
@@ -1957,23 +1992,18 @@ export default function DoctorVisitHub({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "questions",
-                        filteredQuestions.map((q) => q.id)
-                      )
-                    }
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title={filteredQuestions.length > 0 && filteredQuestions.every((q) => expandedQuestions[q.id] !== false) ? "Collapse all" : "Expand all"}
-                    aria-label={filteredQuestions.length > 0 && filteredQuestions.every((q) => expandedQuestions[q.id] !== false) ? "Collapse all" : "Expand all"}
+                    onClick={() => toggleSection("questions")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("questions") ? "Collapse Questions" : "Expand Questions"}
+                    aria-label={isSectionOpen("questions") ? "Collapse Questions" : "Expand Questions"}
                   >
-                    {filteredQuestions.length > 0 && filteredQuestions.every((q) => expandedQuestions[q.id] !== false) ? (
-                      <ChevronsUp className="h-4 w-4" />
+                    {isSectionOpen("questions") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
                     ) : (
-                      <ChevronsDown className="h-4 w-4" />
+                      <ChevronsUpDown className="h-4 w-4" />
                     )}
                   </button>
                   <button
@@ -1986,6 +2016,9 @@ export default function DoctorVisitHub({
                   </button>
                 </div>
               </div>
+
+              {isSectionOpen("questions") && (
+                <>
 
               {/* Toolbar: Search, Doctor Filter, Sort */}
               <SectionToolbar
@@ -2143,7 +2176,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -2152,10 +2187,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("notes") && (
             <section
               id="section-notes"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("notes") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("notes") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("notes")}
+                >
                   <div className="p-2 rounded-xl bg-teal-500/10 text-teal-400">
                     <FileText className="h-5 w-5" />
                   </div>
@@ -2168,20 +2208,15 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "notes",
-                        filteredNotes.map((n) => n.id)
-                      )
-                    }
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title={filteredNotes.length > 0 && filteredNotes.every((n) => expandedNotes[n.id] !== false) ? "Collapse all" : "Expand all"}
-                    aria-label={filteredNotes.length > 0 && filteredNotes.every((n) => expandedNotes[n.id] !== false) ? "Collapse all" : "Expand all"}
+                    onClick={() => toggleSection("notes")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("notes") ? "Collapse Health Notes" : "Expand Health Notes"}
+                    aria-label={isSectionOpen("notes") ? "Collapse Health Notes" : "Expand Health Notes"}
                   >
-                    {filteredNotes.length > 0 && filteredNotes.every((n) => expandedNotes[n.id] !== false) ? (
-                      <ChevronsUp className="h-4 w-4" />
+                    {isSectionOpen("notes") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
                     ) : (
-                      <ChevronsDown className="h-4 w-4" />
+                      <ChevronsUpDown className="h-4 w-4" />
                     )}
                   </button>
                   <button
@@ -2215,7 +2250,9 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
+              {isSectionOpen("notes") && (
+                <>
+                  {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={notesSearch}
                 onSearchChange={setNotesSearch}
@@ -2404,7 +2441,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -2413,10 +2452,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("letters") && (
             <section
               id="section-letters"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("letters") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("letters") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("letters")}
+                >
                   <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
                     <Mail className="h-5 w-5" />
                   </div>
@@ -2429,20 +2473,15 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "letters",
-                        filteredLetters.map((l) => l.id)
-                      )
-                    }
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title={filteredLetters.length > 0 && filteredLetters.every((l) => expandedLetters[l.id] !== false) ? "Collapse all" : "Expand all"}
-                    aria-label={filteredLetters.length > 0 && filteredLetters.every((l) => expandedLetters[l.id] !== false) ? "Collapse all" : "Expand all"}
+                    onClick={() => toggleSection("letters")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("letters") ? "Collapse Doctor Letters" : "Expand Doctor Letters"}
+                    aria-label={isSectionOpen("letters") ? "Collapse Doctor Letters" : "Expand Doctor Letters"}
                   >
-                    {filteredLetters.length > 0 && filteredLetters.every((l) => expandedLetters[l.id] !== false) ? (
-                      <ChevronsUp className="h-4 w-4" />
+                    {isSectionOpen("letters") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
                     ) : (
-                      <ChevronsDown className="h-4 w-4" />
+                      <ChevronsUpDown className="h-4 w-4" />
                     )}
                   </button>
                   <button
@@ -2479,7 +2518,9 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
+              {isSectionOpen("letters") && (
+                <>
+                  {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={lettersSearch}
                 onSearchChange={setLettersSearch}
@@ -2695,7 +2736,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -2704,10 +2747,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("referrals") && (
             <section
               id="section-referrals"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("referrals") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("referrals") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("referrals")}
+                >
                   <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400">
                     <Share2 className="h-5 w-5" />
                   </div>
@@ -2720,20 +2768,15 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "referrals",
-                        filteredReferrals.map((r) => r.id)
-                      )
-                    }
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title={filteredReferrals.length > 0 && filteredReferrals.every((r) => expandedReferrals[r.id] !== false) ? "Collapse all" : "Expand all"}
-                    aria-label={filteredReferrals.length > 0 && filteredReferrals.every((r) => expandedReferrals[r.id] !== false) ? "Collapse all" : "Expand all"}
+                    onClick={() => toggleSection("referrals")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("referrals") ? "Collapse Referrals & Specialists" : "Expand Referrals & Specialists"}
+                    aria-label={isSectionOpen("referrals") ? "Collapse Referrals & Specialists" : "Expand Referrals & Specialists"}
                   >
-                    {filteredReferrals.length > 0 && filteredReferrals.every((r) => expandedReferrals[r.id] !== false) ? (
-                      <ChevronsUp className="h-4 w-4" />
+                    {isSectionOpen("referrals") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
                     ) : (
-                      <ChevronsDown className="h-4 w-4" />
+                      <ChevronsUpDown className="h-4 w-4" />
                     )}
                   </button>
                   <button
@@ -2772,7 +2815,9 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
+              {isSectionOpen("referrals") && (
+                <>
+                  {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={referralsSearch}
                 onSearchChange={setReferralsSearch}
@@ -3003,7 +3048,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -3012,10 +3059,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("summary") && (
             <section
               id="section-summary"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("summary") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("summary") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("summary")}
+                >
                   <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">
                     <FileCheck2 className="h-5 w-5" />
                   </div>
@@ -3028,20 +3080,15 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "summaries",
-                        filteredVisitSummaries.map((s) => s.id)
-                      )
-                    }
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title={filteredVisitSummaries.length > 0 && filteredVisitSummaries.every((s) => expandedSummaries[s.id] !== false) ? "Collapse all" : "Expand all"}
-                    aria-label={filteredVisitSummaries.length > 0 && filteredVisitSummaries.every((s) => expandedSummaries[s.id] !== false) ? "Collapse all" : "Expand all"}
+                    onClick={() => toggleSection("summary")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("summary") ? "Collapse Visit Summary" : "Expand Visit Summary"}
+                    aria-label={isSectionOpen("summary") ? "Collapse Visit Summary" : "Expand Visit Summary"}
                   >
-                    {filteredVisitSummaries.length > 0 && filteredVisitSummaries.every((s) => expandedSummaries[s.id] !== false) ? (
-                      <ChevronsUp className="h-4 w-4" />
+                    {isSectionOpen("summary") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
                     ) : (
-                      <ChevronsDown className="h-4 w-4" />
+                      <ChevronsUpDown className="h-4 w-4" />
                     )}
                   </button>
                   <button
@@ -3075,7 +3122,9 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
+              {isSectionOpen("summary") && (
+                <>
+                  {/* Toolbar: Search, Doctor Filter, Sort, Given Filter */}
               <SectionToolbar
                 search={summariesSearch}
                 onSearchChange={setSummariesSearch}
@@ -3266,7 +3315,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
 
           {/* ============================================================== */}
@@ -3275,10 +3326,15 @@ export default function DoctorVisitHub({
           {selectedSections.includes("visits") && (
             <section
               id="section-visits"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+              className={`bg-slate-900 border border-slate-800 rounded-3xl p-3 sm:p-4 md:p-6 shadow-xl transition-all ${
+                isSectionOpen("visits") ? "space-y-4" : "space-y-0"
+              }`}
             >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
+              <div className={`flex items-center justify-between ${isSectionOpen("visits") ? "border-b border-slate-800 pb-3" : ""} flex-wrap gap-2`}>
+                <div
+                  className="flex items-center gap-2 cursor-pointer select-none"
+                  onClick={() => toggleSection("visits")}
+                >
                   <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
                     <Clock className="h-5 w-5" />
                   </div>
@@ -3291,20 +3347,15 @@ export default function DoctorVisitHub({
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "visits",
-                        filteredVisits.map((v) => v.id)
-                      )
-                    }
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                    title={filteredVisits.length > 0 && filteredVisits.every((v) => expandedVisits[v.id] !== false) ? "Collapse all" : "Expand all"}
-                    aria-label={filteredVisits.length > 0 && filteredVisits.every((v) => expandedVisits[v.id] !== false) ? "Collapse all" : "Expand all"}
+                    onClick={() => toggleSection("visits")}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                    title={isSectionOpen("visits") ? "Collapse Recent Visits" : "Expand Recent Visits"}
+                    aria-label={isSectionOpen("visits") ? "Collapse Recent Visits" : "Expand Recent Visits"}
                   >
-                    {filteredVisits.length > 0 && filteredVisits.every((v) => expandedVisits[v.id] !== false) ? (
-                      <ChevronsUp className="h-4 w-4" />
+                    {isSectionOpen("visits") ? (
+                      <ChevronsDownUp className="h-4 w-4" />
                     ) : (
-                      <ChevronsDown className="h-4 w-4" />
+                      <ChevronsUpDown className="h-4 w-4" />
                     )}
                   </button>
                   <button
@@ -3327,7 +3378,9 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              {/* Toolbar: Search, Doctor Filter, Sort */}
+              {isSectionOpen("visits") && (
+                <>
+                  {/* Toolbar: Search, Doctor Filter, Sort */}
               <SectionToolbar
                 search={visitsSearch}
                 onSearchChange={setVisitsSearch}
@@ -3438,7 +3491,9 @@ export default function DoctorVisitHub({
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
-            </section>
+            </>
+          )}
+        </section>
           )}
         </div>
       </main>
@@ -4305,21 +4360,6 @@ export default function DoctorVisitHub({
         </div>
       )}
 
-      {/* ============================================================== */}
-      {/* MODAL: PIN LOCK SETTINGS                                       */}
-      {/* ============================================================== */}
-      {pinModalOpen && (
-        <DoctorVisitPinModal
-          isOpen={pinModalOpen}
-          mode={pinModalMode}
-          onSuccess={() => {
-            setPinModalOpen(false)
-            setIsUnlocked(true)
-          }}
-          onClose={() => setPinModalOpen(false)}
-          theme={theme}
-        />
-      )}
     </div>
   )
 }

@@ -1701,9 +1701,13 @@ function ModuleAccessSettings({
   }
 
   const toggleLock = (moduleId: string) => {
-    const current = securitySettings[moduleId] || { isLocked: false, pin: "0000" }
-    const newVal = { ...current, isLocked: !current.isLocked }
-    if (!current.pin) newVal.pin = "0000"
+    const current = securitySettings[moduleId] || { isLocked: false, pin: "1234" }
+    const isNowLocked = !current.isLocked
+    const newVal = {
+      ...current,
+      isLocked: isNowLocked,
+      pin: current.pin && current.pin.trim() !== "" ? current.pin : "1234"
+    }
 
     saveSettings({
       ...securitySettings,
@@ -1946,7 +1950,14 @@ function ModuleAccessSettings({
                   </div>
                   <div>
                     <h3 className={`font-medium text-sm ${theme === 'light' ? 'text-gray-900' : 'text-gray-200'} `}>{mod.label}</h3>
-                    {setting.isLocked && <p className="text-[10px] text-gray-500 font-mono mt-0.5">PIN: {setting.pin ? "••••" : "Not Set"}</p>}
+                    {setting.isLocked && (
+                      <div className="flex flex-col gap-0.5 mt-0.5">
+                        <p className="text-[10px] text-gray-500 font-mono">PIN: {setting.pin ? "••••" : "Not Set"}</p>
+                        {(!setting.pin || setting.pin === "1234") && (
+                          <span className="text-[10px] text-amber-400 font-medium">Default PIN is 1234 - change it</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
