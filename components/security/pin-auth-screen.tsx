@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { Lock, Unlock, ChevronRight, AlertCircle, Delete } from "lucide-react"
+import { verifyPin } from "@/lib/pin-security"
 
 interface PinAuthScreenProps {
     moduleName: string
     onSuccess: () => void
     onCancel: () => void
-    hashedPin?: string // in a real app, this would be hashed. For now, we compare direct string.
+    hashedPin?: string // in a real app, this would be hashed. Supports plain string or SHA-256 hash.
     theme: string
 }
 
@@ -18,17 +19,23 @@ export default function PinAuthScreen({ moduleName, onSuccess, onCancel, hashedP
 
     useEffect(() => {
         if (pin.length === 4) {
-            if (pin === hashedPin) {
-                onSuccess()
-            } else {
-                setError(true)
-                setShake(true)
-                setTimeout(() => {
-                    setPin("")
-                    setShake(false)
-                    setError(false)
-                }, 500)
-            }
+            let isCurrent = true
+            verifyPin(pin, hashedPin).then((valid) => {
+                if (!isCurrent) return
+                if (valid) {
+                    onSuccess()
+                } else {
+                    setError(true)
+                    setShake(true)
+                    setTimeout(() => {
+                        if (!isCurrent) return
+                        setPin("")
+                        setShake(false)
+                        setError(false)
+                    }, 500)
+                }
+            })
+            return () => { isCurrent = false }
         }
     }, [pin, hashedPin, onSuccess])
 

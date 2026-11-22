@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import DoctorVisitHub from "@/components/doctor-visit-hub/DoctorVisitHub"
 import { VisitHubSectionId } from "@/components/doctor-visit-hub/doctor-visit-types"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
+import { ensurePinReset1234 } from "@/lib/pin-security"
 
 function DoctorVisitHubContent() {
   const router = useRouter()
@@ -14,6 +15,7 @@ function DoctorVisitHubContent() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     if (typeof window === "undefined") return true
     try {
+      ensurePinReset1234()
       const raw = localStorage.getItem("hub_security_settings")
       if (!raw) return true
       const settings = JSON.parse(raw)
@@ -29,6 +31,7 @@ function DoctorVisitHubContent() {
   const [isLocked, setIsLocked] = useState<boolean>(() => {
     if (typeof window === "undefined") return false
     try {
+      ensurePinReset1234()
       const raw = localStorage.getItem("hub_security_settings")
       if (!raw) return false
       const settings = JSON.parse(raw)
@@ -41,6 +44,7 @@ function DoctorVisitHubContent() {
 
   useEffect(() => {
     try {
+      ensurePinReset1234()
       const raw = localStorage.getItem("hub_security_settings")
       if (raw) {
         const settings = JSON.parse(raw)

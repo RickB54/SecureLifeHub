@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Login from "@/components/login"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
+import { ensurePinReset1234 } from "@/lib/pin-security"
 import { useAuth } from "@/components/auth-provider"
 import { useVault } from "@/hooks/use-vault"
 
@@ -304,7 +305,16 @@ function HomeContent() {
     }
   }, [activePage])
 
-  const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>({})
+  const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        ensurePinReset1234()
+        const saved = localStorage.getItem("hub_security_settings")
+        if (saved) return JSON.parse(saved)
+      } catch (e) {}
+    }
+    return {}
+  })
   const [unlockedModules, setUnlockedModules] = useState<string[]>([])
   const [mockSettings, setMockSettings] = useState<Record<string, boolean>>(() => {
     if (typeof window !== 'undefined') {
@@ -329,6 +339,7 @@ function HomeContent() {
   useEffect(() => {
     const handleStorage = () => {
       try {
+        ensurePinReset1234()
         const savedSec = localStorage.getItem("hub_security_settings")
         if (savedSec) setSecuritySettings(JSON.parse(savedSec))
         

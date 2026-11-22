@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
+import { ensurePinReset1234 } from "@/lib/pin-security"
 import {
   Lock,
   Unlock,
@@ -1660,6 +1661,7 @@ function ModuleAccessSettings({
 
   const [securitySettings, setSecuritySettings] = useState<Record<string, { isLocked: boolean, pin: string }>>(() => {
     try {
+      ensurePinReset1234()
       const saved = localStorage.getItem("hub_security_settings")
       return saved ? JSON.parse(saved) : {}
     } catch (e) { return {} }
