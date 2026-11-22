@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -34,12 +34,22 @@ interface HealthDashboardProps {
     theme: string
     setRecords?: any
     onOpenHelp?: (targetId?: string) => void
+    setActivePage?: (page: string) => void
     initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors"
     mockSettings?: Record<string, boolean>
 }
 
-export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings }: HealthDashboardProps) {
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(initialTab as any)
+export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings, setActivePage }: HealthDashboardProps) {
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
+        if (typeof window !== "undefined") {
+            const target = localStorage.getItem("slh-health-target-tab")
+            if (target) {
+                localStorage.removeItem("slh-health-target-tab")
+                return target as any
+            }
+        }
+        return initialTab as any
+    })
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
     const [editingVital, setEditingVital] = useState<any>(null)
@@ -71,6 +81,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     // Mock data state
     const [showMockData, setShowMockData] = useState(false)
     const [isForcedMock, setIsForcedMock] = useState(false)
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const target = localStorage.getItem("slh-health-target-tab")
+            if (target) {
+                localStorage.removeItem("slh-health-target-tab")
+                setActiveTab(target as any)
+            }
+        }
+    }, [])
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -969,13 +989,29 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             )}
 
             <div className="p-4 md:p-8 pb-4">
-                <h1 className="text-2xl md:text-3xl font-bold mb-6 flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
-                    <Activity className="h-8 w-8 text-blue-400" /> Health Hub
-                </h1>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                    <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+                        <Activity className="h-8 w-8 text-blue-400" /> Health Hub
+                    </h1>
+                    <button
+                        onClick={() => {
+                            if (setActivePage) {
+                                setActivePage("doctor-visit-hub")
+                            } else if (typeof window !== "undefined") {
+                                window.location.href = "/doctor-visit-hub"
+                            }
+                        }}
+                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-teal-500/20 transition-all self-start sm:self-auto cursor-pointer"
+                        title="Open full-screen Doctor Visit Hub"
+                    >
+                        <Stethoscope className="h-4 w-4" /> Doctor Visit Hub
+                    </button>
+                </div>
 
                 <div className={`flex flex-wrap gap-1.5 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'} pb-3`}>
                     {[
                         { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+                        { id: 'visit-hub', label: 'Visit Hub', icon: Stethoscope },
                         { id: 'records', label: 'Medical History', icon: FileText },
                         { id: 'meds', label: 'Meds', icon: Pill },
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },
@@ -987,10 +1023,22 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     ].map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 whitespace-nowrap ${activeTab === tab.id
-                                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                                : theme === 'light' ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "text-gray-400 hover:text-white hover:bg-white/5"
+                            onClick={() => {
+                                if (tab.id === 'visit-hub') {
+                                    if (setActivePage) {
+                                        setActivePage("doctor-visit-hub")
+                                    } else if (typeof window !== "undefined") {
+                                        window.location.href = "/doctor-visit-hub"
+                                    }
+                                    return
+                                }
+                                setActiveTab(tab.id as any)
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 whitespace-nowrap ${tab.id === 'visit-hub'
+                                ? "bg-teal-600/25 text-teal-300 hover:bg-teal-600/40 border border-teal-500/30"
+                                : activeTab === tab.id
+                                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
+                                    : theme === 'light' ? "bg-gray-100 text-gray-500 hover:bg-gray-200" : "text-gray-400 hover:text-white hover:bg-white/5"
                                 }`}
                         >
                             <tab.icon className="h-3.5 w-3.5" /> {tab.label}
