@@ -2,6 +2,7 @@
 "use client"
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { createPortal } from "react-dom"
 import {
   X,
   Printer,
@@ -169,6 +170,22 @@ function AgAccountTrackerReportsInner({
     return () => clearInterval(timer)
   }, [])
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (helpOpen) {
+          setHelpOpen(false)
+          return
+        }
+        onClose()
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [isOpen, helpOpen, onClose])
+
   // Save prefs on change
   const updatePrefs = (updater: (prev: ReportPrefs) => ReportPrefs) => {
     setPrefs((prev) => {
@@ -217,11 +234,11 @@ function AgAccountTrackerReportsInner({
       let latestNextAvailableMs = 0
 
       // Scan trackers
-      for (const tracker of trackers) {
-        const appName = tracker.appName || tracker.title
-        for (const row of tracker.rows || []) {
-          for (const line of row.lines || []) {
-            const lineAccount = line.googleAccount?.trim() || row.label?.trim()
+      for (const tracker of (trackers || [])) {
+        const appName = tracker?.appName || tracker?.title || tracker?.day || "Untitled"
+        for (const row of tracker?.rows || []) {
+          for (const line of row?.lines || []) {
+            const lineAccount = line?.googleAccount?.trim() || row?.label?.trim()
             if (lineAccount === accountName) {
               if (line.agent?.trim()) {
                 agentsSet.add(line.agent.trim())
@@ -236,11 +253,12 @@ function AgAccountTrackerReportsInner({
                   latestUsedMs = usedTime
                   latestUsedIso = line.usedOn
                   latestUsedApp = appName
-                  latestLineStatus = line.status || ""
+                  latestLineStatus = line.status === "Out" ? "Done" : (line.status || "")
                   if (line.notes) latestNotes = line.notes
                 }
               } else if (line.status) {
-                if (!latestLineStatus) latestLineStatus = line.status
+                const normStatus = line.status === "Out" ? "Done" : line.status
+                if (!latestLineStatus) latestLineStatus = normStatus
                 if (line.notes && !latestNotes) latestNotes = line.notes
               }
 
@@ -267,7 +285,7 @@ function AgAccountTrackerReportsInner({
             latestUsedApp = carry.appName || "Previous cycle"
             timesUsed++
             if (carry.status && !latestLineStatus) {
-              latestLineStatus = carry.status
+              latestLineStatus = carry.status === "Out" ? "Done" : carry.status
             }
           }
         }
@@ -530,6 +548,7 @@ function AgAccountTrackerReportsInner({
       role="dialog"
       aria-modal="true"
       aria-label="AG Account Tracker Reports"
+      style={{ zIndex: 100030 }}
     >
       <div className={`ag-report-dialog journal-theme-${theme}`} onClick={(e) => e.stopPropagation()}>
         {/* HEADER BAR */}
@@ -1502,11 +1521,25 @@ function AgAccountTrackerReportsInner({
 }
 
 export default function AgAccountTrackerReports(props: AgAccountTrackerReportsProps) {
-  if (!props.isOpen) return null
+  const [mounted, setMounted] = useState(false)
 
-  return (
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!props.isOpen || !mounted) return null
+
+  const root =
+    (typeof document !== "undefined" &&
+      (document.querySelector(".journal-root") as HTMLElement | null)) ||
+    (typeof document !== "undefined" ? document.body : null)
+
+  if (!root) return null
+
+  return createPortal(
     <TrackerErrorBoundary>
       <AgAccountTrackerReportsInner {...props} />
-    </TrackerErrorBoundary>
+    </TrackerErrorBoundary>,
+    root
   )
 }
