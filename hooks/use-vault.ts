@@ -183,7 +183,10 @@ export function useVault() {
     const ALLOWED_VAULT_TYPES = ['password', 'note', 'financial-card', 'contact', 'address']
 
     const addItem = async (item: Partial<VaultItem> & { item_metadata?: any }, options?: { skipRefresh?: boolean }) => {
-        if (!user) return
+        if (!user) {
+            toast.error("You must be signed in to add items to your vault.")
+            return null
+        }
         try {
             const isAllowedType = ALLOWED_VAULT_TYPES.includes(item.type || '')
             const sanitizedType = isAllowedType ? (item.type || 'password') : 'note'
@@ -354,10 +357,12 @@ export function useVault() {
             // Update local state
             setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates, item_metadata: dbPayload.item_metadata || item.item_metadata } : item))
             toast.success("Item updated")
-            await fetchData() // Force sync
+            if (!options?.skipRefresh) await fetchData() // Force sync
+            return true
         } catch (error: any) {
             console.error("Update error:", error)
-            toast.error("Failed to update item")
+            toast.error(error?.message || "Failed to update item")
+            return false
         }
     }
 

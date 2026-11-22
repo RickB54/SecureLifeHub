@@ -8,12 +8,29 @@ import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, each
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { toast } from 'sonner'
+import { lookupDrugInfo, type DrugInfo } from '@/lib/drug-database'
+
+// Horizontally stretched oval / ellipse icon (not capsule style)
+export const OvalIcon = ({ className = "h-4 w-4", style, fill, stroke, strokeWidth }: any) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill={fill || "none"}
+        stroke={stroke || "currentColor"}
+        strokeWidth={strokeWidth ?? 2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+        style={style}
+    >
+        <ellipse cx="12" cy="12" rx="10" ry="5.5" />
+    </svg>
+)
 
 // Pill shapes and their icon components
-const PILL_SHAPES = [
+export const PILL_SHAPES = [
     { id: 'round', label: 'Round Pill', icon: Circle },
     { id: 'capsule', label: 'Capsule', icon: Pill },
-    { id: 'oblong', label: 'Oblong Tablet', icon: Square },
+    { id: 'oval', label: 'Oval Tablet', icon: OvalIcon },
     { id: 'liquid', label: 'Liquid', icon: Droplets },
     { id: 'spray', label: 'Spray', icon: Droplets },
     { id: 'inhaler', label: 'Inhaler', icon: Package },
@@ -22,6 +39,12 @@ const PILL_SHAPES = [
     { id: 'star', label: 'Star', icon: Sparkles },
     { id: 'diamond', label: 'Diamond', icon: MapPin },
 ]
+
+export const normalizePillShape = (shape?: string): string => {
+    if (!shape) return 'round'
+    if (shape === 'oblong') return 'oval'
+    return shape
+}
 
 // Common pill colors
 const PILL_COLORS = [
@@ -63,6 +86,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const [aiResponse, setAiResponse] = useState("")
     const [showDrugInfo, setShowDrugInfo] = useState(false)
     const [drugInfo, setDrugInfo] = useState<any>(null)
+    const [drugLookupTarget, setDrugLookupTarget] = useState("")
+    const [prefillTarget, setPrefillTarget] = useState<any>(null)
     const [loadingDrugInfo, setLoadingDrugInfo] = useState(false)
     const [currentDate, setCurrentDate] = useState(new Date())
     const [viewMode, setViewMode] = useState<"list" | "timeline">("list")
@@ -80,53 +105,63 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     // AI Drug Lookup Function
     const handleDrugLookup = async (medName: string) => {
+        if (!medName || !medName.trim()) {
+            toast.error("Please enter a medication name to look up.")
+            return
+        }
+        setDrugLookupTarget(medName.trim())
         setShowDrugInfo(true)
         setLoadingDrugInfo(true)
         setDrugInfo(null)
 
         try {
-            // In a real app, this would call an AI API or drug database
-            // For now, we'll create comprehensive mock data based on the drug name
-            await new Promise(resolve => setTimeout(resolve, 1500)) // Simulate API call
-
-            const mockInfo = {
-                name: medName,
-                genericName: medName === "Aspirin" ? "Acetylsalicylic acid" : medName.toLowerCase(),
-                brandNames: medName === "Lisinopril" ? ["Prinivil", "Zestril"] : ["Various"],
-                drugClass: medName.includes("statin") ? "Statin" : medName === "Lisinopril" ? "ACE Inhibitor" : "Analgesic",
-                uses: [
-                    `Treatment of ${medName === "Lisinopril" ? "high blood pressure (hypertension)" : "pain and inflammation"}`,
-                    medName === "Aspirin" ? "Prevention of heart attacks and strokes" : "Management of chronic conditions",
-                    "Consult your doctor for specific indications"
-                ],
-                dosage: "As prescribed by your healthcare provider",
-                sideEffects: {
-                    common: ["Headache", "Dizziness", "Nausea", "Fatigue"],
-                    serious: ["Severe allergic reaction", "Liver problems", "Kidney issues", "Severe stomach pain"]
-                },
-                interactions: [
-                    "NSAIDs (ibuprofen, naproxen)",
-                    "Blood thinners (warfarin)",
-                    "Other blood pressure medications",
-                    "Alcohol"
-                ],
-                warnings: [
-                    "Do not stop taking this medication without consulting your doctor",
-                    "Inform your doctor of all medications you are taking",
-                    "May cause dizziness - do not drive until you know how this affects you",
-                    "Store at room temperature away from moisture and heat"
-                ],
-                pregnancy: "Consult your doctor - Category C/D",
-                mechanism: `${medName} works by affecting certain pathways in the body to provide therapeutic effects.`
+            await new Promise(resolve => setTimeout(resolve, 500)) // smooth UI transition
+            const info = lookupDrugInfo(medName.trim())
+            if (info) {
+                setDrugInfo(info)
+            } else {
+                setDrugInfo({ unavailable: true, name: medName.trim() })
             }
-
-            setDrugInfo(mockInfo)
         } catch (error) {
             console.error("Drug lookup error:", error)
-            setDrugInfo({ error: "Failed to fetch drug information" })
+            setDrugInfo({ unavailable: true, name: medName.trim() })
         } finally {
             setLoadingDrugInfo(false)
         }
+    }
+
+    const handleFillFields = (info: any) => {
+        if (!info || info.unavailable) return
+
+        const sideEffectsStr = Array.isArray(info.sideEffects?.common)
+            ? info.sideEffects.common.join(", ")
+            : (typeof info.sideEffects === 'string' ? info.sideEffects : "")
+
+        const usesStr = Array.isArray(info.uses)
+            ? info.uses.join("; ")
+            : (info.uses || "")
+
+        const prefill = {
+            name: info.name,
+            genericName: info.genericName,
+            drugClass: info.drugClass,
+            purpose: usesStr,
+            sideEffects: sideEffectsStr,
+            verificationNote: "Verify with your pharmacist or doctor"
+        }
+
+        setPrefillTarget(prefill)
+        setShowDrugInfo(false)
+
+        // If neither modal is open, open Add (or Edit if a med was selected)
+        if (!showAddModal && !showEditModal) {
+            if (selectedMed) {
+                setShowEditModal(true)
+            } else {
+                setShowAddModal(true)
+            }
+        }
+        toast.success("Medication details filled! Please enter your prescribed dosage and schedule.")
     }
 
     // Filter medications - MUST use useMemo to re-run when records change!
@@ -352,69 +387,93 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     })
 
     const handleAddMed = async (formData: any) => {
-        await addItem({
-            type: "note", // Changed from "medication" to comply with database constraint
-            category: "Medications",
-            title: formData.name,
-            item_metadata: {
-                dosage: formData.dosage,
-                frequency: formData.frequency,
-                prescribedBy: formData.prescribedBy,
-                purpose: formData.purpose,
-                sideEffects: formData.sideEffects,
-                interactions: formData.interactions,
-                rxInstructions: formData.rxInstructions,
-                refillDate: formData.refillDate,
-                nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
-                pillShape: formData.pillShape,
-                pillColor: formData.pillColor,
-                quantity: formData.quantity,
-                totalQuantity: formData.totalQuantity,
-                reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
-                takenLog: [],
-                skippedLog: [],
-                notes: formData.notes,
-                doseSchedule: formData.doseSchedule || [],
-                startDate: formData.startDate,
-                endDate: formData.endDate,
-                scheduleStartDate: formData.scheduleStartDate || new Date().toISOString().split('T')[0],
-                createdAt: new Date().toISOString(),
-                lastModified: new Date().toISOString()
+        try {
+            const res = await addItem({
+                type: "note", // Changed from "medication" to comply with database constraint
+                category: "Medications",
+                title: formData.name || "Untitled Medication",
+                item_metadata: {
+                    dosage: formData.dosage || "As directed",
+                    frequency: formData.frequency || "",
+                    prescribedBy: formData.prescribedBy || "",
+                    purpose: formData.purpose || "",
+                    genericName: formData.genericName || "",
+                    drugClass: formData.drugClass || "",
+                    sideEffects: formData.sideEffects || "",
+                    interactions: formData.interactions || "",
+                    rxInstructions: formData.rxInstructions || "",
+                    refillDate: formData.refillDate || "",
+                    nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
+                    pillShape: normalizePillShape(formData.pillShape),
+                    pillColor: formData.pillColor || "#FFFFFF",
+                    quantity: typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0),
+                    totalQuantity: typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0),
+                    reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
+                    takenLog: [],
+                    skippedLog: [],
+                    notes: formData.notes || "",
+                    doseSchedule: formData.doseSchedule || [],
+                    startDate: formData.startDate || format(new Date(), 'yyyy-MM-dd'),
+                    endDate: formData.endDate || "",
+                    scheduleStartDate: formData.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
+                    createdAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString()
+                }
+            })
+            if (!res) {
+                throw new Error("Unable to save medication to your vault. Please verify your connection.")
             }
-        })
-        setShowAddModal(false)
+            setShowAddModal(false)
+            setPrefillTarget(null)
+            return true
+        } catch (error: any) {
+            console.error("handleAddMed error:", error)
+            throw error
+        }
     }
 
     const handleEditMed = async (formData: any) => {
-        if (!selectedMed) return
-        await updateItem(selectedMed.id, {
-            title: formData.name,
-            item_metadata: {
-                ...selectedMed.item_metadata,
-                dosage: formData.dosage,
-                frequency: formData.frequency,
-                prescribedBy: formData.prescribedBy,
-                purpose: formData.purpose,
-                sideEffects: formData.sideEffects,
-                interactions: formData.interactions,
-                rxInstructions: formData.rxInstructions,
-                refillDate: formData.refillDate,
-                nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
-                pillShape: formData.pillShape,
-                pillColor: formData.pillColor,
-                quantity: formData.quantity,
-                totalQuantity: formData.totalQuantity,
-                reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
-                doseSchedule: formData.doseSchedule || [],
-                startDate: formData.startDate,
-                endDate: formData.endDate,
-                scheduleStartDate: formData.scheduleStartDate || new Date().toISOString().split('T')[0],
-                notes: formData.notes,
-                lastModified: new Date().toISOString()
+        if (!selectedMed) throw new Error("No medication selected to update.")
+        try {
+            const res = await updateItem(selectedMed.id, {
+                title: formData.name || selectedMed.title,
+                item_metadata: {
+                    ...selectedMed.item_metadata,
+                    dosage: formData.dosage || "As directed",
+                    frequency: formData.frequency || "",
+                    prescribedBy: formData.prescribedBy || "",
+                    purpose: formData.purpose || "",
+                    genericName: formData.genericName || "",
+                    drugClass: formData.drugClass || "",
+                    sideEffects: formData.sideEffects || "",
+                    interactions: formData.interactions || "",
+                    rxInstructions: formData.rxInstructions || "",
+                    refillDate: formData.refillDate || "",
+                    nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
+                    pillShape: normalizePillShape(formData.pillShape),
+                    pillColor: formData.pillColor || "#FFFFFF",
+                    quantity: typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0),
+                    totalQuantity: typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0),
+                    reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
+                    doseSchedule: formData.doseSchedule || [],
+                    startDate: formData.startDate || format(new Date(), 'yyyy-MM-dd'),
+                    endDate: formData.endDate || "",
+                    scheduleStartDate: formData.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
+                    notes: formData.notes || "",
+                    lastModified: new Date().toISOString()
+                }
+            })
+            if (res === false) {
+                throw new Error("Unable to update medication in your vault. Please verify your connection.")
             }
-        })
-        setShowEditModal(false)
-        setSelectedMed(null)
+            setShowEditModal(false)
+            setSelectedMed(null)
+            setPrefillTarget(null)
+            return true
+        } catch (error: any) {
+            console.error("handleEditMed error:", error)
+            throw error
+        }
     }
 
     const handleTakeMed = async (med: any, overrideTime?: string) => {
@@ -677,7 +736,7 @@ ${selectedMed ? `
 
     // Get pill icon and color
     const getPillIcon = (med: any) => {
-        const shapeId = med.item_metadata?.pillShape || 'round'
+        const shapeId = normalizePillShape(med.item_metadata?.pillShape)
         const colorHex = med.item_metadata?.pillColor || '#FFFFFF'
         const PillIcon = PILL_SHAPES.find(s => s.id === shapeId)?.icon || Circle
 
@@ -1328,10 +1387,12 @@ ${selectedMed ? `
             {(showAddModal || showEditModal) && (
                 <MedicationModal
                     isOpen={showAddModal || showEditModal}
-                    onClose={() => { setShowAddModal(false); setShowEditModal(false); setSelectedMed(null) }}
+                    onClose={() => { setShowAddModal(false); setShowEditModal(false); setSelectedMed(null); setPrefillTarget(null) }}
                     onSave={showAddModal ? handleAddMed : handleEditMed}
                     medication={selectedMed}
                     theme={theme}
+                    prefillData={prefillTarget}
+                    onLookupDrug={handleDrugLookup}
                 />
             )}
 
@@ -1497,7 +1558,21 @@ ${selectedMed ? `
                         {loadingDrugInfo ? (
                             <div className="text-center py-12">
                                 <Loader2 className="h-12 w-12 animate-spin text-blue-400 mx-auto mb-4" />
-                                <p className="text-gray-400">Looking up drug information...</p>
+                                <p className="text-gray-400">Looking up clinical drug information...</p>
+                            </div>
+                        ) : drugInfo?.unavailable ? (
+                            <div className="text-center py-12 px-4 space-y-4">
+                                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
+                                    <AlertCircle className="h-8 w-8 text-amber-400" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Information unavailable</h3>
+                                <p className="text-gray-400 max-w-md mx-auto text-sm">
+                                    Accurate clinical drug information for &ldquo;{drugLookupTarget || drugInfo.name}&rdquo; is not available in our verified drug directory.
+                                </p>
+                                <div className="inline-flex items-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
+                                    <Shield className="h-4 w-4 shrink-0" />
+                                    <span>Verify with your pharmacist or doctor.</span>
+                                </div>
                             </div>
                         ) : drugInfo?.error ? (
                             <div className="text-center py-12 text-red-400">
@@ -1505,13 +1580,39 @@ ${selectedMed ? `
                             </div>
                         ) : drugInfo && (
                             <div className="space-y-6">
+                                {/* Verification Alert Banner */}
+                                <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-200 text-xs flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-purple-400 shrink-0" />
+                                        <span><strong>Clinical Note:</strong> Verify with your pharmacist or doctor.</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleFillFields(drugInfo)}
+                                        className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-md"
+                                    >
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        Fill fields
+                                    </button>
+                                </div>
+
                                 {/* Drug Header */}
                                 <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl p-6 border border-blue-500/20">
-                                    <h3 className="text-3xl font-bold text-white mb-2">{drugInfo.name}</h3>
-                                    <div className="text-gray-400">
-                                        <div><strong>Generic Name:</strong> {drugInfo.genericName}</div>
-                                        <div><strong>Drug Class:</strong> {drugInfo.drugClass}</div>
-                                        <div><strong>Brand Names:</strong> {drugInfo.brandNames.join(", ")}</div>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                                        <h3 className="text-3xl font-bold text-white">{drugInfo.name}</h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFillFields(drugInfo)}
+                                            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-purple-900/30 self-start sm:self-auto"
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            Fill fields
+                                        </button>
+                                    </div>
+                                    <div className="text-gray-300 space-y-1 text-sm">
+                                        <div><strong className="text-white">Generic Name:</strong> {drugInfo.genericName}</div>
+                                        <div><strong className="text-white">Drug Class:</strong> {drugInfo.drugClass}</div>
+                                        <div><strong className="text-white">Brand Names:</strong> {Array.isArray(drugInfo.brandNames) ? drugInfo.brandNames.join(", ") : drugInfo.brandNames}</div>
                                     </div>
                                 </div>
 
@@ -1521,7 +1622,7 @@ ${selectedMed ? `
                                         <Check className="h-5 w-5" /> Uses & Indications
                                     </h4>
                                     <ul className="list-disc list-inside space-y-2 text-gray-300">
-                                        {drugInfo.uses.map((use: string, idx: number) => (
+                                        {drugInfo.uses?.map((use: string, idx: number) => (
                                             <li key={idx}>{use}</li>
                                         ))}
                                     </ul>
@@ -1541,73 +1642,101 @@ ${selectedMed ? `
                                         <AlertCircle className="h-5 w-5" /> Side Effects
                                     </h4>
                                     <div className="space-y-3">
-                                        <div>
-                                            <div className="font-bold text-gray-400 mb-2">Common:</div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {drugInfo.sideEffects.common.map((effect: string, idx: number) => (
-                                                    <span key={idx} className="px-3 py-1 bg-yellow-500/10 text-yellow-300 rounded-full text-sm border border-yellow-500/20">
-                                                        {effect}
-                                                    </span>
-                                                ))}
+                                        {drugInfo.sideEffects?.common?.length > 0 && (
+                                            <div>
+                                                <div className="font-bold text-gray-400 mb-2">Common:</div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {drugInfo.sideEffects.common.map((effect: string, idx: number) => (
+                                                        <span key={idx} className="px-3 py-1 bg-yellow-500/10 text-yellow-300 rounded-full text-sm border border-yellow-500/20">
+                                                            {effect}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <div className="font-bold text-red-400 mb-2">Serious (Seek Medical Help):</div>
-                                            <div className="flex flex-wrap gap-2">
-                                                {drugInfo.sideEffects.serious.map((effect: string, idx: number) => (
-                                                    <span key={idx} className="px-3 py-1 bg-red-500/10 text-red-300 rounded-full text-sm border border-red-500/20">
-                                                        {effect}
-                                                    </span>
-                                                ))}
+                                        )}
+                                        {drugInfo.sideEffects?.serious?.length > 0 && (
+                                            <div>
+                                                <div className="font-bold text-red-400 mb-2">Serious (Seek Medical Help):</div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {drugInfo.sideEffects.serious.map((effect: string, idx: number) => (
+                                                        <span key={idx} className="px-3 py-1 bg-red-500/10 text-red-300 rounded-full text-sm border border-red-500/20">
+                                                            {effect}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Drug Interactions */}
-                                <div className="bg-black/20 rounded-xl p-6 border border-white/5">
-                                    <h4 className="text-xl font-bold text-red-400 mb-3 flex items-center gap-2">
-                                        <AlertCircle className="h-5 w-5" /> Drug Interactions
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {drugInfo.interactions.map((interaction: string, idx: number) => (
-                                            <span key={idx} className="px-3 py-1 bg-red-500/10 text-red-300 rounded-lg text-sm border border-red-500/20">
-                                                {interaction}
-                                            </span>
-                                        ))}
+                                {drugInfo.interactions?.length > 0 && (
+                                    <div className="bg-black/20 rounded-xl p-6 border border-white/5">
+                                        <h4 className="text-xl font-bold text-red-400 mb-3 flex items-center gap-2">
+                                            <AlertCircle className="h-5 w-5" /> Drug Interactions
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {drugInfo.interactions.map((interaction: string, idx: number) => (
+                                                <span key={idx} className="px-3 py-1 bg-red-500/10 text-red-300 rounded-lg text-sm border border-red-500/20">
+                                                    {interaction}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
 
                                 {/* Warnings */}
-                                <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-xl p-6 border border-orange-500/30">
-                                    <h4 className="text-xl font-bold text-orange-400 mb-3 flex items-center gap-2">
-                                        <AlertCircle className="h-5 w-5" /> Important Warnings
-                                    </h4>
-                                    <ul className="list-disc list-inside space-y-2 text-gray-300">
-                                        {drugInfo.warnings.map((warning: string, idx: number) => (
-                                            <li key={idx}>{warning}</li>
-                                        ))}
-                                    </ul>
-                                </div>
+                                {drugInfo.warnings?.length > 0 && (
+                                    <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-xl p-6 border border-orange-500/30">
+                                        <h4 className="text-xl font-bold text-orange-400 mb-3 flex items-center gap-2">
+                                            <AlertCircle className="h-5 w-5" /> Important Warnings
+                                        </h4>
+                                        <ul className="list-disc list-inside space-y-2 text-gray-300">
+                                            {drugInfo.warnings.map((warning: string, idx: number) => (
+                                                <li key={idx}>{warning}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
 
                                 {/* Pregnancy */}
-                                <div className="bg-black/20 rounded-xl p-4 border border-white/5 text-sm text-gray-400">
-                                    <strong>Pregnancy & Breastfeeding:</strong> {drugInfo.pregnancy}
-                                </div>
+                                {drugInfo.pregnancy && (
+                                    <div className="bg-black/20 rounded-xl p-4 border border-white/5 text-sm text-gray-400">
+                                        <strong>Pregnancy & Breastfeeding:</strong> {drugInfo.pregnancy}
+                                    </div>
+                                )}
 
-                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-sm text-blue-300">
-                                    <strong>💡 Disclaimer:</strong> This information is for educational purposes only and is not a substitute for professional medical advice. Always consult your healthcare provider before starting, stopping, or changing any medication.
+                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-sm text-blue-300 flex items-start gap-2">
+                                    <Shield className="h-4 w-4 shrink-0 mt-0.5" />
+                                    <span><strong>Note:</strong> Verify with your pharmacist or doctor. This clinical overview is for informational support only. Dosing, quantity, and administration schedules must always follow your actual prescription.</span>
                                 </div>
                             </div>
                         )}
 
-                        <div className="mt-6 flex justify-end">
-                            <button
-                                onClick={() => setShowDrugInfo(false)}
-                                className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold"
-                            >
-                                Close
-                            </button>
+                        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-white/10 pt-4">
+                            <div className="text-xs text-gray-400 flex items-center gap-1.5">
+                                <Shield className="h-4 w-4 text-purple-400" />
+                                <span>Verify with your pharmacist or doctor</span>
+                            </div>
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                {drugInfo && !drugInfo.unavailable && (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleFillFields(drugInfo)}
+                                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-purple-900/30 transition-all"
+                                    >
+                                        <Sparkles className="h-4 w-4" />
+                                        Fill fields
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDrugInfo(false)}
+                                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold transition-all"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1619,9 +1748,11 @@ ${selectedMed ? `
 
 
 // Medication Modal with Pill Shape/Color Selection
-function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
+function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillData, onLookupDrug }: any) {
     const [formData, setFormData] = useState({
         name: medication?.title || "",
+        genericName: medication?.item_metadata?.genericName || "",
+        drugClass: medication?.item_metadata?.drugClass || "",
         dosage: medication?.item_metadata?.dosage || "",
         frequency: medication?.item_metadata?.frequency || "",
         prescribedBy: medication?.item_metadata?.prescribedBy || "",
@@ -1631,10 +1762,10 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
         rxInstructions: medication?.item_metadata?.rxInstructions || "",
         refillDate: medication?.item_metadata?.refillDate || "",
         nextDose: medication?.item_metadata?.nextDose || "",
-        pillShape: medication?.item_metadata?.pillShape || "round",
+        pillShape: normalizePillShape(medication?.item_metadata?.pillShape),
         pillColor: medication?.item_metadata?.pillColor || "#FFFFFF",
-        quantity: medication?.item_metadata?.quantity || 0,
-        totalQuantity: medication?.item_metadata?.totalQuantity || 0,
+        quantity: medication?.item_metadata?.quantity ?? 0,
+        totalQuantity: medication?.item_metadata?.totalQuantity ?? 0,
         notes: medication?.item_metadata?.notes || "",
         reminders: medication?.item_metadata?.reminders || [],
         doseSchedule: medication?.item_metadata?.doseSchedule || [], // Array of { dayIndex: number, quantity: number }
@@ -1644,9 +1775,70 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
         dosesPerDay: medication?.item_metadata?.dosesPerDay || "1"
     })
 
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
     const [isStyleExpanded, setIsStyleExpanded] = useState(false)
     const [showQRScanner, setShowQRScanner] = useState(false)
     const [scanningQR, setScanningQR] = useState(false)
+
+    // Prefill fields from AI Drug Lookup when user taps "Fill fields"
+    // NEVER prefill dosage, quantity, or schedule
+    useEffect(() => {
+        if (prefillData) {
+            setFormData(prev => {
+                const noteText = prefillData.verificationNote || "Verify with your pharmacist or doctor"
+                let newNotes = prev.notes
+                if (!newNotes || !newNotes.includes(noteText)) {
+                    newNotes = newNotes ? `${newNotes}\n\nNote: ${noteText}` : `Note: ${noteText}`
+                }
+                return {
+                    ...prev,
+                    name: prev.name ? prev.name : (prefillData.name || ""),
+                    genericName: prefillData.genericName || prev.genericName,
+                    drugClass: prefillData.drugClass || prev.drugClass,
+                    purpose: prefillData.purpose || prev.purpose,
+                    sideEffects: prefillData.sideEffects || prev.sideEffects,
+                    notes: newNotes
+                    // DO NOT TOUCH: dosage, quantity, totalQuantity, frequency, reminders, doseSchedule
+                }
+            })
+        }
+    }, [prefillData])
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaveError(null)
+
+        if (!formData.name.trim()) {
+            const err = "Medication name is required."
+            setSaveError(err)
+            toast.error(err)
+            return
+        }
+
+        setIsSaving(true)
+        try {
+            const success = await onSave({
+                ...formData,
+                name: formData.name.trim(),
+                dosage: formData.dosage.trim() || "As directed",
+                pillShape: normalizePillShape(formData.pillShape)
+            })
+            if (success === false) {
+                throw new Error("Unable to save medication to your vault. Please verify your connection.")
+            }
+            toast.success(medication ? "Medication updated successfully!" : "Medication saved successfully!")
+            onClose()
+        } catch (err: any) {
+            console.error("Save error:", err)
+            const msg = err?.message || "Failed to save medication. Please check your connection and try again."
+            setSaveError(msg)
+            toast.error(msg)
+            // NEVER clear formData and NEVER close on error
+        } finally {
+            setIsSaving(false)
+        }
+    }
 
     const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
@@ -1924,15 +2116,64 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                     )}
                 </div>
 
-                <form onSubmit={(e) => { e.preventDefault(); onSave(formData) }} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Medication Name *</label>
-                            <input required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-sm font-bold text-gray-400 uppercase block">Medication Name *</label>
+                                {onLookupDrug && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!formData.name.trim()) {
+                                                toast.error("Please enter a name first to look up clinical details.")
+                                                return
+                                            }
+                                            onLookupDrug(formData.name.trim())
+                                        }}
+                                        className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold transition-colors"
+                                    >
+                                        <Sparkles className="h-3 w-3" /> Look up Drug Info
+                                    </button>
+                                )}
+                            </div>
+                            <input
+                                placeholder="e.g., Zolpidem"
+                                value={formData.name}
+                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
                         </div>
                         <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Dosage *</label>
-                            <input required placeholder="e.g., 500mg" value={formData.dosage} onChange={(e) => setFormData({ ...formData, dosage: e.target.value })} className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Dosage</label>
+                            <input
+                                placeholder="e.g., 10mg (or as directed)"
+                                value={formData.dosage}
+                                onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Generic Name & Drug Class */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Generic Name</label>
+                            <input
+                                placeholder="e.g., Zolpidem tartrate"
+                                value={formData.genericName}
+                                onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Drug Class</label>
+                            <input
+                                placeholder="e.g., Sedative-hypnotic"
+                                value={formData.drugClass}
+                                onChange={(e) => setFormData({ ...formData, drugClass: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            />
                         </div>
                     </div>
 
@@ -1946,7 +2187,7 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                             <div className="flex items-center gap-3">
                                 <div className="p-2 rounded-lg bg-gray-800 border border-gray-700">
                                     {(() => {
-                                        const ShapeIcon = PILL_SHAPES.find(s => s.id === formData.pillShape)?.icon || Circle
+                                        const ShapeIcon = PILL_SHAPES.find(s => s.id === normalizePillShape(formData.pillShape))?.icon || Circle
                                         return <ShapeIcon className="h-5 w-5" style={{ color: formData.pillColor }} />
                                     })()}
                                 </div>
@@ -1954,7 +2195,7 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                                     <div className="text-sm font-bold text-white">Pill Design</div>
                                     {!isStyleExpanded && (
                                         <div className="text-xs text-gray-400 capitalize">
-                                            {PILL_COLORS.find(c => c.hex === formData.pillColor)?.label || 'Selected'} {PILL_SHAPES.find(s => s.id === formData.pillShape)?.label || 'Pill'}
+                                            {PILL_COLORS.find(c => c.hex === formData.pillColor)?.label || 'Selected'} {PILL_SHAPES.find(s => s.id === normalizePillShape(formData.pillShape))?.label || 'Oval Tablet'}
                                         </div>
                                     )}
                                 </div>
@@ -1975,7 +2216,7 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                                                     key={shape.id}
                                                     type="button"
                                                     onClick={() => setFormData({ ...formData, pillShape: shape.id })}
-                                                    className={`p-4 rounded-xl border-2 transition-all ${formData.pillShape === shape.id ? 'border-purple-500 bg-purple-500/20' : 'border-gray-700 hover:border-gray-600'}`}
+                                                    className={`p-4 rounded-xl border-2 transition-all ${normalizePillShape(formData.pillShape) === shape.id ? 'border-purple-500 bg-purple-500/20' : 'border-gray-700 hover:border-gray-600'}`}
                                                 >
                                                     <Icon className="h-6 w-6 mx-auto mb-2" />
                                                     <div className="text-[10px] text-center font-bold uppercase tracking-tighter">{shape.label}</div>
@@ -2163,33 +2404,52 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                     </div>
 
                     <div>
+                        <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Common Side Effects</label>
+                        <textarea
+                            placeholder="e.g., Drowsiness, dizziness, headache..."
+                            value={formData.sideEffects}
+                            onChange={(e) => setFormData({ ...formData, sideEffects: e.target.value })}
+                            rows={2}
+                            className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        />
+                    </div>
+
+                    <div>
                         <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Drug Interactions</label>
                         <textarea
                             placeholder="List any known interactions with other medications..."
                             value={formData.interactions}
                             onChange={(e) => setFormData({ ...formData, interactions: e.target.value })}
-                            rows={3}
-                            className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            rows={2}
+                            className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
 
                     <div>
                         <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">RX Label Instructions</label>
                         <textarea
-                            placeholder="Prescription label instructions (e.g., 'Take 1 tablet by mouth twice daily with food')..."
+                            placeholder="Prescription label instructions (e.g., 'Take 1 tablet by mouth daily before bedtime')..."
                             value={formData.rxInstructions}
                             onChange={(e) => setFormData({ ...formData, rxInstructions: e.target.value })}
                             rows={2}
-                            className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <button type="submit" className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl font-bold transition-all">
-                            {medication ? 'Update' : 'Add'} Medication
-                        </button>
-                        <button type="button" onClick={onClose} className="px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold transition-all">Cancel</button>
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm font-bold text-gray-400 uppercase block">Private Notes</label>
+                            <span className="text-[11px] text-purple-400 font-medium">Verify with your pharmacist or doctor</span>
+                        </div>
+                        <textarea
+                            placeholder="Private instructions, doctor/pharmacist recommendations..."
+                            value={formData.notes}
+                            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                            rows={2}
+                            className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        />
                     </div>
+
                     {/* Dose Schedule (Dynamic Tapering/Increase) */}
                     <div className="p-5 rounded-2xl bg-purple-900/10 border border-purple-500/20">
                         <div className="flex justify-between items-center mb-4">
@@ -2271,6 +2531,50 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme }: any) {
                             </div>
                         )}
                     </div>
+
+                    {/* Save Error Alert */}
+                    {saveError && (
+                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 shrink-0 text-red-400 mt-0.5" />
+                            <div className="flex-1">
+                                <strong className="block font-bold">Failed to Save Medication:</strong>
+                                <span>{saveError}</span>
+                                <p className="text-xs text-gray-400 mt-1">Your form values have been preserved. Please verify and submit again.</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Verification Note Banner */}
+                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs flex items-center gap-2">
+                        <Shield className="h-4 w-4 shrink-0 text-blue-400" />
+                        <span><strong>Clinical Reminder:</strong> Verify with your pharmacist or doctor.</span>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4">
+                        <button
+                            type="submit"
+                            disabled={isSaving}
+                            className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/30"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    Saving Medication...
+                                </>
+                            ) : (
+                                `${medication ? 'Update' : 'Add'} Medication`
+                            )}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            disabled={isSaving}
+                            className="px-6 py-4 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-xl font-bold transition-all"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -2346,12 +2650,12 @@ export function PillLibraryModal({ isOpen, onClose, theme, addItem }: any) {
                             <div className="relative group">
                                 <div className="absolute inset-0 bg-white blur-3xl opacity-10 group-hover:opacity-20 transition-opacity rounded-full"></div>
                                 {(() => {
-                                    const Icon = PILL_SHAPES.find(s => s.id === selectedShape)?.icon || Circle
+                                    const Icon = PILL_SHAPES.find(s => s.id === normalizePillShape(selectedShape))?.icon || Circle
                                     return <Icon className="h-40 w-40 relative z-10 transition-transform duration-700" fill={selectedColor} stroke="white" strokeWidth={0.5} />
                                 })()}
                             </div>
                             <div className="mt-8 text-center">
-                                <div className="text-2xl font-black italic tracking-tighter uppercase">{PILL_SHAPES.find(s => s.id === selectedShape)?.label}</div>
+                                <div className="text-2xl font-black italic tracking-tighter uppercase">{PILL_SHAPES.find(s => s.id === normalizePillShape(selectedShape))?.label || 'Oval Tablet'}</div>
                                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">{PILL_COLORS.find(c => c.hex === selectedColor)?.label} Finish</div>
                             </div>
                         </div>
@@ -2450,7 +2754,7 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme }: any) {
                 { name: "NyQuil / DayQuil", dosage: "30ml", frequency: "Every 6 hours", shape: "liquid", color: "#4169E1", quantity: 2, purpose: "Multi-symptom Cold" },
                 { name: "Theraflu", dosage: "1 packet", frequency: "Every 4 hours", shape: "powder", color: "#FFD700", quantity: 6, purpose: "Flu Relief" },
                 { name: "Robitussin", dosage: "10ml", frequency: "Every 4-6 hours", shape: "liquid", color: "#FF4444", quantity: 1, purpose: "Cough Relief" },
-                { name: "Mucinex", dosage: "600mg", frequency: "Every 12 hours", shape: "oblong", color: "#32CD32", quantity: 20, purpose: "Chest Congestion" },
+                { name: "Mucinex", dosage: "600mg", frequency: "Every 12 hours", shape: "oval", color: "#32CD32", quantity: 20, purpose: "Chest Congestion" },
                 { name: "Sudafed", dosage: "30mg", frequency: "Every 4-6 hours", shape: "round", color: "#FF4444", quantity: 24, purpose: "Nasal Congestion" },
                 { name: "Alka-Seltzer Plus", dosage: "2 tablets", frequency: "Every 4 hours", shape: "round", color: "#FFFFFF", quantity: 20, purpose: "Severe Cold" },
             ]
@@ -2478,7 +2782,7 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme }: any) {
                 { name: "Diphenhydramine (Benadryl)", dosage: "25mg", frequency: "Every 4-6 hours", shape: "round", color: "#FF69B4", quantity: 24, purpose: "Allergy/Runny Nose" },
                 { name: "Loratadine (Claritin)", dosage: "10mg", frequency: "Once daily", shape: "round", color: "#FFFFFF", quantity: 30, purpose: "Allergy Relief" },
                 { name: "Cetirizine (Zyrtec)", dosage: "10mg", frequency: "Once daily", shape: "round", color: "#FFFFFF", quantity: 30, purpose: "Allergy Relief" },
-                { name: "Fexofenadine (Allegra)", dosage: "180mg", frequency: "Once daily", shape: "oblong", color: "#FFD700", quantity: 30, purpose: "Allergy Relief" },
+                { name: "Fexofenadine (Allegra)", dosage: "180mg", frequency: "Once daily", shape: "oval", color: "#FFD700", quantity: 30, purpose: "Allergy Relief" },
                 { name: "Chlorpheniramine", dosage: "4mg", frequency: "Every 4-6 hours", shape: "round", color: "#FFFF00", quantity: 100, purpose: "Allergy/Cold" },
             ]
         }
