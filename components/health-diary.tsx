@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2, HelpCircle } from "lucide-react"
+import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2, HelpCircle, Hospital } from "lucide-react"
 import { toast } from "sonner"
 
 interface HealthDiaryProps {
@@ -11,9 +11,10 @@ interface HealthDiaryProps {
     deleteItem: (id: string) => Promise<any>
     theme: string
     onOpenHelp?: (targetId?: string) => void
+    setActivePage?: (page: string) => void
 }
 
-export default function HealthDiary({ records, addItem, deleteItem, theme, onOpenHelp }: HealthDiaryProps) {
+export default function HealthDiary({ records, addItem, deleteItem, theme, onOpenHelp, setActivePage }: HealthDiaryProps) {
     const [entries, setEntries] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
     const [isListening, setIsListening] = useState(false)
@@ -87,7 +88,7 @@ export default function HealthDiary({ records, addItem, deleteItem, theme, onOpe
         <div className="space-y-8 p-4">
             {/* Header */}
             <div className={`p-6 rounded-2xl ${headerStyle} ${glassCardStyle}`}>
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
                         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-500 flex items-center gap-3">
                             Health Diary
@@ -95,20 +96,39 @@ export default function HealthDiary({ records, addItem, deleteItem, theme, onOpe
                         </h1>
                         <p className="text-gray-400 mt-1 uppercase tracking-widest text-[10px] font-black opacity-70">Symptom tracking & wellness journal</p>
                     </div>
-                    <button
-                        onClick={() => {
-                            setFormData({
-                                title: "",
-                                content: "",
-                                date: new Date().toISOString().split('T')[0]
-                            })
-                            setShowAddModal(true)
-                        }}
-                        className="flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-6 py-3 rounded-xl shadow-md transition-all transform hover:scale-105"
-                    >
-                        <Plus className="h-5 w-5 mr-2" />
-                        New Entry
-                    </button>
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                        <button
+                            onClick={() => {
+                                if (typeof window !== "undefined") {
+                                    localStorage.setItem("slh-health-target-tab", "dashboard")
+                                }
+                                if (setActivePage) {
+                                    setActivePage("type-health-records")
+                                } else if (typeof window !== "undefined") {
+                                    window.location.href = "/?page=type-health-records"
+                                }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                            title="Back to Health Hub Overview"
+                        >
+                            <Hospital className="h-4 w-4 text-rose-400" />
+                            Health Hub
+                        </button>
+                        <button
+                            onClick={() => {
+                                setFormData({
+                                    title: "",
+                                    content: "",
+                                    date: new Date().toISOString().split('T')[0]
+                                })
+                                setShowAddModal(true)
+                            }}
+                            className="flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white px-5 py-2.5 rounded-xl shadow-md transition-all font-bold text-sm cursor-pointer"
+                        >
+                            <Plus className="h-5 w-5 mr-1.5" />
+                            New Entry
+                        </button>
+                    </div>
                 </div>
             </div>
 

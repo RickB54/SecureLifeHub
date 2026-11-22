@@ -228,6 +228,11 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
   }
 
   const handleNavigation = (page: string) => {
+    if (page === "type-health-records") {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("slh-health-target-tab", "dashboard")
+      }
+    }
     setActivePage(page)
     setIsOpen(false)
   }

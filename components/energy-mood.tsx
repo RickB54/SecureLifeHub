@@ -3,7 +3,7 @@ import {
     Zap, Moon, Sun, Cloud, CloudRain, Smile, Meh, Frown, 
     Battery, BatteryLow, BatteryMedium, BatteryFull, Activity, 
     Plus, Trash2, Calendar, TrendingUp, Sparkles, Coffee, 
-    Utensils, MessageSquare, Brain, Target
+    Utensils, MessageSquare, Brain, Target, Hospital
 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts"
 import { toast } from "sonner"
@@ -13,6 +13,7 @@ interface EnergyMoodProps {
     addItem: (item: any) => Promise<any>
     deleteItem: (id: string) => Promise<void>
     theme: string
+    setActivePage?: (page: string) => void
 }
 
 const MOODS = [
@@ -25,7 +26,7 @@ const MOODS = [
     { id: 'stressed', label: 'Stressed', emoji: '😤', color: 'text-red-400', bg: 'bg-red-400/10' },
 ]
 
-export default function EnergyMood({ records = [], addItem, deleteItem, theme }: EnergyMoodProps) {
+export default function EnergyMood({ records = [], addItem, deleteItem, theme, setActivePage }: EnergyMoodProps) {
     const isDark = theme !== 'light'
     const logs = useMemo(() => 
         records.filter(r => r.type === "energy-mood-log")
@@ -81,11 +82,30 @@ export default function EnergyMood({ records = [], addItem, deleteItem, theme }:
     return (
         <div className={`h-full flex flex-col ${isDark ? 'bg-[#121212]' : 'bg-gray-50'} text-white overflow-y-auto custom-scrollbar p-4 md:p-8 space-y-8`}>
             {/* Header */}
-            <div>
-                <h1 className="text-3xl md:text-5xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 uppercase flex items-center gap-4">
-                    <Activity className="h-10 w-10 text-yellow-500" /> State of Being
-                </h1>
-                <p className="text-gray-500 mt-2 font-black uppercase tracking-[0.3em] text-[10px] md:text-xs">Human Capacity & Mood Architecture</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl md:text-5xl font-black italic bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 uppercase flex items-center gap-4">
+                        <Activity className="h-10 w-10 text-yellow-500" /> State of Being
+                    </h1>
+                    <p className="text-gray-500 mt-2 font-black uppercase tracking-[0.3em] text-[10px] md:text-xs">Human Capacity & Mood Architecture</p>
+                </div>
+                <button
+                    onClick={() => {
+                        if (typeof window !== "undefined") {
+                            localStorage.setItem("slh-health-target-tab", "dashboard")
+                        }
+                        if (setActivePage) {
+                            setActivePage("type-health-records")
+                        } else if (typeof window !== "undefined") {
+                            window.location.href = "/?page=type-health-records"
+                        }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all self-start sm:self-auto cursor-pointer"
+                    title="Back to Health Hub Overview"
+                >
+                    <Hospital className="h-4 w-4 text-rose-400" />
+                    Health Hub
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

@@ -18,7 +18,8 @@ import {
   ChevronRight,
   MoreVertical,
   Heart,
-  HelpCircle
+  HelpCircle,
+  Hospital
 } from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
@@ -38,9 +39,10 @@ interface DoctorsProps {
   deleteItem: (id: string) => Promise<any>
   theme: string
   onOpenHelp?: (targetId?: string) => void
+  setActivePage?: (page: string) => void
 }
 
-export default function Doctors({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: DoctorsProps) {
+export default function Doctors({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, setActivePage }: DoctorsProps) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [editingDoctor, setEditingDoctor] = useState<any>(null)
@@ -172,12 +174,31 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
           </h1>
           <p className="text-gray-500 text-sm mt-1">Directory of specialists, facilities, and care providers.</p>
         </div>
-        <button
-          onClick={() => { resetForm(); setShowAddModal(true); }}
-          className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-2xl shadow-xl shadow-rose-500/20 transition-all font-bold flex items-center gap-2"
-        >
-          <Plus className="h-5 w-5" /> Add Provider
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <button
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                localStorage.setItem("slh-health-target-tab", "dashboard")
+              }
+              if (setActivePage) {
+                setActivePage("type-health-records")
+              } else if (typeof window !== "undefined") {
+                window.location.href = "/?page=type-health-records"
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+            title="Back to Health Hub Overview"
+          >
+            <Hospital className="h-4 w-4 text-rose-400" />
+            Health Hub
+          </button>
+          <button
+            onClick={() => { resetForm(); setShowAddModal(true); }}
+            className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-2xl shadow-xl shadow-rose-500/20 transition-all font-bold flex items-center gap-2"
+          >
+            <Plus className="h-5 w-5" /> Add Provider
+          </button>
+        </div>
       </div>
 
       <div className="relative group max-w-2xl">

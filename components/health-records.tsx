@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -88,9 +88,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             if (target) {
                 localStorage.removeItem("slh-health-target-tab")
                 setActiveTab(target as any)
+                return
             }
         }
-    }, [])
+        if (initialTab) {
+            setActiveTab(initialTab as any)
+        }
+    }, [initialTab])
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -993,19 +997,31 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
                         <Activity className="h-8 w-8 text-blue-400" /> Health Hub
                     </h1>
-                    <button
-                        onClick={() => {
-                            if (setActivePage) {
-                                setActivePage("doctor-visit-hub")
-                            } else if (typeof window !== "undefined") {
-                                window.location.href = "/doctor-visit-hub"
-                            }
-                        }}
-                        className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-teal-500/20 transition-all self-start sm:self-auto cursor-pointer"
-                        title="Open full-screen Doctor Visit Hub"
-                    >
-                        <Stethoscope className="h-4 w-4" /> Doctor Visit Hub
-                    </button>
+                    <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+                        {activeTab !== 'dashboard' && (
+                            <button
+                                onClick={() => setActiveTab('dashboard')}
+                                className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                                title="Back to Health Hub Overview"
+                            >
+                                <Hospital className="h-4 w-4 text-rose-400" />
+                                Health Hub
+                            </button>
+                        )}
+                        <button
+                            onClick={() => {
+                                if (setActivePage) {
+                                    setActivePage("doctor-visit-hub")
+                                } else if (typeof window !== "undefined") {
+                                    window.location.href = "/doctor-visit-hub"
+                                }
+                            }}
+                            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-teal-500/20 transition-all cursor-pointer"
+                            title="Open full-screen Doctor Visit Hub"
+                        >
+                            <Stethoscope className="h-4 w-4" /> Doctor Visit Hub
+                        </button>
+                    </div>
                 </div>
 
                 <div className={`flex flex-wrap gap-1.5 border-b ${theme === 'light' ? 'border-gray-200' : 'border-white/10'} pb-3`}>

@@ -3,7 +3,7 @@ import NavBar from "./NavBar"
 import Index from "./pages/Index"
 import NotFound from "./pages/NotFound"
 
-import { ArrowLeft, Maximize2, Minimize2 } from "lucide-react"
+import { ArrowLeft, Maximize2, Minimize2, Hospital } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import Exercises from "./pages/Exercises"
 import Workout from "./pages/Workout"
@@ -128,6 +128,23 @@ export default function GdftShell({ setActivePage, theme }: any) {
                         >
                           <ArrowLeft className="h-4 w-4" />
                           <span className="tracking-wide uppercase">EXIT GDFT</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (typeof window !== "undefined") {
+                              localStorage.setItem("slh-health-target-tab", "dashboard")
+                            }
+                            if (setActivePage) {
+                              setActivePage("type-health-records")
+                            } else if (typeof window !== "undefined") {
+                              window.location.href = "/?page=type-health-records"
+                            }
+                          }}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-200 hover:text-white px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 border border-slate-700 transition-colors cursor-pointer"
+                          title="Back to Health Hub Overview"
+                        >
+                          <Hospital className="h-3.5 w-3.5 text-rose-400" />
+                          <span className="tracking-wide uppercase hidden xs:inline sm:inline">Health Hub</span>
                         </button>
                       </div>
 

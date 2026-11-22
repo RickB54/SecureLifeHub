@@ -561,6 +561,7 @@ function HomeContent() {
             updateItem={updateItem}
             deleteItem={deleteItem}
             theme={theme}
+            setActivePage={handleNavigate}
           />
         )
       case "type-logins":

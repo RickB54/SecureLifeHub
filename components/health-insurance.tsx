@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Trash2, Edit, HelpCircle } from "lucide-react"
+import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Trash2, Edit, HelpCircle, Hospital } from "lucide-react"
 
 interface Props {
     records: any[]
@@ -10,9 +10,10 @@ interface Props {
     deleteItem: (id: string) => Promise<any>
     theme: string
     onOpenHelp?: (targetId?: string) => void
+    setActivePage?: (page: string) => void
 }
 
-export default function HealthInsurance({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: Props) {
+export default function HealthInsurance({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, setActivePage }: Props) {
     const [policies, setPolicies] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
     const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -29,7 +30,7 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
         <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50' : 'bg-[#121212]'} text-white overflow-hidden`}>
             {/* Header */}
             <div className="p-8 pb-4">
-                <div className="flex justify-between items-start mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                     <div>
                         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center gap-3">
                             <Shield className="h-8 w-8 text-blue-500" /> Health Insurance
@@ -37,12 +38,31 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
                         </h1>
                         <p className="text-gray-400 mt-1">Manage cards, copays, and provider contacts.</p>
                     </div>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20"
-                    >
-                        <Plus className="h-4 w-4 mr-2" /> Add Policy
-                    </button>
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                        <button
+                            onClick={() => {
+                                if (typeof window !== "undefined") {
+                                    localStorage.setItem("slh-health-target-tab", "dashboard")
+                                }
+                                if (setActivePage) {
+                                    setActivePage("type-health-records")
+                                } else if (typeof window !== "undefined") {
+                                    window.location.href = "/?page=type-health-records"
+                                }
+                            }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+                            title="Back to Health Hub Overview"
+                        >
+                            <Hospital className="h-4 w-4 text-rose-400" />
+                            Health Hub
+                        </button>
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
+                        >
+                            <Plus className="h-4 w-4 mr-2" /> Add Policy
+                        </button>
+                    </div>
                 </div>
             </div>
 
