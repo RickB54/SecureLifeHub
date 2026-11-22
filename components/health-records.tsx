@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -77,6 +77,39 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         specialty: "",
         date: new Date().toISOString().slice(0, 16)
     })
+
+    // Google Calendar State
+    const [googleCalendarEvents, setGoogleCalendarEvents] = useState<any[]>([])
+    const [isGCalConnected, setIsGCalConnected] = useState(false)
+    const [addToGoogleCalendar, setAddToGoogleCalendar] = useState(true)
+
+    // Check for scheduling conflict with Google Calendar events
+    const schedulingConflict = useMemo(() => {
+        if (!isGCalConnected || !apptFormData.date || googleCalendarEvents.length === 0) return null
+        const apptStart = new Date(apptFormData.date).getTime()
+        if (isNaN(apptStart)) return null
+        const apptEnd = apptStart + 60 * 60 * 1000 // 1 hour duration
+
+        for (const ev of googleCalendarEvents) {
+            const evStartStr = ev.start?.dateTime || ev.start?.date
+            const evEndStr = ev.end?.dateTime || ev.end?.date
+            if (!evStartStr) continue
+
+            const evStart = new Date(evStartStr).getTime()
+            const evEnd = evEndStr ? new Date(evEndStr).getTime() : evStart + 60 * 60 * 1000
+
+            if (apptStart < evEnd && apptEnd > evStart) {
+                return {
+                    eventTitle: ev.summary || "(No Title)",
+                    calendarName: ev.calendarName || "Google Calendar",
+                    timeStr: ev.start.dateTime
+                        ? new Date(ev.start.dateTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                        : 'All day',
+                }
+            }
+        }
+        return null
+    }, [isGCalConnected, apptFormData.date, googleCalendarEvents])
 
     // Mock data state
     const [showMockData, setShowMockData] = useState(false)
@@ -871,6 +904,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 theme={theme}
                 existingAppointments={upcomingAppts}
                 onScheduleAppointment={() => { setAddModalType('appointment'); setShowAddModal(true) }}
+                onEventsLoaded={setGoogleCalendarEvents}
+                onConnectionChange={setIsGCalConnected}
             />
 
             {/* Divider */}
@@ -1269,6 +1304,31 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         await updateItem(editingVital.id, payload)
                                     } else {
                                         await addItem(payload)
+
+                                        // If user opted to add to Google Calendar and connected
+                                        if (isGCalConnected && addToGoogleCalendar && apptFormData.date) {
+                                            try {
+                                                const session = (await supabase.auth.getSession()).data.session
+                                                if (session?.access_token) {
+                                                    const startIso = new Date(apptFormData.date).toISOString()
+                                                    const endIso = new Date(new Date(apptFormData.date).getTime() + 60 * 60 * 1000).toISOString()
+                                                    const gcalRes = await fetch("/api/google-calendar/create-event", {
+                                                        method: "POST",
+                                                        headers: {
+                                                            Authorization: `Bearer ${session.access_token}`,
+                                                            "Content-Type": "application/json",
+                                                        },
+                                                        body: JSON.stringify({ start: startIso, end: endIso }),
+                                                    })
+                                                    const gcalData = await gcalRes.json()
+                                                    if (gcalData.success) {
+                                                        toast.success("Added to Google Calendar as 'Doctor appointment'")
+                                                    }
+                                                }
+                                            } catch (err) {
+                                                console.warn("Failed to create Google Calendar event:", err)
+                                            }
+                                        }
                                     }
                                     setShowAddModal(false)
                                     setEditingVital(null)
@@ -1363,6 +1423,36 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm italic custom-scrollbar"
                                         />
                                     </div>
+
+                                    {schedulingConflict && (
+                                        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-amber-300">
+                                            <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                                            <div className="text-xs leading-relaxed">
+                                                <span className="font-bold">⚠️ Scheduling Conflict:</span> You already have an event (<span className="font-semibold text-white">"{schedulingConflict.eventTitle}"</span> at {schedulingConflict.timeStr}) on this date in your <span className="font-semibold">{schedulingConflict.calendarName}</span> calendar.
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {isGCalConnected && (
+                                        <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">
+                                            <input
+                                                type="checkbox"
+                                                checked={addToGoogleCalendar}
+                                                onChange={(e) => setAddToGoogleCalendar(e.target.checked)}
+                                                className="rounded border-slate-700 text-blue-600 focus:ring-0 cursor-pointer"
+                                            />
+                                            <div className="flex-1">
+                                                <div className="text-xs font-bold text-white flex items-center gap-2">
+                                                    <CalendarIcon className="h-3.5 w-3.5 text-blue-400" />
+                                                    Add to Google Calendar
+                                                </div>
+                                                <p className="text-[10px] text-gray-400 mt-0.5">
+                                                    Generic title: "Doctor appointment" (no medical details in Google)
+                                                </p>
+                                            </div>
+                                        </label>
+                                    )}
+
                                     <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
                                         {editingVital ? 'Update Appointment' : 'Confirm Appointment'}
                                     </button>
@@ -1403,6 +1493,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Diagnostic Summarization</label>
                                         <textarea name="notes" placeholder="Summarize findings, outcomes, and next steps..." className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm" />
                                     </div>
+
                                     <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
                                         Securely Store Record
                                     </button>
