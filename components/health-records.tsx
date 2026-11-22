@@ -77,7 +77,12 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         if (typeof window !== "undefined") {
             const urlParams = new URLSearchParams(window.location.search)
             const fromUrl = normalizeHealthTab(urlParams.get("tab"))
-            if (fromUrl) return fromUrl
+            if (fromUrl) {
+                const cleanUrl = new URL(window.location.href)
+                cleanUrl.searchParams.delete("tab")
+                window.history.replaceState({}, "", cleanUrl.toString())
+                return fromUrl
+            }
             const target = normalizeHealthTab(localStorage.getItem("slh-health-target-tab"))
             if (target) {
                 localStorage.removeItem("slh-health-target-tab")
@@ -156,6 +161,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             const urlParams = new URLSearchParams(window.location.search)
             const fromUrl = normalizeHealthTab(urlParams.get("tab"))
             if (fromUrl) {
+                const cleanUrl = new URL(window.location.href)
+                cleanUrl.searchParams.delete("tab")
+                window.history.replaceState({}, "", cleanUrl.toString())
                 setActiveTab(fromUrl)
                 return
             }
@@ -1088,9 +1096,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         )}
                         <button
                             onClick={() => {
-                                if (setActivePage) {
-                                    setActivePage("doctor-visit-hub")
-                                } else if (typeof window !== "undefined") {
+                                if (typeof window !== "undefined") {
                                     window.location.href = "/doctor-visit-hub"
                                 }
                             }}
@@ -1125,14 +1131,6 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             onClick={() => {
                                 if (tab.id === 'visit-hub') {
                                     if (typeof window !== "undefined") {
-                                        const url = new URL(window.location.href)
-                                        url.searchParams.delete("section")
-                                        window.history.replaceState({}, "", url.toString())
-                                        localStorage.removeItem("slh-pending-visit-hub-section")
-                                    }
-                                    if (setActivePage) {
-                                        setActivePage("doctor-visit-hub")
-                                    } else if (typeof window !== "undefined") {
                                         window.location.href = "/doctor-visit-hub"
                                     }
                                     return
@@ -1140,19 +1138,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 if ((tab as any).section) {
                                     const sec = (tab as any).section
                                     if (typeof window !== "undefined") {
-                                        const url = new URL(window.location.href)
-                                        url.searchParams.set("section", sec)
-                                        window.history.replaceState({}, "", url.toString())
-                                        localStorage.setItem("slh-pending-visit-hub-section", sec)
-                                    }
-                                    if (setActivePage) {
-                                        setActivePage(`type-visit-hub-${sec}`)
-                                    } else if (typeof window !== "undefined") {
                                         window.location.href = `/doctor-visit-hub?section=${sec}`
                                     }
                                     return
                                 }
                                 setActiveTab(tab.id as any)
+                                if (typeof window !== "undefined") {
+                                    const cleanUrl = new URL(window.location.href)
+                                    cleanUrl.searchParams.delete("tab")
+                                    window.history.replaceState({}, "", cleanUrl.toString())
+                                }
                             }}
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 whitespace-nowrap ${tab.id === 'visit-hub'
                                 ? "bg-teal-600/25 text-teal-300 hover:bg-teal-600/40 border border-teal-500/30"

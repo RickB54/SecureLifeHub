@@ -235,18 +235,17 @@ export default function DoctorVisitHub({
   useEffect(() => {
     if (initialSection && VISIT_HUB_SECTIONS.some((s) => s.id === initialSection)) {
       setSelectedSections([initialSection])
-      return
-    }
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search)
-      const secParam = urlParams.get("section") as VisitHubSectionId
-      if (secParam && VISIT_HUB_SECTIONS.some((s) => s.id === secParam)) {
-        setSelectedSections([secParam])
-      }
     }
   }, [initialSection])
 
   const handleToggleChip = (sectionId: VisitHubSectionId) => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has("section")) {
+        url.searchParams.delete("section")
+        window.history.replaceState({}, "", url.toString())
+      }
+    }
     setSelectedSections((prev) => {
       let next: VisitHubSectionId[]
       if (prev.length === 1 && prev[0] === sectionId) {
@@ -266,6 +265,13 @@ export default function DoctorVisitHub({
   }
 
   const handleToggleAll = () => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has("section")) {
+        url.searchParams.delete("section")
+        window.history.replaceState({}, "", url.toString())
+      }
+    }
     const allIds = VISIT_HUB_SECTIONS.map((s) => s.id)
     if (selectedSections.length === allIds.length) {
       // Collapse back to first
@@ -1453,14 +1459,14 @@ export default function DoctorVisitHub({
           <button
             type="button"
             onClick={handleToggleAll}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer select-none ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer select-none ${
               isAllSelected
-                ? "bg-indigo-600 text-white shadow-md shadow-indigo-500/25 border border-indigo-400/40"
-                : "bg-slate-800/80 hover:bg-slate-800 text-indigo-300 hover:text-indigo-200 border border-indigo-500/30"
+                ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
+                : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
             }`}
             title={isAllSelected ? "Collapse all back to one section" : "Show all sections in order"}
           >
-            All {isAllSelected ? "(Active)" : ""}
+            All
           </button>
         </div>
       </nav>
@@ -2946,166 +2952,6 @@ export default function DoctorVisitHub({
                   onClick={() => handleGoToNextSection("referrals")}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
                 >
-                  <span>Next: Recent Visits</span>
-                  <ChevronRight className="h-4 w-4 text-slate-400" />
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* ============================================================== */}
-          {/* SECTION 7: VISITS                                              */}
-          {/* ============================================================== */}
-          {selectedSections.includes("visits") && (
-            <section
-              id="section-visits"
-              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
-            >
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
-                    <Clock className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h2 className="text-base md:text-lg font-bold text-white">Recent Visits</h2>
-                    <p className="text-xs text-slate-400">Past consultations with linked notes, letters & referrals</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toggleExpandAll(
-                        "visits",
-                        filteredVisits.map((v) => v.id)
-                      )
-                    }
-                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
-                  >
-                    {filteredVisits.length > 0 &&
-                    filteredVisits.every((v) => expandedVisits[v.id])
-                      ? "Collapse all"
-                      : "Expand all"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleNavigateToFullTab("appointments")}
-                    className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
-                  >
-                    <span>Go to full Visits tab</span>
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Toolbar: Search, Doctor Filter, Sort */}
-              <SectionToolbar
-                search={visitsSearch}
-                onSearchChange={setVisitsSearch}
-                doctorFilter={visitsDoctorFilter}
-                onDoctorFilterChange={setVisitsDoctorFilter}
-                sort={visitsSort}
-                onSortChange={(val) => handleSortChange("visits", val)}
-                existingDoctors={existingDoctors}
-                searchPlaceholder="Search visits..."
-              />
-
-              {/* Visits List */}
-              <div className="space-y-3">
-                {filteredVisits.length === 0 ? (
-                  <p className="text-xs text-slate-500 italic py-2">
-                    {existingVisits.length === 0
-                      ? "No visits found in Health Hub."
-                      : "No visits match your filter."}
-                  </p>
-                ) : (
-                  filteredVisits.map((v) => {
-                    const isExpanded = !!expandedVisits[v.id]
-                    const counts = visitItemCounts[v.id] || { notes: 0, letters: 0, referrals: 0 }
-                    const dateStr = formatDateOnly(v.date) || "No date"
-                    return (
-                      <div
-                        key={v.id}
-                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
-                      >
-                        {/* Compact bar */}
-                        <div
-                          onClick={() => toggleExpand("visits", v.id)}
-                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
-                        >
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-xs md:text-sm font-bold text-white truncate">
-                              {v.doctor || v.title || "Visit"}
-                            </span>
-                            {v.location && (
-                              <span className="hidden sm:inline-flex text-xs text-slate-400 truncate max-w-[120px]">
-                                &bull; {v.location}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-[11px] text-slate-400">{dateStr}</span>
-                            {isExpanded ? (
-                              <ChevronUp className="h-4 w-4 text-slate-400" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-slate-400" />
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Expanded details */}
-                        {isExpanded && (
-                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
-                            <div className="flex items-start justify-between gap-3 flex-wrap">
-                              <div className="space-y-1 text-xs">
-                                {v.location && (
-                                  <div className="text-slate-400 flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    <span>{v.location}</span>
-                                  </div>
-                                )}
-                                {v.notes && <p className="text-slate-300 leading-relaxed pt-1">{v.notes}</p>}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleNavigateToFullTab("appointments")
-                                }}
-                                className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 text-xs font-semibold border border-slate-800 transition-colors shrink-0"
-                              >
-                                View in Visits
-                              </button>
-                            </div>
-                            {/* Linked Counts */}
-                            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 flex-wrap">
-                              <span className="font-semibold text-slate-300">Linked items:</span>
-                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-teal-300">
-                                {counts.notes} notes
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-300">
-                                {counts.letters} letters
-                              </span>
-                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-rose-300">
-                                {counts.referrals} referrals
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-
-              {/* Bottom Next Section Button */}
-              <div className="pt-2 border-t border-slate-800 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleGoToNextSection("visits")}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
-                >
                   <span>Next: Visit Summary</span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
@@ -3114,7 +2960,7 @@ export default function DoctorVisitHub({
           )}
 
           {/* ============================================================== */}
-          {/* SECTION 8: VISIT SUMMARY                                       */}
+          {/* SECTION 7: VISIT SUMMARY                                       */}
           {/* ============================================================== */}
           {selectedSections.includes("summary") && (
             <section
@@ -3364,6 +3210,166 @@ export default function DoctorVisitHub({
                 <button
                   type="button"
                   onClick={() => handleGoToNextSection("summary")}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
+                >
+                  <span>Next: Recent Visits</span>
+                  <ChevronRight className="h-4 w-4 text-slate-400" />
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* ============================================================== */}
+          {/* SECTION 8: VISITS                                              */}
+          {/* ============================================================== */}
+          {selectedSections.includes("visits") && (
+            <section
+              id="section-visits"
+              className="bg-slate-900 border border-slate-800 rounded-3xl p-4 md:p-6 shadow-xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base md:text-lg font-bold text-white">Recent Visits</h2>
+                    <p className="text-xs text-slate-400">Past consultations with linked notes, letters & referrals</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleExpandAll(
+                        "visits",
+                        filteredVisits.map((v) => v.id)
+                      )
+                    }
+                    className="text-xs text-slate-400 hover:text-slate-200 font-semibold px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors"
+                  >
+                    {filteredVisits.length > 0 &&
+                    filteredVisits.every((v) => expandedVisits[v.id])
+                      ? "Collapse all"
+                      : "Expand all"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigateToFullTab("appointments")}
+                    className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                  >
+                    <span>Go to full Visits tab</span>
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Toolbar: Search, Doctor Filter, Sort */}
+              <SectionToolbar
+                search={visitsSearch}
+                onSearchChange={setVisitsSearch}
+                doctorFilter={visitsDoctorFilter}
+                onDoctorFilterChange={setVisitsDoctorFilter}
+                sort={visitsSort}
+                onSortChange={(val) => handleSortChange("visits", val)}
+                existingDoctors={existingDoctors}
+                searchPlaceholder="Search visits..."
+              />
+
+              {/* Visits List */}
+              <div className="space-y-3">
+                {filteredVisits.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-2">
+                    {existingVisits.length === 0
+                      ? "No visits found in Health Hub."
+                      : "No visits match your filter."}
+                  </p>
+                ) : (
+                  filteredVisits.map((v) => {
+                    const isExpanded = !!expandedVisits[v.id]
+                    const counts = visitItemCounts[v.id] || { notes: 0, letters: 0, referrals: 0 }
+                    const dateStr = formatDateOnly(v.date) || "No date"
+                    return (
+                      <div
+                        key={v.id}
+                        className="rounded-2xl bg-slate-950 border border-slate-800 transition-all overflow-hidden"
+                      >
+                        {/* Compact bar */}
+                        <div
+                          onClick={() => toggleExpand("visits", v.id)}
+                          className="p-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.02] select-none"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="text-xs md:text-sm font-bold text-white truncate">
+                              {v.doctor || v.title || "Visit"}
+                            </span>
+                            {v.location && (
+                              <span className="hidden sm:inline-flex text-xs text-slate-400 truncate max-w-[120px]">
+                                &bull; {v.location}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[11px] text-slate-400">{dateStr}</span>
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-slate-400" />
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Expanded details */}
+                        {isExpanded && (
+                          <div className="p-4 pt-2 border-t border-slate-900 space-y-3">
+                            <div className="flex items-start justify-between gap-3 flex-wrap">
+                              <div className="space-y-1 text-xs">
+                                {v.location && (
+                                  <div className="text-slate-400 flex items-center gap-1">
+                                    <MapPin className="h-3 w-3" />
+                                    <span>{v.location}</span>
+                                  </div>
+                                )}
+                                {v.notes && <p className="text-slate-300 leading-relaxed pt-1">{v.notes}</p>}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleNavigateToFullTab("appointments")
+                                }}
+                                className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 text-xs font-semibold border border-slate-800 transition-colors shrink-0"
+                              >
+                                View in Visits
+                              </button>
+                            </div>
+                            {/* Linked Counts */}
+                            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 flex-wrap">
+                              <span className="font-semibold text-slate-300">Linked items:</span>
+                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-teal-300">
+                                {counts.notes} notes
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-300">
+                                {counts.letters} letters
+                              </span>
+                              <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-rose-300">
+                                {counts.referrals} referrals
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+
+              {/* Bottom Next Section Button */}
+              <div className="pt-2 border-t border-slate-800 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => handleGoToNextSection("visits")}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
                 >
                   <span>Next: Next Appointment</span>

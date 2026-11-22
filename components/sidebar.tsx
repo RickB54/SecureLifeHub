@@ -242,10 +242,14 @@ export default function Sidebar({ activePage, setActivePage, isOpen, setIsOpen, 
     }
     if (sectionMap[page]) {
       if (typeof window !== "undefined") {
-        localStorage.setItem("slh-pending-visit-hub-section", sectionMap[page])
-        const url = new URL(window.location.href)
-        url.searchParams.set("section", sectionMap[page])
-        window.history.replaceState({}, "", url.toString())
+        window.location.href = `/doctor-visit-hub?section=${sectionMap[page]}`
+        return
+      }
+    }
+    if (page === "doctor-visit-hub" || page === "type-doctor-visit-hub") {
+      if (typeof window !== "undefined") {
+        window.location.href = "/doctor-visit-hub"
+        return
       }
     }
     setActivePage(page)

@@ -140,6 +140,25 @@ function HomeContent() {
   const scrollPositions = useRef<Record<string, number>>({})
 
   const handleNavigate = (page: string) => {
+    if (page === "doctor-visit-hub" || page === "type-doctor-visit-hub") {
+      if (typeof window !== "undefined") {
+        window.location.href = "/doctor-visit-hub"
+        return
+      }
+    }
+    const visitHubSectionMap: Record<string, string> = {
+      "type-visit-hub-notes": "notes",
+      "type-visit-hub-letters": "letters",
+      "type-visit-hub-referrals": "referrals",
+      "type-visit-hub-questions": "questions",
+      "type-visit-hub-summary": "summary",
+    }
+    if (visitHubSectionMap[page]) {
+      if (typeof window !== "undefined") {
+        window.location.href = `/doctor-visit-hub?section=${visitHubSectionMap[page]}`
+        return
+      }
+    }
     if (page === activePage) return
     const mainEl = document.getElementById("main-scroll-container")
     if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop

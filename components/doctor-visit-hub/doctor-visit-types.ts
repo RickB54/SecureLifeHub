@@ -5,8 +5,8 @@ export type VisitHubSectionId =
   | "notes"
   | "letters"
   | "referrals"
-  | "visits"
   | "summary"
+  | "visits"
 
 export interface VisitHubSectionConfig {
   id: VisitHubSectionId
@@ -64,20 +64,20 @@ export const VISIT_HUB_SECTIONS: VisitHubSectionConfig[] = [
     shortLabel: "Referrals",
     fullTabTarget: "doctors",
     fullTabName: "My Doctors",
+    nextSectionId: "summary",
+  },
+  {
+    id: "summary",
+    label: "Visit Summary",
+    shortLabel: "Visit Summary",
+    fullTabTarget: "appointments",
+    fullTabName: "Visits",
     nextSectionId: "visits",
   },
   {
     id: "visits",
     label: "Recent Visits",
     shortLabel: "Visits",
-    fullTabTarget: "appointments",
-    fullTabName: "Visits",
-    nextSectionId: "summary",
-  },
-  {
-    id: "summary",
-    label: "Visit Summary",
-    shortLabel: "Summary",
     fullTabTarget: "appointments",
     fullTabName: "Visits",
     nextSectionId: "nextAppt",
