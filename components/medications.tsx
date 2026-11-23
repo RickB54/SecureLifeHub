@@ -9,6 +9,12 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { toast } from 'sonner'
 import { lookupDrugInfo, type DrugInfo } from '@/lib/drug-database'
+import {
+    DoctorCombobox,
+    FieldSuggestionInput,
+    extractDoctorsFromRecords,
+    extractHealthSuggestions,
+} from './health-ui/health-field-helpers'
 
 // Horizontally stretched oval / ellipse icon (not capsule style)
 export const OvalIcon = ({ className = "h-4 w-4", style, fill, stroke, strokeWidth }: any) => (
@@ -396,6 +402,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     dosage: formData.dosage || "As directed",
                     frequency: formData.frequency || "",
                     prescribedBy: formData.prescribedBy || "",
+                    doctor_id: formData.doctor_id || null,
+                    pharmacy: formData.pharmacy || "",
                     purpose: formData.purpose || "",
                     genericName: formData.genericName || "",
                     drugClass: formData.drugClass || "",
@@ -442,6 +450,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     dosage: formData.dosage || "As directed",
                     frequency: formData.frequency || "",
                     prescribedBy: formData.prescribedBy || "",
+                    doctor_id: formData.doctor_id || null,
+                    pharmacy: formData.pharmacy || "",
                     purpose: formData.purpose || "",
                     genericName: formData.genericName || "",
                     drugClass: formData.drugClass || "",
@@ -1393,6 +1403,8 @@ ${selectedMed ? `
                     theme={theme}
                     prefillData={prefillTarget}
                     onLookupDrug={handleDrugLookup}
+                    doctors={extractDoctorsFromRecords(records)}
+                    suggestions={extractHealthSuggestions(records)}
                 />
             )}
 
@@ -1748,7 +1760,7 @@ ${selectedMed ? `
 
 
 // Medication Modal with Pill Shape/Color Selection
-function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillData, onLookupDrug }: any) {
+function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillData, onLookupDrug, doctors = [], suggestions }: any) {
     const [formData, setFormData] = useState({
         name: medication?.title || "",
         genericName: medication?.item_metadata?.genericName || "",
@@ -1756,6 +1768,8 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
         dosage: medication?.item_metadata?.dosage || "",
         frequency: medication?.item_metadata?.frequency || "",
         prescribedBy: medication?.item_metadata?.prescribedBy || "",
+        doctor_id: medication?.item_metadata?.doctor_id || null as string | null,
+        pharmacy: medication?.item_metadata?.pharmacy || "",
         purpose: medication?.item_metadata?.purpose || "",
         sideEffects: medication?.item_metadata?.sideEffects || "",
         interactions: medication?.item_metadata?.interactions || "",
@@ -2137,11 +2151,13 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                                     </button>
                                 )}
                             </div>
-                            <input
+                            <FieldSuggestionInput
+                                name="medication-name"
                                 placeholder="e.g., Zolpidem"
                                 value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                onChange={(val) => setFormData({ ...formData, name: val })}
+                                suggestions={suggestions?.medicationNames || []}
+                                inputClassName="w-full px-4 py-3 pr-10 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
                             />
                         </div>
                         <div>
@@ -2348,9 +2364,41 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                             </div>
                         </div>
                         <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Prescribed By</label>
-                            <input placeholder="Dr. Smith" value={formData.prescribedBy} onChange={(e) => setFormData({ ...formData, prescribedBy: e.target.value })} className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" />
+                            <DoctorCombobox
+                                label="Prescribed By"
+                                value={formData.prescribedBy}
+                                doctorId={formData.doctor_id}
+                                doctors={doctors}
+                                placeholder="Select doctor or type name..."
+                                inputClassName="w-full px-4 py-3 pr-12 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white text-sm"
+                                onSelectDoctor={(doc) =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        prescribedBy: doc.name,
+                                        doctor_id: doc.id,
+                                    }))
+                                }
+                                onClear={() =>
+                                    setFormData((prev) => ({
+                                        ...prev,
+                                        prescribedBy: "",
+                                        doctor_id: null,
+                                    }))
+                                }
+                            />
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Pharmacy</label>
+                        <FieldSuggestionInput
+                            name="med-pharmacy"
+                            placeholder="e.g., CVS Pharmacy, Walgreens..."
+                            value={formData.pharmacy}
+                            onChange={(val) => setFormData({ ...formData, pharmacy: val })}
+                            suggestions={suggestions?.pharmacies || []}
+                            inputClassName="w-full px-4 py-3 pr-10 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                        />
                     </div>
 
                     {/* Reminder Times */}

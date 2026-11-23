@@ -41,6 +41,11 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
+  DoctorCombobox,
+  FieldSuggestionInput,
+  extractHealthSuggestions,
+} from "@/components/health-ui/health-field-helpers"
+import {
   VisitHubSectionId,
   VISIT_HUB_SECTIONS,
   HealthProfile,
@@ -337,6 +342,7 @@ export default function DoctorVisitHub({
   const [questions, setQuestions] = useState<HealthQuestion[]>([])
   const [questionInput, setQuestionInput] = useState("")
   const [questionDoctorId, setQuestionDoctorId] = useState("")
+  const [questionDoctorName, setQuestionDoctorName] = useState("")
 
   const [notes, setNotes] = useState<HealthNote[]>([])
   const [noteDoctorFilter, setNoteDoctorFilter] = useState("all")
@@ -1038,6 +1044,29 @@ export default function DoctorVisitHub({
     await deletePrepItem(id, userId)
   }
 
+  // Zero-egress field suggestions built from already-loaded Visit Hub data
+  const hubSuggestions = useMemo(() => {
+    const base = extractHealthSuggestions([], {
+      notes,
+      letters,
+      referrals,
+      visits: existingVisits,
+      meds: medications,
+    })
+    const specSet = new Set(base.specialties)
+    const locSet = new Set(base.locations)
+    for (const d of existingDoctors) {
+      if (d.specialty?.trim()) specSet.add(d.specialty.trim())
+      if (d.facility?.trim()) locSet.add(d.facility.trim())
+      if (d.address?.trim()) locSet.add(d.address.trim())
+    }
+    return {
+      ...base,
+      specialties: Array.from(specSet).sort(),
+      locations: Array.from(locSet).sort(),
+    }
+  }, [notes, letters, referrals, existingVisits, medications, existingDoctors])
+
   // Questions Handlers
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1048,7 +1077,7 @@ export default function DoctorVisitHub({
         question: questionInput.trim(),
         answered: false,
         doctor_id: questionDoctorId || null,
-        doctor_name: doctorObj?.name || "",
+        doctor_name: doctorObj?.name || questionDoctorName.trim() || "",
         visit_id: nextAppt?.id || null,
       },
       userId
@@ -1346,19 +1375,18 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={summaryForm.title}
-                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
-                  placeholder="e.g. Annual physical exam summary, Consultation recap"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                />
-              </div>
+              <FieldSuggestionInput
+                compact
+                name="summary-title"
+                label="Title"
+                required
+                value={summaryForm.title}
+                onChange={(val) => setSummaryForm({ ...summaryForm, title: val })}
+                suggestions={hubSuggestions.reasons}
+                placeholder="e.g. Annual physical exam summary, Consultation recap"
+              />
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -1368,35 +1396,37 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={summaryForm.date_type}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
-                  <select
-                    value={summaryForm.doctor_id}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">None / General</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="summary-date-type"
+                  label="Date Type"
+                  value={summaryForm.date_type}
+                  onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Visit date"
+                />
+                <DoctorCombobox
+                  compact
+                  label="Related Doctor"
+                  value={summaryForm.doctor_name}
+                  doctorId={summaryForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select or type doctor..."
+                  onSelectDoctor={(doc) =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
               </div>
 
               <div>
@@ -2042,18 +2072,24 @@ export default function DoctorVisitHub({
                     placeholder="Enter question to ask doctor..."
                     className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                   />
-                  <select
-                    value={questionDoctorId}
-                    onChange={(e) => setQuestionDoctorId(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-300 focus:outline-none"
-                  >
-                    <option value="">Any Doctor</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="sm:w-56 shrink-0">
+                    <DoctorCombobox
+                      compact
+                      label=""
+                      value={questionDoctorName}
+                      doctorId={questionDoctorId || null}
+                      doctors={existingDoctors}
+                      placeholder="Any Doctor..."
+                      onSelectDoctor={(doc) => {
+                        setQuestionDoctorId(doc.id || "")
+                        setQuestionDoctorName(doc.name)
+                      }}
+                      onClear={() => {
+                        setQuestionDoctorId("")
+                        setQuestionDoctorName("")
+                      }}
+                    />
+                  </div>
                   <button
                     type="submit"
                     className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shrink-0 cursor-pointer"
@@ -3524,19 +3560,18 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveNoteSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={noteForm.title}
-                  onChange={(e) => setNoteForm({ ...noteForm, title: e.target.value })}
-                  placeholder="e.g. Cardiology follow-up summary"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                />
-              </div>
+              <FieldSuggestionInput
+                compact
+                name="note-title"
+                label="Title"
+                required
+                value={noteForm.title}
+                onChange={(val) => setNoteForm({ ...noteForm, title: val })}
+                suggestions={hubSuggestions.reasons}
+                placeholder="e.g. Cardiology follow-up summary"
+              />
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -3546,35 +3581,37 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={noteForm.date_type}
-                    onChange={(e) => setNoteForm({ ...noteForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Related Doctor</label>
-                  <select
-                    value={noteForm.doctor_id}
-                    onChange={(e) => setNoteForm({ ...noteForm, doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">None / General</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="note-date-type"
+                  label="Date Type"
+                  value={noteForm.date_type}
+                  onChange={(val) => setNoteForm({ ...noteForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Appointment date"
+                />
+                <DoctorCombobox
+                  compact
+                  label="Related Doctor"
+                  value={noteForm.doctor_name}
+                  doctorId={noteForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select or type doctor..."
+                  onSelectDoctor={(doc) =>
+                    setNoteForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setNoteForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
               </div>
 
               <div>
@@ -3651,19 +3688,18 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={summaryForm.title}
-                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
-                  placeholder="e.g. Annual physical exam summary, Consultation recap"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                />
-              </div>
+              <FieldSuggestionInput
+                compact
+                name="summary-title"
+                label="Title"
+                required
+                value={summaryForm.title}
+                onChange={(val) => setSummaryForm({ ...summaryForm, title: val })}
+                suggestions={hubSuggestions.reasons}
+                placeholder="e.g. Annual physical exam summary, Consultation recap"
+              />
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -3673,35 +3709,37 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={summaryForm.date_type}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
-                  <select
-                    value={summaryForm.doctor_id}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">None / General</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="summary-date-type"
+                  label="Date Type"
+                  value={summaryForm.date_type}
+                  onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Visit date"
+                />
+                <DoctorCombobox
+                  compact
+                  label="Related Doctor"
+                  value={summaryForm.doctor_name}
+                  doctorId={summaryForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select or type doctor..."
+                  onSelectDoctor={(doc) =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
               </div>
 
               <div>
@@ -3780,35 +3818,30 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveLetterSubmit} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Select Doctor</label>
-                  <select
-                    value={letterForm.doctor_id}
-                    onChange={(e) => setLetterForm({ ...letterForm, doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">Other / Enter manually</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Doctor / Clinic Name</label>
-                  <input
-                    type="text"
-                    value={letterForm.doctor_name}
-                    onChange={(e) => setLetterForm({ ...letterForm, doctor_name: e.target.value })}
-                    placeholder="e.g. Dr. Adams or General Hospital"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  />
-                </div>
-              </div>
+              <DoctorCombobox
+                compact
+                label="Doctor / Provider"
+                value={letterForm.doctor_name}
+                doctorId={letterForm.doctor_id || null}
+                doctors={existingDoctors}
+                placeholder="Select doctor or type clinic name..."
+                onSelectDoctor={(doc) =>
+                  setLetterForm((prev) => ({
+                    ...prev,
+                    doctor_id: doc.id || "",
+                    doctor_name: doc.name,
+                  }))
+                }
+                onClear={() =>
+                  setLetterForm((prev) => ({
+                    ...prev,
+                    doctor_id: "",
+                    doctor_name: "",
+                  }))
+                }
+              />
 
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -3818,20 +3851,15 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={letterForm.date_type}
-                    onChange={(e) => setLetterForm({ ...letterForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="letter-date-type"
+                  label="Date Type"
+                  value={letterForm.date_type}
+                  onChange={(val) => setLetterForm({ ...letterForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Letter date"
+                />
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Direction</label>
                   <select
@@ -3942,19 +3970,18 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={summaryForm.title}
-                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
-                  placeholder="e.g. Annual physical exam summary, Consultation recap"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                />
-              </div>
+              <FieldSuggestionInput
+                compact
+                name="summary-title"
+                label="Title"
+                required
+                value={summaryForm.title}
+                onChange={(val) => setSummaryForm({ ...summaryForm, title: val })}
+                suggestions={hubSuggestions.reasons}
+                placeholder="e.g. Annual physical exam summary, Consultation recap"
+              />
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -3964,35 +3991,37 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={summaryForm.date_type}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
-                  <select
-                    value={summaryForm.doctor_id}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">None / General</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="summary-date-type"
+                  label="Date Type"
+                  value={summaryForm.date_type}
+                  onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Visit date"
+                />
+                <DoctorCombobox
+                  compact
+                  label="Related Doctor"
+                  value={summaryForm.doctor_name}
+                  doctorId={summaryForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select or type doctor..."
+                  onSelectDoctor={(doc) =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
               </div>
 
               <div>
@@ -4071,58 +4100,43 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveReferralSubmit} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">
-                    Link to My Doctors (Optional)
-                  </label>
-                  <select
-                    value={referralForm.doctor_id}
-                    onChange={(e) => {
-                      const docId = e.target.value
-                      const doc = existingDoctors.find((d) => d.id === docId)
-                      setReferralForm({
-                        ...referralForm,
-                        doctor_id: docId,
-                        specialist_name: doc?.name || referralForm.specialist_name,
-                        specialty: doc?.specialty || referralForm.specialty,
-                        phone: doc?.phone || referralForm.phone,
-                      })
-                    }}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">Not in My Doctors</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.specialty || "Specialist"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Specialist Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={referralForm.specialist_name}
-                    onChange={(e) => setReferralForm({ ...referralForm, specialist_name: e.target.value })}
-                    placeholder="e.g. Dr. Robert Chen"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  />
-                </div>
-              </div>
+              <DoctorCombobox
+                compact
+                required
+                label="Specialist / Doctor"
+                value={referralForm.specialist_name}
+                doctorId={referralForm.doctor_id || null}
+                doctors={existingDoctors}
+                placeholder="Select from My Doctors or type specialist name..."
+                onSelectDoctor={(doc) =>
+                  setReferralForm((prev) => ({
+                    ...prev,
+                    doctor_id: doc.id || "",
+                    specialist_name: doc.name,
+                    specialty: prev.specialty?.trim() ? prev.specialty : (doc.specialty || ""),
+                    phone: prev.phone?.trim() ? prev.phone : (doc.phone || ""),
+                    notes: prev.notes?.trim() ? prev.notes : (doc.facility || doc.address || ""),
+                  }))
+                }
+                onClear={() =>
+                  setReferralForm((prev) => ({
+                    ...prev,
+                    doctor_id: "",
+                    specialist_name: "",
+                  }))
+                }
+              />
 
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Specialty</label>
-                  <input
-                    type="text"
-                    value={referralForm.specialty}
-                    onChange={(e) => setReferralForm({ ...referralForm, specialty: e.target.value })}
-                    placeholder="e.g. Dermatology, Neurology"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  />
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="referral-specialty"
+                  label="Specialty"
+                  value={referralForm.specialty}
+                  onChange={(val) => setReferralForm({ ...referralForm, specialty: val })}
+                  suggestions={hubSuggestions.specialties}
+                  placeholder="e.g. Dermatology, Neurology"
+                />
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Phone</label>
                   <input
@@ -4135,22 +4149,29 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Referred By</label>
-                  <select
-                    value={referralForm.referred_by_doctor_id}
-                    onChange={(e) => setReferralForm({ ...referralForm, referred_by_doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">Select Doctor</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <DoctorCombobox
+                  compact
+                  label="Referred By"
+                  value={referralForm.referred_by_name}
+                  doctorId={referralForm.referred_by_doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select doctor..."
+                  onSelectDoctor={(doc) =>
+                    setReferralForm((prev) => ({
+                      ...prev,
+                      referred_by_doctor_id: doc.id || "",
+                      referred_by_name: doc.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setReferralForm((prev) => ({
+                      ...prev,
+                      referred_by_doctor_id: "",
+                      referred_by_name: "",
+                    }))
+                  }
+                />
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -4160,20 +4181,15 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={referralForm.date_type}
-                    onChange={(e) => setReferralForm({ ...referralForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="referral-date-type"
+                  label="Date Type"
+                  value={referralForm.date_type}
+                  onChange={(val) => setReferralForm({ ...referralForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Referral date"
+                />
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Status</label>
                   <select
@@ -4189,16 +4205,15 @@ export default function DoctorVisitHub({
                 </div>
               </div>
 
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Reason for Referral</label>
-                <input
-                  type="text"
-                  value={referralForm.reason}
-                  onChange={(e) => setReferralForm({ ...referralForm, reason: e.target.value })}
-                  placeholder="e.g. Annual skin check, MRI evaluation..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                />
-              </div>
+              <FieldSuggestionInput
+                compact
+                name="referral-reason"
+                label="Reason for Referral"
+                value={referralForm.reason}
+                onChange={(val) => setReferralForm({ ...referralForm, reason: val })}
+                suggestions={hubSuggestions.reasons}
+                placeholder="e.g. Annual skin check, MRI evaluation..."
+              />
 
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Notes</label>
@@ -4257,19 +4272,18 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveSummarySubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 font-semibold block mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={summaryForm.title}
-                  onChange={(e) => setSummaryForm({ ...summaryForm, title: e.target.value })}
-                  placeholder="e.g. Annual physical exam summary, Consultation recap"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                />
-              </div>
+              <FieldSuggestionInput
+                compact
+                name="summary-title"
+                label="Title"
+                required
+                value={summaryForm.title}
+                onChange={(val) => setSummaryForm({ ...summaryForm, title: val })}
+                suggestions={hubSuggestions.reasons}
+                placeholder="e.g. Annual physical exam summary, Consultation recap"
+              />
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
                   <label className="text-slate-400 font-semibold block mb-1">Date</label>
                   <input
@@ -4279,35 +4293,37 @@ export default function DoctorVisitHub({
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                   />
                 </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date Type</label>
-                  <select
-                    value={summaryForm.date_type}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, date_type: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    {DATE_TYPE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Doctor (Optional)</label>
-                  <select
-                    value={summaryForm.doctor_id}
-                    onChange={(e) => setSummaryForm({ ...summaryForm, doctor_id: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="">None / General</option>
-                    {existingDoctors.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <FieldSuggestionInput
+                  compact
+                  name="summary-date-type"
+                  label="Date Type"
+                  value={summaryForm.date_type}
+                  onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
+                  suggestions={hubSuggestions.dateTypes}
+                  placeholder="Visit date"
+                />
+                <DoctorCombobox
+                  compact
+                  label="Related Doctor"
+                  value={summaryForm.doctor_name}
+                  doctorId={summaryForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select or type doctor..."
+                  onSelectDoctor={(doc) =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setSummaryForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
               </div>
 
               <div>

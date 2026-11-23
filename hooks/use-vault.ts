@@ -305,7 +305,7 @@ export function useVault() {
         }
     }
 
-    const updateItem = async (id: string, updates: Partial<VaultItem>) => {
+    const updateItem = async (id: string, updates: Partial<VaultItem>, options?: { skipRefresh?: boolean }) => {
         try {
             // Define known schema columns to prevent errors
             const schemaFields = [

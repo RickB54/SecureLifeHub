@@ -13,6 +13,13 @@ import { MOCKED_HEALTH } from "../lib/mock-data"
 import MockDataBanner from "./ui/mock-data-banner"
 import { supabase } from "@/lib/supabase"
 import Doctors from "./doctors"
+import {
+    DoctorCombobox,
+    FieldSuggestionInput,
+    formatForDateTimeInput,
+    extractDoctorsFromRecords,
+    extractHealthSuggestions,
+} from "./health-ui/health-field-helpers"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -121,9 +128,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         title: "",
         notes: "",
         doctor: "",
+        doctor_id: "" as string | null,
         location: "",
         specialty: "",
-        date: new Date().toISOString().slice(0, 16)
+        date: formatForDateTimeInput(new Date())
+    })
+    const [manualRecordForm, setManualRecordForm] = useState({
+        title: "",
+        doctor: "",
+        doctor_id: "" as string | null,
+        date: formatForDateTimeInput(new Date()),
+        notes: ""
     })
 
     // Google Calendar State
@@ -282,7 +297,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 const { data, error } = await supabase
                     .from("vault_items")
                     .select("*")
-                    .or("category.in.(Health Records,Medications,Vitals,Health Insurance,Doctors,Medical),type.in.(health-record,medication,vital,doctor,health-insurance,health-checkin)")
+                    .or('category.in.("Health Records","Medications","Vitals","Health Insurance","Doctors","My Doctors","Medical"),type.in.(health-record,medication,vital,doctor,doctor-record,health-insurance,health-checkin)')
                     .order("created_at", { ascending: false })
 
                 if (!error && data && isMounted) {
@@ -301,6 +316,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const consolidatedRecords = useMemo(() => {
         return showMockData ? MOCKED_HEALTH : effectiveRecords;
     }, [showMockData, effectiveRecords])
+
+    // Shared zero-egress doctors & field suggestions built from already-loaded records
+    const savedDoctors = useMemo(() => extractDoctorsFromRecords(effectiveRecords), [effectiveRecords])
+    const healthSuggestions = useMemo(() => extractHealthSuggestions(effectiveRecords), [effectiveRecords])
 
     const healthRecords = useMemo(() => {
         return consolidatedRecords.filter(r => 
@@ -969,7 +988,20 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             <GoogleCalendarIntegration
                 theme={theme}
                 existingAppointments={upcomingAppts}
-                onScheduleAppointment={() => { setAddModalType('appointment'); setShowAddModal(true) }}
+                onScheduleAppointment={() => {
+                    setEditingVital(null)
+                    setApptFormData({
+                        title: "",
+                        notes: "",
+                        doctor: "",
+                        doctor_id: null,
+                        location: "",
+                        specialty: "",
+                        date: formatForDateTimeInput(new Date())
+                    })
+                    setAddModalType('appointment')
+                    setShowAddModal(true)
+                }}
                 onEventsLoaded={setGoogleCalendarEvents}
                 onConnectionChange={setIsGCalConnected}
             />
@@ -987,9 +1019,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 title: "",
                                 notes: "",
                                 doctor: "",
+                                doctor_id: null,
                                 location: "",
                                 specialty: "",
-                                date: getLocalDateTimeString()
+                                date: formatForDateTimeInput(new Date())
                             })
                             setAddModalType('appointment')
                             setShowAddModal(true)
@@ -1027,9 +1060,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                     title: apt.title || "",
                                                     notes: apt.item_metadata?.notes || "",
                                                     doctor: apt.item_metadata?.doctor || "",
+                                                    doctor_id: apt.item_metadata?.doctor_id || null,
                                                     location: apt.item_metadata?.location || "",
                                                     specialty: apt.item_metadata?.specialty || "",
-                                                    date: apt.item_metadata?.date ? new Date(apt.item_metadata.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
+                                                    date: formatForDateTimeInput(apt.item_metadata?.date)
                                                 })
                                                 setAddModalType('appointment')
                                                 setShowAddModal(true)
@@ -1255,7 +1289,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </button>
 
                         </div>
-                        <Medications records={records} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />
+                        <Medications records={effectiveRecords} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />
                         {showPillLibrary && <PillLibraryModal isOpen={showPillLibrary} onClose={() => setShowPillLibrary(false)} theme={theme} addItem={addItem} />}
                     </div>
                 )}
@@ -1389,7 +1423,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Timestamp</label>
-                                            <input type="datetime-local" name="date" required defaultValue={editingVital?.item_metadata?.date ? new Date(editingVital.item_metadata.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }} />
+                                            <input type="datetime-local" name="date" required defaultValue={formatForDateTimeInput(editingVital?.item_metadata?.date)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }} />
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">State/Context (AI Informed)</label>
@@ -1440,8 +1474,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         item_metadata: {
                                             is_health_record: true,
                                             type: "Appointment",
-                                            date: apptFormData.date || getLocalDateTimeString(),
+                                            date: apptFormData.date || formatForDateTimeInput(new Date()),
                                             doctor: apptFormData.doctor || "",
+                                            doctor_id: apptFormData.doctor_id || null,
                                             location: apptFormData.location || "",
                                             specialty: apptFormData.specialty || "",
                                             notes: apptFormData.notes || "",
@@ -1492,7 +1527,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         const { data: refreshed } = await supabase
                                             .from("vault_items")
                                             .select("*")
-                                            .or("category.in.(Health Records,Medications,Vitals,Health Insurance,Doctors,Medical),type.in.(health-record,medication,vital,doctor,health-insurance,health-checkin)")
+                                            .or('category.in.("Health Records","Medications","Vitals","Health Insurance","Doctors","My Doctors","Medical"),type.in.(health-record,medication,vital,doctor,doctor-record,health-insurance,health-checkin)')
                                             .order("created_at", { ascending: false })
                                         if (refreshed) setIsolatedHealthRecords(refreshed)
 
@@ -1515,13 +1550,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 <Mic className="h-4 w-4" />
                                             </button>
                                         </div>
-                                        <input
+                                        <FieldSuggestionInput
                                             name="title"
                                             required
                                             value={apptFormData.title || ''}
-                                            onChange={(e) => setApptFormData({ ...apptFormData, title: e.target.value })}
+                                            onChange={(val) => setApptFormData({ ...apptFormData, title: val })}
+                                            suggestions={healthSuggestions.reasons}
                                             placeholder="e.g. Annual Checkup"
-                                            className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
                                         />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1537,41 +1572,42 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 style={{ colorScheme: 'dark' }}
                                             />
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Doctor / Provider</label>
-                                            <input
-                                                name="doctor"
-                                                value={apptFormData.doctor || ''}
-                                                onChange={(e) => setApptFormData({ ...apptFormData, doctor: e.target.value })}
-                                                placeholder="Dr. Smith"
-                                                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
-                                            />
-                                        </div>
+                                        <DoctorCombobox
+                                            label="Doctor / Provider"
+                                            value={apptFormData.doctor || ''}
+                                            doctorId={apptFormData.doctor_id}
+                                            doctors={savedDoctors}
+                                            placeholder="Select doctor or type name..."
+                                            onSelectDoctor={(doc) => {
+                                                setApptFormData((prev) => ({
+                                                    ...prev,
+                                                    doctor: doc.name,
+                                                    doctor_id: doc.id,
+                                                    location: prev.location?.trim() ? prev.location : (doc.facility || doc.address || ""),
+                                                    specialty: prev.specialty?.trim() ? prev.specialty : (doc.specialty || ""),
+                                                }))
+                                            }}
+                                            onClear={() => setApptFormData((prev) => ({ ...prev, doctor: "", doctor_id: null }))}
+                                        />
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Location</label>
-                                            <div className="relative">
-                                                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
-                                                <input
-                                                    name="location"
-                                                    value={apptFormData.location || ''}
-                                                    onChange={(e) => setApptFormData({ ...apptFormData, location: e.target.value })}
-                                                    placeholder="123 Medic Lane"
-                                                    className="w-full p-4 pl-12 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Specialty</label>
-                                            <input
-                                                name="specialty"
-                                                value={apptFormData.specialty || ''}
-                                                onChange={(e) => setApptFormData({ ...apptFormData, specialty: e.target.value })}
-                                                placeholder="Cardiology"
-                                                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
-                                            />
-                                        </div>
+                                        <FieldSuggestionInput
+                                            name="location"
+                                            label="Location"
+                                            value={apptFormData.location || ''}
+                                            onChange={(val) => setApptFormData({ ...apptFormData, location: val })}
+                                            suggestions={healthSuggestions.locations}
+                                            placeholder="123 Medic Lane"
+                                            icon={<MapPin className="h-5 w-5" />}
+                                        />
+                                        <FieldSuggestionInput
+                                            name="specialty"
+                                            label="Specialty"
+                                            value={apptFormData.specialty || ''}
+                                            onChange={(val) => setApptFormData({ ...apptFormData, specialty: val })}
+                                            suggestions={healthSuggestions.specialties}
+                                            placeholder="Cardiology"
+                                        />
                                     </div>
                                     <div className="space-y-2">
                                         <div className="flex justify-between items-center mb-1">
@@ -1630,38 +1666,81 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             ) : (
                                 <form key="manual-form" onSubmit={async (e: any) => {
                                     e.preventDefault()
-                                    const fd = new FormData(e.target)
+                                    if (!manualRecordForm.title.trim()) {
+                                        toast.error("Record title is required")
+                                        return
+                                    }
                                     await addItem({
                                         type: "note",
-                                        title: fd.get("title") as string,
+                                        title: manualRecordForm.title.trim(),
                                         category: "Health Records",
                                         item_metadata: {
                                             is_health_record: true,
-                                            date: fd.get("date"),
-                                            doctor: fd.get("doctor"),
-                                            notes: fd.get("notes"),
+                                            date: manualRecordForm.date || formatForDateTimeInput(new Date()),
+                                            doctor: manualRecordForm.doctor || "",
+                                            doctor_id: manualRecordForm.doctor_id || null,
+                                            notes: manualRecordForm.notes || "",
                                             type: "Manual Entry"
                                         }
                                     })
+                                    setManualRecordForm({
+                                        title: "",
+                                        doctor: "",
+                                        doctor_id: null,
+                                        date: formatForDateTimeInput(new Date()),
+                                        notes: ""
+                                    })
                                     setShowAddModal(false)
                                 }} className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Record Title</label>
-                                        <input name="title" required placeholder="e.g. Annual Cardiovascular Screening" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
-                                    </div>
+                                    <FieldSuggestionInput
+                                        name="title"
+                                        label="Record Title"
+                                        required
+                                        value={manualRecordForm.title}
+                                        onChange={(val) => setManualRecordForm((prev) => ({ ...prev, title: val }))}
+                                        suggestions={healthSuggestions.reasons}
+                                        placeholder="e.g. Annual Cardiovascular Screening"
+                                    />
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Doctor/Facility</label>
-                                            <input name="doctor" placeholder="Dr. Sarah Johnson" className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
-                                        </div>
+                                        <DoctorCombobox
+                                            label="Doctor / Provider"
+                                            value={manualRecordForm.doctor}
+                                            doctorId={manualRecordForm.doctor_id}
+                                            doctors={savedDoctors}
+                                            placeholder="Select doctor or type name..."
+                                            onSelectDoctor={(doc) =>
+                                                setManualRecordForm((prev) => ({
+                                                    ...prev,
+                                                    doctor: doc.name,
+                                                    doctor_id: doc.id,
+                                                }))
+                                            }
+                                            onClear={() =>
+                                                setManualRecordForm((prev) => ({ ...prev, doctor: "", doctor_id: null }))
+                                            }
+                                        />
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Record Date</label>
-                                            <input type="datetime-local" name="date" required defaultValue={new Date().toISOString().slice(0, 16)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold" />
+                                            <input
+                                                type="datetime-local"
+                                                name="date"
+                                                required
+                                                value={manualRecordForm.date}
+                                                onChange={(e) => setManualRecordForm((prev) => ({ ...prev, date: e.target.value }))}
+                                                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
+                                                style={{ colorScheme: 'dark' }}
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Diagnostic Summarization</label>
-                                        <textarea name="notes" placeholder="Summarize findings, outcomes, and next steps..." className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm" />
+                                        <textarea
+                                            name="notes"
+                                            value={manualRecordForm.notes}
+                                            onChange={(e) => setManualRecordForm((prev) => ({ ...prev, notes: e.target.value }))}
+                                            placeholder="Summarize findings, outcomes, and next steps..."
+                                            className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all h-32 text-sm"
+                                        />
                                     </div>
 
                                     <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">

@@ -756,6 +756,8 @@ export async function fetchExistingDoctors(userId?: string): Promise<DoctorOptio
         name: d.title || d.item_metadata?.doctorName || "Unnamed Doctor",
         specialty: d.item_metadata?.specialty || d.item_metadata?.doctorSpecialty || "",
         phone: d.item_metadata?.phone || d.item_metadata?.doctorPhone || "",
+        facility: d.item_metadata?.facility || d.item_metadata?.location || d.item_metadata?.address || "",
+        address: d.item_metadata?.address || "",
         portalUrl: d.website || d.item_metadata?.portalUrl || "",
       }))
       setCachedItem("existing_doctors", doctors)

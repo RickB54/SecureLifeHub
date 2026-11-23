@@ -249,6 +249,8 @@ export interface DoctorOption {
   name: string
   specialty?: string
   phone?: string
+  facility?: string
+  address?: string
   portalUrl?: string
 }
 

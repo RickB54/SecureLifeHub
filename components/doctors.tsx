@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
+import { FieldSuggestionInput, extractHealthSuggestions } from "./health-ui/health-field-helpers"
 
 const normalizeUrl = (url?: string) => {
   if (!url) return ""
@@ -70,6 +71,7 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
 
   // Use isolated records if available; fall back to prop
   const effectiveDoctorRecords = isolatedDoctors ?? records
+  const healthSuggestions = useMemo(() => extractHealthSuggestions(effectiveDoctorRecords), [effectiveDoctorRecords])
 
   const doctors = useMemo(() => {
     return effectiveDoctorRecords.filter(r =>
@@ -367,16 +369,29 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Specialty</label>
-                  <input required value={formData.specialty} onChange={(e) => setFormData({...formData, specialty: e.target.value})} placeholder="e.g. Cardiologist" className={`w-full p-4 rounded-2xl border ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5 border-white/10'} focus:ring-2 focus:ring-rose-500 outline-none`} />
+                  <FieldSuggestionInput
+                    name="doctor-specialty"
+                    required
+                    value={formData.specialty}
+                    onChange={(val) => setFormData({...formData, specialty: val})}
+                    suggestions={healthSuggestions.specialties}
+                    placeholder="e.g. Cardiologist"
+                    inputClassName={`w-full p-4 pr-10 rounded-2xl border ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-white/5 border-white/10 text-white'} focus:ring-2 focus:ring-rose-500 outline-none`}
+                  />
                 </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Facility / Hospital</label>
-                <div className="relative">
-                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 opacity-50" />
-                  <input value={formData.facility} onChange={(e) => setFormData({...formData, facility: e.target.value})} placeholder="e.g. City General Hospital" className={`w-full p-4 pl-12 rounded-2xl border ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5 border-white/10'} focus:ring-2 focus:ring-rose-500 outline-none`} />
-                </div>
+                <FieldSuggestionInput
+                  name="doctor-facility"
+                  value={formData.facility}
+                  onChange={(val) => setFormData({...formData, facility: val})}
+                  suggestions={healthSuggestions.locations}
+                  placeholder="e.g. City General Hospital"
+                  icon={<Building2 className="h-5 w-5 opacity-50" />}
+                  inputClassName={`w-full p-4 pr-10 rounded-2xl border ${theme === 'light' ? 'bg-gray-100 text-gray-900' : 'bg-white/5 border-white/10 text-white'} focus:ring-2 focus:ring-rose-500 outline-none`}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
