@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSmartBack } from "@/hooks/use-smart-back"
 import Login from "@/components/login"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
 import { ensurePinReset1234 } from "@/lib/pin-security"
@@ -137,15 +138,23 @@ function HomeContent() {
   }, [])
 
   // -- Navigation History & Scroll Memory --
+  const { smartBack } = useSmartBack()
   const [navHistory, setNavHistory] = useState<string[]>([])
   const scrollPositions = useRef<Record<string, number>>({})
 
+  const isHealthHubPage = (page: string) =>
+    page === "type-health-records" ||
+    page === "type-vitals" ||
+    page === "type-medications" ||
+    page === "type-health-ai" ||
+    page === "doctor-visit-hub" ||
+    page === "type-doctor-visit-hub" ||
+    page.startsWith("type-visit-hub-")
+
   const handleNavigate = (page: string) => {
     if (page === "doctor-visit-hub" || page === "type-doctor-visit-hub") {
-      if (typeof window !== "undefined") {
-        window.location.href = "/doctor-visit-hub"
-        return
-      }
+      router.push("/doctor-visit-hub")
+      return
     }
     const visitHubSectionMap: Record<string, string> = {
       "type-visit-hub-notes": "notes",
@@ -171,7 +180,24 @@ function HomeContent() {
   const handleBack = () => {
     const mainEl = document.getElementById("main-scroll-container")
     if (mainEl && typeof window !== "undefined") scrollPositions.current[activePage] = mainEl.scrollTop
-    
+
+    // Health Hub pages use real browser history via useSmartBack (with safe parent fallback on refresh/deep link)
+    if (isHealthHubPage(activePage)) {
+      const currentTab = searchParams.get("tab")
+      const isSubTab =
+        (activePage === "type-health-records" && currentTab && currentTab !== "dashboard") ||
+        activePage === "type-vitals" ||
+        activePage === "type-medications" ||
+        activePage === "type-health-ai" ||
+        activePage === "doctor-visit-hub" ||
+        activePage.startsWith("type-visit-hub-")
+      const fallbackUrl = isSubTab
+        ? "/?page=type-health-records&tab=dashboard"
+        : "/?page=dashboard"
+      smartBack(fallbackUrl)
+      return
+    }
+
     if (navHistory.length === 0) {
       setActivePage("dashboard")
       router.push("/?page=dashboard", { scroll: false })
@@ -519,7 +545,14 @@ function HomeContent() {
             setUnlockedModules(prev => [...prev, activePage])
             try { sessionStorage.setItem("slh_unlocked_" + activePage, "true") } catch (e) {}
           }}
-          onCancel={handleBack} // Go back to previous page on cancel
+          onCancel={() => {
+            if (isHealthHubPage(activePage)) {
+              setActivePage("dashboard")
+              router.replace("/?page=dashboard", { scroll: false })
+            } else {
+              handleBack()
+            }
+          }} // Avoid lock screen bounce loop on Health pages
         />
       )
     }
@@ -589,16 +622,9 @@ function HomeContent() {
         return (
           <DoctorVisitHub
             initialSection={sectionMap[activePage]}
-            onClose={() => handleNavigate("type-health-records")}
+            onClose={() => smartBack("/?page=type-health-records&tab=dashboard")}
             onNavigateTab={(tab) => {
-              if (typeof window !== "undefined") {
-                localStorage.setItem("slh-health-target-tab", tab)
-                const url = new URL(window.location.href)
-                url.searchParams.set("page", "type-health-records")
-                url.searchParams.set("tab", tab)
-                window.history.replaceState({}, "", url.toString())
-              }
-              handleNavigate("type-health-records")
+              router.push(`/?page=type-health-records&tab=${tab}`, { scroll: false })
             }}
             theme={theme}
           />

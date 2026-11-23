@@ -6,11 +6,13 @@ import DoctorVisitHub from "@/components/doctor-visit-hub/DoctorVisitHub"
 import { VisitHubSectionId } from "@/components/doctor-visit-hub/doctor-visit-types"
 import PinAuthScreen from "@/components/security/pin-auth-screen"
 import { ensurePinReset1234 } from "@/lib/pin-security"
+import { useSmartBack } from "@/hooks/use-smart-back"
 
 function DoctorVisitHubContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const sectionParam = searchParams.get("section") as VisitHubSectionId | null
+  const { smartBack } = useSmartBack()
 
   const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
     if (typeof window === "undefined") return true
@@ -80,11 +82,7 @@ function DoctorVisitHubContent() {
           } catch (e) {}
         }}
         onCancel={() => {
-          if (typeof window !== "undefined" && window.history.length > 1) {
-            router.back()
-          } else {
-            router.push("/?page=type-health-records")
-          }
+          router.replace("/?page=dashboard")
         }}
       />
     )
@@ -94,17 +92,8 @@ function DoctorVisitHubContent() {
     <main className="w-full h-screen bg-slate-950 overflow-hidden">
       <DoctorVisitHub
         initialSection={sectionParam || undefined}
-        onClose={() => {
-          if (typeof window !== "undefined" && window.history.length > 1) {
-            router.back()
-          } else {
-            router.push("/?page=type-health-records")
-          }
-        }}
+        onClose={() => smartBack("/?page=type-health-records&tab=dashboard")}
         onNavigateTab={(tab) => {
-          if (typeof window !== "undefined") {
-            localStorage.setItem("slh-health-target-tab", tab)
-          }
           router.push(`/?page=type-health-records&tab=${tab}`)
         }}
         theme="dark"

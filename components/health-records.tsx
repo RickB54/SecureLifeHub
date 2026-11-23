@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
@@ -97,6 +97,7 @@ const getLocalDateTimeString = () => {
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings, setActivePage }: HealthDashboardProps) {
+    const router = useRouter()
     const searchParams = useSearchParams()
     const tabParam = searchParams.get("tab")
     const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
@@ -104,6 +105,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         if (fromParam) return fromParam
         return (normalizeHealthTab(initialTab) || "dashboard") as any
     })
+
+    // Navigate between Health Hub tabs with real browser history entries so Back returns to the previous tab
+    const navigateToTab = (nextTab: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors") => {
+        setActiveTab(nextTab)
+        if (tabParam !== nextTab) {
+            router.push(`/?page=type-health-records&tab=${nextTab}`, { scroll: false })
+        }
+    }
     const [showAddModal, setShowAddModal] = useState(false)
     const [addModalType, setAddModalType] = useState<"record" | "vital" | "appointment">("record")
     const [editingVital, setEditingVital] = useState<any>(null)
@@ -194,10 +203,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 return
             }
         }
-        if (initialTab && initialTab !== "dashboard") {
-            const normalized = normalizeHealthTab(initialTab)
-            if (normalized) setActiveTab(normalized)
-        }
+        const normalized = normalizeHealthTab(initialTab) || "dashboard"
+        setActiveTab(normalized)
     }, [tabParam, initialTab])
 
     useEffect(() => {
@@ -580,7 +587,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <span className="flex items-center gap-2">
                             <Activity className="h-5 w-5 text-rose-500" /> Vital Statistics
                         </span>
-                        <button onClick={() => setActiveTab('vitals')} className="text-xs text-blue-400 hover:underline">View All Trends</button>
+                        <button onClick={() => navigateToTab('vitals')} className="text-xs text-blue-400 hover:underline">View All Trends</button>
                     </h3>
                     <div className="h-[300px] w-full">
                         {weightData.length > 1 ? (
@@ -1199,7 +1206,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 addItem={addItem}
                 updateItem={updateItem}
                 theme={theme} 
-                setActiveTab={setActiveTab} 
+                setActiveTab={navigateToTab} 
             />
         )
     }
@@ -1226,20 +1233,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         onChange={(e) => {
                             const val = e.target.value
                             if (val === 'visit-hub') {
-                                if (typeof window !== "undefined") window.location.href = "/doctor-visit-hub"
+                                router.push("/doctor-visit-hub")
                                 return
                             }
                             if (val.startsWith('section:')) {
                                 const sec = val.replace('section:', '')
-                                if (typeof window !== "undefined") window.location.href = `/doctor-visit-hub?section=${sec}`
+                                router.push(`/doctor-visit-hub?section=${sec}`)
                                 return
                             }
-                            setActiveTab(val as any)
-                            if (typeof window !== "undefined") {
-                                const cleanUrl = new URL(window.location.href)
-                                cleanUrl.searchParams.delete("tab")
-                                window.history.replaceState({}, "", cleanUrl.toString())
-                            }
+                            navigateToTab(val as any)
                         }}
                         className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white focus:outline-none focus:border-blue-500 appearance-none cursor-pointer truncate shadow-sm"
                         style={{ colorScheme: 'dark' }}
@@ -1265,11 +1267,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                 <button
                     type="button"
-                    onClick={() => {
-                        if (typeof window !== "undefined") {
-                            window.location.href = "/doctor-visit-hub"
-                        }
-                    }}
+                    onClick={() => router.push("/doctor-visit-hub")}
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shrink-0 shadow-md shadow-teal-500/20 transition-all cursor-pointer"
                     title="Open full-screen Doctor Visit Hub"
                 >
@@ -1287,7 +1285,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
                         {activeTab !== 'dashboard' && (
                             <button
-                                onClick={() => setActiveTab('dashboard')}
+                                onClick={() => navigateToTab('dashboard')}
                                 className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
                                 title="Back to Health Hub Overview"
                             >
@@ -1296,11 +1294,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </button>
                         )}
                         <button
-                            onClick={() => {
-                                if (typeof window !== "undefined") {
-                                    window.location.href = "/doctor-visit-hub"
-                                }
-                            }}
+                            onClick={() => router.push("/doctor-visit-hub")}
                             className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-teal-500/20 transition-all cursor-pointer"
                             title="Open full-screen Doctor Visit Hub"
                         >
@@ -1331,24 +1325,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             key={tab.id}
                             onClick={() => {
                                 if (tab.id === 'visit-hub') {
-                                    if (typeof window !== "undefined") {
-                                        window.location.href = "/doctor-visit-hub"
-                                    }
+                                    router.push("/doctor-visit-hub")
                                     return
                                 }
                                 if ((tab as any).section) {
                                     const sec = (tab as any).section
-                                    if (typeof window !== "undefined") {
-                                        window.location.href = `/doctor-visit-hub?section=${sec}`
-                                    }
+                                    router.push(`/doctor-visit-hub?section=${sec}`)
                                     return
                                 }
-                                setActiveTab(tab.id as any)
-                                if (typeof window !== "undefined") {
-                                    const cleanUrl = new URL(window.location.href)
-                                    cleanUrl.searchParams.delete("tab")
-                                    window.history.replaceState({}, "", cleanUrl.toString())
-                                }
+                                navigateToTab(tab.id as any)
                             }}
                             className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 whitespace-nowrap ${tab.id === 'visit-hub'
                                 ? "bg-teal-600/25 text-teal-300 hover:bg-teal-600/40 border border-teal-500/30"
