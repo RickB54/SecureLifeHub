@@ -925,14 +925,14 @@ ${selectedMed ? `
     }
 
     // Get pill icon and color
-    const getPillIcon = (med: any) => {
+    const getPillIcon = (med: any, sizeClass = "h-7 w-7") => {
         const shapeId = normalizePillShape(med.item_metadata?.pillShape)
         const colorHex = med.item_metadata?.pillColor || '#FFFFFF'
         const PillIcon = PILL_SHAPES.find(s => s.id === shapeId)?.icon || Circle
 
         return (
-            <div className="relative" style={{ color: colorHex }}>
-                <PillIcon className="h-8 w-8" fill="currentColor" stroke={theme === 'dark' ? '#333' : '#ccc'} strokeWidth={1} />
+            <div className="relative shrink-0" style={{ color: colorHex }}>
+                <PillIcon className={sizeClass} fill="currentColor" stroke={theme === 'dark' ? '#333' : '#ccc'} strokeWidth={1} />
             </div>
         )
     }
@@ -1415,9 +1415,9 @@ ${selectedMed ? `
             {/* Content */}
             <div className="px-2 md:px-4 pb-6">
                 {viewMode === "list" ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {filteredMeds.length === 0 ? (
-                            <div className="text-center text-gray-500 py-12">
+                            <div className="col-span-full text-center text-gray-500 py-12">
                                 <Pill className="h-16 w-16 mx-auto mb-4 opacity-20" />
                                 <p>No medications found. Add your first medication to get started.</p>
                             </div>
@@ -1426,181 +1426,183 @@ ${selectedMed ? `
                                 const estimate = calculatePillCountEstimate(med.item_metadata)
                                 const tracked = Boolean(estimate?.tracked)
                                 const lowStock = Boolean(estimate?.isLowStock)
+                                const liveNextDose = getScheduledNextDose(med.item_metadata) || med.item_metadata?.nextDose
+                                const reminderTimes = getEffectiveReminderTimes(med.item_metadata)
+                                const todayTimesStr = reminderTimes.length > 0
+                                    ? reminderTimes.map(r => formatReminderTime12h(r.hh, r.mm)).join(", ")
+                                    : null
+                                const skippedLog = Array.isArray(med.item_metadata?.skippedLog) ? med.item_metadata.skippedLog : []
+                                const takenLog = Array.isArray(med.item_metadata?.takenLog) ? med.item_metadata.takenLog : []
+                                const hasLogs = skippedLog.length > 0 || takenLog.length > 0
+                                const today = new Date()
+                                const hasTodayLog = [...takenLog, ...skippedLog].some((e: any) => {
+                                    const ts = e?.timestamp || e
+                                    if (!ts) return false
+                                    const d = new Date(ts)
+                                    return !isNaN(d.getTime()) && isSameDay(d, today)
+                                })
+                                const isDueMed = !isMedAsNeeded(med.item_metadata)
+
                                 return (
                                 <div
                                     key={med.id}
-                                    className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-all"
+                                    className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 hover:border-purple-500/35 transition-colors space-y-1.5"
                                 >
-                                    <div className="flex justify-between items-start mb-4">
-                                        <div className="flex items-center gap-4 flex-1">
-                                            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20">
-                                                {getPillIcon(med)}
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex flex-col min-w-0">
-                                                    <h3 className="text-lg font-bold break-words leading-tight">
-                                                        {med.title}
-                                                    </h3>
-                                                    <span className="text-xs text-gray-400">{med.item_metadata?.dosage}</span>
-                                                </div>
-                                                <div className="text-sm text-gray-400 mt-1 flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span>
-                                                            {med.item_metadata?.frequency || "As needed"}
-                                                            {tracked && estimate ? ` • Est. ${estimate.remaining} left` : ""}
-                                                        </span>
-                                                        {lowStock && (
-                                                            <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 flex items-center gap-1 font-bold animate-pulse">
-                                                                <AlertCircle className="h-3 w-3" /> LOW STOCK
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {tracked && estimate?.runOutDateStr && (
-                                                        <div className="text-xs text-amber-300/90">
-                                                            Runs out about {estimate.runOutDateStr}
-                                                        </div>
-                                                    )}
-                                                    <div className="flex items-center gap-2 text-purple-300 font-bold mt-1">
-                                                        <Activity className="h-3.5 w-3.5" />
-                                                        Today's Dose: {getCurrentDose(med)}
-                                                    </div>
-                                                </div>
-
-                                                {/* Next Scheduled Time (derived from Reminder Times + Frequency) */}
-                                                {(() => {
-                                                    const liveNextDose = getScheduledNextDose(med.item_metadata) || med.item_metadata?.nextDose
-                                                    if (!liveNextDose) return null
-                                                    return (
-                                                        <div className="flex items-center gap-2 text-sm text-purple-400 mt-2">
-                                                            <Clock className="h-4 w-4" />
-                                                            Next: {format(new Date(liveNextDose), 'MMM d, h:mm a')}
-                                                        </div>
-                                                    )
-                                                })()}
-
-                                                {/* Status Badges */}
-                                                {(() => {
-                                                    const skippedLog = Array.isArray(med.item_metadata?.skippedLog) ? med.item_metadata.skippedLog : []
-                                                    const takenLog = Array.isArray(med.item_metadata?.takenLog) ? med.item_metadata.takenLog : []
-                                                    const hasLogs = skippedLog.length > 0 || takenLog.length > 0
-                                                    const today = new Date()
-                                                    const hasTodayLog = [...takenLog, ...skippedLog].some((e: any) => {
-                                                        const ts = e?.timestamp || e
-                                                        if (!ts) return false
-                                                        const d = new Date(ts)
-                                                        return !isNaN(d.getTime()) && isSameDay(d, today)
-                                                    })
-                                                    const isDueMed = !isMedAsNeeded(med.item_metadata)
-                                                    return (
-                                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                                            {isDueMed && !hasTodayLog && (
-                                                                <span className="px-2 py-0.5 bg-white/5 text-gray-400 text-xs rounded-full border border-white/10 flex items-center gap-1">
-                                                                    Not taken
-                                                                </span>
-                                                            )}
-                                                            {skippedLog.length > 0 && (
-                                                                <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30 flex items-center gap-1">
-                                                                    <X className="h-3 w-3" /> Skipped {skippedLog.length}x
-                                                                </span>
-                                                            )}
-                                                            {takenLog.length > 0 && (
-                                                                <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30 flex items-center gap-1">
-                                                                    <Check className="h-3 w-3" /> Taken {takenLog.length}x
-                                                                </span>
-                                                            )}
-                                                            {hasLogs && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleResetDoseStatus(med)}
-                                                                    className="px-2 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white text-xs rounded-full border border-white/10 flex items-center gap-1 transition-colors cursor-pointer"
-                                                                    title="Undo / Reset dose status"
-                                                                >
-                                                                    <RotateCcw className="h-3 w-3" /> Reset
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    )
-                                                })()}
-                                                {/* RX Instructions Display */}
-                                                {med.item_metadata?.rxInstructions && (
-                                                    <div className="mt-2 text-xs text-blue-300 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
-                                                        <span className="font-bold">RX:</span> {med.item_metadata.rxInstructions}
-                                                    </div>
-                                                )}
-                                                {/* Interactions Display */}
-                                                {med.item_metadata?.interactions && (
-                                                    <div className="mt-2 text-xs text-red-300 bg-red-500/10 p-2 rounded-lg border border-red-500/20">
-                                                        <span className="font-bold">Interactions:</span> {med.item_metadata.interactions}
-                                                    </div>
-                                                )}
-                                                {med.item_metadata?.lastTaken && (
-                                                    <div className="flex items-center gap-2 text-sm text-green-400 mt-2">
-                                                        <Check className="h-4 w-4" />
-                                                        Last taken: {format(new Date(med.item_metadata.lastTaken), 'PPp')}
-                                                    </div>
-                                                )}
-                                            </div>
+                                    {/* Line 1: [icon] Name + Dosage */}
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        {getPillIcon(med, "h-7 w-7")}
+                                        <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
+                                            <h3 className="text-sm font-bold text-white leading-tight truncate">
+                                                {med.title}
+                                            </h3>
+                                            {med.item_metadata?.dosage && (
+                                                <span className="text-xs text-gray-400 font-medium shrink-0">
+                                                    {med.item_metadata.dosage}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Medisafe-style Action Buttons */}
-                                    <div className="flex gap-3 mt-4">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleSkipMed(med) }}
-                                            className="flex-1 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <X className="h-5 w-5" /> SKIP
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleTakeMed(med) }}
-                                            className="flex-1 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Check className="h-5 w-5" /> TAKE
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); openRescheduleModal(med) }}
-                                            className="flex-1 py-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Clock className="h-5 w-5" /> RESCHEDULE
-                                        </button>
-                                    </div>
-
-                                    {/* Additional Actions */}
-                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10">
-                                        <button
-                                            type="button"
-                                            onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
-                                            className="p-2 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 cursor-pointer"
-                                            title="Details"
-                                            aria-label="Details"
-                                        >
-                                            <Info className="h-5 w-5" />
-                                        </button>
-                                        <button type="button" onClick={() => handleDrugLookup(med.title)} className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 cursor-pointer" title="AI Drug Info">
-                                            <Sparkles className="h-5 w-5" />
-                                        </button>
-                                        <button type="button" onClick={() => { setSelectedMed(med); setShowEditModal(true) }} className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 cursor-pointer" title="Edit">
-                                            <Edit className="h-5 w-5" />
-                                        </button>
-                                        <button type="button" onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 cursor-pointer" title="Delete">
-                                            <Trash className="h-5 w-5" />
-                                        </button>
-                                        {tracked && (
+                                    {/* Line 2: Frequency + Est. left + Status chips inline */}
+                                    <div className="flex items-center gap-1.5 flex-wrap text-xs text-gray-300">
+                                        <span>
+                                            {med.item_metadata?.frequency || "As needed"}
+                                            {tracked && estimate ? ` • Est. ${estimate.remaining} left` : ""}
+                                        </span>
+                                        {lowStock && (
+                                            <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] rounded-md border border-red-500/30 inline-flex items-center gap-1 font-bold animate-pulse">
+                                                <AlertCircle className="h-3 w-3" /> LOW STOCK
+                                            </span>
+                                        )}
+                                        {isDueMed && !hasTodayLog && (
+                                            <span className="px-1.5 py-0.5 bg-white/5 text-gray-400 text-[10px] rounded-md border border-white/10 inline-flex items-center">
+                                                Not taken
+                                            </span>
+                                        )}
+                                        {skippedLog.length > 0 && (
+                                            <span className="px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 text-[10px] rounded-md border border-yellow-500/30 inline-flex items-center gap-0.5">
+                                                <X className="h-3 w-3" /> Skipped {skippedLog.length}x
+                                            </span>
+                                        )}
+                                        {takenLog.length > 0 && (
+                                            <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[10px] rounded-md border border-green-500/30 inline-flex items-center gap-0.5">
+                                                <Check className="h-3 w-3" /> Taken {takenLog.length}x
+                                            </span>
+                                        )}
+                                        {hasLogs && (
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setRefillMed(med)
-                                                    setRefillCount(String(med.item_metadata?.totalQuantity || 30))
-                                                }}
-                                                className="ml-auto px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer"
-                                                title="Record refill & reset pill count baseline"
+                                                onClick={() => handleResetDoseStatus(med)}
+                                                className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white text-[10px] rounded-md border border-white/10 inline-flex items-center gap-0.5 transition-colors cursor-pointer"
+                                                title="Undo / Reset dose status"
                                             >
-                                                Refill
+                                                <RotateCcw className="h-2.5 w-2.5" /> Reset
                                             </button>
                                         )}
+                                    </div>
+
+                                    {/* Line 3: Today <time> - Next <date, time> */}
+                                    {(todayTimesStr || liveNextDose) && (
+                                        <div className="flex items-center gap-1.5 flex-wrap text-xs text-purple-300">
+                                            <Clock className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                                            <span>
+                                                {todayTimesStr ? `Today ${todayTimesStr}` : ""}
+                                                {todayTimesStr && liveNextDose ? " - " : ""}
+                                                {liveNextDose ? `Next ${format(new Date(liveNextDose), 'MMM d, h:mm a')}` : ""}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Line 4: Runs out about <date> (muted) */}
+                                    {tracked && estimate?.runOutDateStr && (
+                                        <div className="text-xs text-gray-400">
+                                            Runs out about {estimate.runOutDateStr}
+                                        </div>
+                                    )}
+
+                                    {/* RX instructions: one truncated line */}
+                                    {med.item_metadata?.rxInstructions && (
+                                        <div className="text-xs text-blue-300/90 truncate" title={med.item_metadata.rxInstructions}>
+                                            <span className="font-semibold text-blue-300">RX:</span> {med.item_metadata.rxInstructions}
+                                        </div>
+                                    )}
+
+                                    {/* One compact bottom row: Skip/Take/Reschedule left, Info/AI/Edit/Delete/Refill right */}
+                                    <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 mt-1 border-t border-white/10">
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleSkipMed(med)}
+                                                className="h-8 px-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <X className="h-3.5 w-3.5" /> Skip
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleTakeMed(med)}
+                                                className="h-8 px-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Check className="h-3.5 w-3.5" /> Take
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => openRescheduleModal(med)}
+                                                className="h-8 px-2.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Clock className="h-3.5 w-3.5" /> Reschedule
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
+                                                className="h-8 w-8 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                title="Details"
+                                                aria-label="Details"
+                                            >
+                                                <Info className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDrugLookup(med.title)}
+                                                className="h-8 w-8 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                title="AI Drug Info"
+                                                aria-label="AI Drug Info"
+                                            >
+                                                <Sparkles className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setSelectedMed(med); setShowEditModal(true) }}
+                                                className="h-8 w-8 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                title="Edit"
+                                                aria-label="Edit"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }}
+                                                className="h-8 w-8 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                title="Delete"
+                                                aria-label="Delete"
+                                            >
+                                                <Trash className="h-4 w-4" />
+                                            </button>
+                                            {tracked && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setRefillMed(med)
+                                                        setRefillCount(String(med.item_metadata?.totalQuantity || 30))
+                                                    }}
+                                                    className="h-8 px-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                                                    title="Record refill & reset pill count baseline"
+                                                >
+                                                    Refill
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 )
@@ -1813,7 +1815,7 @@ ${selectedMed ? `
 
             {/* Medication Summary Modal - For Doctor */}
             {showMedSummary && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
+                <div className="fixed inset-0 z-[110] flex items-start justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto">
                     <div className="w-full max-w-4xl bg-[#1e1e1e] border border-white/10 rounded-3xl p-8 shadow-2xl my-auto md:my-8 relative">
                         <div className="flex justify-between items-center mb-6 sticky top-0 bg-[#1e1e1e]/90 backdrop-blur-sm z-10 py-2">
                             <h2 className="text-3xl font-bold">Medication Summary</h2>
@@ -2401,7 +2403,7 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className={`w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl my-8 ${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'}`}>
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-4">

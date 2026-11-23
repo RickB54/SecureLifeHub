@@ -116,7 +116,7 @@ export default function MedicationDetailView({
   const hasNotes = Boolean(meta.notes || meta.aiDrugInfo)
 
   return (
-    <div className="fixed inset-0 z-40 bg-[#121212] text-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-[#121212] text-white flex flex-col overflow-hidden">
       {/* Sticky Compact Header */}
       <header className="sticky top-0 z-10 bg-[#181818]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <button
