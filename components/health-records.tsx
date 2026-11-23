@@ -1385,16 +1385,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 {activeTab === 'dashboard' && <div className="px-4 md:px-8 pb-8">{renderDashboard()}</div>}
                 {activeTab === 'records' && <div className="px-4 md:px-8 pb-8">{renderRecords()}</div>}
                 {activeTab === 'meds' && (
-                    <div className="px-4 md:px-8 pb-8 space-y-4">
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowPillLibrary(true)}
-                                className="bg-purple-600/20 hover:bg-purple-600/30 text-purple-400 px-4 py-2 rounded-xl transition-all font-bold text-xs uppercase flex items-center gap-2"
-                            >
-                                <Pill className="h-4 w-4" /> Pill Library
-                            </button>
-
-                        </div>
+                    <div className="px-3 md:px-6 pb-6">
                         <Medications records={effectiveRecords} addItem={addItem} updateItem={updateItem} deleteItem={deleteItem} theme={theme} />
                         {showPillLibrary && <PillLibraryModal isOpen={showPillLibrary} onClose={() => setShowPillLibrary(false)} theme={theme} addItem={addItem} />}
                     </div>

@@ -1256,71 +1256,78 @@ ${selectedMed ? `
 
     return (
         <div className={`h-full flex flex-col ${theme === 'light' ? 'bg-gray-50' : 'bg-[#121212]'} text-white overflow-y-auto`}>
-            {/* Header with AI Button */}
-            <div className="p-4 md:p-8 pb-4">
-                <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-6">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-500">
-                                Medications
-                            </h1>
-                        </div>
-                        <p className="text-sm md:text-base text-gray-400">Track medications, set reminders, and maintain your health</p>
+            {/* Compact Header & Toolbar */}
+            <div className="px-2 md:px-4 pt-2 pb-3">
+                {/* Row 1: Title + Primary Controls */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5 mb-3">
+                    <div className="min-w-0">
+                        <h1 className="text-xl md:text-2xl font-bold text-purple-300 leading-tight">
+                            Medications
+                        </h1>
+                        <p className="text-xs text-gray-400">Track medications, set reminders, and maintain your health</p>
                     </div>
-                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                        <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10 mr-2">
-                            <button
-                                onClick={handlePrintAll}
-                                className="p-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                                title="Print Master List"
-                            >
-                                <Printer className="h-5 w-5" />
-                            </button>
-                            <button
-                                onClick={handleExportAllPDF}
-                                className="p-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-                                title="Export Master PDF"
-                            >
-                                <FileDown className="h-5 w-5" />
-                            </button>
-                        </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
                         <button
+                            type="button"
+                            onClick={handlePrintAll}
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                            title="Print Master List"
+                            aria-label="Print Master List"
+                        >
+                            <Printer className="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleExportAllPDF}
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                            title="Export Master PDF"
+                            aria-label="Export Master PDF"
+                        >
+                            <FileDown className="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
                             onClick={() => setShowMedSummary(true)}
-                            className="flex-1 md:flex-none bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 text-white px-3 md:px-4 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center justify-center gap-2 text-xs md:text-base"
+                            className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                            <FileText className="h-4 md:h-5 w-4 md:w-5" /> Med Summary
+                            <FileText className="h-4 w-4 shrink-0" />
+                            <span>Med Summary</span>
                         </button>
                         <button
+                            type="button"
                             onClick={() => setShowQuickAI(!showQuickAI)}
-                            className="flex-1 md:flex-none bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white px-3 md:px-4 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center justify-center gap-2 text-xs md:text-base"
+                            className="h-8 px-3 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                            <Sparkles className="h-4 md:h-5 w-4 md:w-5" /> AI Assistant
+                            <Sparkles className="h-4 w-4 shrink-0" />
+                            <span>AI Assistant</span>
                         </button>
                         <button
+                            type="button"
                             onClick={() => setShowAddModal(true)}
-                            className="flex-1 md:flex-none bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white px-3 md:px-6 py-3 rounded-xl shadow-lg transition-all font-medium flex items-center justify-center gap-2 text-xs md:text-base"
+                            className="h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                            <Plus className="h-4 md:h-5 w-4 md:w-5" /> Add Med
+                            <Plus className="h-4 w-4 shrink-0" />
+                            <span>Add Med</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Quick AI Panel */}
                 {showQuickAI && (
-                    <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/30">
-                        <div className="flex gap-2 mb-3">
+                    <div className="mb-3 p-3 rounded-xl bg-blue-950/30 border border-blue-500/30">
+                        <div className="flex gap-2 mb-2">
                             <input
                                 type="text"
                                 placeholder="Ask about drug interactions, side effects, dosage..."
                                 value={aiQuestion}
                                 onChange={(e) => setAiQuestion(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleAIQuestion()}
-                                className="flex-1 px-4 py-2 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                                className="flex-1 h-9 px-3 bg-[#222222] border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
                             />
-                            <button onClick={handleAIQuestion} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 rounded-xl"><Send className="h-5 w-5" /></button>
+                            <button onClick={handleAIQuestion} className="h-9 px-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white"><Send className="h-4 w-4" /></button>
                         </div>
                         {aiResponse && (
-                            <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 max-h-48 overflow-y-auto custom-scrollbar">
+                            <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 max-h-48 overflow-y-auto custom-scrollbar">
                                 <div className="text-sm whitespace-pre-wrap">{aiResponse}</div>
                             </div>
                         )}
@@ -1328,65 +1335,87 @@ ${selectedMed ? `
                 )}
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
-                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-600/20 border border-purple-500/30">
-                        <div className="text-xl md:text-2xl font-bold text-purple-400">{medRecords.length}</div>
-                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Total Meds</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
+                    <div className="px-3 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/25">
+                        <div className="text-lg md:text-xl font-bold text-purple-400 leading-tight">{medRecords.length}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">Total Meds</div>
                     </div>
-                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-pink-500/20 to-pink-600/20 border border-pink-500/30">
-                        <div className="text-xl md:text-2xl font-bold text-pink-400">{upcomingReminders.length}</div>
-                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Due Today</div>
+                    <div className="px-3 py-2.5 rounded-lg bg-pink-500/10 border border-pink-500/25">
+                        <div className="text-lg md:text-xl font-bold text-pink-400 leading-tight">{upcomingReminders.length}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">Due Today</div>
                     </div>
-                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30">
-                        <div className="text-xl md:text-2xl font-bold text-blue-400">{medRecords.filter(m => isMedLowStock(m.item_metadata)).length}</div>
-                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Low Stock</div>
+                    <div className="px-3 py-2.5 rounded-lg bg-blue-500/10 border border-blue-500/25">
+                        <div className="text-lg md:text-xl font-bold text-blue-400 leading-tight">{medRecords.filter(m => isMedLowStock(m.item_metadata)).length}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">Low Stock</div>
                     </div>
-                    <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30">
-                        <div className="text-xl md:text-2xl font-bold text-green-400">{medRecords.reduce((sum, m) => sum + (m.item_metadata?.takenLog?.length || 0), 0)}</div>
-                        <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Doses Taken</div>
+                    <div className="px-3 py-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25">
+                        <div className="text-lg md:text-xl font-bold text-emerald-400 leading-tight">{medRecords.reduce((sum, m) => sum + (m.item_metadata?.takenLog?.length || 0), 0)}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">Doses Taken</div>
                     </div>
                 </div>
 
-                {/* Search and Views */}
-                <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
-                    <div className="flex-1 w-full md:w-auto relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                {/* Row 2: Search, Pill Library, Import Rx, List / Timeline */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[180px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
                         <input
                             type="text"
                             placeholder="Search medications..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all"
+                            className="w-full h-9 pl-9 pr-3 bg-[#1e1e1e] border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
                         />
                     </div>
-                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
-                        <button onClick={() => setShowPillLibrary(true)} className="flex-1 md:flex-none px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2">
-                            <Package className="h-4 w-4" /> Pill Library
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => setShowPillLibrary(true)}
+                            className="h-9 px-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                            <Package className="h-4 w-4 shrink-0" />
+                            <span>Pill Library</span>
                         </button>
-                        <button onClick={() => setShowMockDrugs(true)} className="flex-1 md:flex-none px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-2">
-                            <Activity className="h-4 w-4" /> Import Rx
+                        <button
+                            type="button"
+                            onClick={() => setShowMockDrugs(true)}
+                            className="h-9 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                            <Activity className="h-4 w-4 shrink-0" />
+                            <span>Import Rx</span>
                         </button>
-                    </div>
-                    <div className="flex gap-2 bg-[#2a2a2a] rounded-xl p-1 w-full md:w-auto">
-                        <button onClick={() => setViewMode("list")} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition-all ${viewMode === "list" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>List</button>
-                        <button onClick={() => setViewMode("timeline")} className={`flex-1 md:flex-none px-4 py-2 rounded-lg transition-all ${viewMode === "timeline" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>Timeline</button>
+                        <div className="h-8 p-0.5 bg-[#1e1e1e] border border-white/10 rounded-lg inline-flex items-center">
+                            <button
+                                type="button"
+                                onClick={() => setViewMode("list")}
+                                className={`h-full px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${viewMode === "list" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
+                            >
+                                List
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setViewMode("timeline")}
+                                className={`h-full px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${viewMode === "timeline" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
+                            >
+                                Timeline
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 {/* Calendar Views */}
                 {viewMode === "timeline" && (
-                    <div className="flex gap-2 bg-[#2a2a2a] rounded-xl p-1 w-fit">
-                        <button onClick={() => setCalendarView("day")} className={`px-4 py-2 rounded-lg text-sm ${calendarView === "day" ? "bg-purple-600 text-white" : "text-gray-400"}`}>Day</button>
-                        <button onClick={() => setCalendarView("week")} className={`px-4 py-2 rounded-lg text-sm ${calendarView === "week" ? "bg-purple-600 text-white" : "text-gray-400"}`}>Week</button>
-                        <button onClick={() => setCalendarView("month")} className={`px-4 py-2 rounded-lg text-sm ${calendarView === "month" ? "bg-purple-600 text-white" : "text-gray-400"}`}>Month</button>
+                    <div className="flex gap-1 bg-[#1e1e1e] border border-white/10 rounded-lg p-0.5 w-fit mt-2">
+                        <button onClick={() => setCalendarView("day")} className={`h-7 px-3 rounded-md text-xs font-medium ${calendarView === "day" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>Day</button>
+                        <button onClick={() => setCalendarView("week")} className={`h-7 px-3 rounded-md text-xs font-medium ${calendarView === "week" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>Week</button>
+                        <button onClick={() => setCalendarView("month")} className={`h-7 px-3 rounded-md text-xs font-medium ${calendarView === "month" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}>Month</button>
                     </div>
                 )}
             </div>
 
             {/* Content */}
-            <div className="px-8 pb-8">
+            <div className="px-2 md:px-4 pb-6">
                 {viewMode === "list" ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {filteredMeds.length === 0 ? (
                             <div className="text-center text-gray-500 py-12">
                                 <Pill className="h-16 w-16 mx-auto mb-4 opacity-20" />
