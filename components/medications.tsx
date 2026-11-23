@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
 import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize } from "lucide-react"
@@ -16,6 +17,21 @@ import {
     extractHealthSuggestions,
 } from './health-ui/health-field-helpers'
 import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
+import MedicationDetailView from './health-ui/medication-detail-view'
+
+// Optional pill tracking helpers: default OFF for new meds; existing meds ON only if totalQuantity > 0
+export function isMedTracked(meta?: any): boolean {
+    if (!meta) return false
+    if (typeof meta.trackInventory === "boolean") return meta.trackInventory
+    return (parseFloat(meta.totalQuantity) || 0) > 0
+}
+
+export function isMedLowStock(meta?: any): boolean {
+    if (!isMedTracked(meta)) return false
+    const qty = parseFloat(meta.quantity ?? "0") || 0
+    const threshold = parseFloat(meta.lowStockThreshold ?? "5") || 5
+    return qty <= threshold
+}
 
 // Horizontally stretched oval / ellipse icon (not capsule style)
 export const OvalIcon = ({ className = "h-4 w-4", style, fill, stroke, strokeWidth }: any) => (
@@ -78,6 +94,10 @@ interface MedicationsProps {
 
 export default function Medications({ records, addItem, updateItem, deleteItem, theme, onOpenHelp }: MedicationsProps) {
     const { user } = useAuth()
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const activeMedId = searchParams.get("medId")
+    const savedDoctors = useMemo(() => extractDoctorsFromRecords(records), [records])
     const [searchQuery, setSearchQuery] = useState("")
     const [showAddModal, setShowAddModal] = useState(false)
     const [showEditModal, setShowEditModal] = useState(false)
@@ -415,8 +435,10 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
                     pillShape: normalizePillShape(formData.pillShape),
                     pillColor: formData.pillColor || "#FFFFFF",
-                    quantity: typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0),
-                    totalQuantity: typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0),
+                    trackInventory: Boolean(formData.trackInventory),
+                    lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
+                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0)) : 0,
+                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0)) : 0,
                     reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
                     takenLog: [],
                     skippedLog: [],
@@ -464,8 +486,10 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
                     pillShape: normalizePillShape(formData.pillShape),
                     pillColor: formData.pillColor || "#FFFFFF",
-                    quantity: typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0),
-                    totalQuantity: typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0),
+                    trackInventory: Boolean(formData.trackInventory),
+                    lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
+                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0)) : 0,
+                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0)) : 0,
                     reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
                     doseSchedule: formData.doseSchedule || [],
                     startDate: formData.startDate || format(new Date(), 'yyyy-MM-dd'),
@@ -489,6 +513,16 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     doctor_id: formData.doctor_id ?? selectedMed.item_metadata?.doctor_id ?? null,
                     pharmacy: formData.pharmacy ?? selectedMed.item_metadata?.pharmacy ?? "",
                     purpose: formData.purpose || "",
+                    genericName: formData.genericName || "",
+                    drugClass: formData.drugClass || "",
+                    sideEffects: formData.sideEffects || "",
+                    interactions: formData.interactions || "",
+                    rxInstructions: formData.rxInstructions || "",
+                    notes: formData.notes || "",
+                    trackInventory: Boolean(formData.trackInventory),
+                    lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
+                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0)) : 0,
+                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0)) : 0,
                 }
             })
             setShowEditModal(false)
@@ -503,6 +537,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     const handleTakeMed = async (med: any, overrideTime?: string) => {
         const takenLog = med.item_metadata?.takenLog || []
+        const tracked = isMedTracked(med.item_metadata)
         const quantity = parseFloat(med.item_metadata?.quantity || "0")
         const timestamp = overrideTime || new Date().toISOString()
         const doseQty = getCurrentDoseQuantity(med)
@@ -510,15 +545,17 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         // Calculate next dose based on the time we took it
         const nextDoseTime = calculateNextDose(med, new Date(timestamp), true)
 
-        await updateItem(med.id, {
-            item_metadata: {
-                ...med.item_metadata,
-                takenLog: [...takenLog, { timestamp, dosage: med.item_metadata?.dosage, doseQty }],
-                lastTaken: timestamp,
-                quantity: Math.max(0, quantity - doseQty),
-                nextDose: nextDoseTime
-            }
-        })
+        const updatedMeta: any = {
+            ...med.item_metadata,
+            takenLog: [...takenLog, { timestamp, dosage: med.item_metadata?.dosage, doseQty }],
+            lastTaken: timestamp,
+            nextDose: nextDoseTime
+        }
+        if (tracked) {
+            updatedMeta.quantity = Math.max(0, quantity - doseQty)
+        }
+
+        await updateItem(med.id, { item_metadata: updatedMeta })
     }
 
 
@@ -1173,7 +1210,7 @@ ${selectedMed ? `
                         <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Due Today</div>
                     </div>
                     <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/20 border border-blue-500/30">
-                        <div className="text-xl md:text-2xl font-bold text-blue-400">{medRecords.filter(m => (m.item_metadata?.quantity || 0) < 10).length}</div>
+                        <div className="text-xl md:text-2xl font-bold text-blue-400">{medRecords.filter(m => isMedLowStock(m.item_metadata)).length}</div>
                         <div className="text-[10px] md:text-xs text-gray-400 uppercase tracking-wider">Low Stock</div>
                     </div>
                     <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-green-600/20 border border-green-500/30">
@@ -1228,8 +1265,15 @@ ${selectedMed ? `
                                 <p>No medications found. Add your first medication to get started.</p>
                             </div>
                         ) : (
-                            filteredMeds.map(med => (
-                                <div key={med.id} className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-all">
+                            filteredMeds.map(med => {
+                                const tracked = isMedTracked(med.item_metadata)
+                                const lowStock = isMedLowStock(med.item_metadata)
+                                return (
+                                <div
+                                    key={med.id}
+                                    onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
+                                    className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer"
+                                >
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex items-center gap-4 flex-1">
                                             <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20">
@@ -1237,19 +1281,18 @@ ${selectedMed ? `
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex flex-col min-w-0">
-                                                    <h3
-                                                        onClick={() => { setSelectedMed(med); setShowEditModal(true) }}
-                                                        className="text-lg font-bold break-words leading-tight cursor-pointer hover:text-purple-400 transition-colors"
-                                                        title="Tap to edit medication"
-                                                    >
+                                                    <h3 className="text-lg font-bold break-words leading-tight hover:text-purple-400 transition-colors">
                                                         {med.title}
                                                     </h3>
                                                     <span className="text-xs text-gray-400">{med.item_metadata?.dosage}</span>
                                                 </div>
                                                 <div className="text-sm text-gray-400 mt-1 flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span>{med.item_metadata?.frequency || "As needed"} • {med.item_metadata?.quantity || 0} pills left</span>
-                                                        {(med.item_metadata?.quantity || 0) <= 5 && (
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span>
+                                                            {med.item_metadata?.frequency || "As needed"}
+                                                            {tracked ? ` • ${med.item_metadata?.quantity || 0} pills left` : ""}
+                                                        </span>
+                                                        {lowStock && (
                                                             <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 flex items-center gap-1 font-bold animate-pulse">
                                                                 <AlertCircle className="h-3 w-3" /> LOW STOCK
                                                             </span>
@@ -1307,19 +1350,22 @@ ${selectedMed ? `
                                     {/* Medisafe-style Action Buttons */}
                                     <div className="flex gap-3 mt-4">
                                         <button
-                                            onClick={() => handleSkipMed(med)}
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleSkipMed(med) }}
                                             className="flex-1 py-3 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 font-bold transition-all flex items-center justify-center gap-2"
                                         >
                                             <X className="h-5 w-5" /> SKIP
                                         </button>
                                         <button
-                                            onClick={() => handleTakeMed(med)}
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); handleTakeMed(med) }}
                                             className="flex-1 py-3 rounded-xl bg-green-500/20 hover:bg-green-500/30 text-green-400 font-bold transition-all flex items-center justify-center gap-2"
                                         >
                                             <Check className="h-5 w-5" /> TAKE
                                         </button>
                                         <button
-                                            onClick={() => openRescheduleModal(med)}
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); openRescheduleModal(med) }}
                                             className="flex-1 py-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold transition-all flex items-center justify-center gap-2"
                                         >
                                             <Clock className="h-5 w-5" /> RESCHEDULE
@@ -1328,18 +1374,19 @@ ${selectedMed ? `
 
                                     {/* Additional Actions */}
                                     <div className="flex gap-2 mt-4 pt-4 border-t border-white/10">
-                                        <button onClick={() => handleDrugLookup(med.title)} className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400" title="AI Drug Info">
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDrugLookup(med.title) }} className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400" title="AI Drug Info">
                                             <Sparkles className="h-5 w-5" />
                                         </button>
-                                        <button onClick={() => { setSelectedMed(med); setShowEditModal(true) }} className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400" title="Edit">
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedMed(med); setShowEditModal(true) }} className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400" title="Edit">
                                             <Edit className="h-5 w-5" />
                                         </button>
-                                        <button onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Delete">
+                                        <button type="button" onClick={async (e) => { e.stopPropagation(); if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Delete">
                                             <Trash className="h-5 w-5" />
                                         </button>
                                     </div>
                                 </div>
-                            ))
+                                )
+                            })
                         )}
                     </div>
                 ) : (
@@ -1413,6 +1460,35 @@ ${selectedMed ? `
                     theme={theme}
                 />
             )}
+
+            {/* Full-Screen Medication Detail View (Zero extra queries, real browser history via ?medId=) */}
+            {activeMedId && (() => {
+                const detailMed = medRecords.find((m) => m.id === activeMedId)
+                if (!detailMed) return null
+                return (
+                    <MedicationDetailView
+                        medication={detailMed}
+                        doctors={savedDoctors}
+                        pillIcon={getPillIcon(detailMed)}
+                        isTracked={isMedTracked(detailMed.item_metadata)}
+                        isLowStock={isMedLowStock(detailMed.item_metadata)}
+                        currentDose={getCurrentDose(detailMed)}
+                        onBack={() => {
+                            if (typeof window !== "undefined" && window.history.length > 1) {
+                                router.back()
+                            } else {
+                                router.replace("/?page=type-health-records&tab=meds", { scroll: false })
+                            }
+                        }}
+                        onEdit={() => {
+                            setSelectedMed(detailMed)
+                            setShowEditModal(true)
+                        }}
+                        onLookupDrug={handleDrugLookup}
+                        onOpenDoctors={() => router.push("/?page=type-health-records&tab=doctors", { scroll: false })}
+                    />
+                )
+            })()}
 
             {/* Modals */}
             {(showAddModal || showEditModal) && (
@@ -1799,6 +1875,8 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
         nextDose: medication?.item_metadata?.nextDose || "",
         pillShape: normalizePillShape(medication?.item_metadata?.pillShape),
         pillColor: medication?.item_metadata?.pillColor || "#FFFFFF",
+        trackInventory: medication ? isMedTracked(medication.item_metadata) : false,
+        lowStockThreshold: medication?.item_metadata?.lowStockThreshold ?? 5,
         quantity: medication?.item_metadata?.quantity ?? 0,
         totalQuantity: medication?.item_metadata?.totalQuantity ?? 0,
         notes: medication?.item_metadata?.notes || "",
@@ -2284,32 +2362,64 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                         )}
                     </div>
 
-                    {/* Quantity */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Current Quantity</label>
+                    {/* Optional Pill Count Tracking */}
+                    <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-4">
+                        <label className="flex items-center gap-3 cursor-pointer select-none">
                             <input
-                                type="number"
-                                value={isNaN(formData.quantity) ? '' : formData.quantity}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    setFormData({ ...formData, quantity: isNaN(val) ? 0 : val });
-                                }}
-                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                type="checkbox"
+                                checked={Boolean(formData.trackInventory)}
+                                onChange={(e) => setFormData({ ...formData, trackInventory: e.target.checked })}
+                                className="h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 cursor-pointer"
                             />
-                        </div>
-                        <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Total Quantity (Bottle)</label>
-                            <input
-                                type="number"
-                                value={isNaN(formData.totalQuantity) ? '' : formData.totalQuantity}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    setFormData({ ...formData, totalQuantity: isNaN(val) ? 0 : val });
-                                }}
-                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            />
-                        </div>
+                            <div>
+                                <span className="text-sm font-bold text-white">Track pill count</span>
+                                <p className="text-xs text-gray-400">Optional — enable to count remaining pills and show low-stock alerts</p>
+                            </div>
+                        </label>
+
+                        {formData.trackInventory && (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/10">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Current Quantity</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={isNaN(formData.quantity) ? '' : formData.quantity}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            setFormData({ ...formData, quantity: isNaN(val) ? 0 : val });
+                                        }}
+                                        className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Total Quantity (Bottle)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={isNaN(formData.totalQuantity) ? '' : formData.totalQuantity}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            setFormData({ ...formData, totalQuantity: isNaN(val) ? 0 : val });
+                                        }}
+                                        className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Low-Stock Threshold</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={isNaN(formData.lowStockThreshold) ? '' : formData.lowStockThreshold}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            setFormData({ ...formData, lowStockThreshold: isNaN(val) ? 5 : val });
+                                        }}
+                                        className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Rest of form fields */}
