@@ -218,6 +218,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [remindersTouched, setRemindersTouched] = useState(false)
     const [sendingTestEmail, setSendingTestEmail] = useState(false)
     const [savingAppt, setSavingAppt] = useState(false)
+    const [checkingReminderKey, setCheckingReminderKey] = useState<string | null>(null)
+    const [checkedReminderStatus, setCheckedReminderStatus] = useState<Record<string, { status: string; reason?: string | null }>>({})
     const promotedWaitingRef = useRef<Set<string>>(new Set())
 
     // Check for scheduling conflict with Google Calendar events
@@ -1346,31 +1348,114 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         )}
                                     </div>
                                     {Array.isArray(apt.item_metadata?.reminderEmails) && apt.item_metadata.reminderEmails.length > 0 && (
-                                        <div className="space-y-1 pt-1">
+                                        <div className="space-y-1.5 pt-1">
                                             {apt.item_metadata.reminderEmails.map((rem: AppointmentReminderEmail, idx: number) => {
+                                                const remKey = `${apt.id}:${rem.resendId || rem.sendAt}:${idx}`
                                                 const sendTs = new Date(rem.sendAt).getTime()
-                                                const isSent = rem.status === "scheduled" && !isNaN(sendTs) && sendTs <= Date.now()
-                                                const statusLabel = isSent
-                                                    ? "Sent"
-                                                    : rem.status === "waiting"
-                                                    ? "Waiting"
-                                                    : rem.status === "failed"
-                                                    ? "Failed"
-                                                    : "Scheduled"
-                                                const badgeCls = isSent
-                                                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                                                    : rem.status === "waiting"
-                                                    ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                                                    : rem.status === "failed"
-                                                    ? "bg-red-500/15 text-red-400 border-red-500/30"
-                                                    : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                                                const isPast = !isNaN(sendTs) && sendTs <= Date.now()
+                                                const live = checkedReminderStatus[remKey]
+                                                const isChecking = checkingReminderKey === remKey
+
+                                                const handleCheckStatus = async () => {
+                                                    if (!rem.resendId) {
+                                                        toast.error("No Resend email ID on this reminder")
+                                                        return
+                                                    }
+                                                    setCheckingReminderKey(remKey)
+                                                    try {
+                                                        const res = await fetch("/api/appointment-reminders", {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({ action: "status", resendId: rem.resendId }),
+                                                        })
+                                                        const data = await res.json().catch(() => ({}))
+                                                        if (res.ok && data.ok) {
+                                                            setCheckedReminderStatus((prev) => ({
+                                                                ...prev,
+                                                                [remKey]: { status: data.resendStatus, reason: data.failureReason },
+                                                            }))
+                                                        } else {
+                                                            toast.error(data?.error || "Could not check Resend status")
+                                                        }
+                                                    } catch (err: any) {
+                                                        toast.error(err?.message || "Could not check Resend status")
+                                                    } finally {
+                                                        setCheckingReminderKey(null)
+                                                    }
+                                                }
+
+                                                const realStatus = live?.status?.toLowerCase()
+                                                const realBadgeCls =
+                                                    realStatus === "delivered" || realStatus === "opened" || realStatus === "clicked"
+                                                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                                                        : realStatus === "failed" || realStatus === "bounced" || realStatus === "complained"
+                                                        ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                                        : realStatus === "canceled" || realStatus === "cancelled"
+                                                        ? "bg-gray-500/15 text-gray-400 border-gray-500/30"
+                                                        : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+
                                                 return (
-                                                    <div key={`${rem.sendAt}-${idx}`} className="flex items-center gap-1.5 flex-wrap text-[11px] text-gray-300">
-                                                        <Mail className="h-3 w-3 text-blue-400 shrink-0" />
-                                                        <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
-                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${badgeCls}`}>
-                                                            {statusLabel}
-                                                        </span>
+                                                    <div key={remKey} className="space-y-0.5 text-[11px] text-gray-300">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <Mail className="h-3 w-3 text-blue-400 shrink-0" />
+                                                            {rem.status === "waiting" ? (
+                                                                <>
+                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
+                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-amber-500/15 text-amber-300 border-amber-500/30">
+                                                                        Waiting
+                                                                    </span>
+                                                                </>
+                                                            ) : rem.status === "failed" && !live ? (
+                                                                <>
+                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
+                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-red-500/15 text-red-400 border-red-500/30">
+                                                                        Failed
+                                                                    </span>
+                                                                </>
+                                                            ) : live ? (
+                                                                <>
+                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
+                                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border capitalize ${realBadgeCls}`}>
+                                                                        {live.status}
+                                                                    </span>
+                                                                    {rem.resendId && (
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={isChecking}
+                                                                            onClick={handleCheckStatus}
+                                                                            className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 transition-colors cursor-pointer disabled:opacity-50"
+                                                                        >
+                                                                            {isChecking ? "Checking..." : "Check status"}
+                                                                        </button>
+                                                                    )}
+                                                                </>
+                                                            ) : !isPast ? (
+                                                                <>
+                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-blue-500/15 text-blue-300 border-blue-500/30">
+                                                                        Scheduled for {safeFormat(rem.sendAt, 'MMM d, h:mm a')}
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
+                                                                    {rem.resendId && (
+                                                                        <button
+                                                                            type="button"
+                                                                            disabled={isChecking}
+                                                                            onClick={handleCheckStatus}
+                                                                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition-colors cursor-pointer disabled:opacity-50"
+                                                                        >
+                                                                            {isChecking ? "Checking..." : "Check status"}
+                                                                        </button>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                        {live?.reason && (
+                                                            <div className="text-[10px] text-red-400 pl-4 break-words">
+                                                                Reason: {live.reason}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )
                                             })}

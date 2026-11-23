@@ -100,6 +100,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, results })
     }
 
+    // 2b. Check real delivery status of a scheduled email on-demand (manual tap only)
+    if (action === "status") {
+      const resendId = String(body?.resendId || "").trim()
+      if (!resendId) {
+        return NextResponse.json(
+          { ok: false, error: "No Resend email ID saved for this reminder." },
+          { status: 400 }
+        )
+      }
+
+      const res = await fetch(`${RESEND_API_URL}/${encodeURIComponent(resendId)}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        return NextResponse.json(
+          { ok: false, error: data?.message || data?.error || `Resend error (${res.status})` },
+          { status: res.status }
+        )
+      }
+
+      const resendStatus = String(data?.last_event || data?.status || "unknown").toLowerCase()
+      const failureReason =
+        data?.failed?.reason ||
+        data?.bounce?.message ||
+        data?.error?.message ||
+        (typeof data?.error === "string" ? data.error : null) ||
+        null
+
+      return NextResponse.json({
+        ok: true,
+        resendStatus,
+        failureReason,
+      })
+    }
+
     // 3. Schedule a one-time appointment reminder email
     if (action === "schedule") {
       const to = String(body?.to || "").trim()
