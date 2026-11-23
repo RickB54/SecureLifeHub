@@ -168,6 +168,11 @@ export default function DoctorVisitMode({
 
             <div className="text-xl md:text-2xl font-black text-white">
               {nextAppt.doctor || nextAppt.title}
+              {nextAppt.facility_name && (
+                <span className="text-base md:text-lg font-semibold text-teal-400 ml-2">
+                  &bull; {nextAppt.facility_name}
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-2 text-gray-300 text-base md:text-lg font-semibold">
@@ -277,8 +282,12 @@ export default function DoctorVisitMode({
                   </span>
                   <div className="flex-1">
                     <p className="text-lg md:text-xl font-bold text-white">{q.question}</p>
-                    {q.doctor_name && (
-                      <p className="text-xs text-indigo-300 mt-1">For: {q.doctor_name}</p>
+                    {(q.doctor_name || q.facility_name) && (
+                      <p className="text-xs text-indigo-300 mt-1">
+                        {q.doctor_name ? `For: ${q.doctor_name}` : ""}
+                        {q.doctor_name && q.facility_name ? " • " : ""}
+                        {q.facility_name ? q.facility_name : ""}
+                      </p>
                     )}
                     {q.answer_notes && (
                       <p className="text-sm text-gray-300 mt-1 italic pl-2 border-l-2 border-indigo-500/40">
@@ -379,14 +388,20 @@ export default function DoctorVisitMode({
               {activeLetters.map((l) => (
                 <div key={l.id} className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm">
                   <span className="text-xs font-bold uppercase text-blue-400">Letter: {l.status}</span>
-                  <p className="font-bold text-white">{l.doctor_name || "Doctor Letter"}</p>
+                  <p className="font-bold text-white">
+                    {l.doctor_name || "Doctor Letter"}
+                    {l.facility_name && <span className="text-xs font-semibold text-teal-400 ml-2">&bull; {l.facility_name}</span>}
+                  </p>
                   {l.notes && <p className="text-xs text-gray-300 mt-1">{l.notes}</p>}
                 </div>
               ))}
               {activeReferrals.map((r) => (
                 <div key={r.id} className="p-3 rounded-xl bg-white/5 border border-white/10 text-sm">
                   <span className="text-xs font-bold uppercase text-purple-400">Referral: {r.status}</span>
-                  <p className="font-bold text-white">{r.specialist_name}</p>
+                  <p className="font-bold text-white">
+                    {r.specialist_name}
+                    {r.facility_name && <span className="text-xs font-semibold text-teal-400 ml-2">&bull; {r.facility_name}</span>}
+                  </p>
                   <p className="text-xs text-purple-200">{r.specialty}</p>
                   {r.reason && <p className="text-xs text-gray-300 mt-1">{r.reason}</p>}
                 </div>
@@ -409,6 +424,7 @@ export default function DoctorVisitMode({
                     <div className="text-xs text-gray-400 flex items-center gap-2">
                       <span>{s.date_type ? `${s.date_type}: ` : ""}{formatDateOnly(s.date)}</span>
                       {s.doctor_name && <span>&bull; Dr. {s.doctor_name}</span>}
+                      {s.facility_name && <span className="text-teal-400">&bull; {s.facility_name}</span>}
                     </div>
                   </div>
                   <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{s.summary_text}</p>

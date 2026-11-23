@@ -115,6 +115,8 @@ export interface HealthQuestion {
   answered: boolean
   doctor_id?: string | null
   doctor_name?: string
+  facility_id?: string | null
+  facility_name?: string
   visit_id?: string | null
   answer_notes?: string
   created_at?: string
@@ -178,6 +180,8 @@ export interface HealthNote {
   date_type?: string
   doctor_id?: string | null
   doctor_name?: string
+  facility_id?: string | null
+  facility_name?: string
   visit_id?: string | null
   given_to_doctor?: boolean
   given_method?: GivenMethod | null
@@ -194,6 +198,8 @@ export interface HealthLetter {
   user_id?: string
   doctor_id?: string | null
   doctor_name?: string
+  facility_id?: string | null
+  facility_name?: string
   visit_id?: string | null
   date: string
   date_type?: string
@@ -219,6 +225,8 @@ export interface HealthReferral {
   doctor_id?: string | null // Linked doctor in My Doctors
   referred_by_doctor_id?: string | null
   referred_by_name?: string
+  facility_id?: string | null
+  facility_name?: string
   visit_id?: string | null
   reason: string
   date: string
@@ -242,6 +250,8 @@ export interface HealthVisitSummary {
   date_type?: string
   doctor_id?: string | null
   doctor_name?: string
+  facility_id?: string | null
+  facility_name?: string
   visit_id?: string | null
   given_to_doctor?: boolean
   given_method?: GivenMethod | null
@@ -258,6 +268,7 @@ export interface DoctorOption {
   facility?: string
   address?: string
   portalUrl?: string
+  facility_ids?: string[]
 }
 
 export interface VisitOption {
@@ -265,6 +276,9 @@ export interface VisitOption {
   title: string
   date: string
   doctor?: string
+  doctor_id?: string | null
+  facility_id?: string | null
+  facility_name?: string
   location?: string
   notes?: string
 }

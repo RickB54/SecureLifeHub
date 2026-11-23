@@ -1,8 +1,34 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useMemo } from "react"
-import { Search, ChevronDown, Plus, User, Stethoscope, Check, X } from "lucide-react"
+import { Search, ChevronDown, Plus, User, Stethoscope, Check, X, Building2 } from "lucide-react"
 import { format } from "date-fns"
+
+export const FACILITY_TYPES = [
+  "Hospital",
+  "Clinic",
+  "Lab",
+  "Imaging",
+  "Pharmacy",
+  "Urgent Care",
+  "Other",
+] as const
+
+export type FacilityType = (typeof FACILITY_TYPES)[number]
+
+export interface FacilityOption {
+  id: string
+  name: string
+  type?: string
+  address?: string
+  phone?: string
+  fax?: string
+  website?: string
+  hours?: string
+  notes?: string
+  doctor_ids?: string[]
+  created_at?: string
+}
 
 export interface DoctorOption {
   id: string
@@ -12,6 +38,7 @@ export interface DoctorOption {
   facility?: string
   address?: string
   portalUrl?: string
+  facility_ids?: string[]
 }
 
 /**
@@ -52,6 +79,37 @@ export function extractDoctorsFromRecords(records: any[] = []): DoctorOption[] {
       address: r.item_metadata?.address || "",
       phone: r.item_metadata?.phone || r.item_metadata?.doctorPhone || "",
       portalUrl: r.website || r.item_metadata?.portalUrl || "",
+      facility_ids: Array.isArray(r.item_metadata?.facility_ids) ? r.item_metadata.facility_ids : [],
+    }))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+}
+
+/**
+ * Extract distinct medical facility records from existing vault items with zero extra queries.
+ */
+export function extractFacilitiesFromRecords(records: any[] = []): FacilityOption[] {
+  if (!Array.isArray(records)) return []
+  return records
+    .filter(
+      (r) =>
+        r &&
+        (r.type === "facility-record" ||
+          r.category === "Medical Facilities" ||
+          r.item_metadata?.is_facility === true ||
+          r.item_metadata?.custom_type === "facility-record")
+    )
+    .map((r) => ({
+      id: r.id,
+      name: r.title || r.item_metadata?.facilityName || "Unnamed Facility",
+      type: r.item_metadata?.facilityType || "Clinic",
+      address: r.item_metadata?.address || "",
+      phone: r.item_metadata?.phone || "",
+      fax: r.item_metadata?.fax || "",
+      website: r.website || r.item_metadata?.website || "",
+      hours: r.item_metadata?.hours || "",
+      notes: r.notes || r.item_metadata?.notes || "",
+      doctor_ids: Array.isArray(r.item_metadata?.doctor_ids) ? r.item_metadata.doctor_ids : [],
+      created_at: r.created_at,
     }))
     .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
 }
@@ -192,6 +250,7 @@ interface DoctorComboboxProps {
     facility?: string
     phone?: string
     address?: string
+    facility_ids?: string[]
   }) => void
   onClear?: () => void
   label?: string
@@ -265,6 +324,7 @@ export function DoctorCombobox({
       facility: doc.facility || doc.address || "",
       phone: doc.phone || "",
       address: doc.address || "",
+      facility_ids: doc.facility_ids || [],
     })
     setSearchTerm(doc.name)
     setIsOpen(false)
@@ -548,6 +608,244 @@ export function FieldSuggestionInput({
               <span className="text-[10px] text-gray-500 uppercase">Insert</span>
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+/**
+ * If a doctor has exactly one linked facility, return it so forms can pre-select it (editable).
+ */
+export function findSingleLinkedFacility(
+  doctor: { id: string | null; facility_ids?: string[] },
+  facilities: FacilityOption[]
+): FacilityOption | null {
+  if (!doctor.id) return null
+  const linked = facilities.filter(
+    (f) =>
+      doctor.facility_ids?.includes(f.id) ||
+      f.doctor_ids?.includes(doctor.id as string)
+  )
+  return linked.length === 1 ? linked[0] : null
+}
+
+interface FacilityComboboxProps {
+  value: string
+  facilityId?: string | null
+  facilities: FacilityOption[]
+  onSelectFacility: (facility: {
+    id: string | null
+    name: string
+    type?: string
+    address?: string
+    phone?: string
+  }) => void
+  onClear?: () => void
+  label?: string
+  placeholder?: string
+  className?: string
+  inputClassName?: string
+  compact?: boolean
+  required?: boolean
+  disabled?: boolean
+}
+
+/**
+ * Searchable Facility Combobox:
+ * - Lists facilities saved in Medical Facilities
+ * - Plus "+ Other (type a name)" to enter a custom facility name
+ * - Selecting stores facility link (facility_id) and name
+ */
+export function FacilityCombobox({
+  value,
+  facilityId,
+  facilities = [],
+  onSelectFacility,
+  onClear,
+  label = "Facility / Location",
+  placeholder = "Select facility or type name...",
+  className = "",
+  inputClassName = "",
+  compact = false,
+  required = false,
+  disabled = false,
+}: FacilityComboboxProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const containerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setSearchTerm(value || "")
+  }, [value])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const filteredFacilities = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim()
+    if (!q) return facilities
+    return facilities.filter(
+      (f) =>
+        f.name.toLowerCase().includes(q) ||
+        f.type?.toLowerCase().includes(q) ||
+        f.address?.toLowerCase().includes(q)
+    )
+  }, [facilities, searchTerm])
+
+  const selectedObj = useMemo(() => {
+    if (facilityId) return facilities.find((f) => f.id === facilityId)
+    if (value) return facilities.find((f) => f.name.toLowerCase() === value.toLowerCase())
+    return null
+  }, [facilityId, value, facilities])
+
+  return (
+    <div ref={containerRef} className={`relative space-y-1.5 ${className}`}>
+      {label && (
+        <div className="flex justify-between items-center">
+          <label
+            className={
+              compact
+                ? "text-slate-400 font-semibold text-xs flex items-center gap-1"
+                : "text-[10px] font-black uppercase text-gray-400 tracking-widest pl-1 flex items-center gap-1.5"
+            }
+          >
+            {!compact && <Building2 className="h-3 w-3 text-teal-400" />}
+            {label} {required && <span className="text-rose-500">*</span>}
+          </label>
+          {selectedObj && (
+            <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+              <Check className="h-2.5 w-2.5" /> {compact ? "Linked" : "Linked Facility"}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            const text = e.target.value
+            setSearchTerm(text)
+            onSelectFacility({ id: null, name: text })
+            if (!isOpen) setIsOpen(true)
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required && !searchTerm}
+          className={
+            inputClassName ||
+            (compact
+              ? "w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 pr-10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-teal-500"
+              : "w-full p-4 pr-12 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-teal-500/50 transition-all font-bold text-white text-sm placeholder:text-gray-500")
+          }
+        />
+
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          {searchTerm && onClear && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTerm("")
+                onClear()
+              }}
+              className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-white/10"
+              title="Clear"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+            tabIndex={-1}
+          >
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180 text-teal-400" : ""}`} />
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-2 z-50 max-h-64 overflow-y-auto rounded-2xl bg-[#1e1e1e] border border-white/15 p-2 shadow-2xl backdrop-blur-xl custom-scrollbar">
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false)
+              if (inputRef.current) {
+                inputRef.current.focus()
+                inputRef.current.select()
+              }
+            }}
+            className="w-full text-left p-3 rounded-xl hover:bg-teal-600/20 text-teal-400 hover:text-teal-300 font-bold text-xs flex items-center gap-2 border border-teal-500/20 mb-1 transition-all"
+          >
+            <Plus className="h-4 w-4 shrink-0" />
+            <span>+ Other (type a name)</span>
+          </button>
+
+          {filteredFacilities.length > 0 ? (
+            <div className="space-y-1">
+              <div className="px-2 py-1 text-[10px] font-black uppercase text-gray-500 tracking-wider">
+                Medical Facilities ({filteredFacilities.length})
+              </div>
+              {filteredFacilities.map((fac) => {
+                const isSelected = fac.id === facilityId || fac.name.toLowerCase() === value?.toLowerCase()
+                return (
+                  <button
+                    key={fac.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectFacility({
+                        id: fac.id,
+                        name: fac.name,
+                        type: fac.type || "",
+                        address: fac.address || "",
+                        phone: fac.phone || "",
+                      })
+                      setSearchTerm(fac.name)
+                      setIsOpen(false)
+                    }}
+                    className={`w-full text-left p-3 rounded-xl transition-all flex items-start justify-between gap-2 ${
+                      isSelected
+                        ? "bg-teal-600/30 border border-teal-500/40 text-white"
+                        : "hover:bg-white/5 text-gray-200 hover:text-white"
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-sm flex items-center gap-1.5 truncate">
+                        <Building2 className="h-3.5 w-3.5 text-teal-400 shrink-0" />
+                        <span className="truncate">{fac.name}</span>
+                      </div>
+                      {(fac.type || fac.address || fac.phone) && (
+                        <div className="text-[11px] text-gray-400 mt-0.5 truncate">
+                          {fac.type && <span className="text-teal-300/90 font-medium">{fac.type}</span>}
+                          {fac.type && (fac.address || fac.phone) && " • "}
+                          {fac.address || fac.phone}
+                        </div>
+                      )}
+                    </div>
+                    {isSelected && <Check className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-xs text-gray-400">
+              No matching facility found. Click &ldquo;+ Other&rdquo; above to type a custom name.
+            </div>
+          )}
         </div>
       )}
     </div>

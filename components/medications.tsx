@@ -12,26 +12,20 @@ import { toast } from 'sonner'
 import { lookupDrugInfo, type DrugInfo } from '@/lib/drug-database'
 import {
     DoctorCombobox,
+    FacilityCombobox,
     FieldSuggestionInput,
     extractDoctorsFromRecords,
+    extractFacilitiesFromRecords,
     extractHealthSuggestions,
+    findSingleLinkedFacility,
 } from './health-ui/health-field-helpers'
 import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
 import MedicationDetailView from './health-ui/medication-detail-view'
-
-// Optional pill tracking helpers: default OFF for new meds; existing meds ON only if totalQuantity > 0
-export function isMedTracked(meta?: any): boolean {
-    if (!meta) return false
-    if (typeof meta.trackInventory === "boolean") return meta.trackInventory
-    return (parseFloat(meta.totalQuantity) || 0) > 0
-}
-
-export function isMedLowStock(meta?: any): boolean {
-    if (!isMedTracked(meta)) return false
-    const qty = parseFloat(meta.quantity ?? "0") || 0
-    const threshold = parseFloat(meta.lowStockThreshold ?? "5") || 5
-    return qty <= threshold
-}
+import {
+    isMedTracked,
+    calculatePillCountEstimate,
+    isMedLowStockCalculated as isMedLowStock,
+} from '@/lib/pill-count'
 
 // Horizontally stretched oval / ellipse icon (not capsule style)
 export const OvalIcon = ({ className = "h-4 w-4", style, fill, stroke, strokeWidth }: any) => (
@@ -98,6 +92,9 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const searchParams = useSearchParams()
     const activeMedId = searchParams.get("medId")
     const savedDoctors = useMemo(() => extractDoctorsFromRecords(records), [records])
+    const savedFacilities = useMemo(() => extractFacilitiesFromRecords(records), [records])
+    const [refillMed, setRefillMed] = useState<any>(null)
+    const [refillCount, setRefillCount] = useState<string>("")
     const [searchQuery, setSearchQuery] = useState("")
     const [showAddModal, setShowAddModal] = useState(false)
     const [showEditModal, setShowEditModal] = useState(false)
@@ -424,6 +421,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     frequency: formData.frequency || "",
                     prescribedBy: formData.prescribedBy || "",
                     doctor_id: formData.doctor_id || null,
+                    facility_id: formData.facility_id || null,
+                    facility_name: formData.facility_name || "",
                     pharmacy: formData.pharmacy || "",
                     purpose: formData.purpose || "",
                     genericName: formData.genericName || "",
@@ -436,9 +435,20 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     pillShape: normalizePillShape(formData.pillShape),
                     pillColor: formData.pillColor || "#FFFFFF",
                     trackInventory: Boolean(formData.trackInventory),
+                    pillsPerDose: parseFloat(formData.pillsPerDose) || 1,
                     lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
-                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0)) : 0,
-                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0)) : 0,
+                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseFloat(formData.quantity) || 0)) : 0,
+                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseFloat(formData.totalQuantity) || 0)) : 0,
+                    countBaseline: formData.trackInventory
+                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
+                            ? (parseFloat(formData.quantity) || 0)
+                            : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(formData.quantity) || 0))
+                        : 0,
+                    countBaselineDate: formData.trackInventory
+                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
+                            ? new Date().toISOString()
+                            : selectedMed?.item_metadata?.countBaselineDate)
+                        : null,
                     reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
                     takenLog: [],
                     skippedLog: [],
@@ -475,6 +485,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     frequency: formData.frequency || "",
                     prescribedBy: formData.prescribedBy || "",
                     doctor_id: formData.doctor_id || null,
+                    facility_id: formData.facility_id || null,
+                    facility_name: formData.facility_name || "",
                     pharmacy: formData.pharmacy || "",
                     purpose: formData.purpose || "",
                     genericName: formData.genericName || "",
@@ -487,9 +499,20 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     pillShape: normalizePillShape(formData.pillShape),
                     pillColor: formData.pillColor || "#FFFFFF",
                     trackInventory: Boolean(formData.trackInventory),
+                    pillsPerDose: parseFloat(formData.pillsPerDose) || 1,
                     lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
-                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0)) : 0,
-                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0)) : 0,
+                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseFloat(formData.quantity) || 0)) : 0,
+                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseFloat(formData.totalQuantity) || 0)) : 0,
+                    countBaseline: formData.trackInventory
+                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
+                            ? (parseFloat(formData.quantity) || 0)
+                            : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(formData.quantity) || 0))
+                        : 0,
+                    countBaselineDate: formData.trackInventory
+                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
+                            ? new Date().toISOString()
+                            : selectedMed?.item_metadata?.countBaselineDate)
+                        : null,
                     reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
                     doseSchedule: formData.doseSchedule || [],
                     startDate: formData.startDate || format(new Date(), 'yyyy-MM-dd'),
@@ -520,9 +543,20 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     rxInstructions: formData.rxInstructions || "",
                     notes: formData.notes || "",
                     trackInventory: Boolean(formData.trackInventory),
+                    pillsPerDose: parseFloat(formData.pillsPerDose) || 1,
                     lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
-                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseInt(formData.quantity) || 0)) : 0,
-                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseInt(formData.totalQuantity) || 0)) : 0,
+                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseFloat(formData.quantity) || 0)) : 0,
+                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseFloat(formData.totalQuantity) || 0)) : 0,
+                    countBaseline: formData.trackInventory
+                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
+                            ? (parseFloat(formData.quantity) || 0)
+                            : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(formData.quantity) || 0))
+                        : 0,
+                    countBaselineDate: formData.trackInventory
+                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
+                            ? new Date().toISOString()
+                            : selectedMed?.item_metadata?.countBaselineDate)
+                        : null,
                 }
             })
             setShowEditModal(false)
@@ -552,10 +586,41 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             nextDose: nextDoseTime
         }
         if (tracked) {
-            updatedMeta.quantity = Math.max(0, quantity - doseQty)
+            const pillsStep = parseFloat(med.item_metadata?.pillsPerDose ?? doseQty ?? "1") || 1
+            updatedMeta.quantity = Math.max(0, quantity - pillsStep)
         }
 
         await updateItem(med.id, { item_metadata: updatedMeta })
+    }
+
+    const handleConfirmRefill = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!refillMed) return
+        const newCount = parseFloat(refillCount)
+        if (isNaN(newCount) || newCount < 0) {
+            toast.error("Please enter a valid pill count")
+            return
+        }
+        try {
+            const nowIso = new Date().toISOString()
+            const updatedMeta = {
+                ...refillMed.item_metadata,
+                trackInventory: true,
+                quantity: newCount,
+                totalQuantity: Math.max(newCount, parseFloat(refillMed.item_metadata?.totalQuantity || "0") || 0),
+                countBaseline: newCount,
+                countBaselineDate: nowIso,
+                lastModified: nowIso,
+            }
+            const res = await updateItem(refillMed.id, { item_metadata: updatedMeta })
+            if (res === false) throw new Error("Failed to save refill")
+            upsertSharedHealthRecord({ ...refillMed, item_metadata: updatedMeta })
+            toast.success(`Refill saved — baseline reset to ${newCount}`)
+            setRefillMed(null)
+            setRefillCount("")
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to save refill")
+        }
     }
 
 
@@ -1266,8 +1331,9 @@ ${selectedMed ? `
                             </div>
                         ) : (
                             filteredMeds.map(med => {
-                                const tracked = isMedTracked(med.item_metadata)
-                                const lowStock = isMedLowStock(med.item_metadata)
+                                const estimate = calculatePillCountEstimate(med.item_metadata)
+                                const tracked = Boolean(estimate?.tracked)
+                                const lowStock = Boolean(estimate?.isLowStock)
                                 return (
                                 <div
                                     key={med.id}
@@ -1290,7 +1356,7 @@ ${selectedMed ? `
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span>
                                                             {med.item_metadata?.frequency || "As needed"}
-                                                            {tracked ? ` • ${med.item_metadata?.quantity || 0} pills left` : ""}
+                                                            {tracked && estimate ? ` • Est. ${estimate.remaining} left` : ""}
                                                         </span>
                                                         {lowStock && (
                                                             <span className="px-2 py-0.5 bg-red-500/20 text-red-400 text-xs rounded-full border border-red-500/30 flex items-center gap-1 font-bold animate-pulse">
@@ -1298,6 +1364,11 @@ ${selectedMed ? `
                                                             </span>
                                                         )}
                                                     </div>
+                                                    {tracked && estimate?.runOutDateStr && (
+                                                        <div className="text-xs text-amber-300/90">
+                                                            Runs out about {estimate.runOutDateStr}
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center gap-2 text-purple-300 font-bold mt-1">
                                                         <Activity className="h-3.5 w-3.5" />
                                                         Today's Dose: {getCurrentDose(med)}
@@ -1373,7 +1444,7 @@ ${selectedMed ? `
                                     </div>
 
                                     {/* Additional Actions */}
-                                    <div className="flex gap-2 mt-4 pt-4 border-t border-white/10">
+                                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10">
                                         <button type="button" onClick={(e) => { e.stopPropagation(); handleDrugLookup(med.title) }} className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400" title="AI Drug Info">
                                             <Sparkles className="h-5 w-5" />
                                         </button>
@@ -1383,6 +1454,20 @@ ${selectedMed ? `
                                         <button type="button" onClick={async (e) => { e.stopPropagation(); if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Delete">
                                             <Trash className="h-5 w-5" />
                                         </button>
+                                        {tracked && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setRefillMed(med)
+                                                    setRefillCount(String(med.item_metadata?.totalQuantity || 30))
+                                                }}
+                                                className="ml-auto px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all"
+                                                title="Record refill & reset pill count baseline"
+                                            >
+                                                Refill
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                                 )
@@ -1465,13 +1550,16 @@ ${selectedMed ? `
             {activeMedId && (() => {
                 const detailMed = medRecords.find((m) => m.id === activeMedId)
                 if (!detailMed) return null
+                const est = calculatePillCountEstimate(detailMed.item_metadata)
                 return (
                     <MedicationDetailView
                         medication={detailMed}
                         doctors={savedDoctors}
+                        facilities={savedFacilities}
                         pillIcon={getPillIcon(detailMed)}
-                        isTracked={isMedTracked(detailMed.item_metadata)}
-                        isLowStock={isMedLowStock(detailMed.item_metadata)}
+                        isTracked={Boolean(est?.tracked)}
+                        isLowStock={Boolean(est?.isLowStock)}
+                        pillEstimate={est}
                         currentDose={getCurrentDose(detailMed)}
                         onBack={() => {
                             if (typeof window !== "undefined" && window.history.length > 1) {
@@ -1484,11 +1572,44 @@ ${selectedMed ? `
                             setSelectedMed(detailMed)
                             setShowEditModal(true)
                         }}
+                        onRefill={() => {
+                            setRefillMed(detailMed)
+                            setRefillCount(String(detailMed.item_metadata?.totalQuantity || 30))
+                        }}
                         onLookupDrug={handleDrugLookup}
                         onOpenDoctors={() => router.push("/?page=type-health-records&tab=doctors", { scroll: false })}
                     />
                 )
             })()}
+
+            {/* Refill Modal */}
+            {refillMed && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4" onClick={() => setRefillMed(null)}>
+                    <div className="w-full max-w-sm bg-[#1e1e1e] border border-white/10 rounded-2xl p-6 shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-white">Refill {refillMed.title}</h3>
+                        <p className="text-xs text-gray-400">Enter your new pill count to reset the automatic estimate baseline to today.</p>
+                        <form onSubmit={handleConfirmRefill} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase block mb-1.5">New Pill Count</label>
+                                <input
+                                    type="number"
+                                    step="0.5"
+                                    min="0"
+                                    required
+                                    autoFocus
+                                    value={refillCount}
+                                    onChange={(e) => setRefillCount(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => setRefillMed(null)} className="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold">Cancel</button>
+                                <button type="submit" className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold">Save Refill</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Modals */}
             {(showAddModal || showEditModal) && (
@@ -1500,7 +1621,8 @@ ${selectedMed ? `
                     theme={theme}
                     prefillData={prefillTarget}
                     onLookupDrug={handleDrugLookup}
-                    doctors={extractDoctorsFromRecords(records)}
+                    doctors={savedDoctors}
+                    facilities={savedFacilities}
                     suggestions={extractHealthSuggestions(records)}
                 />
             )}
@@ -1857,7 +1979,8 @@ ${selectedMed ? `
 
 
 // Medication Modal with Pill Shape/Color Selection
-function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillData, onLookupDrug, doctors = [], suggestions }: any) {
+function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillData, onLookupDrug, doctors = [], facilities = [], suggestions }: any) {
+    const initialEstimate = medication ? calculatePillCountEstimate(medication.item_metadata) : null
     const [formData, setFormData] = useState({
         name: medication?.title || "",
         genericName: medication?.item_metadata?.genericName || "",
@@ -1866,6 +1989,8 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
         frequency: medication?.item_metadata?.frequency || "",
         prescribedBy: medication?.item_metadata?.prescribedBy || "",
         doctor_id: medication?.item_metadata?.doctor_id || null as string | null,
+        facility_id: medication?.item_metadata?.facility_id || null as string | null,
+        facility_name: medication?.item_metadata?.facility_name || "",
         pharmacy: medication?.item_metadata?.pharmacy || "",
         purpose: medication?.item_metadata?.purpose || "",
         sideEffects: medication?.item_metadata?.sideEffects || "",
@@ -1876,9 +2001,11 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
         pillShape: normalizePillShape(medication?.item_metadata?.pillShape),
         pillColor: medication?.item_metadata?.pillColor || "#FFFFFF",
         trackInventory: medication ? isMedTracked(medication.item_metadata) : false,
+        pillsPerDose: medication?.item_metadata?.pillsPerDose ?? 1,
         lowStockThreshold: medication?.item_metadata?.lowStockThreshold ?? 5,
-        quantity: medication?.item_metadata?.quantity ?? 0,
+        quantity: initialEstimate ? initialEstimate.remaining : (medication?.item_metadata?.quantity ?? 0),
         totalQuantity: medication?.item_metadata?.totalQuantity ?? 0,
+        quantityChanged: false,
         notes: medication?.item_metadata?.notes || "",
         reminders: medication?.item_metadata?.reminders || [],
         doseSchedule: medication?.item_metadata?.doseSchedule || [], // Array of { dayIndex: number, quantity: number }
@@ -2378,35 +2505,51 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                         </label>
 
                         {formData.trackInventory && (
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/10">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-white/10">
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Current Quantity</label>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Pills per Dose</label>
                                     <input
                                         type="number"
+                                        step="0.5"
+                                        min="0.25"
+                                        value={isNaN(formData.pillsPerDose) ? '' : formData.pillsPerDose}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            setFormData({ ...formData, pillsPerDose: isNaN(val) ? 1 : val });
+                                        }}
+                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Current Quantity</label>
+                                    <input
+                                        type="number"
+                                        step="0.5"
                                         min="0"
                                         value={isNaN(formData.quantity) ? '' : formData.quantity}
                                         onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            setFormData({ ...formData, quantity: isNaN(val) ? 0 : val });
+                                            const val = parseFloat(e.target.value);
+                                            setFormData({ ...formData, quantity: isNaN(val) ? 0 : val, quantityChanged: true });
                                         }}
-                                        className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Total Quantity (Bottle)</label>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Total (Bottle)</label>
                                     <input
                                         type="number"
+                                        step="0.5"
                                         min="0"
                                         value={isNaN(formData.totalQuantity) ? '' : formData.totalQuantity}
                                         onChange={(e) => {
-                                            const val = parseInt(e.target.value);
+                                            const val = parseFloat(e.target.value);
                                             setFormData({ ...formData, totalQuantity: isNaN(val) ? 0 : val });
                                         }}
-                                        className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Low-Stock Threshold</label>
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Low-Stock Alert</label>
                                     <input
                                         type="number"
                                         min="0"
@@ -2415,7 +2558,7 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                                             const val = parseInt(e.target.value);
                                             setFormData({ ...formData, lowStockThreshold: isNaN(val) ? 5 : val });
                                         }}
-                                        className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
                             </div>
@@ -2502,13 +2645,17 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                                 doctors={doctors}
                                 placeholder="Select doctor or type name..."
                                 inputClassName="w-full px-4 py-3 pr-12 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white text-sm"
-                                onSelectDoctor={(doc) =>
+                                onSelectDoctor={(doc) => {
+                                    const singleFac = findSingleLinkedFacility(doc, facilities)
                                     setFormData((prev) => ({
                                         ...prev,
                                         prescribedBy: doc.name,
                                         doctor_id: doc.id,
+                                        ...(singleFac && !prev.facility_name?.trim()
+                                            ? { facility_id: singleFac.id, facility_name: singleFac.name }
+                                            : {}),
                                     }))
-                                }
+                                }}
                                 onClear={() =>
                                     setFormData((prev) => ({
                                         ...prev,
@@ -2520,16 +2667,40 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                         </div>
                     </div>
 
-                    <div>
-                        <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Pharmacy</label>
-                        <FieldSuggestionInput
-                            name="med-pharmacy"
-                            placeholder="e.g., CVS Pharmacy, Walgreens..."
-                            value={formData.pharmacy}
-                            onChange={(val) => setFormData({ ...formData, pharmacy: val })}
-                            suggestions={suggestions?.pharmacies || []}
-                            inputClassName="w-full px-4 py-3 pr-10 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FacilityCombobox
+                            label="Facility"
+                            value={formData.facility_name}
+                            facilityId={formData.facility_id}
+                            facilities={facilities}
+                            placeholder="Select facility or type name..."
+                            inputClassName="w-full px-4 py-3 pr-12 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white text-sm"
+                            onSelectFacility={(fac) =>
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    facility_id: fac.id,
+                                    facility_name: fac.name,
+                                }))
+                            }
+                            onClear={() =>
+                                setFormData((prev) => ({
+                                    ...prev,
+                                    facility_id: null,
+                                    facility_name: "",
+                                }))
+                            }
                         />
+                        <div>
+                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Pharmacy</label>
+                            <FieldSuggestionInput
+                                name="med-pharmacy"
+                                placeholder="e.g., CVS Pharmacy, Walgreens..."
+                                value={formData.pharmacy}
+                                onChange={(val) => setFormData({ ...formData, pharmacy: val })}
+                                suggestions={suggestions?.pharmacies || []}
+                                inputClassName="w-full px-4 py-3 pr-10 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-white"
+                            />
+                        </div>
                     </div>
 
                     {/* Reminder Times */}

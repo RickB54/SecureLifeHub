@@ -18,18 +18,22 @@ import {
   ExternalLink,
 } from "lucide-react"
 import { format } from "date-fns"
-import type { DoctorOption } from "./health-field-helpers"
-import { resolveDoctorInfo } from "@/lib/health-store"
+import type { DoctorOption, FacilityOption } from "./health-field-helpers"
+import { resolveDoctorInfo, resolveFacilityInfo } from "@/lib/health-store"
+import type { PillCountEstimate } from "@/lib/pill-count"
 
 interface MedicationDetailViewProps {
   medication: any
   doctors: DoctorOption[]
+  facilities?: FacilityOption[]
   pillIcon: React.ReactNode
   isTracked: boolean
   isLowStock: boolean
+  pillEstimate?: PillCountEstimate | null
   currentDose: string
   onBack: () => void
   onEdit: () => void
+  onRefill?: () => void
   onLookupDrug?: (name: string) => void
   onOpenDoctors?: () => void
 }
@@ -60,12 +64,15 @@ function DetailRow({ label, value }: { label: string; value?: React.ReactNode })
 export default function MedicationDetailView({
   medication,
   doctors,
+  facilities = [],
   pillIcon,
   isTracked,
   isLowStock,
+  pillEstimate,
   currentDose,
   onBack,
   onEdit,
+  onRefill,
   onLookupDrug,
   onOpenDoctors,
 }: MedicationDetailViewProps) {
@@ -74,6 +81,11 @@ export default function MedicationDetailView({
     meta.doctor_id,
     { name: meta.prescribedBy },
     doctors
+  )
+  const facInfo = resolveFacilityInfo(
+    meta.facility_id,
+    { name: meta.facility_name || docInfo.location },
+    facilities
   )
 
   const hasClinical = Boolean(
@@ -96,7 +108,7 @@ export default function MedicationDetailView({
       (Array.isArray(meta.skippedLog) && meta.skippedLog.length > 0)
   )
 
-  const hasCareTeam = Boolean(docInfo.name || docInfo.location || meta.pharmacy)
+  const hasCareTeam = Boolean(docInfo.name || facInfo.name || meta.pharmacy)
 
   const hasNotes = Boolean(meta.notes || meta.aiDrugInfo)
 
@@ -260,7 +272,8 @@ export default function MedicationDetailView({
                   }
                 />
               )}
-              {docInfo.location && <DetailRow label="Facility" value={docInfo.location} />}
+              {facInfo.name && <DetailRow label="Facility" value={facInfo.name} />}
+              {facInfo.address && <DetailRow label="Facility Address" value={facInfo.address} />}
               {docInfo.phone && <DetailRow label="Doctor Phone" value={docInfo.phone} />}
               <DetailRow label="Pharmacy" value={meta.pharmacy} />
             </section>
@@ -269,10 +282,31 @@ export default function MedicationDetailView({
           {/* Inventory & Refills — ONLY shown when pill tracking is ON */}
           {isTracked && (
             <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-amber-400 mb-2 flex items-center gap-1.5">
-                <Calendar className="h-3.5 w-3.5" /> Inventory &amp; Refills
-              </h2>
-              <DetailRow label="Current Quantity" value={`${meta.quantity ?? 0} remaining`} />
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" /> Inventory &amp; Refills (Estimate)
+                </h2>
+                {onRefill && (
+                  <button
+                    type="button"
+                    onClick={onRefill}
+                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                  >
+                    Refill
+                  </button>
+                )}
+              </div>
+              <DetailRow
+                label="Estimated Remaining"
+                value={`Est. ${pillEstimate?.remaining ?? meta.quantity ?? 0} left`}
+              />
+              {pillEstimate?.runOutDateStr && (
+                <DetailRow
+                  label="Estimated Run-Out"
+                  value={`Runs out about ${pillEstimate.runOutDateStr}`}
+                />
+              )}
+              <DetailRow label="Pills per Dose" value={`${meta.pillsPerDose ?? 1}`} />
               <DetailRow label="Total Quantity (Bottle)" value={meta.totalQuantity ? `${meta.totalQuantity}` : ""} />
               <DetailRow label="Low-Stock Alert At" value={`≤ ${meta.lowStockThreshold ?? 5}`} />
               <DetailRow

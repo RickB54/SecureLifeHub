@@ -43,11 +43,15 @@ import { useAuth } from "@/components/auth-provider"
 import { toast } from "sonner"
 import {
   DoctorCombobox,
+  FacilityCombobox,
   FieldSuggestionInput,
   extractDoctorsFromRecords,
+  extractFacilitiesFromRecords,
   extractHealthSuggestions,
+  findSingleLinkedFacility,
+  type FacilityOption,
 } from "@/components/health-ui/health-field-helpers"
-import { resolveDoctorInfo, subscribeHealthStore } from "@/lib/health-store"
+import { resolveDoctorInfo, resolveFacilityInfo, subscribeHealthStore } from "@/lib/health-store"
 import {
   VisitHubSectionId,
   VISIT_HUB_SECTIONS,
@@ -90,6 +94,7 @@ import {
   deleteVisitSummary,
   updateItemGivenStatus,
   fetchExistingDoctors,
+  fetchExistingFacilities,
   fetchExistingVisits,
   fetchExistingMedications,
   saveSelectedSectionsToStorage,
@@ -447,6 +452,7 @@ export default function DoctorVisitHub({
   const [profileForm, setProfileForm] = useState<HealthProfile>(profile)
 
   const [existingDoctors, setExistingDoctors] = useState<DoctorOption[]>([])
+  const [existingFacilities, setExistingFacilities] = useState<FacilityOption[]>([])
   const [existingVisits, setExistingVisits] = useState<VisitOption[]>([])
   const [medications, setMedications] = useState<MedicationSummary[]>([])
 
@@ -457,11 +463,15 @@ export default function DoctorVisitHub({
   const [questionInput, setQuestionInput] = useState("")
   const [questionDoctorId, setQuestionDoctorId] = useState("")
   const [questionDoctorName, setQuestionDoctorName] = useState("")
+  const [questionFacilityId, setQuestionFacilityId] = useState("")
+  const [questionFacilityName, setQuestionFacilityName] = useState("")
   const [editingQuestion, setEditingQuestion] = useState<HealthQuestion | null>(null)
   const [questionEditForm, setQuestionEditForm] = useState({
     question: "",
     doctor_id: "",
     doctor_name: "",
+    facility_id: "",
+    facility_name: "",
     answer_notes: "",
   })
 
@@ -476,6 +486,8 @@ export default function DoctorVisitHub({
     date_type: "Appointment date",
     doctor_id: "",
     doctor_name: "",
+    facility_id: "",
+    facility_name: "",
     visit_id: "",
   })
 
@@ -485,6 +497,8 @@ export default function DoctorVisitHub({
   const [letterForm, setLetterForm] = useState({
     doctor_name: "",
     doctor_id: "",
+    facility_id: "",
+    facility_name: "",
     visit_id: "",
     date: getTodayDateString(),
     date_type: "Letter date",
@@ -505,6 +519,8 @@ export default function DoctorVisitHub({
     doctor_id: "",
     referred_by_name: "",
     referred_by_doctor_id: "",
+    facility_id: "",
+    facility_name: "",
     visit_id: "",
     reason: "",
     date: getTodayDateString(),
@@ -525,6 +541,8 @@ export default function DoctorVisitHub({
     date_type: "Visit date",
     doctor_id: "",
     doctor_name: "",
+    facility_id: "",
+    facility_name: "",
     visit_id: "",
   })
 
@@ -1004,9 +1022,10 @@ export default function DoctorVisitHub({
 
     const loadInitialData = async () => {
       try {
-        const [prof, docs, vsts, meds] = await Promise.all([
+        const [prof, docs, facs, vsts, meds] = await Promise.all([
           fetchHealthProfile(userId),
           fetchExistingDoctors(userId),
+          fetchExistingFacilities(userId),
           fetchExistingVisits(userId),
           fetchExistingMedications(userId),
         ])
@@ -1014,6 +1033,7 @@ export default function DoctorVisitHub({
           setProfile(prof)
           setProfileForm(prof)
           setExistingDoctors(docs)
+          setExistingFacilities(facs)
           setExistingVisits(vsts)
           setMedications(meds)
         }
@@ -1108,6 +1128,9 @@ export default function DoctorVisitHub({
       const liveDocs = extractDoctorsFromRecords(allRecords)
       if (liveDocs.length > 0) setExistingDoctors(liveDocs)
 
+      const liveFacs = extractFacilitiesFromRecords(allRecords)
+      if (liveFacs.length > 0) setExistingFacilities(liveFacs)
+
       const liveMeds: MedicationSummary[] = allRecords
         .filter((r) => (r.category || "").toLowerCase() === "medications" || (r.type || "").toLowerCase() === "medication")
         .map((d) => ({
@@ -1126,6 +1149,8 @@ export default function DoctorVisitHub({
           title: d.title || d.item_metadata?.title || "Doctor Visit",
           date: d.item_metadata?.date || d.created_at || "",
           doctor: resolveDoctorInfo(d.item_metadata?.doctor_id, { name: d.item_metadata?.doctor }, liveDocs).name,
+          facility_id: d.item_metadata?.facility_id || null,
+          facility_name: resolveFacilityInfo(d.item_metadata?.facility_id, { name: d.item_metadata?.facility_name }, liveFacs).name,
           location: d.item_metadata?.location || "",
           notes: d.item_metadata?.notes || d.notes || "",
         }))
@@ -1205,12 +1230,15 @@ export default function DoctorVisitHub({
     if (!questionInput.trim()) return
     try {
       const doctorObj = existingDoctors.find((d) => d.id === questionDoctorId)
+      const facObj = existingFacilities.find((f) => f.id === questionFacilityId)
       const newQ = await saveQuestion(
         {
           question: questionInput.trim(),
           answered: false,
           doctor_id: questionDoctorId || null,
           doctor_name: doctorObj?.name || questionDoctorName.trim() || "",
+          facility_id: questionFacilityId || null,
+          facility_name: facObj?.name || questionFacilityName.trim() || "",
           visit_id: nextAppt?.id || null,
         },
         userId
@@ -1225,11 +1253,14 @@ export default function DoctorVisitHub({
 
   const openEditQuestionModal = (q: HealthQuestion) => {
     const docInfo = resolveDoctorInfo(q.doctor_id, { name: q.doctor_name }, existingDoctors)
+    const facInfo = resolveFacilityInfo(q.facility_id, { name: q.facility_name }, existingFacilities)
     setEditingQuestion(q)
     setQuestionEditForm({
       question: q.question || "",
       doctor_id: q.doctor_id || "",
       doctor_name: docInfo.name,
+      facility_id: q.facility_id || "",
+      facility_name: facInfo.name,
       answer_notes: q.answer_notes || "",
     })
   }
@@ -1239,12 +1270,15 @@ export default function DoctorVisitHub({
     if (!editingQuestion || !questionEditForm.question.trim()) return
     try {
       const doctorObj = existingDoctors.find((d) => d.id === questionEditForm.doctor_id)
+      const facObj = existingFacilities.find((f) => f.id === questionEditForm.facility_id)
       const saved = await saveQuestion(
         {
           ...editingQuestion,
           question: questionEditForm.question.trim(),
           doctor_id: questionEditForm.doctor_id || null,
           doctor_name: doctorObj?.name || questionEditForm.doctor_name.trim() || "",
+          facility_id: questionEditForm.facility_id || null,
+          facility_name: facObj?.name || questionEditForm.facility_name.trim() || "",
           answer_notes: questionEditForm.answer_notes.trim(),
         },
         userId
@@ -1283,6 +1317,7 @@ export default function DoctorVisitHub({
     }
     try {
       const doctorObj = existingDoctors.find((d) => d.id === noteForm.doctor_id)
+      const facObj = existingFacilities.find((f) => f.id === noteForm.facility_id)
       const payload = {
         ...(editingNote
           ? {
@@ -1299,6 +1334,8 @@ export default function DoctorVisitHub({
         date_type: noteForm.date_type || "Appointment date",
         doctor_id: noteForm.doctor_id || null,
         doctor_name: doctorObj?.name || noteForm.doctor_name || "",
+        facility_id: noteForm.facility_id || null,
+        facility_name: facObj?.name || noteForm.facility_name.trim() || "",
         visit_id: noteForm.visit_id || null,
       }
       const saved = await saveHealthNote(payload, userId)
@@ -1320,6 +1357,7 @@ export default function DoctorVisitHub({
     e.preventDefault()
     try {
       const doctorObj = existingDoctors.find((d) => d.id === letterForm.doctor_id)
+      const facObj = existingFacilities.find((f) => f.id === letterForm.facility_id)
       const payload = {
         ...(editingLetter
           ? {
@@ -1332,6 +1370,8 @@ export default function DoctorVisitHub({
           : {}),
         doctor_name: doctorObj?.name || letterForm.doctor_name || "Doctor Letter",
         doctor_id: letterForm.doctor_id || null,
+        facility_id: letterForm.facility_id || null,
+        facility_name: facObj?.name || letterForm.facility_name.trim() || "",
         visit_id: letterForm.visit_id || null,
         date: letterForm.date || getTodayDateString(),
         date_type: letterForm.date_type || "Letter date",
@@ -1397,6 +1437,7 @@ export default function DoctorVisitHub({
     try {
       const refDoctorObj = existingDoctors.find((d) => d.id === referralForm.referred_by_doctor_id)
       const specDoctorObj = existingDoctors.find((d) => d.id === referralForm.doctor_id)
+      const facObj = existingFacilities.find((f) => f.id === referralForm.facility_id)
       const payload = {
         ...(editingReferral
           ? {
@@ -1410,6 +1451,8 @@ export default function DoctorVisitHub({
         specialist_name: referralForm.specialist_name.trim() || specDoctorObj?.name || "",
         specialty: referralForm.specialty.trim() || specDoctorObj?.specialty || "",
         doctor_id: referralForm.doctor_id || null,
+        facility_id: referralForm.facility_id || null,
+        facility_name: facObj?.name || referralForm.facility_name.trim() || "",
         referred_by_doctor_id: referralForm.referred_by_doctor_id || null,
         referred_by_name: refDoctorObj?.name || referralForm.referred_by_name.trim(),
         visit_id: referralForm.visit_id || null,
@@ -1417,7 +1460,7 @@ export default function DoctorVisitHub({
         date: referralForm.date || getTodayDateString(),
         date_type: referralForm.date_type || "Referral date",
         status: referralForm.status,
-        phone: referralForm.phone.trim() || specDoctorObj?.phone || "",
+        phone: referralForm.phone.trim() || specDoctorObj?.phone || facObj?.phone || "",
         notes: referralForm.notes.trim(),
       }
       const saved = await saveHealthReferral(payload, userId)
@@ -1443,6 +1486,7 @@ export default function DoctorVisitHub({
     }
     try {
       const doctorObj = existingDoctors.find((d) => d.id === summaryForm.doctor_id)
+      const facObj = existingFacilities.find((f) => f.id === summaryForm.facility_id)
       const payload = {
         ...(editingSummary
           ? {
@@ -1459,6 +1503,8 @@ export default function DoctorVisitHub({
         date_type: summaryForm.date_type || "Visit date",
         doctor_id: summaryForm.doctor_id || null,
         doctor_name: doctorObj?.name || summaryForm.doctor_name || "",
+        facility_id: summaryForm.facility_id || null,
+        facility_name: facObj?.name || summaryForm.facility_name.trim() || "",
         visit_id: summaryForm.visit_id || null,
       }
       const saved = await saveVisitSummary(payload, userId)
@@ -1664,13 +1710,16 @@ export default function DoctorVisitHub({
                   doctorId={summaryForm.doctor_id || null}
                   doctors={existingDoctors}
                   placeholder="Select or type doctor..."
-                  onSelectDoctor={(doc) =>
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
                     setSummaryForm((prev) => ({
                       ...prev,
                       doctor_id: doc.id || "",
                       doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
                     }))
-                  }
+                  }}
                   onClear={() =>
                     setSummaryForm((prev) => ({
                       ...prev,
@@ -1680,6 +1729,29 @@ export default function DoctorVisitHub({
                   }
                 />
               </div>
+
+              <FacilityCombobox
+                compact
+                label="Facility"
+                value={summaryForm.facility_name}
+                facilityId={summaryForm.facility_id || null}
+                facilities={existingFacilities}
+                placeholder="Select or type facility..."
+                onSelectFacility={(fac) =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: fac.id || "",
+                    facility_name: fac.name,
+                  }))
+                }
+                onClear={() =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: "",
+                    facility_name: "",
+                  }))
+                }
+              />
 
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
@@ -1840,8 +1912,16 @@ export default function DoctorVisitHub({
                     )}
                   </div>
 
-                  <div className="text-lg md:text-xl font-bold text-white">
-                    {nextAppt.doctor || nextAppt.title}
+                  <div className="text-lg md:text-xl font-bold text-white flex items-center gap-2 flex-wrap">
+                    <span>{nextAppt.doctor || nextAppt.title}</span>
+                    {(() => {
+                      const facName = resolveFacilityInfo(nextAppt.facility_id, { name: nextAppt.facility_name }, existingFacilities).name
+                      return facName ? (
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/30">
+                          {facName}
+                        </span>
+                      ) : null
+                    })()}
                   </div>
 
                   <div className="flex items-center gap-2 text-sm text-slate-300 font-medium">
@@ -2324,7 +2404,7 @@ export default function DoctorVisitHub({
                     placeholder="Enter question to ask doctor..."
                     className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                   />
-                  <div className="sm:w-56 shrink-0">
+                  <div className="sm:w-44 shrink-0">
                     <DoctorCombobox
                       compact
                       label=""
@@ -2335,10 +2415,33 @@ export default function DoctorVisitHub({
                       onSelectDoctor={(doc) => {
                         setQuestionDoctorId(doc.id || "")
                         setQuestionDoctorName(doc.name)
+                        const linked = findSingleLinkedFacility(doc, existingFacilities)
+                        if (linked && !questionFacilityName.trim()) {
+                          setQuestionFacilityId(linked.id)
+                          setQuestionFacilityName(linked.name)
+                        }
                       }}
                       onClear={() => {
                         setQuestionDoctorId("")
                         setQuestionDoctorName("")
+                      }}
+                    />
+                  </div>
+                  <div className="sm:w-44 shrink-0">
+                    <FacilityCombobox
+                      compact
+                      label=""
+                      value={questionFacilityName}
+                      facilityId={questionFacilityId || null}
+                      facilities={existingFacilities}
+                      placeholder="Any Facility..."
+                      onSelectFacility={(fac) => {
+                        setQuestionFacilityId(fac.id || "")
+                        setQuestionFacilityName(fac.name)
+                      }}
+                      onClear={() => {
+                        setQuestionFacilityId("")
+                        setQuestionFacilityName("")
                       }}
                     />
                   </div>
@@ -2409,11 +2512,21 @@ export default function DoctorVisitHub({
                             </span>
                             {(() => {
                               const resolvedDoc = resolveDoctorInfo(q.doctor_id, { name: q.doctor_name }, existingDoctors).name
-                              return resolvedDoc ? (
-                                <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 shrink-0 truncate max-w-[120px]">
-                                  {resolvedDoc}
-                                </span>
-                              ) : null
+                              const resolvedFac = resolveFacilityInfo(q.facility_id, { name: q.facility_name }, existingFacilities).name
+                              return (
+                                <>
+                                  {resolvedDoc && (
+                                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 shrink-0 truncate max-w-[120px]">
+                                      {resolvedDoc}
+                                    </span>
+                                  )}
+                                  {resolvedFac && (
+                                    <span className="hidden md:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-300 shrink-0 truncate max-w-[120px]">
+                                      {resolvedFac}
+                                    </span>
+                                  )}
+                                </>
+                              )
                             })()}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
@@ -2537,6 +2650,8 @@ export default function DoctorVisitHub({
                         date_type: "Appointment date",
                         doctor_id: "",
                         doctor_name: "",
+                        facility_id: "",
+                        facility_name: "",
                         visit_id: "",
                       })
                       setNoteModalOpen(true)
@@ -2613,11 +2728,24 @@ export default function DoctorVisitHub({
                             >
                               {n.given_to_doctor ? `Given - ${n.given_method || "visit"}` : "Not given"}
                             </span>
-                            {n.doctor_name && (
-                              <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-400 shrink-0 truncate max-w-[120px]">
-                                Dr. {n.doctor_name}
-                              </span>
-                            )}
+                            {(() => {
+                              const resolvedDoc = resolveDoctorInfo(n.doctor_id, { name: n.doctor_name }, existingDoctors).name
+                              const resolvedFac = resolveFacilityInfo(n.facility_id, { name: n.facility_name }, existingFacilities).name
+                              return (
+                                <>
+                                  {resolvedDoc && (
+                                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-400 shrink-0 truncate max-w-[120px]">
+                                      {resolvedDoc}
+                                    </span>
+                                  )}
+                                  {resolvedFac && (
+                                    <span className="hidden md:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-300 shrink-0 truncate max-w-[120px]">
+                                      {resolvedFac}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
@@ -2633,6 +2761,8 @@ export default function DoctorVisitHub({
                                   date_type: n.date_type || "Appointment date",
                                   doctor_id: n.doctor_id || "",
                                   doctor_name: resolveDoctorInfo(n.doctor_id, { name: n.doctor_name }, existingDoctors).name,
+                                  facility_id: n.facility_id || "",
+                                  facility_name: resolveFacilityInfo(n.facility_id, { name: n.facility_name }, existingFacilities).name,
                                   visit_id: n.visit_id || "",
                                 })
                                 setNoteModalOpen(true)
@@ -2670,7 +2800,9 @@ export default function DoctorVisitHub({
                                       date: n.date,
                                       date_type: n.date_type || "Appointment date",
                                       doctor_id: n.doctor_id || "",
-                                      doctor_name: n.doctor_name || "",
+                                      doctor_name: resolveDoctorInfo(n.doctor_id, { name: n.doctor_name }, existingDoctors).name,
+                                      facility_id: n.facility_id || "",
+                                      facility_name: resolveFacilityInfo(n.facility_id, { name: n.facility_name }, existingFacilities).name,
                                       visit_id: n.visit_id || "",
                                     })
                                     setNoteModalOpen(true)
@@ -2819,6 +2951,8 @@ export default function DoctorVisitHub({
                       setLetterForm({
                         doctor_name: "",
                         doctor_id: "",
+                        facility_id: "",
+                        facility_name: "",
                         visit_id: "",
                         date: getTodayDateString(),
                         date_type: "Letter date",
@@ -2915,6 +3049,14 @@ export default function DoctorVisitHub({
                             <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/20 text-blue-300 shrink-0">
                               {l.direction}
                             </span>
+                            {(() => {
+                              const resolvedFac = resolveFacilityInfo(l.facility_id, { name: l.facility_name }, existingFacilities).name
+                              return resolvedFac ? (
+                                <span className="hidden md:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-300 shrink-0 truncate max-w-[120px]">
+                                  {resolvedFac}
+                                </span>
+                              ) : null
+                            })()}
                             {l.attachment_url && (
                               <Paperclip className="h-3.5 w-3.5 text-blue-400 shrink-0" />
                             )}
@@ -2929,6 +3071,8 @@ export default function DoctorVisitHub({
                                 setLetterForm({
                                   doctor_name: resolveDoctorInfo(l.doctor_id, { name: l.doctor_name }, existingDoctors).name,
                                   doctor_id: l.doctor_id || "",
+                                  facility_id: l.facility_id || "",
+                                  facility_name: resolveFacilityInfo(l.facility_id, { name: l.facility_name }, existingFacilities).name,
                                   visit_id: l.visit_id || "",
                                   date: l.date,
                                   date_type: l.date_type || "Letter date",
@@ -2969,8 +3113,10 @@ export default function DoctorVisitHub({
                                     e.stopPropagation()
                                     setEditingLetter(l)
                                     setLetterForm({
-                                      doctor_name: l.doctor_name || "",
+                                      doctor_name: resolveDoctorInfo(l.doctor_id, { name: l.doctor_name }, existingDoctors).name,
                                       doctor_id: l.doctor_id || "",
+                                      facility_id: l.facility_id || "",
+                                      facility_name: resolveFacilityInfo(l.facility_id, { name: l.facility_name }, existingFacilities).name,
                                       visit_id: l.visit_id || "",
                                       date: l.date,
                                       date_type: l.date_type || "Letter date",
@@ -3137,6 +3283,8 @@ export default function DoctorVisitHub({
                         specialist_name: "",
                         specialty: "",
                         doctor_id: "",
+                        facility_id: "",
+                        facility_name: "",
                         referred_by_name: "",
                         referred_by_doctor_id: "",
                         visit_id: "",
@@ -3227,6 +3375,14 @@ export default function DoctorVisitHub({
                                 &bull; {r.specialty}
                               </span>
                             )}
+                            {(() => {
+                              const resolvedFac = resolveFacilityInfo(r.facility_id, { name: r.facility_name }, existingFacilities).name
+                              return resolvedFac ? (
+                                <span className="hidden md:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-300 shrink-0 truncate max-w-[120px]">
+                                  {resolvedFac}
+                                </span>
+                              ) : null
+                            })()}
                             <span
                               className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
                                 r.status === "seen"
@@ -3252,6 +3408,8 @@ export default function DoctorVisitHub({
                                   specialist_name: r.specialist_name || "",
                                   specialty: r.specialty || "",
                                   doctor_id: r.doctor_id || "",
+                                  facility_id: r.facility_id || "",
+                                  facility_name: resolveFacilityInfo(r.facility_id, { name: r.facility_name }, existingFacilities).name,
                                   referred_by_name: r.referred_by_name || "",
                                   referred_by_doctor_id: r.referred_by_doctor_id || "",
                                   visit_id: r.visit_id || "",
@@ -3311,6 +3469,8 @@ export default function DoctorVisitHub({
                                       specialist_name: r.specialist_name,
                                       specialty: r.specialty,
                                       doctor_id: r.doctor_id || "",
+                                      facility_id: r.facility_id || "",
+                                      facility_name: resolveFacilityInfo(r.facility_id, { name: r.facility_name }, existingFacilities).name,
                                       referred_by_name: r.referred_by_name || "",
                                       referred_by_doctor_id: r.referred_by_doctor_id || "",
                                       visit_id: r.visit_id || "",
@@ -3478,6 +3638,8 @@ export default function DoctorVisitHub({
                         date_type: "Visit date",
                         doctor_id: "",
                         doctor_name: "",
+                        facility_id: "",
+                        facility_name: "",
                         visit_id: "",
                       })
                       setSummaryModalOpen(true)
@@ -3554,11 +3716,24 @@ export default function DoctorVisitHub({
                             >
                               {s.given_to_doctor ? `Given - ${s.given_method || "visit"}` : "Not given"}
                             </span>
-                            {s.doctor_name && (
-                              <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 shrink-0 truncate max-w-[120px]">
-                                Dr. {s.doctor_name}
-                              </span>
-                            )}
+                            {(() => {
+                              const resolvedDoc = resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name
+                              const resolvedFac = resolveFacilityInfo(s.facility_id, { name: s.facility_name }, existingFacilities).name
+                              return (
+                                <>
+                                  {resolvedDoc && (
+                                    <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 shrink-0 truncate max-w-[120px]">
+                                      {resolvedDoc}
+                                    </span>
+                                  )}
+                                  {resolvedFac && (
+                                    <span className="hidden md:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-300 shrink-0 truncate max-w-[120px]">
+                                      {resolvedFac}
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
@@ -3574,6 +3749,8 @@ export default function DoctorVisitHub({
                                   date_type: s.date_type || "Visit date",
                                   doctor_id: s.doctor_id || "",
                                   doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
+                                  facility_id: s.facility_id || "",
+                                  facility_name: resolveFacilityInfo(s.facility_id, { name: s.facility_name }, existingFacilities).name,
                                   visit_id: s.visit_id || "",
                                 })
                                 setSummaryModalOpen(true)
@@ -3611,7 +3788,9 @@ export default function DoctorVisitHub({
                                       date: s.date,
                                       date_type: s.date_type || "Visit date",
                                       doctor_id: s.doctor_id || "",
-                                      doctor_name: s.doctor_name || "",
+                                      doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
+                                      facility_id: s.facility_id || "",
+                                      facility_name: resolveFacilityInfo(s.facility_id, { name: s.facility_name }, existingFacilities).name,
                                       visit_id: s.visit_id || "",
                                     })
                                     setSummaryModalOpen(true)
@@ -3816,6 +3995,14 @@ export default function DoctorVisitHub({
                             <span className="text-xs md:text-sm font-bold text-white truncate">
                               {v.doctor || v.title || "Visit"}
                             </span>
+                            {(() => {
+                              const resolvedFac = resolveFacilityInfo(v.facility_id, { name: v.facility_name }, existingFacilities).name
+                              return resolvedFac ? (
+                                <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-teal-500/10 text-teal-300 shrink-0 truncate max-w-[130px]">
+                                  {resolvedFac}
+                                </span>
+                              ) : null
+                            })()}
                             {v.location && (
                               <span className="hidden sm:inline-flex text-xs text-slate-400 truncate max-w-[120px]">
                                 &bull; {v.location}
@@ -3969,13 +4156,16 @@ export default function DoctorVisitHub({
                   doctorId={noteForm.doctor_id || null}
                   doctors={existingDoctors}
                   placeholder="Select or type doctor..."
-                  onSelectDoctor={(doc) =>
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
                     setNoteForm((prev) => ({
                       ...prev,
                       doctor_id: doc.id || "",
                       doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
                     }))
-                  }
+                  }}
                   onClear={() =>
                     setNoteForm((prev) => ({
                       ...prev,
@@ -3985,6 +4175,29 @@ export default function DoctorVisitHub({
                   }
                 />
               </div>
+
+              <FacilityCombobox
+                compact
+                label="Facility"
+                value={noteForm.facility_name}
+                facilityId={noteForm.facility_id || null}
+                facilities={existingFacilities}
+                placeholder="Select or type facility..."
+                onSelectFacility={(fac) =>
+                  setNoteForm((prev) => ({
+                    ...prev,
+                    facility_id: fac.id || "",
+                    facility_name: fac.name,
+                  }))
+                }
+                onClear={() =>
+                  setNoteForm((prev) => ({
+                    ...prev,
+                    facility_id: "",
+                    facility_name: "",
+                  }))
+                }
+              />
 
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
@@ -4097,13 +4310,16 @@ export default function DoctorVisitHub({
                   doctorId={summaryForm.doctor_id || null}
                   doctors={existingDoctors}
                   placeholder="Select or type doctor..."
-                  onSelectDoctor={(doc) =>
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
                     setSummaryForm((prev) => ({
                       ...prev,
                       doctor_id: doc.id || "",
                       doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
                     }))
-                  }
+                  }}
                   onClear={() =>
                     setSummaryForm((prev) => ({
                       ...prev,
@@ -4113,6 +4329,29 @@ export default function DoctorVisitHub({
                   }
                 />
               </div>
+
+              <FacilityCombobox
+                compact
+                label="Facility"
+                value={summaryForm.facility_name}
+                facilityId={summaryForm.facility_id || null}
+                facilities={existingFacilities}
+                placeholder="Select or type facility..."
+                onSelectFacility={(fac) =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: fac.id || "",
+                    facility_name: fac.name,
+                  }))
+                }
+                onClear={() =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: "",
+                    facility_name: "",
+                  }))
+                }
+              />
 
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
@@ -4190,28 +4429,55 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveLetterSubmit} className="space-y-3 text-xs">
-              <DoctorCombobox
-                compact
-                label="Doctor / Provider"
-                value={letterForm.doctor_name}
-                doctorId={letterForm.doctor_id || null}
-                doctors={existingDoctors}
-                placeholder="Select doctor or type clinic name..."
-                onSelectDoctor={(doc) =>
-                  setLetterForm((prev) => ({
-                    ...prev,
-                    doctor_id: doc.id || "",
-                    doctor_name: doc.name,
-                  }))
-                }
-                onClear={() =>
-                  setLetterForm((prev) => ({
-                    ...prev,
-                    doctor_id: "",
-                    doctor_name: "",
-                  }))
-                }
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <DoctorCombobox
+                  compact
+                  label="Doctor / Provider"
+                  value={letterForm.doctor_name}
+                  doctorId={letterForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select doctor or type clinic name..."
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
+                    setLetterForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
+                    }))
+                  }}
+                  onClear={() =>
+                    setLetterForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
+                <FacilityCombobox
+                  compact
+                  label="Facility"
+                  value={letterForm.facility_name}
+                  facilityId={letterForm.facility_id || null}
+                  facilities={existingFacilities}
+                  placeholder="Select or type facility..."
+                  onSelectFacility={(fac) =>
+                    setLetterForm((prev) => ({
+                      ...prev,
+                      facility_id: fac.id || "",
+                      facility_name: fac.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setLetterForm((prev) => ({
+                      ...prev,
+                      facility_id: "",
+                      facility_name: "",
+                    }))
+                  }
+                />
+              </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
@@ -4379,13 +4645,16 @@ export default function DoctorVisitHub({
                   doctorId={summaryForm.doctor_id || null}
                   doctors={existingDoctors}
                   placeholder="Select or type doctor..."
-                  onSelectDoctor={(doc) =>
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
                     setSummaryForm((prev) => ({
                       ...prev,
                       doctor_id: doc.id || "",
                       doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
                     }))
-                  }
+                  }}
                   onClear={() =>
                     setSummaryForm((prev) => ({
                       ...prev,
@@ -4395,6 +4664,29 @@ export default function DoctorVisitHub({
                   }
                 />
               </div>
+
+              <FacilityCombobox
+                compact
+                label="Facility"
+                value={summaryForm.facility_name}
+                facilityId={summaryForm.facility_id || null}
+                facilities={existingFacilities}
+                placeholder="Select or type facility..."
+                onSelectFacility={(fac) =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: fac.id || "",
+                    facility_name: fac.name,
+                  }))
+                }
+                onClear={() =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: "",
+                    facility_name: "",
+                  }))
+                }
+              />
 
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
@@ -4472,32 +4764,61 @@ export default function DoctorVisitHub({
             </div>
 
             <form onSubmit={handleSaveReferralSubmit} className="space-y-3 text-xs">
-              <DoctorCombobox
-                compact
-                required
-                label="Specialist / Doctor"
-                value={referralForm.specialist_name}
-                doctorId={referralForm.doctor_id || null}
-                doctors={existingDoctors}
-                placeholder="Select from My Doctors or type specialist name..."
-                onSelectDoctor={(doc) =>
-                  setReferralForm((prev) => ({
-                    ...prev,
-                    doctor_id: doc.id || "",
-                    specialist_name: doc.name,
-                    specialty: prev.specialty?.trim() ? prev.specialty : (doc.specialty || ""),
-                    phone: prev.phone?.trim() ? prev.phone : (doc.phone || ""),
-                    notes: prev.notes?.trim() ? prev.notes : (doc.facility || doc.address || ""),
-                  }))
-                }
-                onClear={() =>
-                  setReferralForm((prev) => ({
-                    ...prev,
-                    doctor_id: "",
-                    specialist_name: "",
-                  }))
-                }
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <DoctorCombobox
+                  compact
+                  required
+                  label="Specialist / Doctor"
+                  value={referralForm.specialist_name}
+                  doctorId={referralForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select from My Doctors or type specialist name..."
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
+                    setReferralForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      specialist_name: doc.name,
+                      specialty: prev.specialty?.trim() ? prev.specialty : (doc.specialty || ""),
+                      phone: prev.phone?.trim() ? prev.phone : (doc.phone || ""),
+                      notes: prev.notes?.trim() ? prev.notes : (doc.facility || doc.address || ""),
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
+                    }))
+                  }}
+                  onClear={() =>
+                    setReferralForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      specialist_name: "",
+                    }))
+                  }
+                />
+                <FacilityCombobox
+                  compact
+                  label="Facility"
+                  value={referralForm.facility_name}
+                  facilityId={referralForm.facility_id || null}
+                  facilities={existingFacilities}
+                  placeholder="Select or type facility..."
+                  onSelectFacility={(fac) =>
+                    setReferralForm((prev) => ({
+                      ...prev,
+                      facility_id: fac.id || "",
+                      facility_name: fac.name,
+                      phone: prev.phone?.trim() ? prev.phone : (fac.phone || ""),
+                      notes: prev.notes?.trim() ? prev.notes : (fac.address || ""),
+                    }))
+                  }
+                  onClear={() =>
+                    setReferralForm((prev) => ({
+                      ...prev,
+                      facility_id: "",
+                      facility_name: "",
+                    }))
+                  }
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <FieldSuggestionInput
@@ -4681,13 +5002,16 @@ export default function DoctorVisitHub({
                   doctorId={summaryForm.doctor_id || null}
                   doctors={existingDoctors}
                   placeholder="Select or type doctor..."
-                  onSelectDoctor={(doc) =>
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
                     setSummaryForm((prev) => ({
                       ...prev,
                       doctor_id: doc.id || "",
                       doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
                     }))
-                  }
+                  }}
                   onClear={() =>
                     setSummaryForm((prev) => ({
                       ...prev,
@@ -4697,6 +5021,29 @@ export default function DoctorVisitHub({
                   }
                 />
               </div>
+
+              <FacilityCombobox
+                compact
+                label="Facility"
+                value={summaryForm.facility_name}
+                facilityId={summaryForm.facility_id || null}
+                facilities={existingFacilities}
+                placeholder="Select or type facility..."
+                onSelectFacility={(fac) =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: fac.id || "",
+                    facility_name: fac.name,
+                  }))
+                }
+                onClear={() =>
+                  setSummaryForm((prev) => ({
+                    ...prev,
+                    facility_id: "",
+                    facility_name: "",
+                  }))
+                }
+              />
 
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Linked Visit (Optional)</label>
@@ -4781,28 +5128,55 @@ export default function DoctorVisitHub({
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
                 />
               </div>
-              <DoctorCombobox
-                compact
-                label="Related Doctor"
-                value={questionEditForm.doctor_name}
-                doctorId={questionEditForm.doctor_id || null}
-                doctors={existingDoctors}
-                placeholder="Select or type doctor..."
-                onSelectDoctor={(doc) =>
-                  setQuestionEditForm((prev) => ({
-                    ...prev,
-                    doctor_id: doc.id || "",
-                    doctor_name: doc.name,
-                  }))
-                }
-                onClear={() =>
-                  setQuestionEditForm((prev) => ({
-                    ...prev,
-                    doctor_id: "",
-                    doctor_name: "",
-                  }))
-                }
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <DoctorCombobox
+                  compact
+                  label="Related Doctor"
+                  value={questionEditForm.doctor_name}
+                  doctorId={questionEditForm.doctor_id || null}
+                  doctors={existingDoctors}
+                  placeholder="Select or type doctor..."
+                  onSelectDoctor={(doc) => {
+                    const linked = findSingleLinkedFacility(doc, existingFacilities)
+                    setQuestionEditForm((prev) => ({
+                      ...prev,
+                      doctor_id: doc.id || "",
+                      doctor_name: doc.name,
+                      facility_id: prev.facility_name?.trim() ? prev.facility_id : (linked?.id || prev.facility_id),
+                      facility_name: prev.facility_name?.trim() ? prev.facility_name : (linked?.name || prev.facility_name),
+                    }))
+                  }}
+                  onClear={() =>
+                    setQuestionEditForm((prev) => ({
+                      ...prev,
+                      doctor_id: "",
+                      doctor_name: "",
+                    }))
+                  }
+                />
+                <FacilityCombobox
+                  compact
+                  label="Facility"
+                  value={questionEditForm.facility_name}
+                  facilityId={questionEditForm.facility_id || null}
+                  facilities={existingFacilities}
+                  placeholder="Select or type facility..."
+                  onSelectFacility={(fac) =>
+                    setQuestionEditForm((prev) => ({
+                      ...prev,
+                      facility_id: fac.id || "",
+                      facility_name: fac.name,
+                    }))
+                  }
+                  onClear={() =>
+                    setQuestionEditForm((prev) => ({
+                      ...prev,
+                      facility_id: "",
+                      facility_name: "",
+                    }))
+                  }
+                />
+              </div>
               <div>
                 <label className="text-slate-400 font-semibold block mb-1">Doctor Answer / Notes</label>
                 <textarea

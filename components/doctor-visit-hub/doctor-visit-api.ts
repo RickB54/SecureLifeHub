@@ -360,7 +360,7 @@ export async function fetchQuestions(userId?: string): Promise<HealthQuestion[]>
   try {
     const { data, error } = await supabase
       .from("health_questions")
-      .select("id, user_id, question, answered, doctor_id, doctor_name, visit_id, answer_notes, created_at, updated_at")
+      .select("id, user_id, question, answered, doctor_id, doctor_name, facility_id, facility_name, visit_id, answer_notes, created_at, updated_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
@@ -441,7 +441,7 @@ export async function fetchHealthNotes(userId?: string): Promise<HealthNote[]> {
   try {
     const { data, error } = await supabase
       .from("health_notes")
-      .select("id, user_id, title, text, date, date_type, doctor_id, doctor_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
+      .select("id, user_id, title, text, date, date_type, doctor_id, doctor_name, facility_id, facility_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -522,7 +522,7 @@ export async function fetchHealthLetters(userId?: string): Promise<HealthLetter[
   try {
     const { data, error } = await supabase
       .from("health_letters")
-      .select("id, user_id, doctor_id, doctor_name, visit_id, date, date_type, direction, status, notes, attachment_url, attachment_name, given_to_doctor, given_method, given_date, created_at, updated_at")
+      .select("id, user_id, doctor_id, doctor_name, facility_id, facility_name, visit_id, date, date_type, direction, status, notes, attachment_url, attachment_name, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -608,7 +608,7 @@ export async function fetchHealthReferrals(userId?: string): Promise<HealthRefer
   try {
     const { data, error } = await supabase
       .from("health_referrals")
-      .select("id, user_id, specialist_name, specialty, doctor_id, referred_by_doctor_id, referred_by_name, visit_id, reason, date, date_type, status, phone, notes, given_to_doctor, given_method, given_date, created_at, updated_at")
+      .select("id, user_id, specialist_name, specialty, doctor_id, referred_by_doctor_id, referred_by_name, facility_id, facility_name, visit_id, reason, date, date_type, status, phone, notes, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -737,7 +737,7 @@ export async function fetchVisitSummaries(userId?: string): Promise<HealthVisitS
   try {
     const { data, error } = await supabase
       .from("health_visit_summaries")
-      .select("id, user_id, title, summary_text, date, date_type, doctor_id, doctor_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
+      .select("id, user_id, title, summary_text, date, date_type, doctor_id, doctor_name, facility_id, facility_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
       .order("date", { ascending: false })
 
@@ -837,12 +837,56 @@ export async function fetchExistingDoctors(userId?: string): Promise<DoctorOptio
         facility: d.item_metadata?.facility || d.item_metadata?.location || d.item_metadata?.address || "",
         address: d.item_metadata?.address || "",
         portalUrl: d.website || d.item_metadata?.portalUrl || "",
+        facility_ids: Array.isArray(d.item_metadata?.facility_ids) ? d.item_metadata.facility_ids : [],
       }))
       setCachedItem("existing_doctors", doctors)
       return doctors
     }
   } catch (err) {
     console.warn("Error fetching existing doctors:", err)
+  }
+
+  return cached
+}
+
+export async function fetchExistingFacilities(userId?: string): Promise<import("@/components/health-ui/health-field-helpers").FacilityOption[]> {
+  const cached = getCachedItem<import("@/components/health-ui/health-field-helpers").FacilityOption[]>("existing_facilities", [])
+
+  if (typeof window !== "undefined" && !navigator.onLine) {
+    return cached
+  }
+
+  try {
+    let query = supabase
+      .from("vault_items")
+      .select("id, title, notes, website, item_metadata, created_at")
+      .or("category.eq.Medical Facilities,type.eq.facility-record")
+      .order("title", { ascending: true })
+
+    if (userId) {
+      query = query.eq("user_id", userId)
+    }
+
+    const { data, error } = await query
+    if (!error && data) {
+      const facs = data.map((r: any) => ({
+        id: r.id,
+        name: r.title || "Unnamed Facility",
+        type: r.item_metadata?.facilityType || "Clinic",
+        address: r.item_metadata?.address || "",
+        phone: r.item_metadata?.phone || "",
+        fax: r.item_metadata?.fax || "",
+        website: r.website || r.item_metadata?.website || "",
+        hours: r.item_metadata?.hours || "",
+        notes: r.notes || r.item_metadata?.notes || "",
+        doctor_ids: Array.isArray(r.item_metadata?.doctor_ids) ? r.item_metadata.doctor_ids : [],
+        created_at: r.created_at,
+      }))
+      setCachedItem("existing_facilities", facs)
+      return facs
+    }
+  } catch (err) {
+    console.warn("Error fetching existing facilities:", err)
   }
 
   return cached
@@ -876,6 +920,9 @@ export async function fetchExistingVisits(userId?: string): Promise<VisitOption[
           title: d.title || d.item_metadata?.title || "Doctor Visit",
           date: d.item_metadata?.date || d.created_at || "",
           doctor: d.item_metadata?.doctor || "",
+          doctor_id: d.item_metadata?.doctor_id || null,
+          facility_id: d.item_metadata?.facility_id || null,
+          facility_name: d.item_metadata?.facility_name || "",
           location: d.item_metadata?.location || "",
           notes: d.item_metadata?.notes || d.notes || "",
         }))

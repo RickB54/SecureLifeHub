@@ -16,10 +16,13 @@ import { supabase } from "@/lib/supabase"
 import Doctors from "./doctors"
 import {
     DoctorCombobox,
+    FacilityCombobox,
     FieldSuggestionInput,
     formatForDateTimeInput,
     extractDoctorsFromRecords,
+    extractFacilitiesFromRecords,
     extractHealthSuggestions,
+    findSingleLinkedFacility,
 } from "./health-ui/health-field-helpers"
 import {
     getCachedHealthRecords,
@@ -28,6 +31,7 @@ import {
     upsertSharedHealthRecord,
     removeSharedHealthRecord,
     resolveDoctorInfo,
+    resolveFacilityInfo,
 } from "@/lib/health-store"
 import { prepareHealthAttachment } from "@/lib/image-downsize"
 
@@ -137,6 +141,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         notes: "",
         doctor: "",
         doctor_id: "" as string | null,
+        facility_id: "" as string | null,
+        facility_name: "",
         location: "",
         specialty: "",
         date: formatForDateTimeInput(new Date())
@@ -145,8 +151,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         title: "",
         doctor: "",
         doctor_id: "" as string | null,
+        facility_id: "" as string | null,
+        facility_name: "",
         date: formatForDateTimeInput(new Date()),
         notes: ""
+    })
+    const [vitalLinkForm, setVitalLinkForm] = useState({
+        doctor: "",
+        doctor_id: "" as string | null,
+        facility_id: "" as string | null,
+        facility_name: "",
     })
 
     // Google Calendar State
@@ -308,8 +322,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         return showMockData ? MOCKED_HEALTH : effectiveRecords;
     }, [showMockData, effectiveRecords])
 
-    // Shared zero-egress doctors & field suggestions built from already-loaded records
+    // Shared zero-egress doctors, facilities & field suggestions built from already-loaded records
     const savedDoctors = useMemo(() => extractDoctorsFromRecords(effectiveRecords), [effectiveRecords])
+    const savedFacilities = useMemo(() => extractFacilitiesFromRecords(effectiveRecords), [effectiveRecords])
     const healthSuggestions = useMemo(() => extractHealthSuggestions(effectiveRecords), [effectiveRecords])
 
     const healthRecords = useMemo(() => {
@@ -478,6 +493,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             notes: apt.item_metadata?.notes || "",
             doctor: resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors).name,
             doctor_id: apt.item_metadata?.doctor_id || null,
+            facility_id: apt.item_metadata?.facility_id || null,
+            facility_name: resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities).name,
             location: apt.item_metadata?.location || "",
             specialty: apt.item_metadata?.specialty || "",
             date: formatForDateTimeInput(apt.item_metadata?.date)
@@ -496,6 +513,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             title: item.title || "",
             doctor: resolveDoctorInfo(item.item_metadata?.doctor_id, { name: item.item_metadata?.doctor }, savedDoctors).name,
             doctor_id: item.item_metadata?.doctor_id || null,
+            facility_id: item.item_metadata?.facility_id || null,
+            facility_name: resolveFacilityInfo(item.item_metadata?.facility_id, { name: item.item_metadata?.facility_name }, savedFacilities).name,
             date: formatForDateTimeInput(item.item_metadata?.date || item.created_at),
             notes: item.item_metadata?.notes || ""
         })
@@ -548,6 +567,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         ) : (
                             upcomingAppts.map(apt => {
                                 const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+                                const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
                                 return (
                                 <div key={apt.id} className={`flex items-start gap-4 p-4 rounded-xl border ${theme === 'light' ? 'bg-gray-50 border-gray-100' : 'bg-white/5 border-white/5'} hover:border-blue-500/30 transition-all`}>
                                     <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl cursor-pointer" onClick={() => openEditAppointment(apt)}>
@@ -562,8 +582,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             {apt.title}
                                         </h4>
                                         <p className="text-xs text-blue-400 font-medium mb-1">{safeFormat(apt.item_metadata.date, 'MMM d, h:mm a')}</p>
-                                        <div className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black">
-                                            <User className="h-3 w-3" /> {docInfo.name || "Medical Provider"}
+                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase font-black flex-wrap">
+                                            <span className="inline-flex items-center gap-1"><User className="h-3 w-3" /> {docInfo.name || "Medical Provider"}</span>
+                                            {facInfo.name && <span className="text-teal-400/90">&bull; {facInfo.name}</span>}
                                         </div>
                                     </div>
                                     <button
@@ -639,6 +660,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 title: "",
                                 doctor: "",
                                 doctor_id: null,
+                                facility_id: null,
+                                facility_name: "",
                                 date: formatForDateTimeInput(new Date()),
                                 notes: ""
                             })
@@ -1082,6 +1105,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         notes: "",
                         doctor: "",
                         doctor_id: null,
+                        facility_id: null,
+                        facility_name: "",
                         location: "",
                         specialty: "",
                         date: formatForDateTimeInput(new Date())
@@ -1107,6 +1132,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 notes: "",
                                 doctor: "",
                                 doctor_id: null,
+                                facility_id: null,
+                                facility_name: "",
                                 location: "",
                                 specialty: "",
                                 date: formatForDateTimeInput(new Date())
@@ -1130,6 +1157,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 ) : (
                     upcomingAppts.map(apt => {
                         const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+                        const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
                         return (
                         <div key={apt.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20 shadow-lg'} transition-all group relative overflow-hidden`}>
                             <div className="absolute top-0 right-0 p-4 opacity-50">
@@ -1180,9 +1208,12 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 </div>
 
                                 <div className="pt-4 border-t border-white/5 space-y-2">
-                                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                                    <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
                                         <User className="h-3 w-3" />
                                         <span>{docInfo.name || "No provider specified"}</span>
+                                        {facInfo.name && (
+                                            <span className="text-teal-400 font-medium">&bull; {facInfo.name}</span>
+                                        )}
                                     </div>
                                     {apt.item_metadata.notes && (
                                         <div className="text-xs text-gray-500 italic line-clamp-2">
@@ -1453,7 +1484,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             notes: fd.get("notes"),
                                             // AI Fields
                                             context: fd.get("context"),
-                                            mood: fd.get("mood")
+                                            mood: fd.get("mood"),
+                                            doctor: vitalLinkForm.doctor || "",
+                                            doctor_id: vitalLinkForm.doctor_id || null,
+                                            facility_id: vitalLinkForm.facility_id || null,
+                                            facility_name: vitalLinkForm.facility_name || "",
                                         }
                                     }
 
@@ -1535,6 +1570,37 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         </div>
                                     </div>
 
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <DoctorCombobox
+                                            label="Doctor (Optional)"
+                                            value={vitalLinkForm.doctor}
+                                            doctorId={vitalLinkForm.doctor_id}
+                                            doctors={savedDoctors}
+                                            placeholder="Select doctor or type name..."
+                                            onSelectDoctor={(doc) => {
+                                                const singleFac = findSingleLinkedFacility(doc, savedFacilities)
+                                                setVitalLinkForm((prev) => ({
+                                                    ...prev,
+                                                    doctor: doc.name,
+                                                    doctor_id: doc.id,
+                                                    ...(singleFac && !prev.facility_name?.trim()
+                                                        ? { facility_id: singleFac.id, facility_name: singleFac.name }
+                                                        : {}),
+                                                }))
+                                            }}
+                                            onClear={() => setVitalLinkForm((prev) => ({ ...prev, doctor: "", doctor_id: null }))}
+                                        />
+                                        <FacilityCombobox
+                                            label="Facility (Optional)"
+                                            value={vitalLinkForm.facility_name}
+                                            facilityId={vitalLinkForm.facility_id}
+                                            facilities={savedFacilities}
+                                            placeholder="Select facility or type name..."
+                                            onSelectFacility={(fac) => setVitalLinkForm((prev) => ({ ...prev, facility_id: fac.id, facility_name: fac.name }))}
+                                            onClear={() => setVitalLinkForm((prev) => ({ ...prev, facility_id: null, facility_name: "" }))}
+                                        />
+                                    </div>
+
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Detailed Observations</label>
                                         <textarea name="notes" defaultValue={editingVital?.item_metadata?.notes || ""} placeholder="How are you feeling? Any specific symptoms? (AI will use this for analysis later)" className="w-full p-5 rounded-3xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all h-32 text-sm italic" />
@@ -1562,6 +1628,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             date: apptFormData.date || formatForDateTimeInput(new Date()),
                                             doctor: apptFormData.doctor || "",
                                             doctor_id: apptFormData.doctor_id || null,
+                                            facility_id: apptFormData.facility_id || null,
+                                            facility_name: apptFormData.facility_name || "",
                                             location: apptFormData.location || "",
                                             specialty: apptFormData.specialty || "",
                                             notes: apptFormData.notes || "",
@@ -1654,21 +1722,41 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             doctors={savedDoctors}
                                             placeholder="Select doctor or type name..."
                                             onSelectDoctor={(doc) => {
+                                                const singleFac = findSingleLinkedFacility(doc, savedFacilities)
                                                 setApptFormData((prev) => ({
                                                     ...prev,
                                                     doctor: doc.name,
                                                     doctor_id: doc.id,
-                                                    location: prev.location?.trim() ? prev.location : (doc.facility || doc.address || ""),
+                                                    ...(singleFac && !prev.facility_name?.trim()
+                                                        ? { facility_id: singleFac.id, facility_name: singleFac.name }
+                                                        : {}),
+                                                    location: prev.location?.trim() ? prev.location : (singleFac?.address || doc.facility || doc.address || ""),
                                                     specialty: prev.specialty?.trim() ? prev.specialty : (doc.specialty || ""),
                                                 }))
                                             }}
                                             onClear={() => setApptFormData((prev) => ({ ...prev, doctor: "", doctor_id: null }))}
                                         />
                                     </div>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <FacilityCombobox
+                                            label="Facility"
+                                            value={apptFormData.facility_name || ''}
+                                            facilityId={apptFormData.facility_id}
+                                            facilities={savedFacilities}
+                                            placeholder="Select facility or type name..."
+                                            onSelectFacility={(fac) =>
+                                                setApptFormData((prev) => ({
+                                                    ...prev,
+                                                    facility_id: fac.id,
+                                                    facility_name: fac.name,
+                                                    location: prev.location?.trim() ? prev.location : (fac.address || ""),
+                                                }))
+                                            }
+                                            onClear={() => setApptFormData((prev) => ({ ...prev, facility_id: null, facility_name: "" }))}
+                                        />
                                         <FieldSuggestionInput
                                             name="location"
-                                            label="Location"
+                                            label="Location / Address"
                                             value={apptFormData.location || ''}
                                             onChange={(val) => setApptFormData({ ...apptFormData, location: val })}
                                             suggestions={healthSuggestions.locations}
@@ -1755,6 +1843,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             date: manualRecordForm.date || formatForDateTimeInput(new Date()),
                                             doctor: manualRecordForm.doctor || "",
                                             doctor_id: manualRecordForm.doctor_id || null,
+                                            facility_id: manualRecordForm.facility_id || null,
+                                            facility_name: manualRecordForm.facility_name || "",
                                             notes: manualRecordForm.notes || "",
                                             type: editingRecord?.item_metadata?.type || "Manual Entry"
                                         }
@@ -1775,6 +1865,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             title: "",
                                             doctor: "",
                                             doctor_id: null,
+                                            facility_id: null,
+                                            facility_name: "",
                                             date: formatForDateTimeInput(new Date()),
                                             notes: ""
                                         })
@@ -1793,22 +1885,43 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         suggestions={healthSuggestions.reasons}
                                         placeholder="e.g. Annual Cardiovascular Screening"
                                     />
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <DoctorCombobox
                                             label="Doctor / Provider"
                                             value={manualRecordForm.doctor}
                                             doctorId={manualRecordForm.doctor_id}
                                             doctors={savedDoctors}
                                             placeholder="Select doctor or type name..."
-                                            onSelectDoctor={(doc) =>
+                                            onSelectDoctor={(doc) => {
+                                                const singleFac = findSingleLinkedFacility(doc, savedFacilities)
                                                 setManualRecordForm((prev) => ({
                                                     ...prev,
                                                     doctor: doc.name,
                                                     doctor_id: doc.id,
+                                                    ...(singleFac && !prev.facility_name?.trim()
+                                                        ? { facility_id: singleFac.id, facility_name: singleFac.name }
+                                                        : {}),
+                                                }))
+                                            }}
+                                            onClear={() =>
+                                                setManualRecordForm((prev) => ({ ...prev, doctor: "", doctor_id: null }))
+                                            }
+                                        />
+                                        <FacilityCombobox
+                                            label="Facility"
+                                            value={manualRecordForm.facility_name}
+                                            facilityId={manualRecordForm.facility_id}
+                                            facilities={savedFacilities}
+                                            placeholder="Select facility or type name..."
+                                            onSelectFacility={(fac) =>
+                                                setManualRecordForm((prev) => ({
+                                                    ...prev,
+                                                    facility_id: fac.id,
+                                                    facility_name: fac.name,
                                                 }))
                                             }
                                             onClear={() =>
-                                                setManualRecordForm((prev) => ({ ...prev, doctor: "", doctor_id: null }))
+                                                setManualRecordForm((prev) => ({ ...prev, facility_id: null, facility_name: "" }))
                                             }
                                         />
                                         <div className="space-y-2">

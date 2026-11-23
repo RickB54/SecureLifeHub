@@ -1,13 +1,13 @@
 "use client"
 
 import { supabase } from "@/lib/supabase"
-import type { DoctorOption } from "@/components/health-ui/health-field-helpers"
+import type { DoctorOption, FacilityOption } from "@/components/health-ui/health-field-helpers"
 
 const HEALTH_VAULT_COLUMNS =
   "id, user_id, type, title, category, notes, website, item_metadata, created_at, updated_at"
 
 const HEALTH_VAULT_FILTER =
-  'category.in.("Health Records","Medications","Vitals","Health Insurance","Doctors","My Doctors","Medical","Health Diary","Health Portals","Appointments"),type.in.(health-record,medication,vital,doctor,doctor-record,health-insurance,health-checkin,health-portal,appointment)'
+  'category.in.("Health Records","Medications","Vitals","Health Insurance","Doctors","My Doctors","Medical Facilities","Medical","Health Diary","Health Portals","Appointments"),type.in.(health-record,medication,vital,doctor,doctor-record,facility-record,health-insurance,health-checkin,health-portal,appointment)'
 
 type Listener = (records: any[]) => void
 
@@ -135,6 +135,29 @@ export function resolveDoctorInfo(
     specialty: linked?.specialty || fallback?.specialty || "",
     phone: linked?.phone || fallback?.phone || "",
     location: linked?.facility || linked?.address || fallback?.location || "",
+    facility_ids: linked?.facility_ids || [],
+    isLinked: Boolean(linked),
+  }
+}
+
+/**
+ * Resolve live facility info from Medical Facilities by facility_id, falling back to saved text.
+ */
+export function resolveFacilityInfo(
+  facilityId?: string | null,
+  fallback?: { name?: string; address?: string; phone?: string; type?: string },
+  facilities: FacilityOption[] = []
+) {
+  const linked = facilityId ? facilities.find((f) => f.id === facilityId) : undefined
+  return {
+    id: linked?.id || facilityId || null,
+    name: linked?.name || fallback?.name || "",
+    type: linked?.type || fallback?.type || "",
+    address: linked?.address || fallback?.address || "",
+    phone: linked?.phone || fallback?.phone || "",
+    fax: linked?.fax || "",
+    website: linked?.website || "",
+    hours: linked?.hours || "",
     isLinked: Boolean(linked),
   }
 }
