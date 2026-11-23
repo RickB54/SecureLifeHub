@@ -209,6 +209,33 @@ export default function Passwords({
 
   // State for showing password in details panel
   const [showPasswordInDetails, setShowPasswordInDetails] = useState(false);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  // Automatically hydrate Tier-2 full details (password, notes, item_metadata) whenever ANY record is selected
+  useEffect(() => {
+    const id = selectedRecord?.id
+    if (!id || selectedRecord?.type === "folder" || selectedRecord?._detailsLoaded) return
+    if (String(id).startsWith("m") || String(id).includes("mock")) return
+    if (!fetchItemDetails) return
+
+    let cancelled = false
+    setLoadingDetails(true)
+    fetchItemDetails(id)
+      .then((fullDetails) => {
+        if (!cancelled && fullDetails) {
+          setSelectedRecord((prev: any) =>
+            prev?.id === id ? { ...prev, ...fullDetails, _detailsLoaded: true } : prev
+          )
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDetails(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedRecord?.id, selectedRecord?._detailsLoaded, selectedRecord?.type, fetchItemDetails])
 
   // A-Z Selector States
   const [isDraggingAZ, setIsDraggingAZ] = useState(false);
@@ -416,11 +443,16 @@ export default function Passwords({
     setSelectedRecord(passwordToEdit)
     setShowPasswordInDetails(false) // Reset password visibility when selecting new record
 
-    // Tier 2 Lazy-Loading: If full record details (password/notes/item_metadata) aren't loaded, fetch them on-demand
-    if (fetchItemDetails && (!passwordToEdit?.password && !passwordToEdit?.notes && !passwordToEdit?.item_metadata)) {
-      const fullDetails = await fetchItemDetails(id)
-      if (fullDetails) {
-        setSelectedRecord((prev: any) => prev?.id === id ? { ...prev, ...fullDetails } : prev)
+    // Tier 2 Lazy-Loading: Always fetch full record details if not yet hydrated
+    if (fetchItemDetails && passwordToEdit && !passwordToEdit._detailsLoaded && !String(id).startsWith('m')) {
+      setLoadingDetails(true)
+      try {
+        const fullDetails = await fetchItemDetails(id)
+        if (fullDetails) {
+          setSelectedRecord((prev: any) => prev?.id === id ? { ...prev, ...fullDetails, _detailsLoaded: true } : prev)
+        }
+      } finally {
+        setLoadingDetails(false)
       }
     }
   }
@@ -428,7 +460,12 @@ export default function Passwords({
   // Handle duplicate password
   const handleDuplicatePassword = async (password: any) => {
     try {
-      const { id, created_at, updated_at, ...rest } = password
+      let source = password
+      if (fetchItemDetails && !password._detailsLoaded && !String(password.id).startsWith('m')) {
+        const full = await fetchItemDetails(password.id)
+        if (full) source = { ...password, ...full }
+      }
+      const { id, created_at, updated_at, _detailsLoaded, ...rest } = source
       await addItem({
         ...rest,
         title: `${rest.title || rest.website || 'Untitled'} (Copy)`,
@@ -1791,7 +1828,20 @@ export default function Passwords({
                 </button>
               </div>
               <button
-                onClick={() => setEditPasswordModalOpen(true)}
+                onClick={async () => {
+                  if (fetchItemDetails && !record._detailsLoaded && !String(record.id).startsWith('m')) {
+                    setLoadingDetails(true)
+                    try {
+                      const full = await fetchItemDetails(record.id)
+                      if (full) {
+                        setSelectedRecord((prev: any) => prev?.id === record.id ? { ...prev, ...full, _detailsLoaded: true } : prev)
+                      }
+                    } finally {
+                      setLoadingDetails(false)
+                    }
+                  }
+                  setEditPasswordModalOpen(true)
+                }}
                 className={`p-2 rounded-lg transition-colors ${theme === 'light' ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-white/5 text-gray-300 hover:bg-white/10'}`}
                 title="Edit"
               >
@@ -1938,18 +1988,39 @@ export default function Passwords({
               <div className="flex items-center gap-4 py-2 hover:bg-white/5 rounded-lg pr-4 -ml-4 pl-4 transition-colors">
                 <div
                   className={`flex-1 font-mono text-xl tracking-tight cursor-pointer ${showPasswordInDetails ? 'text-white font-bold' : 'text-gray-500 font-bold overflow-hidden'} hover:text-blue-400`}
-                  onClick={() => {
-                      navigator.clipboard.writeText(record.password || "");
-                      toast.success("Password copied");
+                  onClick={async () => {
+                      let pw = record.password
+                      if (!record._detailsLoaded && fetchItemDetails && !String(record.id).startsWith('m')) {
+                        const full = await fetchItemDetails(record.id)
+                        if (full) {
+                          pw = full.password
+                          setSelectedRecord((prev: any) => prev?.id === record.id ? { ...prev, ...full, _detailsLoaded: true } : prev)
+                        }
+                      }
+                      navigator.clipboard.writeText(pw || "");
+                      toast.success(pw ? "Password copied" : "No password saved on this record");
                   }}
                   title="Click to Copy"
                   style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
                 >
-                  {showPasswordInDetails ? record.password : "••••••••••••"}
+                  {showPasswordInDetails
+                    ? (loadingDetails && !record._detailsLoaded ? "Loading..." : (record.password || "(No password saved)"))
+                    : "••••••••••••"}
                 </div>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation()
+                    if (!showPasswordInDetails && !record._detailsLoaded && fetchItemDetails && !String(record.id).startsWith('m')) {
+                      setLoadingDetails(true)
+                      try {
+                        const full = await fetchItemDetails(record.id)
+                        if (full) {
+                          setSelectedRecord((prev: any) => prev?.id === record.id ? { ...prev, ...full, _detailsLoaded: true } : prev)
+                        }
+                      } finally {
+                        setLoadingDetails(false)
+                      }
+                    }
                     setShowPasswordInDetails(!showPasswordInDetails)
                   }}
                   className={`p-2 rounded-lg transition-colors ${theme === 'light' ? 'hover:bg-gray-100' : 'hover:bg-white/10'}`}

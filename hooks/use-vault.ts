@@ -89,7 +89,22 @@ export function useVault() {
             }))
 
             setFolders(mappedFolders)
-            setItems(mappedItems as any) // Type assertion for transition
+            setItems(prev => {
+                const prevById = new Map(prev.map(p => [p.id, p]))
+                return mappedItems.map(i => {
+                    const existing: any = prevById.get(i.id)
+                    if (existing?._detailsLoaded && existing.updated_at === i.updated_at) {
+                        return {
+                            ...i,
+                            password: existing.password,
+                            notes: existing.notes,
+                            item_metadata: existing.item_metadata,
+                            _detailsLoaded: true,
+                        }
+                    }
+                    return i
+                }) as any
+            })
         } catch (error: any) {
             console.error("Error fetching vault:", error)
             // Log more details if it's a supabase error
@@ -113,8 +128,14 @@ export function useVault() {
 
             if (error) throw error
             if (data) {
-                setItems(prev => prev.map(item => item.id === id ? { ...item, ...data, updatedAt: data.updated_at, createdAt: data.created_at } : item))
-                return data
+                const hydrated = {
+                    ...data,
+                    updatedAt: data.updated_at,
+                    createdAt: data.created_at,
+                    _detailsLoaded: true,
+                }
+                setItems(prev => prev.map(item => item.id === id ? { ...item, ...hydrated } : item))
+                return hydrated
             }
         } catch (err) {
             console.error(`Error loading details for item ${id}:`, err)
@@ -236,7 +257,7 @@ export function useVault() {
             console.log("Inserted data:", data)
             console.log("=== END SUCCESS ===")
 
-            const newItem = { ...data, updatedAt: data.updated_at }
+            const newItem = { ...data, updatedAt: data.updated_at, createdAt: data.created_at, _detailsLoaded: true }
             setItems(prev => {
                 const updated = [newItem as any, ...prev]
                 console.log("🔄 Items state updated, new count:", updated.length)
@@ -354,8 +375,15 @@ export function useVault() {
 
             if (error) throw error
 
-            // Update local state
-            setItems(prev => prev.map(item => item.id === id ? { ...item, ...updates, item_metadata: dbPayload.item_metadata || item.item_metadata } : item))
+            // Update local state (preserve _detailsLoaded so password/notes/metadata stay intact)
+            setItems(prev => prev.map(item => item.id === id ? {
+                ...item,
+                ...updates,
+                updated_at: dbPayload.updated_at,
+                updatedAt: dbPayload.updated_at,
+                item_metadata: dbPayload.item_metadata || item.item_metadata,
+                _detailsLoaded: (item as any)._detailsLoaded || ('password' in updates),
+            } : item))
             toast.success("Item updated")
             if (!options?.skipRefresh) await fetchData() // Force sync
             return true
