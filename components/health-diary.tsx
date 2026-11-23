@@ -1,8 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2, HelpCircle, Hospital } from "lucide-react"
+import { Plus, Book, Trash2, Calendar, Mic, MicOff, Loader2, HelpCircle, Hospital, Edit3 } from "lucide-react"
+import { format } from "date-fns"
 import { toast } from "sonner"
+import { upsertSharedHealthRecord, removeSharedHealthRecord } from "@/lib/health-store"
+
+const getLocalDateStr = () => format(new Date(), "yyyy-MM-dd")
 
 interface HealthDiaryProps {
     records: any[]
@@ -14,16 +18,28 @@ interface HealthDiaryProps {
     setActivePage?: (page: string) => void
 }
 
-export default function HealthDiary({ records, addItem, deleteItem, theme, onOpenHelp, setActivePage }: HealthDiaryProps) {
+export default function HealthDiary({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, setActivePage }: HealthDiaryProps) {
     const [entries, setEntries] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
+    const [editingEntry, setEditingEntry] = useState<any>(null)
+    const [isSaving, setIsSaving] = useState(false)
     const [isListening, setIsListening] = useState(false)
     const [activeField, setActiveField] = useState<string | null>(null)
     const [formData, setFormData] = useState({
         title: "",
         content: "",
-        date: new Date().toISOString().split('T')[0]
+        date: getLocalDateStr()
     })
+
+    const openEditModal = (entry: any) => {
+        setEditingEntry(entry)
+        setFormData({
+            title: entry.title || "",
+            content: entry.item_metadata?.content || entry.item_metadata?.notes || "",
+            date: entry.item_metadata?.date ? String(entry.item_metadata.date).split("T")[0] : getLocalDateStr()
+        })
+        setShowAddModal(true)
+    }
 
     // Filter for Diary
     useEffect(() => {
@@ -116,10 +132,11 @@ export default function HealthDiary({ records, addItem, deleteItem, theme, onOpe
                         </button>
                         <button
                             onClick={() => {
+                                setEditingEntry(null)
                                 setFormData({
                                     title: "",
                                     content: "",
-                                    date: new Date().toISOString().split('T')[0]
+                                    date: getLocalDateStr()
                                 })
                                 setShowAddModal(true)
                             }}
@@ -147,16 +164,39 @@ export default function HealthDiary({ records, addItem, deleteItem, theme, onOpe
                                         <Calendar className="h-3 w-3 mr-2 text-purple-400" />
                                         {entry.item_metadata?.date}
                                     </div>
-                                    <button
-                                        className="text-gray-400 hover:text-red-500 transition-colors"
-                                        onClick={() => {
-                                            if (confirm("Delete this entry?")) deleteItem(entry.id)
-                                        }}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => openEditModal(entry)}
+                                            className="p-1.5 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-white/10 transition-colors"
+                                            title="Edit entry"
+                                        >
+                                            <Edit3 className="h-4 w-4" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-white/10 transition-colors"
+                                            onClick={async () => {
+                                                if (confirm("Delete this entry?")) {
+                                                    await deleteItem(entry.id)
+                                                    removeSharedHealthRecord(entry.id)
+                                                    setEntries((prev) => prev.filter((e) => e.id !== entry.id))
+                                                    toast.success("Diary entry deleted")
+                                                }
+                                            }}
+                                            title="Delete entry"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <h3 className="text-xl font-bold mb-2 line-clamp-1">{entry.title}</h3>
+                                <h3
+                                    onClick={() => openEditModal(entry)}
+                                    className="text-xl font-bold mb-2 line-clamp-1 cursor-pointer hover:text-purple-400 transition-colors"
+                                    title="Tap to edit"
+                                >
+                                    {entry.title}
+                                </h3>
                                 <p className="text-sm opacity-70 line-clamp-5 leading-relaxed">
                                     {entry.item_metadata?.content}
                                 </p>
@@ -170,24 +210,51 @@ export default function HealthDiary({ records, addItem, deleteItem, theme, onOpe
                 )}
             </div>
 
-            {/* Add Modal */}
+            {/* Add / Edit Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className={`w-full max-w-lg rounded-2xl p-6 shadow-2xl ${glassCardStyle} border-none`}>
-                        <h2 className="text-2xl font-bold mb-4">New Diary Entry</h2>
-                        <form onSubmit={(e: any) => {
+                        <h2 className="text-2xl font-bold mb-4">{editingEntry ? "Edit Diary Entry" : "New Diary Entry"}</h2>
+                        <form onSubmit={async (e: any) => {
                             e.preventDefault()
-                            addItem({
-                                type: "note",
-                                category: "Health Diary",
-                                title: formData.title,
-                                item_metadata: {
-                                    is_diary: true,
-                                    date: formData.date,
-                                    content: formData.content
+                            if (!formData.title.trim()) {
+                                toast.error("Please enter a title")
+                                return
+                            }
+                            setIsSaving(true)
+                            try {
+                                const payload = {
+                                    type: "note",
+                                    category: "Health Diary",
+                                    title: formData.title.trim(),
+                                    item_metadata: {
+                                        ...(editingEntry?.item_metadata || {}),
+                                        is_diary: true,
+                                        date: formData.date || getLocalDateStr(),
+                                        content: formData.content
+                                    }
                                 }
-                            })
-                            setShowAddModal(false)
+                                if (editingEntry) {
+                                    const res = await updateItem(editingEntry.id, payload)
+                                    if (res === false) throw new Error("Failed to update diary entry")
+                                    const updated = { ...editingEntry, ...payload }
+                                    upsertSharedHealthRecord(updated)
+                                    setEntries((prev) => prev.map((it) => (it.id === editingEntry.id ? updated : it)))
+                                    toast.success("Diary entry updated")
+                                } else {
+                                    const created = await addItem(payload)
+                                    if (!created) throw new Error("Failed to save diary entry")
+                                    upsertSharedHealthRecord(created)
+                                    setEntries((prev) => [created, ...prev])
+                                    toast.success("Diary entry saved")
+                                }
+                                setShowAddModal(false)
+                                setEditingEntry(null)
+                            } catch (err: any) {
+                                toast.error(err?.message || "Failed to save diary entry")
+                            } finally {
+                                setIsSaving(false)
+                            }
                         }} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Date</label>

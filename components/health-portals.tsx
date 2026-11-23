@@ -20,6 +20,7 @@ import {
   HelpCircle
 } from "lucide-react"
 import { toast } from "sonner"
+import { upsertSharedHealthRecord, removeSharedHealthRecord } from "@/lib/health-store"
 
 interface HealthPortalsProps {
   records: any[]
@@ -71,12 +72,14 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
+    const rawUrl = formData.url?.trim() || ""
+    const normalizedUrl = rawUrl && !/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//i.test(rawUrl) ? `https://${rawUrl}` : rawUrl
     const portalData = {
       type: "health-portal",
-      title: formData.title,
+      title: formData.title.trim(),
       category: "Health Portals",
       item_metadata: {
-        url: formData.url,
+        url: normalizedUrl,
         username: formData.username,
         password: formData.password,
         facility: formData.facility,
@@ -84,15 +87,23 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
       }
     }
 
-    if (editingPortal) {
-      await updateItem(editingPortal.id, portalData)
-      toast.success("Portal updated successfully")
-    } else {
-      await addItem(portalData)
-      toast.success("Portal added successfully")
+    try {
+      if (editingPortal) {
+        const res = await updateItem(editingPortal.id, portalData)
+        if (res === false) throw new Error("Failed to update portal")
+        upsertSharedHealthRecord({ ...editingPortal, ...portalData })
+        toast.success("Portal updated successfully")
+      } else {
+        const created = await addItem(portalData)
+        if (!created) throw new Error("Failed to save portal")
+        upsertSharedHealthRecord(created)
+        toast.success("Portal added successfully")
+      }
+      setShowAddModal(false)
+      resetForm()
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save portal")
     }
-    setShowAddModal(false)
-    resetForm()
   }
 
   const handleEdit = (portal: any) => {
@@ -178,11 +189,11 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
                 theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#1a1a1a] border-white/5'
               }`}
             >
-              <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                <button onClick={() => handleEdit(portal)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400">
+              <div className="absolute top-0 right-0 p-4 flex gap-2">
+                <button type="button" onClick={() => handleEdit(portal)} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400" title="Edit portal">
                   <Edit3 className="h-4 w-4" />
                 </button>
-                <button onClick={() => { if(confirm("Delete this portal?")) deleteItem(portal.id) }} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-red-400">
+                <button type="button" onClick={async () => { if(confirm("Delete this portal?")) { await deleteItem(portal.id); removeSharedHealthRecord(portal.id); toast.success("Portal deleted") } }} className="p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-red-400" title="Delete portal">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -191,8 +202,12 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
                 <div className="p-4 rounded-2xl bg-blue-500/10 text-blue-400 shadow-inner">
                   {portal.item_metadata?.facility?.toLowerCase().includes('hospital') ? <Hospital className="h-8 w-8" /> : <Stethoscope className="h-8 w-8" />}
                 </div>
-                <div className="min-w-0 pr-12">
-                  <h3 className="text-xl font-black uppercase tracking-tighter break-words leading-tight group-hover:text-blue-400 transition-colors">
+                <div className="min-w-0 pr-16">
+                  <h3
+                    onClick={() => handleEdit(portal)}
+                    className="text-xl font-black uppercase tracking-tighter break-words leading-tight group-hover:text-blue-400 transition-colors cursor-pointer"
+                    title="Tap to edit portal"
+                  >
                     {portal.title}
                   </h3>
                   <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mt-1">

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Trash2, Edit, HelpCircle, Hospital } from "lucide-react"
+import { toast } from "sonner"
+import { upsertSharedHealthRecord, removeSharedHealthRecord } from "@/lib/health-store"
 
 interface Props {
     records: any[]
@@ -16,10 +18,11 @@ interface Props {
 export default function HealthInsurance({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, setActivePage }: Props) {
     const [policies, setPolicies] = useState<any[]>([])
     const [showAddModal, setShowAddModal] = useState(false)
+    const [editingPolicy, setEditingPolicy] = useState<any>(null)
     const [expandedId, setExpandedId] = useState<string | null>(null)
 
     useEffect(() => {
-        setPolicies(records.filter(r => r.type === "health-insurance"))
+        setPolicies(records.filter(r => r.type === "health-insurance" || r.category === "Health Insurance"))
     }, [records])
 
     const glassCardStyle = theme === 'light'
@@ -57,7 +60,7 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
                             Health Hub
                         </button>
                         <button
-                            onClick={() => setShowAddModal(true)}
+                            onClick={() => { setEditingPolicy(null); setShowAddModal(true) }}
                             className="flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl font-medium transition-all shadow-lg shadow-blue-500/20 cursor-pointer"
                         >
                             <Plus className="h-4 w-4 mr-2" /> Add Policy
@@ -89,7 +92,13 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
                                             <CreditCard className="h-6 w-6 text-blue-500" />
                                         </div>
                                         <div>
-                                            <h3 className={`text-xl font-bold ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}>{p.title || metadata.planName}</h3>
+                                            <h3
+                                                onClick={(e) => { e.stopPropagation(); setEditingPolicy(p); setShowAddModal(true) }}
+                                                className={`text-xl font-bold hover:text-blue-400 transition-colors cursor-pointer ${theme === 'light' ? 'text-gray-900' : 'text-white'}`}
+                                                title="Tap to edit policy"
+                                            >
+                                                {p.title || metadata.planName}
+                                            </h3>
                                             <div className="flex gap-4 mt-1 text-sm opacity-60">
                                                 <span>Member ID: <span className="font-mono">{metadata.memberId || '---'}</span></span>
                                                 {metadata.groupNumber && <span>Group: {metadata.groupNumber}</span>}
@@ -97,10 +106,28 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); if (confirm("Delete policy?")) deleteItem(p.id) }}
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); setEditingPolicy(p); setShowAddModal(true) }}
+                                            className="p-2 hover:bg-blue-500/10 text-blue-400 rounded-lg"
+                                            title="Edit policy"
+                                        >
+                                            <Edit className="h-5 w-5" />
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={async (e) => {
+                                                e.stopPropagation()
+                                                if (confirm("Delete policy?")) {
+                                                    await deleteItem(p.id)
+                                                    removeSharedHealthRecord(p.id)
+                                                    setPolicies((prev) => prev.filter((it) => it.id !== p.id))
+                                                    toast.success("Policy deleted")
+                                                }
+                                            }}
                                             className="p-2 hover:bg-rose-500/10 text-rose-500 rounded-lg"
+                                            title="Delete policy"
                                         >
                                             <Trash2 className="h-5 w-5" />
                                         </button>
@@ -186,8 +213,30 @@ export default function HealthInsurance({ records, addItem, updateItem, deleteIt
                 )}
             </div>
 
-            {/* Add Modal */}
-            {showAddModal && <AddInsuranceModal onClose={() => setShowAddModal(false)} onAdd={addItem} theme={theme} />}
+            {/* Add / Edit Modal */}
+            {showAddModal && (
+                <AddInsuranceModal
+                    editingPolicy={editingPolicy}
+                    onClose={() => { setShowAddModal(false); setEditingPolicy(null) }}
+                    onSave={async (payload: any) => {
+                        if (editingPolicy) {
+                            const res = await updateItem(editingPolicy.id, payload)
+                            if (res === false) throw new Error("Failed to update policy")
+                            const updated = { ...editingPolicy, ...payload }
+                            upsertSharedHealthRecord(updated)
+                            setPolicies((prev) => prev.map((it) => (it.id === editingPolicy.id ? updated : it)))
+                            toast.success("Insurance policy updated")
+                        } else {
+                            const created = await addItem(payload)
+                            if (!created) throw new Error("Failed to save policy")
+                            upsertSharedHealthRecord(created)
+                            setPolicies((prev) => [created, ...prev])
+                            toast.success("Insurance policy added")
+                        }
+                    }}
+                    theme={theme}
+                />
+            )}
         </div>
     )
 }
@@ -212,7 +261,7 @@ function CardImage({ label, url, theme }: { label: string, url: string, theme: s
     return (
         <div className={`relative aspect-[1.586/1] rounded-xl overflow-hidden group ${theme === 'light' ? 'bg-gray-100 border border-gray-200' : 'bg-black/30 border border-white/10'}`}>
             {url ? (
-                <img src={url} alt={label} className="w-full h-full object-cover" />
+                <img src={url} alt={label} loading="lazy" className="w-full h-full object-cover" />
             ) : (
                 <div className="flex flex-col items-center justify-center h-full opacity-30">
                     <CreditCard className="h-8 w-8 mb-2" />
@@ -223,77 +272,87 @@ function CardImage({ label, url, theme }: { label: string, url: string, theme: s
     )
 }
 
-function AddInsuranceModal({ onClose, onAdd, theme }: { onClose: () => void, onAdd: (i: any) => void, theme: string }) {
+function AddInsuranceModal({ editingPolicy, onClose, onSave, theme }: { editingPolicy?: any, onClose: () => void, onSave: (i: any) => Promise<void>, theme: string }) {
     const inputClass = `w-full p-3 rounded-xl mt-1 outline-none text-sm ${theme === 'light' ? 'bg-gray-100' : 'bg-black/30'} border border-transparent focus:border-blue-500 transition-colors`
     const labelClass = "text-xs uppercase font-bold opacity-50 ml-1"
+    const meta = editingPolicy?.item_metadata || {}
 
     // Simple file handling for prototype (Base64)
     const handleFile = (e: any, setUrl: (s: string) => void) => {
         const file = e.target.files[0]
         if (!file) return
-        if (file.size > 5000000) { alert("File too large"); return }
+        if (file.size > 5000000) { toast.error("File too large (max 5MB)"); return }
         const r = new FileReader()
         r.onloadend = () => setUrl(r.result as string)
         r.readAsDataURL(file)
     }
 
-    const [frontUrl, setFrontUrl] = useState("")
-    const [backUrl, setBackUrl] = useState("")
+    const [frontUrl, setFrontUrl] = useState(meta.cardFrontUrl || "")
+    const [backUrl, setBackUrl] = useState(meta.cardBackUrl || "")
+    const [saving, setSaving] = useState(false)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
             <div className={`${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'} w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl shadow-2xl p-6`}>
-                <h2 className="text-xl font-bold mb-6">Add Health Insurance</h2>
-                <form onSubmit={(e: any) => {
+                <h2 className="text-xl font-bold mb-6">{editingPolicy ? "Edit Health Insurance" : "Add Health Insurance"}</h2>
+                <form onSubmit={async (e: any) => {
                     e.preventDefault()
                     const fd = new FormData(e.target)
-                    onAdd({
-                        type: "health-insurance",
-                        title: fd.get("planName"),
-                        item_metadata: {
-                            planName: fd.get("planName"),
-                            policyHolder: fd.get("policyHolder"),
-                            relationship: fd.get("relationship"),
-                            memberId: fd.get("memberId"),
-                            groupNumber: fd.get("groupNumber"),
-                            // Copays
-                            copayPcp: fd.get("copayPcp"),
-                            copaySpecialist: fd.get("copaySpecialist"),
-                            copayUrgent: fd.get("copayUrgent"),
-                            copayEr: fd.get("copayEr"),
-                            copayRxGen: fd.get("copayRxGen"),
-                            copayRxBrand: fd.get("copayRxBrand"),
-                            // Contacts
-                            phoneMember: fd.get("phoneMember"),
-                            phoneNurse: fd.get("phoneNurse"),
-                            // Images
-                            cardFrontUrl: frontUrl,
-                            cardBackUrl: backUrl
-                        }
-                    })
-                    onClose()
+                    setSaving(true)
+                    try {
+                        await onSave({
+                            type: "health-insurance",
+                            category: "Health Insurance",
+                            title: fd.get("planName"),
+                            item_metadata: {
+                                planName: fd.get("planName"),
+                                policyHolder: fd.get("policyHolder"),
+                                relationship: fd.get("relationship"),
+                                memberId: fd.get("memberId"),
+                                groupNumber: fd.get("groupNumber"),
+                                // Copays
+                                copayPcp: fd.get("copayPcp"),
+                                copaySpecialist: fd.get("copaySpecialist"),
+                                copayUrgent: fd.get("copayUrgent"),
+                                copayEr: fd.get("copayEr"),
+                                copayRxGen: fd.get("copayRxGen"),
+                                copayRxBrand: fd.get("copayRxBrand"),
+                                // Contacts
+                                phoneMember: fd.get("phoneMember"),
+                                phoneNurse: fd.get("phoneNurse"),
+                                // Images
+                                cardFrontUrl: frontUrl,
+                                cardBackUrl: backUrl
+                            }
+                        })
+                        onClose()
+                    } catch (err: any) {
+                        toast.error(err?.message || "Failed to save insurance policy")
+                    } finally {
+                        setSaving(false)
+                    }
                 }} className="space-y-6">
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
                             <label className={labelClass}>Plan Name / Carrier</label>
-                            <input name="planName" required className={inputClass} placeholder="e.g. Blue Cross Blue Shield PPO" />
+                            <input name="planName" required defaultValue={editingPolicy?.title || meta.planName || ""} className={inputClass} placeholder="e.g. Blue Cross Blue Shield PPO" />
                         </div>
                         <div>
                             <label className={labelClass}>Member ID</label>
-                            <input name="memberId" required className={inputClass} />
+                            <input name="memberId" required defaultValue={meta.memberId || ""} className={inputClass} />
                         </div>
                         <div>
                             <label className={labelClass}>Group Number</label>
-                            <input name="groupNumber" className={inputClass} />
+                            <input name="groupNumber" defaultValue={meta.groupNumber || ""} className={inputClass} />
                         </div>
                         <div>
                             <label className={labelClass}>Policy Holder Name</label>
-                            <input name="policyHolder" required className={inputClass} />
+                            <input name="policyHolder" required defaultValue={meta.policyHolder || ""} className={inputClass} />
                         </div>
                         <div>
                             <label className={labelClass}>Relationship</label>
-                            <select name="relationship" className={inputClass}>
+                            <select name="relationship" defaultValue={meta.relationship || "Self"} className={inputClass}>
                                 <option value="Self">Self</option>
                                 <option value="Spouse">Spouse</option>
                                 <option value="Child">Child</option>
@@ -305,20 +364,20 @@ function AddInsuranceModal({ onClose, onAdd, theme }: { onClose: () => void, onA
                     <div>
                         <h3 className="text-sm font-bold uppercase tracking-wider opacity-60 mb-3 border-b border-gray-500/20 pb-2">Copays ($)</h3>
                         <div className="grid grid-cols-3 gap-3">
-                            <input name="copayPcp" className={inputClass} placeholder="PCP" />
-                            <input name="copaySpecialist" className={inputClass} placeholder="Specialist" />
-                            <input name="copayUrgent" className={inputClass} placeholder="Urgent Care" />
-                            <input name="copayEr" className={inputClass} placeholder="Emergency" />
-                            <input name="copayRxGen" className={inputClass} placeholder="Generic Rx" />
-                            <input name="copayRxBrand" className={inputClass} placeholder="Brand Rx" />
+                            <input name="copayPcp" defaultValue={meta.copayPcp || ""} className={inputClass} placeholder="PCP" />
+                            <input name="copaySpecialist" defaultValue={meta.copaySpecialist || ""} className={inputClass} placeholder="Specialist" />
+                            <input name="copayUrgent" defaultValue={meta.copayUrgent || ""} className={inputClass} placeholder="Urgent Care" />
+                            <input name="copayEr" defaultValue={meta.copayEr || ""} className={inputClass} placeholder="Emergency" />
+                            <input name="copayRxGen" defaultValue={meta.copayRxGen || ""} className={inputClass} placeholder="Generic Rx" />
+                            <input name="copayRxBrand" defaultValue={meta.copayRxBrand || ""} className={inputClass} placeholder="Brand Rx" />
                         </div>
                     </div>
 
                     <div>
                         <h3 className="text-sm font-bold uppercase tracking-wider opacity-60 mb-3 border-b border-gray-500/20 pb-2">Contacts</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <input name="phoneMember" className={inputClass} placeholder="Member Services #" />
-                            <input name="phoneNurse" className={inputClass} placeholder="24/7 Nurse Line #" />
+                            <input name="phoneMember" defaultValue={meta.phoneMember || ""} className={inputClass} placeholder="Member Services #" />
+                            <input name="phoneNurse" defaultValue={meta.phoneNurse || ""} className={inputClass} placeholder="24/7 Nurse Line #" />
                         </div>
                     </div>
 
@@ -335,7 +394,7 @@ function AddInsuranceModal({ onClose, onAdd, theme }: { onClose: () => void, onA
 
                     <div className="flex gap-4 pt-4">
                         <button type="button" onClick={onClose} className={`flex-1 py-3 rounded-xl font-medium ${theme === 'light' ? 'bg-gray-100' : 'bg-white/5'}`}>Cancel</button>
-                        <button type="submit" className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold">Save Policy</button>
+                        <button type="submit" disabled={saving} className="flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold disabled:opacity-50">{saving ? "Saving..." : (editingPolicy ? "Update Policy" : "Save Policy")}</button>
                     </div>
 
                 </form>

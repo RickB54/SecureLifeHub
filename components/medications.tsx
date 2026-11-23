@@ -15,6 +15,7 @@ import {
     extractDoctorsFromRecords,
     extractHealthSuggestions,
 } from './health-ui/health-field-helpers'
+import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
 
 // Horizontally stretched oval / ellipse icon (not capsule style)
 export const OvalIcon = ({ className = "h-4 w-4", style, fill, stroke, strokeWidth }: any) => (
@@ -431,6 +432,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             if (!res) {
                 throw new Error("Unable to save medication to your vault. Please verify your connection.")
             }
+            upsertSharedHealthRecord(res)
             setShowAddModal(false)
             setPrefillTarget(null)
             return true
@@ -476,6 +478,19 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             if (res === false) {
                 throw new Error("Unable to update medication in your vault. Please verify your connection.")
             }
+            upsertSharedHealthRecord({
+                ...selectedMed,
+                title: formData.name || selectedMed.title,
+                item_metadata: {
+                    ...selectedMed.item_metadata,
+                    dosage: formData.dosage || "As directed",
+                    frequency: formData.frequency || "",
+                    prescribedBy: formData.prescribedBy || "",
+                    doctor_id: formData.doctor_id ?? selectedMed.item_metadata?.doctor_id ?? null,
+                    pharmacy: formData.pharmacy ?? selectedMed.item_metadata?.pharmacy ?? "",
+                    purpose: formData.purpose || "",
+                }
+            })
             setShowEditModal(false)
             setSelectedMed(null)
             setPrefillTarget(null)
@@ -1222,7 +1237,13 @@ ${selectedMed ? `
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex flex-col min-w-0">
-                                                    <h3 className="text-lg font-bold break-words leading-tight">{med.title}</h3>
+                                                    <h3
+                                                        onClick={() => { setSelectedMed(med); setShowEditModal(true) }}
+                                                        className="text-lg font-bold break-words leading-tight cursor-pointer hover:text-purple-400 transition-colors"
+                                                        title="Tap to edit medication"
+                                                    >
+                                                        {med.title}
+                                                    </h3>
                                                     <span className="text-xs text-gray-400">{med.item_metadata?.dosage}</span>
                                                 </div>
                                                 <div className="text-sm text-gray-400 mt-1 flex flex-col gap-1">
@@ -1313,7 +1334,7 @@ ${selectedMed ? `
                                         <button onClick={() => { setSelectedMed(med); setShowEditModal(true) }} className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400" title="Edit">
                                             <Edit className="h-5 w-5" />
                                         </button>
-                                        <button onClick={() => { if (confirm(`Delete ${med.title}?`)) deleteItem(med.id) }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Delete">
+                                        <button onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Delete">
                                             <Trash className="h-5 w-5" />
                                         </button>
                                     </div>

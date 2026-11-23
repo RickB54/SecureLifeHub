@@ -40,11 +40,14 @@ import {
   FileCheck2,
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { toast } from "sonner"
 import {
   DoctorCombobox,
   FieldSuggestionInput,
+  extractDoctorsFromRecords,
   extractHealthSuggestions,
 } from "@/components/health-ui/health-field-helpers"
+import { resolveDoctorInfo, subscribeHealthStore } from "@/lib/health-store"
 import {
   VisitHubSectionId,
   VISIT_HUB_SECTIONS,
@@ -343,6 +346,13 @@ export default function DoctorVisitHub({
   const [questionInput, setQuestionInput] = useState("")
   const [questionDoctorId, setQuestionDoctorId] = useState("")
   const [questionDoctorName, setQuestionDoctorName] = useState("")
+  const [editingQuestion, setEditingQuestion] = useState<HealthQuestion | null>(null)
+  const [questionEditForm, setQuestionEditForm] = useState({
+    question: "",
+    doctor_id: "",
+    doctor_name: "",
+    answer_notes: "",
+  })
 
   const [notes, setNotes] = useState<HealthNote[]>([])
   const [noteDoctorFilter, setNoteDoctorFilter] = useState("all")
@@ -1006,12 +1016,49 @@ export default function DoctorVisitHub({
     return map
   }, [existingVisits, notes, letters, referrals])
 
+  // Keep Visit Hub doctors/meds/visits synced live when edited in Health Hub (zero refetch)
+  useEffect(() => {
+    return subscribeHealthStore((allRecords) => {
+      if (!allRecords || allRecords.length === 0) return
+      const liveDocs = extractDoctorsFromRecords(allRecords)
+      if (liveDocs.length > 0) setExistingDoctors(liveDocs)
+
+      const liveMeds: MedicationSummary[] = allRecords
+        .filter((r) => (r.category || "").toLowerCase() === "medications" || (r.type || "").toLowerCase() === "medication")
+        .map((d) => ({
+          id: d.id,
+          name: d.title || "Unnamed Medication",
+          dose: d.item_metadata?.dosage || d.item_metadata?.strength || "",
+          frequency: d.item_metadata?.frequency || "",
+          instructions: d.item_metadata?.rxInstructions || d.item_metadata?.instructions || d.notes || "",
+        }))
+      if (liveMeds.length > 0) setMedications(liveMeds)
+
+      const liveVisits: VisitOption[] = allRecords
+        .filter((d) => d.item_metadata?.type === "Appointment" || d.type === "appointment" || d.category === "Appointments" || d.item_metadata?.is_appointment)
+        .map((d) => ({
+          id: d.id,
+          title: d.title || d.item_metadata?.title || "Doctor Visit",
+          date: d.item_metadata?.date || d.created_at || "",
+          doctor: resolveDoctorInfo(d.item_metadata?.doctor_id, { name: d.item_metadata?.doctor }, liveDocs).name,
+          location: d.item_metadata?.location || "",
+          notes: d.item_metadata?.notes || d.notes || "",
+        }))
+      if (liveVisits.length > 0) setExistingVisits(liveVisits)
+    })
+  }, [])
+
   // Profile Save
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    const saved = await saveHealthProfile(profileForm, userId)
-    setProfile(saved)
-    setIsEditingProfile(false)
+    try {
+      const saved = await saveHealthProfile(profileForm, userId)
+      setProfile(saved)
+      setIsEditingProfile(false)
+      toast.success("Health profile saved")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save health profile")
+    }
   }
 
   // Prep Item Handlers
@@ -1071,82 +1118,156 @@ export default function DoctorVisitHub({
   const handleAddQuestion = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!questionInput.trim()) return
-    const doctorObj = existingDoctors.find((d) => d.id === questionDoctorId)
-    const newQ = await saveQuestion(
-      {
-        question: questionInput.trim(),
-        answered: false,
-        doctor_id: questionDoctorId || null,
-        doctor_name: doctorObj?.name || questionDoctorName.trim() || "",
-        visit_id: nextAppt?.id || null,
-      },
-      userId
-    )
-    setQuestions((prev) => [newQ, ...prev])
-    setQuestionInput("")
+    try {
+      const doctorObj = existingDoctors.find((d) => d.id === questionDoctorId)
+      const newQ = await saveQuestion(
+        {
+          question: questionInput.trim(),
+          answered: false,
+          doctor_id: questionDoctorId || null,
+          doctor_name: doctorObj?.name || questionDoctorName.trim() || "",
+          visit_id: nextAppt?.id || null,
+        },
+        userId
+      )
+      setQuestions((prev) => [newQ, ...prev])
+      setQuestionInput("")
+      toast.success("Question added")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add question")
+    }
+  }
+
+  const openEditQuestionModal = (q: HealthQuestion) => {
+    const docInfo = resolveDoctorInfo(q.doctor_id, { name: q.doctor_name }, existingDoctors)
+    setEditingQuestion(q)
+    setQuestionEditForm({
+      question: q.question || "",
+      doctor_id: q.doctor_id || "",
+      doctor_name: docInfo.name,
+      answer_notes: q.answer_notes || "",
+    })
+  }
+
+  const handleSaveQuestionEdit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingQuestion || !questionEditForm.question.trim()) return
+    try {
+      const doctorObj = existingDoctors.find((d) => d.id === questionEditForm.doctor_id)
+      const saved = await saveQuestion(
+        {
+          ...editingQuestion,
+          question: questionEditForm.question.trim(),
+          doctor_id: questionEditForm.doctor_id || null,
+          doctor_name: doctorObj?.name || questionEditForm.doctor_name.trim() || "",
+          answer_notes: questionEditForm.answer_notes.trim(),
+        },
+        userId
+      )
+      setQuestions((prev) => prev.map((item) => (item.id === saved.id ? saved : item)))
+      setEditingQuestion(null)
+      toast.success("Question updated")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update question")
+    }
   }
 
   const handleToggleQuestion = async (q: HealthQuestion) => {
     const updated = { ...q, answered: !q.answered }
     setQuestions((prev) => prev.map((item) => (item.id === q.id ? updated : item)))
-    await saveQuestion(updated, userId)
+    try {
+      await saveQuestion(updated, userId)
+    } catch (err: any) {
+      setQuestions((prev) => prev.map((item) => (item.id === q.id ? q : item)))
+      toast.error(err?.message || "Failed to update question")
+    }
   }
 
   const handleDeleteQuestion = async (id: string) => {
     setQuestions((prev) => prev.filter((q) => q.id !== id))
     await deleteQuestion(id, userId)
+    toast.success("Question deleted")
   }
 
   // Health Notes Handlers
   const handleSaveNoteSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!noteForm.title.trim()) return
-    const doctorObj = existingDoctors.find((d) => d.id === noteForm.doctor_id)
-    const payload = {
-      ...(editingNote ? { id: editingNote.id } : {}),
-      title: noteForm.title.trim(),
-      text: noteForm.text.trim(),
-      date: noteForm.date || getTodayDateString(),
-      date_type: noteForm.date_type || "Appointment date",
-      doctor_id: noteForm.doctor_id || null,
-      doctor_name: doctorObj?.name || noteForm.doctor_name || "",
-      visit_id: noteForm.visit_id || null,
+    if (!noteForm.title.trim()) {
+      toast.error("Note title is required")
+      return
     }
-    const saved = await saveHealthNote(payload, userId)
-    if (editingNote) {
-      setNotes((prev) => prev.map((n) => (n.id === saved.id ? saved : n)))
-    } else {
-      setNotes((prev) => [saved, ...prev])
+    try {
+      const doctorObj = existingDoctors.find((d) => d.id === noteForm.doctor_id)
+      const payload = {
+        ...(editingNote
+          ? {
+              id: editingNote.id,
+              created_at: editingNote.created_at,
+              given_to_doctor: editingNote.given_to_doctor,
+              given_method: editingNote.given_method,
+              given_date: editingNote.given_date,
+            }
+          : {}),
+        title: noteForm.title.trim(),
+        text: noteForm.text.trim(),
+        date: noteForm.date || getTodayDateString(),
+        date_type: noteForm.date_type || "Appointment date",
+        doctor_id: noteForm.doctor_id || null,
+        doctor_name: doctorObj?.name || noteForm.doctor_name || "",
+        visit_id: noteForm.visit_id || null,
+      }
+      const saved = await saveHealthNote(payload, userId)
+      if (editingNote) {
+        setNotes((prev) => prev.map((n) => (n.id === saved.id ? saved : n)))
+      } else {
+        setNotes((prev) => [saved, ...prev])
+      }
+      setNoteModalOpen(false)
+      setEditingNote(null)
+      toast.success(editingNote ? "Health note updated" : "Health note saved")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save health note")
     }
-    setNoteModalOpen(false)
-    setEditingNote(null)
   }
 
   // Health Letters Handlers
   const handleSaveLetterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const doctorObj = existingDoctors.find((d) => d.id === letterForm.doctor_id)
-    const payload = {
-      ...(editingLetter ? { id: editingLetter.id } : {}),
-      doctor_name: doctorObj?.name || letterForm.doctor_name || "Doctor Letter",
-      doctor_id: letterForm.doctor_id || null,
-      visit_id: letterForm.visit_id || null,
-      date: letterForm.date || getTodayDateString(),
-      date_type: letterForm.date_type || "Letter date",
-      direction: letterForm.direction,
-      status: letterForm.status,
-      notes: letterForm.notes.trim(),
-      attachment_url: letterForm.attachment_url || null,
-      attachment_name: letterForm.attachment_name || null,
+    try {
+      const doctorObj = existingDoctors.find((d) => d.id === letterForm.doctor_id)
+      const payload = {
+        ...(editingLetter
+          ? {
+              id: editingLetter.id,
+              created_at: editingLetter.created_at,
+              given_to_doctor: editingLetter.given_to_doctor,
+              given_method: editingLetter.given_method,
+              given_date: editingLetter.given_date,
+            }
+          : {}),
+        doctor_name: doctorObj?.name || letterForm.doctor_name || "Doctor Letter",
+        doctor_id: letterForm.doctor_id || null,
+        visit_id: letterForm.visit_id || null,
+        date: letterForm.date || getTodayDateString(),
+        date_type: letterForm.date_type || "Letter date",
+        direction: letterForm.direction,
+        status: letterForm.status,
+        notes: letterForm.notes.trim(),
+        attachment_url: letterForm.attachment_url || null,
+        attachment_name: letterForm.attachment_name || null,
+      }
+      const saved = await saveHealthLetter(payload, userId)
+      if (editingLetter) {
+        setLetters((prev) => prev.map((l) => (l.id === saved.id ? saved : l)))
+      } else {
+        setLetters((prev) => [saved, ...prev])
+      }
+      setLetterModalOpen(false)
+      setEditingLetter(null)
+      toast.success(editingLetter ? "Letter updated" : "Letter saved")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save letter")
     }
-    const saved = await saveHealthLetter(payload, userId)
-    if (editingLetter) {
-      setLetters((prev) => prev.map((l) => (l.id === saved.id ? saved : l)))
-    } else {
-      setLetters((prev) => [saved, ...prev])
-    }
-    setLetterModalOpen(false)
-    setEditingLetter(null)
   }
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1170,57 +1291,89 @@ export default function DoctorVisitHub({
   // Health Referrals Handlers
   const handleSaveReferralSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!referralForm.specialist_name.trim()) return
-    const refDoctorObj = existingDoctors.find((d) => d.id === referralForm.referred_by_doctor_id)
-    const specDoctorObj = existingDoctors.find((d) => d.id === referralForm.doctor_id)
-    const payload = {
-      ...(editingReferral ? { id: editingReferral.id } : {}),
-      specialist_name: specDoctorObj?.name || referralForm.specialist_name.trim(),
-      specialty: specDoctorObj?.specialty || referralForm.specialty.trim(),
-      doctor_id: referralForm.doctor_id || null,
-      referred_by_doctor_id: referralForm.referred_by_doctor_id || null,
-      referred_by_name: refDoctorObj?.name || referralForm.referred_by_name.trim(),
-      visit_id: referralForm.visit_id || null,
-      reason: referralForm.reason.trim(),
-      date: referralForm.date || getTodayDateString(),
-      date_type: referralForm.date_type || "Referral date",
-      status: referralForm.status,
-      phone: specDoctorObj?.phone || referralForm.phone.trim(),
-      notes: referralForm.notes.trim(),
+    if (!referralForm.specialist_name.trim()) {
+      toast.error("Specialist name is required")
+      return
     }
-    const saved = await saveHealthReferral(payload, userId)
-    if (editingReferral) {
-      setReferrals((prev) => prev.map((r) => (r.id === saved.id ? saved : r)))
-    } else {
-      setReferrals((prev) => [saved, ...prev])
+    try {
+      const refDoctorObj = existingDoctors.find((d) => d.id === referralForm.referred_by_doctor_id)
+      const specDoctorObj = existingDoctors.find((d) => d.id === referralForm.doctor_id)
+      const payload = {
+        ...(editingReferral
+          ? {
+              id: editingReferral.id,
+              created_at: editingReferral.created_at,
+              given_to_doctor: editingReferral.given_to_doctor,
+              given_method: editingReferral.given_method,
+              given_date: editingReferral.given_date,
+            }
+          : {}),
+        specialist_name: referralForm.specialist_name.trim() || specDoctorObj?.name || "",
+        specialty: referralForm.specialty.trim() || specDoctorObj?.specialty || "",
+        doctor_id: referralForm.doctor_id || null,
+        referred_by_doctor_id: referralForm.referred_by_doctor_id || null,
+        referred_by_name: refDoctorObj?.name || referralForm.referred_by_name.trim(),
+        visit_id: referralForm.visit_id || null,
+        reason: referralForm.reason.trim(),
+        date: referralForm.date || getTodayDateString(),
+        date_type: referralForm.date_type || "Referral date",
+        status: referralForm.status,
+        phone: referralForm.phone.trim() || specDoctorObj?.phone || "",
+        notes: referralForm.notes.trim(),
+      }
+      const saved = await saveHealthReferral(payload, userId)
+      if (editingReferral) {
+        setReferrals((prev) => prev.map((r) => (r.id === saved.id ? saved : r)))
+      } else {
+        setReferrals((prev) => [saved, ...prev])
+      }
+      setReferralModalOpen(false)
+      setEditingReferral(null)
+      toast.success(editingReferral ? "Referral updated" : "Referral saved")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save referral")
     }
-    setReferralModalOpen(false)
-    setEditingReferral(null)
   }
 
   // Visit Summaries Handlers
   const handleSaveSummarySubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!summaryForm.title.trim()) return
-    const doctorObj = existingDoctors.find((d) => d.id === summaryForm.doctor_id)
-    const payload = {
-      ...(editingSummary ? { id: editingSummary.id } : {}),
-      title: summaryForm.title.trim(),
-      summary_text: summaryForm.summary_text.trim(),
-      date: summaryForm.date || getTodayDateString(),
-      date_type: summaryForm.date_type || "Visit date",
-      doctor_id: summaryForm.doctor_id || null,
-      doctor_name: doctorObj?.name || summaryForm.doctor_name || "",
-      visit_id: summaryForm.visit_id || null,
+    if (!summaryForm.title.trim()) {
+      toast.error("Summary title is required")
+      return
     }
-    const saved = await saveVisitSummary(payload, userId)
-    if (editingSummary) {
-      setVisitSummaries((prev) => prev.map((s) => (s.id === saved.id ? saved : s)))
-    } else {
-      setVisitSummaries((prev) => [saved, ...prev])
+    try {
+      const doctorObj = existingDoctors.find((d) => d.id === summaryForm.doctor_id)
+      const payload = {
+        ...(editingSummary
+          ? {
+              id: editingSummary.id,
+              created_at: editingSummary.created_at,
+              given_to_doctor: editingSummary.given_to_doctor,
+              given_method: editingSummary.given_method,
+              given_date: editingSummary.given_date,
+            }
+          : {}),
+        title: summaryForm.title.trim(),
+        summary_text: summaryForm.summary_text.trim(),
+        date: summaryForm.date || getTodayDateString(),
+        date_type: summaryForm.date_type || "Visit date",
+        doctor_id: summaryForm.doctor_id || null,
+        doctor_name: doctorObj?.name || summaryForm.doctor_name || "",
+        visit_id: summaryForm.visit_id || null,
+      }
+      const saved = await saveVisitSummary(payload, userId)
+      if (editingSummary) {
+        setVisitSummaries((prev) => prev.map((s) => (s.id === saved.id ? saved : s)))
+      } else {
+        setVisitSummaries((prev) => [saved, ...prev])
+      }
+      setSummaryModalOpen(false)
+      setEditingSummary(null)
+      toast.success(editingSummary ? "Visit summary updated" : "Visit summary saved")
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save visit summary")
     }
-    setSummaryModalOpen(false)
-    setEditingSummary(null)
   }
 
   const handleDeleteHealthNote = async (id: string) => {
@@ -2144,20 +2297,39 @@ export default function DoctorVisitHub({
                               )}
                             </button>
                             <span
-                              className={`text-xs md:text-sm font-semibold truncate ${
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEditQuestionModal(q)
+                              }}
+                              className={`text-xs md:text-sm font-semibold truncate hover:text-indigo-400 transition-colors ${
                                 q.answered ? "line-through text-slate-500" : "text-white"
                               }`}
+                              title="Tap to edit question"
                             >
                               {q.question}
                             </span>
-                            {q.doctor_name && (
-                              <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 shrink-0 truncate max-w-[120px]">
-                                Dr. {q.doctor_name}
-                              </span>
-                            )}
+                            {(() => {
+                              const resolvedDoc = resolveDoctorInfo(q.doctor_id, { name: q.doctor_name }, existingDoctors).name
+                              return resolvedDoc ? (
+                                <span className="hidden sm:inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 shrink-0 truncate max-w-[120px]">
+                                  {resolvedDoc}
+                                </span>
+                              ) : null
+                            })()}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateStr && <span className="text-[11px] text-slate-500">{dateStr}</span>}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEditQuestionModal(q)
+                              }}
+                              className="p-1 rounded-lg hover:bg-indigo-500/20 text-slate-400 hover:text-indigo-400"
+                              title="Edit question"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -4369,6 +4541,91 @@ export default function DoctorVisitHub({
                   className="px-4 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold"
                 >
                   Save Summary
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: EDIT QUESTION FORM                                      */}
+      {/* ============================================================== */}
+      {editingQuestion && (
+        <div
+          className="fixed inset-0 z-[100060] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in"
+          onClick={() => setEditingQuestion(null)}
+        >
+          <div
+            className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl text-white space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="text-base font-bold text-white">Edit Question</h3>
+              <button
+                type="button"
+                onClick={() => setEditingQuestion(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveQuestionEdit} className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Question *</label>
+                <input
+                  type="text"
+                  required
+                  value={questionEditForm.question}
+                  onChange={(e) => setQuestionEditForm({ ...questionEditForm, question: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+              <DoctorCombobox
+                compact
+                label="Related Doctor"
+                value={questionEditForm.doctor_name}
+                doctorId={questionEditForm.doctor_id || null}
+                doctors={existingDoctors}
+                placeholder="Select or type doctor..."
+                onSelectDoctor={(doc) =>
+                  setQuestionEditForm((prev) => ({
+                    ...prev,
+                    doctor_id: doc.id || "",
+                    doctor_name: doc.name,
+                  }))
+                }
+                onClear={() =>
+                  setQuestionEditForm((prev) => ({
+                    ...prev,
+                    doctor_id: "",
+                    doctor_name: "",
+                  }))
+                }
+              />
+              <div>
+                <label className="text-slate-400 font-semibold block mb-1">Doctor Answer / Notes</label>
+                <textarea
+                  rows={3}
+                  value={questionEditForm.answer_notes}
+                  onChange={(e) => setQuestionEditForm({ ...questionEditForm, answer_notes: e.target.value })}
+                  placeholder="Record the doctor's answer..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-white custom-scrollbar"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingQuestion(null)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                >
+                  Save Question
                 </button>
               </div>
             </form>

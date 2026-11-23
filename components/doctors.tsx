@@ -22,8 +22,14 @@ import {
   Hospital
 } from "lucide-react"
 import { toast } from "sonner"
-import { supabase } from "@/lib/supabase"
 import { FieldSuggestionInput, extractHealthSuggestions } from "./health-ui/health-field-helpers"
+import {
+  getCachedHealthRecords,
+  loadSharedHealthRecords,
+  subscribeHealthStore,
+  upsertSharedHealthRecord,
+  removeSharedHealthRecord,
+} from "@/lib/health-store"
 
 const normalizeUrl = (url?: string) => {
   if (!url) return ""
@@ -48,29 +54,16 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
   const [searchQuery, setSearchQuery] = useState("")
   const [editingDoctor, setEditingDoctor] = useState<any>(null)
 
-  // Isolated Supabase fetch to get full doctor records (including item_metadata)
-  // This bypasses the Tier 1 projected query in useVault which omits item_metadata
-  const [isolatedDoctors, setIsolatedDoctors] = useState<any[] | null>(null)
-
-  const fetchDoctors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("vault_items")
-        .select("*")
-        .or("category.eq.My Doctors,category.eq.Doctors,type.eq.doctor-record")
-        .order("title", { ascending: true })
-      if (!error && data) setIsolatedDoctors(data)
-    } catch (e) {
-      console.error("[Doctors] fetch error:", e)
-    }
-  }
+  // Reuse shared cached Health Hub store (zero duplicate fetches across tabs)
+  const [sharedRecords, setSharedRecords] = useState<any[] | null>(() => getCachedHealthRecords())
 
   useEffect(() => {
-    fetchDoctors()
+    const unsub = subscribeHealthStore((data) => setSharedRecords(data))
+    loadSharedHealthRecords()
+    return unsub
   }, [])
 
-  // Use isolated records if available; fall back to prop
-  const effectiveDoctorRecords = isolatedDoctors ?? records
+  const effectiveDoctorRecords = sharedRecords && sharedRecords.length > 0 ? sharedRecords : records
   const healthSuggestions = useMemo(() => extractHealthSuggestions(effectiveDoctorRecords), [effectiveDoctorRecords])
 
   const doctors = useMemo(() => {
@@ -135,16 +128,18 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
 
     try {
       if (editingDoctor) {
-        await updateItem(editingDoctor.id, doctorData)
+        const res = await updateItem(editingDoctor.id, doctorData)
+        if (res === false) throw new Error("Failed to update doctor")
+        upsertSharedHealthRecord({ ...editingDoctor, ...doctorData })
         toast.success("Doctor updated successfully")
       } else {
-        await addItem(doctorData)
+        const created = await addItem(doctorData)
+        if (!created) throw new Error("Failed to add doctor")
+        upsertSharedHealthRecord(created)
         toast.success("Doctor added to your list")
       }
       setShowAddModal(false)
       resetForm()
-      // Re-fetch to show newly saved record
-      await fetchDoctors()
     } catch (err: any) {
       console.error("Failed to save doctor:", err)
       toast.error(err?.message || "Failed to save doctor")
@@ -240,18 +235,21 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
                 <div className="p-3 rounded-2xl bg-rose-500/10 text-rose-400 shadow-inner">
                   <Stethoscope className="h-6 w-6" />
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(dr)} className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-blue-400">
+                <div className="flex gap-1">
+                  <button type="button" onClick={() => handleEdit(dr)} className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400" title="Edit provider">
                     <Edit3 className="h-4 w-4" />
                   </button>
                   <button 
+                    type="button"
                     onClick={async () => { 
                       if(confirm("Delete this provider?")) {
                         await deleteItem(dr.id)
-                        await fetchDoctors()
+                        removeSharedHealthRecord(dr.id)
+                        toast.success("Provider deleted")
                       }
                     }} 
-                    className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-rose-400"
+                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-400"
+                    title="Delete provider"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -259,7 +257,11 @@ export default function Doctors({ records, addItem, updateItem, deleteItem, them
               </div>
 
               <div className="mb-6">
-                <h3 className="text-xl font-black uppercase tracking-tighter group-hover:text-rose-400 transition-colors leading-tight truncate">
+                <h3
+                  onClick={() => handleEdit(dr)}
+                  className="text-xl font-black uppercase tracking-tighter group-hover:text-rose-400 transition-colors leading-tight truncate cursor-pointer"
+                  title="Tap to edit provider"
+                >
                   {dr.title}
                 </h3>
                 <div className="flex items-center gap-2 mt-1">

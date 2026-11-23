@@ -183,32 +183,31 @@ export async function saveHealthProfile(
   setCachedItem("profile", merged)
 
   if (userId && navigator.onLine) {
-    try {
-      const { data, error } = await supabase
-        .from("health_profile")
-        .upsert(
-          {
-            user_id: userId,
-            allergies: merged.allergies,
-            conditions: merged.conditions,
-            insurance_provider: merged.insurance_provider,
-            insurance_id: merged.insurance_id,
-            emergency_contact_name: merged.emergency_contact_name,
-            emergency_contact_phone: merged.emergency_contact_phone,
-            emergency_contact_relation: merged.emergency_contact_relation,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id" }
-        )
-        .select()
-        .maybeSingle()
+    const { data, error } = await supabase
+      .from("health_profile")
+      .upsert(
+        {
+          user_id: userId,
+          allergies: merged.allergies,
+          conditions: merged.conditions,
+          insurance_provider: merged.insurance_provider,
+          insurance_id: merged.insurance_id,
+          emergency_contact_name: merged.emergency_contact_name,
+          emergency_contact_phone: merged.emergency_contact_phone,
+          emergency_contact_relation: merged.emergency_contact_relation,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      )
+      .select()
+      .maybeSingle()
 
-      if (!error && data) {
-        setCachedItem("profile", data)
-        return data
-      }
-    } catch (err) {
-      console.warn("Supabase saveHealthProfile error:", err)
+    if (error) {
+      throw new Error(error.message || "Failed to save health profile")
+    }
+    if (data) {
+      setCachedItem("profile", data)
+      return data
     }
   }
 
@@ -346,15 +345,20 @@ export async function saveQuestion(
   setCachedItem("questions", updated)
 
   if (userId && navigator.onLine) {
-    try {
-      const { data, error } = await supabase
-        .from("health_questions")
-        .upsert(completeQuestion)
-        .select()
-        .maybeSingle()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn("Supabase saveQuestion error:", err)
+    const { data, error } = await supabase
+      .from("health_questions")
+      .upsert(completeQuestion)
+      .select()
+      .maybeSingle()
+    if (error) {
+      throw new Error(error.message || "Failed to save question")
+    }
+    if (data) {
+      setCachedItem(
+        "questions",
+        updated.map((i) => (i.id === data.id ? data : i))
+      )
+      return data
     }
   }
 
@@ -422,15 +426,20 @@ export async function saveHealthNote(
   setCachedItem("notes", updated)
 
   if (userId && navigator.onLine) {
-    try {
-      const { data, error } = await supabase
-        .from("health_notes")
-        .upsert(completeNote)
-        .select()
-        .maybeSingle()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn("Supabase saveHealthNote error:", err)
+    const { data, error } = await supabase
+      .from("health_notes")
+      .upsert(completeNote)
+      .select()
+      .maybeSingle()
+    if (error) {
+      throw new Error(error.message || "Failed to save note")
+    }
+    if (data) {
+      setCachedItem(
+        "notes",
+        updated.map((i) => (i.id === data.id ? data : i))
+      )
+      return data
     }
   }
 
@@ -498,15 +507,20 @@ export async function saveHealthLetter(
   setCachedItem("letters", updated)
 
   if (userId && navigator.onLine) {
-    try {
-      const { data, error } = await supabase
-        .from("health_letters")
-        .upsert(completeLetter)
-        .select()
-        .maybeSingle()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn("Supabase saveHealthLetter error:", err)
+    const { data, error } = await supabase
+      .from("health_letters")
+      .upsert(completeLetter)
+      .select()
+      .maybeSingle()
+    if (error) {
+      throw new Error(error.message || "Failed to save letter")
+    }
+    if (data) {
+      setCachedItem(
+        "letters",
+        updated.map((i) => (i.id === data.id ? data : i))
+      )
+      return data
     }
   }
 
@@ -574,15 +588,20 @@ export async function saveHealthReferral(
   setCachedItem("referrals", updated)
 
   if (userId && navigator.onLine) {
-    try {
-      const { data, error } = await supabase
-        .from("health_referrals")
-        .upsert(completeReferral)
-        .select()
-        .maybeSingle()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn("Supabase saveHealthReferral error:", err)
+    const { data, error } = await supabase
+      .from("health_referrals")
+      .upsert(completeReferral)
+      .select()
+      .maybeSingle()
+    if (error) {
+      throw new Error(error.message || "Failed to save referral")
+    }
+    if (data) {
+      setCachedItem(
+        "referrals",
+        updated.map((i) => (i.id === data.id ? data : i))
+      )
+      return data
     }
   }
 
@@ -698,15 +717,20 @@ export async function saveVisitSummary(
   setCachedItem("visit_summaries", updated)
 
   if (userId && navigator.onLine) {
-    try {
-      const { data, error } = await supabase
-        .from("health_visit_summaries")
-        .upsert(completeSummary)
-        .select()
-        .maybeSingle()
-      if (!error && data) return data
-    } catch (err) {
-      console.warn("Supabase saveVisitSummary error:", err)
+    const { data, error } = await supabase
+      .from("health_visit_summaries")
+      .upsert(completeSummary)
+      .select()
+      .maybeSingle()
+    if (error) {
+      throw new Error(error.message || "Failed to save visit summary")
+    }
+    if (data) {
+      setCachedItem(
+        "visit_summaries",
+        updated.map((i) => (i.id === data.id ? data : i))
+      )
+      return data
     }
   }
 

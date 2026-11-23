@@ -20,6 +20,14 @@ import {
     extractDoctorsFromRecords,
     extractHealthSuggestions,
 } from "./health-ui/health-field-helpers"
+import {
+    getCachedHealthRecords,
+    loadSharedHealthRecords,
+    subscribeHealthStore,
+    upsertSharedHealthRecord,
+    removeSharedHealthRecord,
+    resolveDoctorInfo,
+} from "@/lib/health-store"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -287,28 +295,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         recognition.start()
     }
 
-    // Health Hub Isolation Query: Fetch full health records independently of Vault projection
-    const [isolatedHealthRecords, setIsolatedHealthRecords] = useState<any[] | null>(null)
+    // Shared cached Health Hub store (single fetch reused across all tabs, zero refetch after save)
+    const [isolatedHealthRecords, setIsolatedHealthRecords] = useState<any[] | null>(() => getCachedHealthRecords())
+    const [editingRecord, setEditingRecord] = useState<any>(null)
 
     useEffect(() => {
-        let isMounted = true
-        async function fetchIsolatedHealth() {
-            try {
-                const { data, error } = await supabase
-                    .from("vault_items")
-                    .select("*")
-                    .or('category.in.("Health Records","Medications","Vitals","Health Insurance","Doctors","My Doctors","Medical"),type.in.(health-record,medication,vital,doctor,doctor-record,health-insurance,health-checkin)')
-                    .order("created_at", { ascending: false })
-
-                if (!error && data && isMounted) {
-                    setIsolatedHealthRecords(data)
-                }
-            } catch (e) {
-                console.error("Health isolation fetch error:", e)
-            }
-        }
-        fetchIsolatedHealth()
-        return () => { isMounted = false }
+        const unsub = subscribeHealthStore((data) => setIsolatedHealthRecords(data))
+        loadSharedHealthRecords()
+        return unsub
     }, [])
 
     // Consolidated records for use in ALL tabs
@@ -476,6 +470,39 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
 
 
+    // Shared edit openers so Overview, Visits, Medical History, and Timeline all open the same form
+    const openEditAppointment = (apt: any) => {
+        setEditingVital(apt)
+        setApptFormData({
+            title: apt.title || "",
+            notes: apt.item_metadata?.notes || "",
+            doctor: resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors).name,
+            doctor_id: apt.item_metadata?.doctor_id || null,
+            location: apt.item_metadata?.location || "",
+            specialty: apt.item_metadata?.specialty || "",
+            date: formatForDateTimeInput(apt.item_metadata?.date)
+        })
+        setAddModalType('appointment')
+        setShowAddModal(true)
+    }
+
+    const openEditRecord = (item: any) => {
+        if (item.item_metadata?.type === "Appointment" || item.type === "appointment" || item.category === "Appointments") {
+            openEditAppointment(item)
+            return
+        }
+        setEditingRecord(item)
+        setManualRecordForm({
+            title: item.title || "",
+            doctor: resolveDoctorInfo(item.item_metadata?.doctor_id, { name: item.item_metadata?.doctor }, savedDoctors).name,
+            doctor_id: item.item_metadata?.doctor_id || null,
+            date: formatForDateTimeInput(item.item_metadata?.date || item.created_at),
+            notes: item.item_metadata?.notes || ""
+        })
+        setAddModalType('record')
+        setShowAddModal(true)
+    }
+
     // --- VIEWS ---
     const renderDashboard = () => (
         <div className="space-y-6 animate-in fade-in duration-300">
@@ -519,20 +546,37 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 <p className="text-gray-500 text-sm">No upcoming appointments scheduled.</p>
                             </div>
                         ) : (
-                            upcomingAppts.map(apt => (
-                                <div key={apt.id} className={`flex items-start gap-4 p-4 rounded-xl border ${theme === 'light' ? 'bg-gray-50 border-gray-100' : 'bg-white/5 border-white/5'} hover:border-blue-500/30 transition-all cursor-pointer`} onClick={() => setSelectedDate(new Date(apt.item_metadata.date))}>
-                                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
+                            upcomingAppts.map(apt => {
+                                const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+                                return (
+                                <div key={apt.id} className={`flex items-start gap-4 p-4 rounded-xl border ${theme === 'light' ? 'bg-gray-50 border-gray-100' : 'bg-white/5 border-white/5'} hover:border-blue-500/30 transition-all`}>
+                                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl cursor-pointer" onClick={() => openEditAppointment(apt)}>
                                         <CalendarIcon className="h-6 w-6" />
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h4 className="font-bold text-sm truncate">{apt.title}</h4>
+                                        <h4
+                                            onClick={() => openEditAppointment(apt)}
+                                            className="font-bold text-sm truncate cursor-pointer hover:text-blue-400 transition-colors"
+                                            title="Tap to edit appointment"
+                                        >
+                                            {apt.title}
+                                        </h4>
                                         <p className="text-xs text-blue-400 font-medium mb-1">{safeFormat(apt.item_metadata.date, 'MMM d, h:mm a')}</p>
                                         <div className="flex items-center gap-1 text-[10px] text-gray-500 uppercase font-black">
-                                            <User className="h-3 w-3" /> {apt.item_metadata.doctor || "Medical Provider"}
+                                            <User className="h-3 w-3" /> {docInfo.name || "Medical Provider"}
                                         </div>
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditAppointment(apt)}
+                                        className="p-2 rounded-lg hover:bg-blue-500/10 text-gray-400 hover:text-blue-400 shrink-0"
+                                        title="Edit appointment"
+                                    >
+                                        <Edit className="h-4 w-4" />
+                                    </button>
                                 </div>
-                            ))
+                                )
+                            })
                         )}
                     </div>
                 </div>
@@ -589,7 +633,18 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 <div className="flex flex-wrap gap-2 w-full md:w-auto">
 
                     <button
-                        onClick={() => { setAddModalType('record'); setShowAddModal(true) }}
+                        onClick={() => {
+                            setEditingRecord(null)
+                            setManualRecordForm({
+                                title: "",
+                                doctor: "",
+                                doctor_id: null,
+                                date: formatForDateTimeInput(new Date()),
+                                notes: ""
+                            })
+                            setAddModalType('record')
+                            setShowAddModal(true)
+                        }}
                         className="flex-1 md:flex-none bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-lg transition-all font-bold text-xs flex items-center justify-center gap-2"
                     >
                         <Plus className="h-4 w-4" /> Add Record
@@ -611,26 +666,42 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <p className="text-gray-500 italic">No medical records uploaded yet.</p>
                     </div>
                 ) : (
-                    healthRecords.map(item => (
+                    healthRecords.map(item => {
+                        const docInfo = resolveDoctorInfo(item.item_metadata?.doctor_id, { name: item.item_metadata?.doctor }, savedDoctors)
+                        return (
                         <details key={item.id} className={`group rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20 shadow-lg'} transition-all overflow-hidden`}>
                             <summary className="p-5 flex items-center gap-4 cursor-pointer list-none">
                                 <div className={`p-3 rounded-xl ${item.item_metadata?.url ? 'bg-orange-500/10 text-orange-500' : 'bg-blue-500/10 text-blue-500'}`}>
                                     {item.item_metadata?.url ? <Image className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-bold break-words group-hover:text-blue-400 transition-colors uppercase tracking-tight">{item.title}</h3>
+                                    <h3
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditRecord(item) }}
+                                        className="text-lg font-bold break-words group-hover:text-blue-400 transition-colors uppercase tracking-tight cursor-pointer"
+                                        title="Tap to edit record"
+                                    >
+                                        {item.title}
+                                    </h3>
                                     <div className="flex items-center gap-3 text-xs text-gray-500 font-bold uppercase tracking-wider">
                                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {safeFormat(item.item_metadata?.date || item.created_at, 'PPP p')}</span>
-                                        {item.item_metadata?.doctor && <span className="flex items-center gap-1 border-l border-white/10 pl-3"><User className="h-3 w-3" /> {item.item_metadata.doctor}</span>}
+                                        {docInfo.name && <span className="flex items-center gap-1 border-l border-white/10 pl-3"><User className="h-3 w-3" /> {docInfo.name}</span>}
                                     </div>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openEditRecord(item) }}
+                                    className="p-2 rounded-xl bg-white/5 hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 transition-colors shrink-0"
+                                    title="Edit record"
+                                >
+                                    <Edit className="h-4 w-4" />
+                                </button>
                                 <ChevronDown className="h-5 w-5 text-gray-500 transition-transform duration-300 group-open:rotate-180" />
                             </summary>
 
                             <div className="p-6 border-t border-white/5 bg-white/[0.02] space-y-6">
                                 {item.item_metadata?.url && (
                                     <div className="max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative group/img cursor-zoom-in" onClick={() => openLightbox(item)}>
-                                        <img src={item.item_metadata.url} alt={item.title} className="w-full h-auto object-contain bg-black" />
+                                        <img src={item.item_metadata.url} alt={item.title} loading="lazy" className="w-full h-auto object-contain bg-black" />
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
                                             <span className="bg-white/10 backdrop-blur-md px-4 py-2 rounded-full font-bold text-sm">Click to Expand</span>
                                         </div>
@@ -661,7 +732,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             </div>
                                         </div>
                                         <div className="flex gap-3 justify-end pt-4">
-                                            <button onClick={() => { if (confirm("Delete this record permanently?")) deleteItem(item.id) }} className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest">
+                                            <button type="button" onClick={() => openEditRecord(item)} className="px-4 py-2 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest">
+                                                Edit Record
+                                            </button>
+                                            <button type="button" onClick={async () => { if (confirm("Delete this record permanently?")) { await deleteItem(item.id); removeSharedHealthRecord(item.id); toast.success("Record deleted") } }} className="px-4 py-2 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all text-xs font-black uppercase tracking-widest">
                                                 Delete Record
                                             </button>
                                         </div>
@@ -669,7 +743,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 </div>
                             </div>
                         </details>
-                    ))
+                        )
+                    })
                 )}
             </div>
         </div>
@@ -746,7 +821,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                         setAddModalType('vital')
                                                         setShowAddModal(true)
                                                     }}
-                                                    className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all"
+                                                    title="Edit vital"
                                                 >
                                                     <Edit className="h-3 w-3" />
                                                 </button>
@@ -757,7 +833,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                         setAddModalType('vital')
                                                         setShowAddModal(true)
                                                     }}
-                                                    className="p-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 opacity-0 group-hover:opacity-100 transition-all"
+                                                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all"
+                                                    title="Log vital"
                                                 >
                                                     <Plus className="h-3 w-3" />
                                                 </button>
@@ -851,7 +928,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 <Activity className="h-4 w-4" />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-sm">{vital.title}</div>
+                                                <div
+                                                    onClick={() => {
+                                                        setEditingVital(vital)
+                                                        setAddModalType('vital')
+                                                        setShowAddModal(true)
+                                                    }}
+                                                    className="font-bold text-sm cursor-pointer hover:text-blue-400 transition-colors"
+                                                    title="Tap to edit vital"
+                                                >
+                                                    {vital.title}
+                                                </div>
                                                 <div className="text-xs text-gray-400 flex items-center gap-2">
                                                     <span>{safeFormat(vital.item_metadata.date, 'PP')}</span>
                                                     {vital.item_metadata.context && <span className="opacity-50 border-l border-gray-500/50 pl-2">{vital.item_metadata.context}</span>}
@@ -862,7 +949,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             <div className="text-right">
                                                 <div className="font-mono font-black text-blue-400">{vital.item_metadata.value} <span className="text-[10px] text-gray-500 font-normal uppercase">{vital.item_metadata.unit}</span></div>
                                             </div>
-                                            <div className="flex gap-2 p-1 bg-black/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-2 p-1 bg-black/20 rounded-lg">
                                                 <button
                                                     onClick={() => {
                                                         setEditingVital(vital)
@@ -1041,7 +1128,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <p className="text-gray-500 italic">No upcoming appointments scheduled.</p>
                     </div>
                 ) : (
-                    upcomingAppts.map(apt => (
+                    upcomingAppts.map(apt => {
+                        const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+                        return (
                         <div key={apt.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20 shadow-lg'} transition-all group relative overflow-hidden`}>
                             <div className="absolute top-0 right-0 p-4 opacity-50">
                                 <CalendarIcon className="h-24 w-24 text-blue-500/10 -mr-6 -mt-6 transform rotate-12" />
@@ -1054,32 +1143,38 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </div>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => {
-                                                setEditingVital(apt)
-                                                setApptFormData({
-                                                    title: apt.title || "",
-                                                    notes: apt.item_metadata?.notes || "",
-                                                    doctor: apt.item_metadata?.doctor || "",
-                                                    doctor_id: apt.item_metadata?.doctor_id || null,
-                                                    location: apt.item_metadata?.location || "",
-                                                    specialty: apt.item_metadata?.specialty || "",
-                                                    date: formatForDateTimeInput(apt.item_metadata?.date)
-                                                })
-                                                setAddModalType('appointment')
-                                                setShowAddModal(true)
-                                            }}
+                                            type="button"
+                                            onClick={() => openEditAppointment(apt)}
                                             className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-full transition-colors"
+                                            title="Edit appointment"
                                         >
                                             <Edit className="h-4 w-4" />
                                         </button>
-                                        <button onClick={() => { if (confirm("Cancel this appointment?")) deleteItem(apt.id) }} className="p-2 hover:bg-red-500/10 text-red-500 rounded-full transition-colors">
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                if (confirm("Cancel this appointment?")) {
+                                                    await deleteItem(apt.id)
+                                                    removeSharedHealthRecord(apt.id)
+                                                    toast.success("Appointment removed")
+                                                }
+                                            }}
+                                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-full transition-colors"
+                                            title="Delete appointment"
+                                        >
                                             <X className="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h3 className="text-lg font-bold mb-1 line-clamp-1">{apt.title}</h3>
+                                    <h3
+                                        onClick={() => openEditAppointment(apt)}
+                                        className="text-lg font-bold mb-1 line-clamp-1 cursor-pointer hover:text-blue-400 transition-colors"
+                                        title="Tap to edit appointment"
+                                    >
+                                        {apt.title}
+                                    </h3>
                                     <p className="text-sm text-blue-400 font-bold uppercase tracking-wider">{safeFormat(apt.item_metadata.date, 'MMMM d, yyyy')}</p>
                                     <p className="text-xs text-gray-500 font-mono mt-1">{safeFormat(apt.item_metadata.date, 'h:mm a')}</p>
                                 </div>
@@ -1087,7 +1182,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 <div className="pt-4 border-t border-white/5 space-y-2">
                                     <div className="flex items-center gap-2 text-xs text-gray-400">
                                         <User className="h-3 w-3" />
-                                        <span>{apt.item_metadata.doctor || "No provider specified"}</span>
+                                        <span>{docInfo.name || "No provider specified"}</span>
                                     </div>
                                     {apt.item_metadata.notes && (
                                         <div className="text-xs text-gray-500 italic line-clamp-2">
@@ -1097,7 +1192,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 </div>
                             </div>
                         </div>
-                    ))
+                        )
+                    })
                 )}
             </div>
         </div>
@@ -1106,8 +1202,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const renderCheckin = () => {
         return (
             <CheckinTab 
-                records={records} 
-                addItem={addItem} 
+                records={effectiveRecords} 
+                addItem={addItem}
+                updateItem={updateItem}
                 theme={theme} 
                 setActiveTab={setActiveTab} 
             />
@@ -1382,13 +1479,23 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         }
                                     }
 
-                                    if (editingVital && !editingVital._isDummy) {
-                                        await updateItem(editingVital.id, payload)
-                                    } else {
-                                        await addItem(payload)
+                                    try {
+                                        if (editingVital && !editingVital._isDummy) {
+                                            const res = await updateItem(editingVital.id, payload)
+                                            if (res === false) throw new Error("Failed to update vital")
+                                            upsertSharedHealthRecord({ ...editingVital, ...payload })
+                                            toast.success("Vital updated")
+                                        } else {
+                                            const created = await addItem(payload)
+                                            if (!created) throw new Error("Failed to save vital")
+                                            upsertSharedHealthRecord(created)
+                                            toast.success("Vital logged")
+                                        }
+                                        setShowAddModal(false)
+                                        setEditingVital(null)
+                                    } catch (err: any) {
+                                        toast.error(err?.message || "Failed to save vital")
                                     }
-                                    setShowAddModal(false)
-                                    setEditingVital(null)
                                 }} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="space-y-2">
@@ -1485,16 +1592,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                                     try {
                                         if (editingVital && !editingVital._isDummy) {
-                                            await updateItem(editingVital.id, payload)
-                                            setIsolatedHealthRecords((prev) =>
-                                                prev ? prev.map((item) => (item.id === editingVital.id ? { ...item, ...payload } : item)) : null
-                                            )
+                                            const res = await updateItem(editingVital.id, payload)
+                                            if (res === false) throw new Error("Failed to update appointment")
+                                            upsertSharedHealthRecord({ ...editingVital, ...payload })
                                             toast.success("Appointment updated successfully")
                                         } else {
                                             const created = await addItem(payload)
-                                            if (created) {
-                                                setIsolatedHealthRecords((prev) => (prev ? [created, ...prev] : [created]))
-                                            }
+                                            if (!created) throw new Error("Failed to schedule appointment")
+                                            upsertSharedHealthRecord(created)
                                             toast.success("Appointment scheduled successfully")
 
                                             // If user opted to add to Google Calendar and connected
@@ -1522,14 +1627,6 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 }
                                             }
                                         }
-
-                                        // Background refresh
-                                        const { data: refreshed } = await supabase
-                                            .from("vault_items")
-                                            .select("*")
-                                            .or('category.in.("Health Records","Medications","Vitals","Health Insurance","Doctors","My Doctors","Medical"),type.in.(health-record,medication,vital,doctor,doctor-record,health-insurance,health-checkin)')
-                                            .order("created_at", { ascending: false })
-                                        if (refreshed) setIsolatedHealthRecords(refreshed)
 
                                         setShowAddModal(false)
                                         setEditingVital(null)
@@ -1670,27 +1767,44 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         toast.error("Record title is required")
                                         return
                                     }
-                                    await addItem({
+                                    const payload = {
                                         type: "note",
                                         title: manualRecordForm.title.trim(),
                                         category: "Health Records",
                                         item_metadata: {
+                                            ...(editingRecord?.item_metadata || {}),
                                             is_health_record: true,
                                             date: manualRecordForm.date || formatForDateTimeInput(new Date()),
                                             doctor: manualRecordForm.doctor || "",
                                             doctor_id: manualRecordForm.doctor_id || null,
                                             notes: manualRecordForm.notes || "",
-                                            type: "Manual Entry"
+                                            type: editingRecord?.item_metadata?.type || "Manual Entry"
                                         }
-                                    })
-                                    setManualRecordForm({
-                                        title: "",
-                                        doctor: "",
-                                        doctor_id: null,
-                                        date: formatForDateTimeInput(new Date()),
-                                        notes: ""
-                                    })
-                                    setShowAddModal(false)
+                                    }
+                                    try {
+                                        if (editingRecord) {
+                                            const res = await updateItem(editingRecord.id, payload)
+                                            if (res === false) throw new Error("Failed to update medical record")
+                                            upsertSharedHealthRecord({ ...editingRecord, ...payload })
+                                            toast.success("Medical record updated")
+                                        } else {
+                                            const created = await addItem(payload)
+                                            if (!created) throw new Error("Failed to save medical record")
+                                            upsertSharedHealthRecord(created)
+                                            toast.success("Medical record saved")
+                                        }
+                                        setManualRecordForm({
+                                            title: "",
+                                            doctor: "",
+                                            doctor_id: null,
+                                            date: formatForDateTimeInput(new Date()),
+                                            notes: ""
+                                        })
+                                        setEditingRecord(null)
+                                        setShowAddModal(false)
+                                    } catch (err: any) {
+                                        toast.error(err?.message || "Failed to save medical record")
+                                    }
                                 }} className="space-y-6">
                                     <FieldSuggestionInput
                                         name="title"
@@ -1744,7 +1858,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </div>
 
                                     <button className="w-full py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black italic uppercase tracking-tighter hover:from-blue-500 hover:to-indigo-500 transition-all shadow-2xl shadow-blue-500/20 active:scale-95">
-                                        Securely Store Record
+                                        {editingRecord ? 'Update Record' : 'Securely Store Record'}
                                     </button>
                                 </form>
                             )}
@@ -1769,37 +1883,57 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 }
 
 // Separate component for CheckinTab to avoid Hook order issues
-function CheckinTab({ records, addItem, theme, setActiveTab }: { records: any[], addItem: (item: any) => Promise<any>, theme: string, setActiveTab: (tab: any) => void }) {
+function CheckinTab({ records, addItem, updateItem, theme, setActiveTab }: { records: any[], addItem: (item: any) => Promise<any>, updateItem: (id: string, updates: any) => Promise<any>, theme: string, setActiveTab: (tab: any) => void }) {
     const [mood, setMood] = useState('😊')
     const [energy, setEnergy] = useState(5)
     const [capacity, setCapacity] = useState('Medium')
     const [notes, setNotes] = useState('')
-
-    // Date formatting helper for internal use (already defined in parent but redeclared or accessed if prop)
-    // Actually we'll just use safeFormat from the parent context if we pass it, or just use what we have.
-    // Note: safeFormat is defined INSIDE HealthDashboard. We should either move it outside or pass it as a prop.
-    // I'll move safeFormat OUTSIDE of HealthDashboard to make it accessible to both.
+    const [editingCheckin, setEditingCheckin] = useState<any>(null)
 
     const checkinHistory = records.filter(r => r.type === "health-checkin")
         .sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
 
+    const openEditCheckin = (log: any) => {
+        setEditingCheckin(log)
+        setMood(log.item_metadata?.mood || '😊')
+        setEnergy(log.item_metadata?.energy ?? 5)
+        setCapacity(log.item_metadata?.capacity || 'Medium')
+        setNotes(log.item_metadata?.notes || '')
+    }
+
     const handleSubmitCheckin = async (e: any) => {
         e.preventDefault()
-        await addItem({
-            type: "health-checkin",
-            title: `Daily Check-in: ${mood}`,
-            category: "Health Diary",
-            item_metadata: {
-                date: new Date().toISOString(),
-                mood,
-                energy,
-                capacity,
-                notes,
-                is_diary: true
+        try {
+            const payload = {
+                type: "health-checkin",
+                title: `Daily Check-in: ${mood}`,
+                category: "Health Diary",
+                item_metadata: {
+                    ...(editingCheckin?.item_metadata || {}),
+                    date: editingCheckin?.item_metadata?.date || new Date().toISOString(),
+                    mood,
+                    energy,
+                    capacity,
+                    notes,
+                    is_diary: true
+                }
             }
-        })
-        toast.success("Check-in logged!")
-        setActiveTab('dashboard')
+            if (editingCheckin) {
+                const res = await updateItem(editingCheckin.id, payload)
+                if (res === false) throw new Error("Failed to update check-in")
+                upsertSharedHealthRecord({ ...editingCheckin, ...payload })
+                toast.success("Check-in updated!")
+                setEditingCheckin(null)
+            } else {
+                const created = await addItem(payload)
+                if (!created) throw new Error("Failed to save check-in")
+                upsertSharedHealthRecord(created)
+                toast.success("Check-in logged!")
+                setActiveTab('dashboard')
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to save check-in")
+        }
     }
 
     const chartData = checkinHistory.slice(-14).map(c => ({
@@ -1881,9 +2015,20 @@ function CheckinTab({ records, addItem, theme, setActiveTab }: { records: any[],
                             />
                         </div>
 
-                        <button className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-500/20 active:scale-95 transition-all">
-                            Log Daily Pulse
-                        </button>
+                        <div className="flex gap-3">
+                            {editingCheckin && (
+                                <button
+                                    type="button"
+                                    onClick={() => { setEditingCheckin(null); setMood('😊'); setEnergy(5); setCapacity('Medium'); setNotes('') }}
+                                    className="px-6 py-5 bg-white/10 hover:bg-white/15 text-gray-300 rounded-[2rem] font-black uppercase text-xs"
+                                >
+                                    Cancel
+                                </button>
+                            )}
+                            <button className="flex-1 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black uppercase italic tracking-tighter shadow-2xl shadow-blue-500/20 active:scale-95 transition-all">
+                                {editingCheckin ? "Update Check-in" : "Log Daily Pulse"}
+                            </button>
+                        </div>
                     </form>
                 </div>
 
@@ -1918,13 +2063,27 @@ function CheckinTab({ records, addItem, theme, setActiveTab }: { records: any[],
                             {checkinHistory.slice(-5).reverse().map((log: any) => (
                                 <div key={log.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 border border-white/10 transition-all hover:bg-white/10">
                                     <div className="text-2xl">{log.item_metadata.mood}</div>
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-center mb-1">
-                                            <span className="text-xs font-bold text-white">{safeFormat(log.item_metadata.date, 'MMM d, p')}</span>
+                                            <span
+                                                onClick={() => openEditCheckin(log)}
+                                                className="text-xs font-bold text-white cursor-pointer hover:text-blue-400 transition-colors"
+                                                title="Tap to edit check-in"
+                                            >
+                                                {safeFormat(log.item_metadata.date, 'MMM d, p')}
+                                            </span>
                                             <span className="text-[10px] font-black uppercase tracking-widest text-blue-400">Idx: {log.item_metadata.energy}/10</span>
                                         </div>
                                         <p className="text-[10px] text-gray-500 italic truncate w-48">{log.item_metadata.notes || 'No notes'}</p>
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => openEditCheckin(log)}
+                                        className="p-2 rounded-lg bg-white/5 hover:bg-blue-500/20 text-gray-400 hover:text-blue-400 shrink-0"
+                                        title="Edit check-in"
+                                    >
+                                        <Edit className="h-3.5 w-3.5" />
+                                    </button>
                                 </div>
                             ))}
                         </div>
