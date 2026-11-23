@@ -12,7 +12,7 @@ interface Props {
     theme: string
 }
 
-export default function Travel({ records, addItem, deleteItem, theme }: Props) {
+export default function Travel({ records, addItem, updateItem, deleteItem, theme }: Props) {
     const [items, setItems] = useState<any[]>([])
     const [filter, setFilter] = useState("all") // all, trips, docs
     const [showAddModal, setShowAddModal] = useState(false)
@@ -168,7 +168,7 @@ export default function Travel({ records, addItem, deleteItem, theme }: Props) {
                     <EditTravelModal
                         item={selectedItem}
                         onClose={() => { setShowEditModal(false); setSelectedItem(null) }}
-                        onSave={async (id, updates) => { await props.updateItem(id, updates); }}
+                        onSave={async (id, updates) => { await updateItem(id, updates); }}
                         theme={theme}
                     />
                 )}

@@ -183,7 +183,7 @@ const AdvancedWorkoutMetricsChart = ({ isOpen, onClose, workout, getExerciseById
                                                             <div className="space-y-1">
                                                                 <div className="flex justify-between gap-4">
                                                                     <span className="text-[10px] text-gray-400">VOLUME</span>
-                                                                    <span className="text-[10px] font-black text-blue-400">{payload[0].value.toLocaleString()} lbs</span>
+                                                                    <span className="text-[10px] font-black text-blue-400">{(payload[0].value ?? 0).toLocaleString()} lbs</span>
                                                                 </div>
                                                                 {payload[1] && (
                                                                     <div className="flex justify-between gap-4">

@@ -553,7 +553,7 @@ function HomeContent() {
         )
       // New Record Types Routing
       case "type-health-records":
-        return <HealthRecords key="type-health-records" {...commonProps} initialTab="dashboard" />
+        return <HealthRecords key="type-health-records" {...commonProps} initialTab={(searchParams.get("tab") as any) || "dashboard"} />
       case "type-vitals":
         return <HealthRecords key="type-vitals" {...commonProps} initialTab="vitals" />
       case "type-medications":

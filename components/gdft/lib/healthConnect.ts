@@ -134,7 +134,7 @@ class HealthConnectService {
         ascending: false
       });
 
-      return result.workouts.map(w => ({
+      return result.workouts.map((w: any) => ({
         sourceId: w.sourceId || 'health_connect',
         sourceName: w.sourceName || 'Health Connect',
         duration: w.duration / 60,

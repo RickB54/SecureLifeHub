@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Exercise } from "@/components/gdft/lib/data";
 
 // Initialize the API
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY;
 
 export interface AIWorkoutPlan {
   planName: string;

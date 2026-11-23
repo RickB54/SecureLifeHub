@@ -163,6 +163,12 @@ export function getTodayDateString(): string {
   return `${y}-${m}-${d}`
 }
 
+export type GivenMethod = "visit" | "portal"
+
+export function parseGivenMethod(value?: string | null): GivenMethod | null {
+  return value === "visit" || value === "portal" ? value : null
+}
+
 export interface HealthNote {
   id: string
   user_id?: string
@@ -174,7 +180,7 @@ export interface HealthNote {
   doctor_name?: string
   visit_id?: string | null
   given_to_doctor?: boolean
-  given_method?: "visit" | "portal" | string | null
+  given_method?: GivenMethod | null
   given_date?: string | null
   created_at?: string
   updated_at?: string
@@ -197,7 +203,7 @@ export interface HealthLetter {
   attachment_url?: string | null
   attachment_name?: string | null
   given_to_doctor?: boolean
-  given_method?: "visit" | "portal" | string | null
+  given_method?: GivenMethod | null
   given_date?: string | null
   created_at?: string
   updated_at?: string
@@ -221,7 +227,7 @@ export interface HealthReferral {
   phone: string
   notes: string
   given_to_doctor?: boolean
-  given_method?: "visit" | "portal" | string | null
+  given_method?: GivenMethod | null
   given_date?: string | null
   created_at?: string
   updated_at?: string
@@ -238,7 +244,7 @@ export interface HealthVisitSummary {
   doctor_name?: string
   visit_id?: string | null
   given_to_doctor?: boolean
-  given_method?: "visit" | "portal" | string | null
+  given_method?: GivenMethod | null
   given_date?: string | null
   created_at?: string
   updated_at?: string

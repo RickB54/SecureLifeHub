@@ -262,8 +262,8 @@ export default function MediaVault({ records = [], addItem, addFolder, deleteIte
                     items={displayItems}
                     currentIndex={lightboxIndex}
                     onClose={() => setLightboxIndex(null)}
-                    onNext={() => setLightboxIndex((prev: any) => (prev + 1) % filteredItems.length)}
-                    onPrev={() => setLightboxIndex((prev: any) => (prev - 1 + filteredItems.length) % filteredItems.length)}
+                    onNext={() => setLightboxIndex((prev: any) => (prev + 1) % displayItems.length)}
+                    onPrev={() => setLightboxIndex((prev: any) => (prev - 1 + displayItems.length) % displayItems.length)}
                     onSelect={(index: number) => setLightboxIndex(index)}
                     onDelete={handleDelete}
                 />

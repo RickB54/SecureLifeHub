@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useWorkout, PR } from '@/components/gdft/contexts/WorkoutContext';
+import { useWorkout, type PR } from '@/components/gdft/contexts/WorkoutContext';
 import { useExercise } from '@/components/gdft/contexts/ExerciseContext';
 import { useSettings } from '@/components/gdft/contexts/SettingsContext';
 import { formatNumber } from '@/components/gdft/lib/formatters';

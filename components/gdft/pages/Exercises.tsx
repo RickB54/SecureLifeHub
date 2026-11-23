@@ -298,7 +298,7 @@ const Exercises = () => {
                     element.style.padding = '20px';
                     
                     const opt = {
-                      margin: [10, 5, 10, 5],
+                      margin: [10, 5, 10, 5] as [number, number, number, number],
                       filename: 'GymDay_Exercise_Catalog.pdf',
                       image: { type: 'jpeg' as const, quality: 0.98 },
                       html2canvas: { scale: 2, useCORS: true, logging: false },

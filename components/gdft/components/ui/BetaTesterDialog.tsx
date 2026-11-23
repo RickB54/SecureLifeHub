@@ -61,7 +61,7 @@ export function BetaTesterDialog({ open, onOpenChange }: BetaTesterDialogProps) 
     // Finalize record (Upsert logic: Update if email exists, otherwise Add)
     // Perform save BEFORE launching mail to ensure history is captured
     const existingRoster = JSON.parse(localStorage.getItem('gymday_beta_roster') || '[]');
-    const existingIndex = existingRoster.findIndex(tester => tester.email.toLowerCase() === email.toLowerCase());
+    const existingIndex = existingRoster.findIndex((tester: any) => tester.email.toLowerCase() === email.toLowerCase());
     const testerId = existingIndex >= 0 ? existingRoster[existingIndex].id : `BTA-${Math.floor(1000 + Math.random() * 9000)}`;
     
     const updatedRecord = {

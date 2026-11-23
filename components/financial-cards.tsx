@@ -53,9 +53,9 @@ interface FinancialCard {
 
 interface FinancialCardsProps {
   records: any[]
-  addItem: (item: any) => Promise<void>
-  updateItem: (id: string, item: any) => Promise<void>
-  deleteItem: (id: string) => Promise<void>
+  addItem: (item: any) => Promise<any>
+  updateItem: (id: string, item: any) => Promise<any>
+  deleteItem: (id: string) => Promise<any>
 }
 
 export default function FinancialCards({ records, addItem, updateItem, deleteItem }: FinancialCardsProps) {

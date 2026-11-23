@@ -394,7 +394,7 @@ class JournalSyncService {
 
     try {
       const res = await Promise.race([reconcilePromise, timeoutPromise])
-      if ("timedOut" in res && res.timedOut) {
+      if (res && typeof res === "object" && "timedOut" in res && res.timedOut) {
         console.warn("Journal sync reconcile timed out (8s) - proceeding with local data.")
         this.setState("offline", "Local storage mode")
         return

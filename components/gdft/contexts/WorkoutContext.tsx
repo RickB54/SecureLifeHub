@@ -30,6 +30,7 @@ import {
   PlanDay, 
   CustomPlan 
 } from "@/components/gdft/lib/workoutTypes";
+export type { PR };
 
 interface WorkoutProviderProps {
   children: ReactNode;

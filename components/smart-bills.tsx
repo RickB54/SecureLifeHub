@@ -7,8 +7,8 @@ import { toast } from "sonner"
 interface BillsProps {
     records: any[]
     addItem: (item: any) => Promise<any>
-    updateItem: (id: string, updates: any) => Promise<void>
-    deleteItem: (id: string) => Promise<void>
+    updateItem: (id: string, updates: any) => Promise<any>
+    deleteItem: (id: string) => Promise<any>
     theme: string
 }
 

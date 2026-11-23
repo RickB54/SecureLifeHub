@@ -170,7 +170,7 @@ const GenerateWorkoutPlan = () => {
       return;
     }
 
-    if (!import.meta.env.VITE_GEMINI_API_KEY) {
+    if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY && !(import.meta as any).env?.VITE_GEMINI_API_KEY) {
       toast.error("Gemini API Key is missing! Please configure it in .env");
       return;
     }

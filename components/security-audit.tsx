@@ -3,19 +3,19 @@
 import { useState, useEffect } from "react"
 import { RefreshCw, Filter, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react"
 
-export default function SecurityAudit({ records, securityAuditData, setSecurityAuditData }) {
+export default function SecurityAudit({ records, securityAuditData, setSecurityAuditData }: { records: any[]; securityAuditData: any; setSecurityAuditData: (data: any) => void }) {
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [isAuditRunning, setIsAuditRunning] = useState(false)
 
   // Get all passwords
-  const passwords = records.filter((record) => record.type === "password")
+  const passwords = records.filter((record: any) => record.type === "password")
 
   // Current date for age calculations
   const currentDate = new Date("2025-03-18")
 
   // Function to check if a password is weak
-  const isWeakPassword = (password) => {
+  const isWeakPassword = (password: string) => {
     // Check if password is less than 8 characters
     if (!password || password.length < 8) return true
 
@@ -27,7 +27,7 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
   }
 
   // Function to check if a password is medium strength
-  const isMediumPassword = (password) => {
+  const isMediumPassword = (password: string) => {
     // Not weak but could be stronger
     if (isWeakPassword(password)) return false
 
@@ -41,7 +41,7 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
   }
 
   // Function to check if a password is old (older than 6 months)
-  const isOldPassword = (lastUpdated) => {
+  const isOldPassword = (lastUpdated: any) => {
     if (!lastUpdated) return true
 
     // Parse the lastUpdated date
@@ -55,7 +55,7 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
   }
 
   // Function to get time ago string
-  const getTimeAgo = (lastUpdated) => {
+  const getTimeAgo = (lastUpdated: any) => {
     if (!lastUpdated) return "unknown"
 
     const updateDate = new Date(lastUpdated)
@@ -89,10 +89,10 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
     let oldCount = 0
 
     // Track password usage to detect reuse
-    const passwordUsage = {}
+    const passwordUsage: Record<string, any[]> = {}
 
     // Analyze each password
-    const passwordsData = passwords.map((password) => {
+    const passwordsData = passwords.map((password: any) => {
       // Check strength
       let strength = "strong"
       if (isWeakPassword(password.password)) {
@@ -133,7 +133,7 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
         reusedCount += passwordUsage[pwd].length
 
         // Update the reused status in passwordsData
-        passwordsData.forEach((data) => {
+        passwordsData.forEach((data: any) => {
           if (passwordUsage[pwd].includes(data.name)) {
             data.reused = "Yes"
             // Additional penalty for reused passwords
@@ -163,8 +163,8 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
 
   // Run analysis when records change (using a stable hash to avoid infinite loops)
   const recordsHash = records
-    .filter(r => r.type === 'password')
-    .map(r => `${r.id}-${r.updatedAt}`)
+    .filter((r: any) => r.type === 'password')
+    .map((r: any) => `${r.id}-${r.updatedAt}`)
     .sort()
     .join('|')
 
@@ -187,25 +187,25 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
     if (!searchQuery.trim()) return securityAuditData.passwordsData
 
     const query = searchQuery.toLowerCase()
-    return securityAuditData.passwordsData.filter((password) => password.name.toLowerCase().includes(query))
+    return securityAuditData.passwordsData.filter((password: any) => password.name.toLowerCase().includes(query))
   }
 
   // Get security score color
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: number) => {
     if (score < 40) return "text-red-500"
     if (score < 70) return "text-yellow-500"
     return "text-green-500"
   }
 
   // Get security score label
-  const getScoreLabel = (score) => {
+  const getScoreLabel = (score: number) => {
     if (score < 40) return "Weak"
     if (score < 70) return "Fair"
     return "Strong"
   }
 
   // Get strength icon
-  const getStrengthIcon = (strength) => {
+  const getStrengthIcon = (strength: string) => {
     if (strength === "weak") return <AlertTriangle className="h-5 w-5 text-red-500" />
     if (strength === "medium") return <AlertCircle className="h-5 w-5 text-yellow-500" />
     return <CheckCircle className="h-5 w-5 text-green-500" />
@@ -373,7 +373,7 @@ export default function SecurityAudit({ records, securityAuditData, setSecurityA
               </tr>
             </thead>
             <tbody>
-              {getFilteredPasswords().map((password, index) => (
+              {getFilteredPasswords().map((password: any, index: number) => (
                 <tr key={index} className="border-b border-gray-700">
                   <td className="py-3 px-4">{password.name}</td>
                   <td className="py-3 px-4">

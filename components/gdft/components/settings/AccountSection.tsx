@@ -15,7 +15,7 @@ import {
 import { Input } from '@/components/gdft/components/ui/input';
 
 export const AccountSection = () => {
-    const { user, authProvider, signInWithGoogle, signOut, loading, updatePassword } = useAuth();
+    const { user, authProvider, signInWithGoogle, signOut, loading, updatePassword } = useAuth() as any;
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');

@@ -2,7 +2,7 @@
 
 import { X, AlertTriangle } from "lucide-react"
 
-export default function DeleteConfirmationModal({ onClose, onConfirm, itemName }) {
+export default function DeleteConfirmationModal({ onClose, onConfirm, itemName }: { onClose: () => void; onConfirm: () => void; itemName?: string }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-[#2a2a2a] rounded-lg shadow-lg w-full max-w-md">

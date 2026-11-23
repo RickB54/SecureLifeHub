@@ -25,8 +25,8 @@ import { VaultItem } from "@/hooks/use-vault"
 interface PersonalInfoProps {
   records: (VaultItem | any)[]
   addItem: (item: any) => Promise<any>
-  updateItem: (id: string, updates: any) => Promise<void>
-  deleteItem: (id: string) => Promise<void>
+  updateItem: (id: string, updates: any) => Promise<any>
+  deleteItem: (id: string) => Promise<any>
   bulkAddItems?: (items: any[]) => Promise<any>
   theme: string
 }

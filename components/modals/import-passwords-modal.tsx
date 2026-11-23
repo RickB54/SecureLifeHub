@@ -3,13 +3,13 @@
 import { useState } from "react"
 import { X, Upload, AlertCircle } from "lucide-react"
 
-export default function ImportPasswordsModal({ onClose, onImport }) {
-  const [file, setFile] = useState(null)
+export default function ImportPasswordsModal({ onClose, onImport }: { onClose: () => void; onImport: (records: any[]) => void }) {
+  const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState("")
 
-  const handleFileChange = (e) => {
+  const handleFileChange = (e: any) => {
     const selectedFile = e.target.files[0]
     if (selectedFile && selectedFile.type !== "text/csv") {
       setError("Please select a CSV file")
@@ -19,7 +19,7 @@ export default function ImportPasswordsModal({ onClose, onImport }) {
     setError("")
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault()
 
     if (!file) {
@@ -93,26 +93,26 @@ export default function ImportPasswordsModal({ onClose, onImport }) {
   }
 
   // Helper to read file as text
-  const readFileAsText = (file) => {
+  const readFileAsText = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = (e) => resolve(e.target.result)
+      reader.onload = (e) => resolve((e.target?.result as string) || "")
       reader.onerror = (e) => reject(e)
       reader.readAsText(file)
     })
   }
 
   // Helper to parse CSV
-  const parseCSV = (text) => {
+  const parseCSV = (text: string) => {
     const lines = text.split("\n")
-    const headers = lines[0].split(",").map((h) => h.trim().toLowerCase())
+    const headers = lines[0].split(",").map((h: string) => h.trim().toLowerCase())
 
-    const data = []
+    const data: Record<string, string>[] = []
     for (let i = 1; i < lines.length; i++) {
       if (!lines[i].trim()) continue
 
       // Handle quoted values with commas
-      const values = []
+      const values: string[] = []
       let inQuote = false
       let currentValue = ""
 
@@ -132,8 +132,8 @@ export default function ImportPasswordsModal({ onClose, onImport }) {
       values.push(currentValue)
 
       // Create object from headers and values
-      const row = {}
-      headers.forEach((header, index) => {
+      const row: Record<string, string> = {}
+      headers.forEach((header: string, index: number) => {
         row[header] = values[index] ? values[index].replace(/^"|"$/g, "") : ""
       })
 

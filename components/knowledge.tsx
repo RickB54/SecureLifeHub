@@ -38,19 +38,20 @@ export default function Knowledge({ records, addItem, deleteItem, theme }: Props
 
     const renderMarkdown = (content: string) => {
         return (
-            <ReactMarkdown
-                className="prose prose-sm dark:prose-invert max-w-none"
-                components={{
-                    h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-2 text-yellow-500" {...props} />,
-                    h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-2 mt-4 text-yellow-400" {...props} />,
-                    p: ({ node, ...props }) => <p className="mb-2 opacity-80" {...props} />,
-                    ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 opacity-80" {...props} />,
-                    li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-                    code: ({ node, ...props }) => <code className="bg-black/20 px-1 py-0.5 rounded text-xs font-mono text-yellow-300" {...props} />
-                }}
-            >
-                {content}
-            </ReactMarkdown>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown
+                    components={{
+                        h1: ({ node, ...props }) => <h1 className="text-xl font-bold mb-2 text-yellow-500" {...props} />,
+                        h2: ({ node, ...props }) => <h2 className="text-lg font-bold mb-2 mt-4 text-yellow-400" {...props} />,
+                        p: ({ node, ...props }) => <p className="mb-2 opacity-80" {...props} />,
+                        ul: ({ node, ...props }) => <ul className="list-disc ml-4 mb-2 opacity-80" {...props} />,
+                        li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+                        code: ({ node, ...props }) => <code className="bg-black/20 px-1 py-0.5 rounded text-xs font-mono text-yellow-300" {...props} />
+                    }}
+                >
+                    {content}
+                </ReactMarkdown>
+            </div>
         )
     }
 

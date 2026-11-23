@@ -87,6 +87,7 @@ export interface Exercise {
   name: string;
   category: RelaxedExerciseCategory; // Changed from ExerciseCategory
   muscleGroups: RelaxedMuscleGroup[]; // Changed from MuscleGroup[]
+  targetMuscle?: string;
   equipment: RelaxedEquipment; // Changed from Equipment;
   settings: ExerciseSettings;
   notes?: string;
@@ -834,6 +835,9 @@ export const weightExercises: Exercise[] = [
     name: "Cybex Eagle Row",
     category: "Weights",
     targetMuscle: "Various",
+    muscleGroups: ["Back"],
+    equipment: "Machine",
+    settings: { sets: 3, reps: 10, weight: 50 } as WeightSettings,
     startPositionUrl: "/icons/weights/realistic/cybex-eagle-row-pos1.png",
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-row-pos2.png"
   },
@@ -842,6 +846,9 @@ export const weightExercises: Exercise[] = [
     name: "Cybex Eagle Overhand Press",
     category: "Weights",
     targetMuscle: "Various",
+    muscleGroups: ["Shoulders"],
+    equipment: "Machine",
+    settings: { sets: 3, reps: 10, weight: 40 } as WeightSettings,
     startPositionUrl: "/icons/weights/realistic/cybex-eagle-overhand-press-pos1.png",
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-overhand-press-pos2.png"
   },
@@ -850,6 +857,9 @@ export const weightExercises: Exercise[] = [
     name: "Cybex Eagle Chest Press",
     category: "Weights",
     targetMuscle: "Various",
+    muscleGroups: ["Chest"],
+    equipment: "Machine",
+    settings: { sets: 3, reps: 10, weight: 50 } as WeightSettings,
     startPositionUrl: "/icons/weights/realistic/cybex-eagle-chest-press-pos1.png",
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-chest-press-pos2.png"
   },
@@ -858,6 +868,9 @@ export const weightExercises: Exercise[] = [
     name: "Cybex Eagle Arm Curl",
     category: "Weights",
     targetMuscle: "Various",
+    muscleGroups: ["Biceps"],
+    equipment: "Machine",
+    settings: { sets: 3, reps: 10, weight: 30 } as WeightSettings,
     startPositionUrl: "/icons/weights/realistic/cybex-eagle-arm-curl-pos1.png",
     endPositionUrl: "/icons/weights/realistic/cybex-eagle-arm-curl-pos2.png"
   },

@@ -104,12 +104,13 @@ export class VoiceLogger {
     this.onAction = onAction;
     const SpeechRecognitionAPI = getSpeechRecognition();
     if (SpeechRecognitionAPI) {
-      this.recognition = new SpeechRecognitionAPI();
-      this.recognition.continuous = false; // Single phrase usually better for commands
-      this.recognition.interimResults = false;
-      this.recognition.lang = 'en-US';
+      const recognition = new SpeechRecognitionAPI();
+      this.recognition = recognition;
+      recognition.continuous = false; // Single phrase usually better for commands
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
 
-      this.recognition.onresult = (event: SpeechRecognitionEvent) => {
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript.toLowerCase()
           .replace(/[.,?!]/g, '') // Remove punctuation
           .trim();
@@ -121,7 +122,7 @@ export class VoiceLogger {
         this.onAction(action);
       };
 
-      this.recognition.onerror = (event: any) => {
+      recognition.onerror = (event: any) => {
         console.error('Speech Recognition Error:', event.error);
         if (event.error === 'not-allowed') {
           toast.error('Microphone access denied. Please check site permissions.');
@@ -131,11 +132,11 @@ export class VoiceLogger {
         this.isListening = false;
       };
 
-      this.recognition.onstart = () => {
+      recognition.onstart = () => {
         console.log('Speech recognition started');
       };
 
-      this.recognition.onend = () => {
+      recognition.onend = () => {
         this.isListening = false;
         console.log('Speech recognition ended');
       };

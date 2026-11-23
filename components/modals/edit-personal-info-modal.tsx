@@ -16,6 +16,8 @@ export default function EditPersonalInfoModal({ onClose, onSave, personalInfoDat
     title: "",
     name: "",
     details: "",
+    frontImage: "",
+    backImage: "",
   })
 
   // Initialize form with existing data
@@ -32,7 +34,7 @@ export default function EditPersonalInfoModal({ onClose, onSave, personalInfoDat
     }
   }, [personalInfoData])
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target
     setFormData({
       ...formData,
@@ -40,7 +42,7 @@ export default function EditPersonalInfoModal({ onClose, onSave, personalInfoDat
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault()
     try {
       onSave(formData)

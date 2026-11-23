@@ -62,6 +62,8 @@ import {
   VisitOption,
   MedicationSummary,
   DATE_TYPE_OPTIONS,
+  GivenMethod,
+  parseGivenMethod,
   formatDateOnly,
   getTodayDateString,
 } from "./doctor-visit-types"
@@ -632,10 +634,10 @@ export default function DoctorVisitHub({
     table: "health_notes" | "health_letters" | "health_referrals" | "health_visit_summaries",
     id: string,
     given_to_doctor: boolean,
-    given_method?: "visit" | "portal" | null,
+    given_method?: GivenMethod | null,
     given_date?: string | null
   ) => {
-    const method = given_to_doctor ? given_method || "visit" : null
+    const method: GivenMethod | null = given_to_doctor ? parseGivenMethod(given_method) || "visit" : null
     const gDate = given_to_doctor ? given_date || getTodayDateString() : null
 
     if (table === "health_notes") {
@@ -2720,7 +2722,7 @@ export default function DoctorVisitHub({
                                         "health_notes",
                                         n.id,
                                         true,
-                                        e.target.value as "visit" | "portal",
+                                        parseGivenMethod(e.target.value),
                                         n.given_date || getTodayDateString()
                                       )
                                     }
@@ -3027,7 +3029,7 @@ export default function DoctorVisitHub({
                                         "health_letters",
                                         l.id,
                                         true,
-                                        e.target.value as "visit" | "portal",
+                                        parseGivenMethod(e.target.value),
                                         l.given_date || getTodayDateString()
                                       )
                                     }
@@ -3368,7 +3370,7 @@ export default function DoctorVisitHub({
                                         "health_referrals",
                                         r.id,
                                         true,
-                                        e.target.value as "visit" | "portal",
+                                        parseGivenMethod(e.target.value),
                                         r.given_date || getTodayDateString()
                                       )
                                     }
@@ -3661,7 +3663,7 @@ export default function DoctorVisitHub({
                                         "health_visit_summaries",
                                         s.id,
                                         true,
-                                        e.target.value as "visit" | "portal",
+                                        parseGivenMethod(e.target.value),
                                         s.given_date || getTodayDateString()
                                       )
                                     }

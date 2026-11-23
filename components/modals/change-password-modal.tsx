@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { X, Eye, EyeOff } from "lucide-react"
 
-export default function ChangePasswordModal({ onClose, onSave }) {
+export default function ChangePasswordModal({ onClose, onSave }: { onClose: () => void; onSave: (data: any) => void }) {
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -19,7 +19,7 @@ export default function ChangePasswordModal({ onClose, onSave }) {
   const [error, setError] = useState("")
   const [strengthScore, setStrengthScore] = useState(0)
 
-  const handleChange = (e) => {
+  const handleChange = (e: any) => {
     const { name, value } = e.target
     setFormData({
       ...formData,
@@ -32,7 +32,7 @@ export default function ChangePasswordModal({ onClose, onSave }) {
     }
   }
 
-  const calculatePasswordStrength = (password) => {
+  const calculatePasswordStrength = (password: string) => {
     let score = 0
 
     // Length check
@@ -54,14 +54,14 @@ export default function ChangePasswordModal({ onClose, onSave }) {
     return { label: "Strong", color: "bg-green-500" }
   }
 
-  const togglePasswordVisibility = (field) => {
+  const togglePasswordVisibility = (field: "current" | "new" | "confirm") => {
     setShowPasswords({
       ...showPasswords,
       [field]: !showPasswords[field],
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: any) => {
     e.preventDefault()
 
     // Validate form

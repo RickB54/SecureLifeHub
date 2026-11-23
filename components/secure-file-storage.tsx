@@ -6,19 +6,19 @@ import DeleteConfirmationModal from "./modals/delete-confirmation-modal"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "./auth-provider"
 
-export default function SecureFileStorage({ records, addItem, deleteItem }) {
+export default function SecureFileStorage({ records, addItem, deleteItem }: { records: any[]; addItem: (item: any) => Promise<any>; deleteItem: (id: string) => Promise<any> }) {
   const { user } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
   const [showFilters, setShowFilters] = useState(false)
-  const [selectedFile, setSelectedFile] = useState(null)
+  const [selectedFile, setSelectedFile] = useState<any>(null)
   const [deleteConfirmModalOpen, setDeleteConfirmModalOpen] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Get and normalize secure files
   const secureFiles = (records || [])
-    .filter((record) => record.type === "secure-file")
-    .map(record => ({
+    .filter((record: any) => record.type === "secure-file")
+    .map((record: any) => ({
       ...record,
       filename: record.title || "Unknown File",
       fileSize: record.item_metadata?.size || 0,
@@ -28,7 +28,7 @@ export default function SecureFileStorage({ records, addItem, deleteItem }) {
     }))
 
   // Handle file upload
-  const handleFileUpload = async (e) => {
+  const handleFileUpload = async (e: any) => {
     const file = e.target.files[0]
     if (!file || !user) return
 
@@ -63,7 +63,7 @@ export default function SecureFileStorage({ records, addItem, deleteItem }) {
   }
 
   // Handle file download
-  const handleFileDownload = async (file) => {
+  const handleFileDownload = async (file: any) => {
     if (!file.filePath) return
 
     try {
@@ -113,11 +113,11 @@ export default function SecureFileStorage({ records, addItem, deleteItem }) {
     if (!searchQuery.trim()) return secureFiles
 
     const query = searchQuery.toLowerCase()
-    return secureFiles.filter((file) => file.filename.toLowerCase().includes(query))
+    return secureFiles.filter((file: any) => file.filename.toLowerCase().includes(query))
   }
 
   // Format file size
-  const formatFileSize = (bytes) => {
+  const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " bytes"
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB"
     else return (bytes / 1048576).toFixed(1) + " MB"
@@ -133,7 +133,7 @@ export default function SecureFileStorage({ records, addItem, deleteItem }) {
 
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => fileInputRef.current.click()}
+            onClick={() => fileInputRef.current?.click()}
             className="flex items-center bg-[#007bff] hover:bg-blue-600 text-white px-4 py-2 rounded-md transition duration-200"
           >
             <Upload className="h-5 w-5 mr-2" />
@@ -182,7 +182,7 @@ export default function SecureFileStorage({ records, addItem, deleteItem }) {
                 </tr>
               </thead>
               <tbody>
-                {getFilteredFiles().map((file) => (
+                {getFilteredFiles().map((file: any) => (
                   <tr key={file.id} className="border-b border-gray-700">
                     <td className="py-3 px-4 flex items-center">
                       <File className="h-5 w-5 mr-2 text-blue-400" />

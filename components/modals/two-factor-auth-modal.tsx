@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { X, Copy, CheckCircle, Smartphone, Mail, Key } from "lucide-react"
 
-export default function TwoFactorAuthModal({ onClose, onEnable }) {
+export default function TwoFactorAuthModal({ onClose, onEnable }: { onClose: () => void; onEnable: (method: string) => void }) {
   const [step, setStep] = useState(1)
   const [method, setMethod] = useState("")
   const [verificationCode, setVerificationCode] = useState("")
@@ -26,12 +26,12 @@ export default function TwoFactorAuthModal({ onClose, onEnable }) {
     "1O2P3Q4R5S6T7U8V",
   ]
 
-  const handleMethodSelect = (selectedMethod) => {
+  const handleMethodSelect = (selectedMethod: string) => {
     setMethod(selectedMethod)
     setStep(2)
   }
 
-  const handleVerifyCode = (e) => {
+  const handleVerifyCode = (e: any) => {
     e.preventDefault()
 
     if (!verificationCode) {

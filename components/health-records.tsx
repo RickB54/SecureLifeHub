@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
@@ -96,22 +97,11 @@ const getLocalDateTimeString = () => {
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings, setActivePage }: HealthDashboardProps) {
+    const searchParams = useSearchParams()
+    const tabParam = searchParams.get("tab")
     const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
-        if (typeof window !== "undefined") {
-            const urlParams = new URLSearchParams(window.location.search)
-            const fromUrl = normalizeHealthTab(urlParams.get("tab"))
-            if (fromUrl) {
-                const cleanUrl = new URL(window.location.href)
-                cleanUrl.searchParams.delete("tab")
-                window.history.replaceState({}, "", cleanUrl.toString())
-                return fromUrl
-            }
-            const target = normalizeHealthTab(localStorage.getItem("slh-health-target-tab"))
-            if (target) {
-                localStorage.removeItem("slh-health-target-tab")
-                return target
-            }
-        }
+        const fromParam = normalizeHealthTab(tabParam)
+        if (fromParam) return fromParam
         return (normalizeHealthTab(initialTab) || "dashboard") as any
     })
     const [showAddModal, setShowAddModal] = useState(false)
@@ -188,16 +178,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [isForcedMock, setIsForcedMock] = useState(false)
 
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            const urlParams = new URLSearchParams(window.location.search)
-            const fromUrl = normalizeHealthTab(urlParams.get("tab"))
-            if (fromUrl) {
-                const cleanUrl = new URL(window.location.href)
-                cleanUrl.searchParams.delete("tab")
-                window.history.replaceState({}, "", cleanUrl.toString())
-                setActiveTab(fromUrl)
-                return
+        const fromUrl = normalizeHealthTab(tabParam)
+        if (fromUrl) {
+            setActiveTab(fromUrl)
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("slh-health-target-tab")
             }
+            return
+        }
+        if (typeof window !== "undefined") {
             const target = normalizeHealthTab(localStorage.getItem("slh-health-target-tab"))
             if (target) {
                 localStorage.removeItem("slh-health-target-tab")
@@ -205,11 +194,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 return
             }
         }
-        if (initialTab) {
+        if (initialTab && initialTab !== "dashboard") {
             const normalized = normalizeHealthTab(initialTab)
             if (normalized) setActiveTab(normalized)
         }
-    }, [initialTab])
+    }, [tabParam, initialTab])
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
