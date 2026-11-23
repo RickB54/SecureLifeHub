@@ -392,44 +392,35 @@ export default function GoogleCalendarIntegration({
     return ""
   }
 
-  // Not connected view
+  // Not connected view — compact single button only
   if (!isConnected) {
     return (
-      <div
-        className={`rounded-3xl border p-6 md:p-8 text-center transition-all ${
-          theme === "light"
-            ? "bg-white border-gray-200 shadow-sm"
-            : "bg-slate-900/60 border-slate-800 backdrop-blur-md"
-        }`}
-      >
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-          <CalendarIcon className="h-8 w-8" />
-        </div>
-        <h3 className="text-xl md:text-2xl font-bold mb-2 text-slate-100">Connect Google Calendar</h3>
-        <p className="text-sm max-w-md mx-auto mb-6 text-slate-400">
-          Connect your Google Calendar to view upcoming events, select which calendars to display, and automatically detect scheduling conflicts when booking visits.
-        </p>
-
-        {error && (
-          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-3 text-xs md:text-sm text-amber-300 text-left max-w-lg mx-auto whitespace-pre-wrap">
-            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-amber-400" />
-            <div className="leading-relaxed">{error}</div>
-          </div>
-        )}
-
+      <div className="flex flex-col items-start gap-2">
         <button
+          type="button"
           onClick={handleConnect}
           disabled={isLoading}
-          className="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm uppercase tracking-wider shadow-lg shadow-blue-500/20 transition-all cursor-pointer disabled:opacity-50"
+          className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+          title="Connect Google Calendar (optional)"
         >
           {isLoading ? (
-            <span className="flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin" /> Connecting...
-            </span>
+            <>
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              <span>Connecting...</span>
+            </>
           ) : (
-            "Connect Google Calendar"
+            <>
+              <CalendarIcon className="h-3.5 w-3.5 text-blue-400" />
+              <span>Connect Google Calendar</span>
+            </>
           )}
         </button>
+        {error && (
+          <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 text-xs text-amber-300 max-w-lg whitespace-pre-wrap">
+            <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-400" />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
     )
   }

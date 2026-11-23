@@ -1255,25 +1255,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }
 
     const renderAppointments = () => (
-        <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Google Calendar Integration */}
-            <GoogleCalendarIntegration
-                theme={theme}
-                existingAppointments={upcomingAppts}
-                onScheduleAppointment={openNewAppointmentModal}
-                onEventsLoaded={setGoogleCalendarEvents}
-                onConnectionChange={setIsGCalConnected}
-            />
-
-            {/* Divider */}
-            <div className="border-t border-white/10 my-8"></div>
-
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">Medical Appointments</h2>
-                <div className="flex gap-2">
+        <div className="space-y-4 animate-in fade-in duration-300">
+            <div className="flex flex-wrap justify-between items-center gap-2">
+                <h2 className="text-xl md:text-2xl font-bold">Medical Appointments</h2>
+                <div className="flex items-center gap-2">
                     <button
                         onClick={openNewAppointmentModal}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2"
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2 cursor-pointer"
                     >
                         <Plus className="h-4 w-4" /> Schedule Visit
                     </button>
@@ -1399,6 +1387,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         )
                     })
                 )}
+            </div>
+
+            {/* Optional Google Calendar Integration (compact button when disconnected) */}
+            <div className="pt-2">
+                <GoogleCalendarIntegration
+                    theme={theme}
+                    existingAppointments={upcomingAppts}
+                    onScheduleAppointment={openNewAppointmentModal}
+                    onEventsLoaded={setGoogleCalendarEvents}
+                    onConnectionChange={setIsGCalConnected}
+                />
             </div>
         </div>
     )
