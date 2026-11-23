@@ -104,13 +104,30 @@ const getLocalDateTimeString = () => {
 interface AppointmentReminderEmail {
     sendAt: string
     resendId: string | null
-    status: "scheduled" | "waiting" | "failed"
+    status: "scheduled" | "waiting" | "failed" | "skipped"
+    reason?: string | null
     to?: string
 }
 
 interface ReminderDraft {
+    id: string
     date: string
     time: string
+}
+
+const makeReminderId = () =>
+    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
+        ? crypto.randomUUID()
+        : `rem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> => {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+        return await fetch(url, { ...options, signal: controller.signal })
+    } finally {
+        clearTimeout(timer)
+    }
 }
 
 const RESEND_WINDOW_MS = 29.5 * 24 * 60 * 60 * 1000
@@ -124,6 +141,7 @@ const computeReminderDraftFromOffset = (
     if (offset === "2h") {
         const target = new Date(validBase.getTime() - 2 * 60 * 60 * 1000)
         return {
+            id: makeReminderId(),
             date: format(target, "yyyy-MM-dd"),
             time: format(target, "HH:mm"),
         }
@@ -131,6 +149,7 @@ const computeReminderDraftFromOffset = (
     const daysBack = offset === "1w" ? 7 : offset === "2d" ? 2 : 1
     const target = subDays(validBase, daysBack)
     return {
+        id: makeReminderId(),
         date: format(target, "yyyy-MM-dd"),
         time: "09:00",
     }
@@ -576,13 +595,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         })
         setApptReminderEmail(apt.item_metadata?.reminderEmail || user?.email || "")
         const existingEmails: AppointmentReminderEmail[] = Array.isArray(apt.item_metadata?.reminderEmails)
-            ? apt.item_metadata.reminderEmails
+            ? [...apt.item_metadata.reminderEmails].sort(
+                (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()
+            )
             : []
         const drafts: ReminderDraft[] = existingEmails
             .map((r) => {
                 const d = new Date(r.sendAt)
                 if (isNaN(d.getTime())) return null
-                return { date: format(d, "yyyy-MM-dd"), time: format(d, "HH:mm") }
+                return { id: makeReminderId(), date: format(d, "yyyy-MM-dd"), time: format(d, "HH:mm") }
             })
             .filter((x): x is ReminderDraft => Boolean(x))
         setApptReminders(drafts)
@@ -1349,7 +1370,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     </div>
                                     {Array.isArray(apt.item_metadata?.reminderEmails) && apt.item_metadata.reminderEmails.length > 0 && (
                                         <div className="space-y-1.5 pt-1">
-                                            {apt.item_metadata.reminderEmails.map((rem: AppointmentReminderEmail, idx: number) => {
+                                            {[...apt.item_metadata.reminderEmails]
+                                                .sort((a: AppointmentReminderEmail, b: AppointmentReminderEmail) =>
+                                                    new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()
+                                                )
+                                                .map((rem: AppointmentReminderEmail, idx: number) => {
                                                 const remKey = `${apt.id}:${rem.resendId || rem.sendAt}:${idx}`
                                                 const sendTs = new Date(rem.sendAt).getTime()
                                                 const isPast = !isNaN(sendTs) && sendTs <= Date.now()
@@ -1363,7 +1388,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                     }
                                                     setCheckingReminderKey(remKey)
                                                     try {
-                                                        const res = await fetch("/api/appointment-reminders", {
+                                                        const res = await fetchWithTimeout("/api/appointment-reminders", {
                                                             method: "POST",
                                                             headers: { "Content-Type": "application/json" },
                                                             body: JSON.stringify({ action: "status", resendId: rem.resendId }),
@@ -1394,6 +1419,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                         ? "bg-gray-500/15 text-gray-400 border-gray-500/30"
                                                         : "bg-blue-500/15 text-blue-300 border-blue-500/30"
 
+                                                const failureReason = live?.reason || rem.reason || null
+
                                                 return (
                                                     <div key={remKey} className="space-y-0.5 text-[11px] text-gray-300">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1403,6 +1430,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                                     <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
                                                                     <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-amber-500/15 text-amber-300 border-amber-500/30">
                                                                         Waiting
+                                                                    </span>
+                                                                </>
+                                                            ) : rem.status === "skipped" ? (
+                                                                <>
+                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
+                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-gray-500/15 text-gray-400 border-gray-500/30">
+                                                                        Skipped
                                                                     </span>
                                                                 </>
                                                             ) : rem.status === "failed" && !live ? (
@@ -1451,9 +1485,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                                 </>
                                                             )}
                                                         </div>
-                                                        {live?.reason && (
+                                                        {failureReason && (rem.status === "failed" || realStatus === "failed" || realStatus === "bounced") && (
                                                             <div className="text-[10px] text-red-400 pl-4 break-words">
-                                                                Reason: {live.reason}
+                                                                Reason: {failureReason}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1546,7 +1580,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <option value="ai">Dr. AI</option>
                         <option value="vitals">Vitals</option>
                         <option value="doctors">My Doctors</option>
-                        <option value="appointments">Visits</option>
+                        <option value="appointments">Appointments</option>
                         <option value="calendar">Timeline</option>
                         <option value="checkin">Check-in</option>
                     </select>
@@ -1605,7 +1639,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },
                         { id: 'vitals', label: 'Vitals', icon: Activity },
                         { id: 'doctors', label: 'My Doctors', icon: User },
-                        { id: 'appointments', label: 'Visits', icon: Clock },
+                        { id: 'appointments', label: 'Appointments', icon: Clock },
                         { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
                         { id: 'checkin', label: 'Check-in', icon: Activity }
                     ].map((tab) => (
@@ -1866,7 +1900,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                                     setSavingAppt(true)
                                     try {
-                                        // 1. If editing, cancel any previously scheduled Resend emails
+                                        // 1. If editing, cancel any previously scheduled Resend emails (with timeout, never hangs)
                                         if (editingVital && !editingVital._isDummy) {
                                             const oldIds = (Array.isArray(editingVital.item_metadata?.reminderEmails)
                                                 ? editingVital.item_metadata.reminderEmails
@@ -1875,102 +1909,133 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 .map((r: any) => r?.resendId)
                                                 .filter(Boolean)
                                             if (oldIds.length > 0) {
-                                                await fetch("/api/appointment-reminders", {
+                                                await fetchWithTimeout("/api/appointment-reminders", {
                                                     method: "POST",
                                                     headers: { "Content-Type": "application/json" },
                                                     body: JSON.stringify({ action: "cancel", resendIds: oldIds }),
-                                                }).catch(() => {})
+                                                }, 8000).catch(() => {})
                                             }
                                         }
 
-                                        // 2. Schedule new email reminders via Resend (server-only route)
+                                        // 2. Deduplicate distinct reminder rows and schedule in parallel with per-row timeout/error handling
                                         const recipient = apptReminderEmail.trim()
-                                        const savedReminderEmails: AppointmentReminderEmail[] = []
                                         const apptDateVal = apptFormData.date || formatForDateTimeInput(new Date())
                                         const apptDisplay = formatApptDisplayForEmail(apptDateVal)
+
+                                        const seenKeys = new Set<string>()
+                                        const distinctDrafts: Array<{ sendAtIso: string; sendTs: number }> = []
+                                        for (const draft of apptReminders) {
+                                            if (!draft.date || !draft.time) continue
+                                            const key = `${draft.date}T${draft.time}`
+                                            if (seenKeys.has(key)) continue
+                                            const localSend = new Date(key)
+                                            if (isNaN(localSend.getTime())) continue
+                                            seenKeys.add(key)
+                                            distinctDrafts.push({ sendAtIso: localSend.toISOString(), sendTs: localSend.getTime() })
+                                        }
+                                        distinctDrafts.sort((a, b) => a.sendTs - b.sendTs)
+
                                         let skippedPastCount = 0
                                         let waitingCount = 0
                                         let failedCount = 0
 
-                                        if (recipient && apptReminders.length > 0) {
-                                            for (const draft of apptReminders) {
-                                                if (!draft.date || !draft.time) continue
-                                                const localSend = new Date(`${draft.date}T${draft.time}`)
-                                                if (isNaN(localSend.getTime())) continue
-                                                const sendAtIso = localSend.toISOString()
-                                                const now = Date.now()
-
-                                                if (localSend.getTime() <= now + 30_000) {
-                                                    skippedPastCount++
-                                                    continue
-                                                }
-
-                                                if (localSend.getTime() - now > RESEND_WINDOW_MS) {
-                                                    waitingCount++
-                                                    savedReminderEmails.push({
-                                                        sendAt: sendAtIso,
-                                                        resendId: null,
-                                                        status: "waiting",
-                                                        to: recipient,
-                                                    })
-                                                    continue
-                                                }
-
-                                                try {
-                                                    const remRes = await fetch("/api/appointment-reminders", {
-                                                        method: "POST",
-                                                        headers: { "Content-Type": "application/json" },
-                                                        body: JSON.stringify({
-                                                            action: "schedule",
+                                        const savedReminderEmails: AppointmentReminderEmail[] = recipient && distinctDrafts.length > 0
+                                            ? await Promise.all(
+                                                distinctDrafts.map(async ({ sendAtIso, sendTs }): Promise<AppointmentReminderEmail> => {
+                                                    const now = Date.now()
+                                                    if (sendTs <= now + 30_000) {
+                                                        skippedPastCount++
+                                                        return {
+                                                            sendAt: sendAtIso,
+                                                            resendId: null,
+                                                            status: "skipped",
+                                                            reason: "Reminder time already passed",
                                                             to: recipient,
-                                                            sendAtIso,
-                                                            reason: apptFormData.title.trim(),
-                                                            appointmentDateDisplay: apptDisplay,
-                                                            doctor: apptFormData.doctor || "",
-                                                            facility: apptFormData.facility_name || "",
-                                                            address: apptFormData.location || "",
-                                                        }),
-                                                    })
-                                                    const remData = await remRes.json().catch(() => ({}))
-                                                    if (remRes.ok && remData.ok && remData.status === "scheduled") {
-                                                        savedReminderEmails.push({
-                                                            sendAt: remData.sendAt || sendAtIso,
-                                                            resendId: remData.resendId || null,
-                                                            status: "scheduled",
-                                                            to: recipient,
-                                                        })
-                                                    } else if (remData.status === "waiting") {
+                                                        }
+                                                    }
+                                                    if (sendTs - now > RESEND_WINDOW_MS) {
                                                         waitingCount++
-                                                        savedReminderEmails.push({
+                                                        return {
                                                             sendAt: sendAtIso,
                                                             resendId: null,
                                                             status: "waiting",
                                                             to: recipient,
-                                                        })
-                                                    } else if (remData.status === "skipped_past") {
-                                                        skippedPastCount++
-                                                    } else {
+                                                        }
+                                                    }
+                                                    try {
+                                                        const remRes = await fetchWithTimeout("/api/appointment-reminders", {
+                                                            method: "POST",
+                                                            headers: { "Content-Type": "application/json" },
+                                                            body: JSON.stringify({
+                                                                action: "schedule",
+                                                                to: recipient,
+                                                                sendAtIso,
+                                                                reason: apptFormData.title.trim(),
+                                                                appointmentDateDisplay: apptDisplay,
+                                                                doctor: apptFormData.doctor || "",
+                                                                facility: apptFormData.facility_name || "",
+                                                                address: apptFormData.location || "",
+                                                            }),
+                                                        }, 10000)
+                                                        const remData = await remRes.json().catch(() => ({}))
+                                                        if (remRes.ok && remData.ok && remData.status === "scheduled") {
+                                                            return {
+                                                                sendAt: remData.sendAt || sendAtIso,
+                                                                resendId: remData.resendId || null,
+                                                                status: "scheduled",
+                                                                to: recipient,
+                                                            }
+                                                        }
+                                                        if (remData.status === "waiting") {
+                                                            waitingCount++
+                                                            return {
+                                                                sendAt: sendAtIso,
+                                                                resendId: null,
+                                                                status: "waiting",
+                                                                to: recipient,
+                                                            }
+                                                        }
+                                                        if (remData.status === "skipped_past") {
+                                                            skippedPastCount++
+                                                            return {
+                                                                sendAt: sendAtIso,
+                                                                resendId: null,
+                                                                status: "skipped",
+                                                                reason: "Reminder time already passed",
+                                                                to: recipient,
+                                                            }
+                                                        }
+                                                        const errMsg = remData?.error || `Resend error (${remRes.status})`
                                                         failedCount++
-                                                        toast.error(remData?.error || "Could not schedule email reminder")
-                                                        savedReminderEmails.push({
+                                                        toast.error(errMsg)
+                                                        return {
                                                             sendAt: sendAtIso,
                                                             resendId: null,
                                                             status: "failed",
+                                                            reason: errMsg,
                                                             to: recipient,
-                                                        })
+                                                        }
+                                                    } catch (remErr: any) {
+                                                        const errMsg = remErr?.name === "AbortError"
+                                                            ? "Reminder request timed out"
+                                                            : (remErr?.message || "Could not schedule email reminder")
+                                                        failedCount++
+                                                        toast.error(errMsg)
+                                                        return {
+                                                            sendAt: sendAtIso,
+                                                            resendId: null,
+                                                            status: "failed",
+                                                            reason: errMsg,
+                                                            to: recipient,
+                                                        }
                                                     }
-                                                } catch (remErr: any) {
-                                                    failedCount++
-                                                    toast.error(remErr?.message || "Could not schedule email reminder")
-                                                    savedReminderEmails.push({
-                                                        sendAt: sendAtIso,
-                                                        resendId: null,
-                                                        status: "failed",
-                                                        to: recipient,
-                                                    })
-                                                }
-                                            }
-                                        }
+                                                })
+                                            )
+                                            : []
+
+                                        savedReminderEmails.sort(
+                                            (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()
+                                        )
 
                                         if (skippedPastCount > 0) {
                                             toast.info(`Skipped ${skippedPastCount} reminder${skippedPastCount > 1 ? "s" : ""} already in the past`)
@@ -2242,9 +2307,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                     onClick={() => {
                                                         const draft = computeReminderDraftFromOffset(apptFormData.date, opt.key)
                                                         setRemindersTouched(true)
-                                                        setApptReminders((prev) =>
-                                                            prev.length === 0 ? [draft] : [draft, ...prev.slice(1)]
-                                                        )
+                                                        setApptReminders((prev) => {
+                                                            const duplicate = prev.some(
+                                                                (r) => r.date === draft.date && r.time === draft.time
+                                                            )
+                                                            if (duplicate) {
+                                                                toast.info("That reminder time is already added")
+                                                                return prev
+                                                            }
+                                                            return [...prev, draft]
+                                                        })
                                                     }}
                                                     className="px-2 py-1 rounded-lg bg-white/5 hover:bg-blue-500/20 border border-white/10 text-[11px] text-gray-200 hover:text-blue-200 transition-colors cursor-pointer"
                                                 >
@@ -2254,15 +2326,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         </div>
 
                                         <div className="space-y-2">
-                                            {apptReminders.map((rem, idx) => (
-                                                <div key={idx} className="flex items-center gap-2">
+                                            {apptReminders.map((rem) => (
+                                                <div key={rem.id} className="flex items-center gap-2">
                                                     <input
                                                         type="date"
                                                         value={rem.date}
                                                         onChange={(e) => {
+                                                            const nextVal = e.target.value
                                                             setRemindersTouched(true)
                                                             setApptReminders((prev) =>
-                                                                prev.map((item, i) => (i === idx ? { ...item, date: e.target.value } : item))
+                                                                prev.map((item) => (item.id === rem.id ? { ...item, date: nextVal } : item))
                                                             )
                                                         }}
                                                         className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white outline-none focus:border-blue-500/50"
@@ -2272,9 +2345,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                         type="time"
                                                         value={rem.time}
                                                         onChange={(e) => {
+                                                            const nextVal = e.target.value
                                                             setRemindersTouched(true)
                                                             setApptReminders((prev) =>
-                                                                prev.map((item, i) => (i === idx ? { ...item, time: e.target.value } : item))
+                                                                prev.map((item) => (item.id === rem.id ? { ...item, time: nextVal } : item))
                                                             )
                                                         }}
                                                         className="w-32 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white outline-none focus:border-blue-500/50"
@@ -2284,7 +2358,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                         type="button"
                                                         onClick={() => {
                                                             setRemindersTouched(true)
-                                                            setApptReminders((prev) => prev.filter((_, i) => i !== idx))
+                                                            setApptReminders((prev) => prev.filter((item) => item.id !== rem.id))
                                                         }}
                                                         className="p-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 transition-colors cursor-pointer"
                                                         title="Remove reminder"
@@ -2297,11 +2371,25 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 type="button"
                                                 onClick={() => {
                                                     setRemindersTouched(true)
-                                                    const nextDraft = computeReminderDraftFromOffset(
-                                                        apptFormData.date,
-                                                        apptReminders.length === 0 ? "1d" : "2h"
-                                                    )
-                                                    setApptReminders((prev) => [...prev, nextDraft])
+                                                    setApptReminders((prev) => {
+                                                        const candidates: Array<"1d" | "2h" | "2d" | "1w"> = ["1d", "2h", "2d", "1w"]
+                                                        for (const c of candidates) {
+                                                            const d = computeReminderDraftFromOffset(apptFormData.date, c)
+                                                            if (!prev.some((r) => r.date === d.date && r.time === d.time)) {
+                                                                return [...prev, d]
+                                                            }
+                                                        }
+                                                        const base = apptFormData.date ? new Date(apptFormData.date) : new Date()
+                                                        const valid = isNaN(base.getTime()) ? new Date() : base
+                                                        return [
+                                                            ...prev,
+                                                            {
+                                                                id: makeReminderId(),
+                                                                date: format(valid, "yyyy-MM-dd"),
+                                                                time: "08:00",
+                                                            },
+                                                        ]
+                                                    })
                                                 }}
                                                 className="inline-flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
                                             >

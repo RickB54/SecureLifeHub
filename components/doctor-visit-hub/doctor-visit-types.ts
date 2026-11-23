@@ -23,7 +23,7 @@ export const VISIT_HUB_SECTIONS: VisitHubSectionConfig[] = [
     label: "Next Appointment",
     shortLabel: "Next Appt",
     fullTabTarget: "appointments",
-    fullTabName: "Visits",
+    fullTabName: "Appointments",
     nextSectionId: "snapshot",
   },
   {
@@ -71,15 +71,15 @@ export const VISIT_HUB_SECTIONS: VisitHubSectionConfig[] = [
     label: "Visit Summary",
     shortLabel: "Visit Summary",
     fullTabTarget: "appointments",
-    fullTabName: "Visits",
+    fullTabName: "Appointments",
     nextSectionId: "visits",
   },
   {
     id: "visits",
-    label: "Recent Visits",
-    shortLabel: "Visits",
+    label: "Appointments",
+    shortLabel: "Appointments",
     fullTabTarget: "appointments",
-    fullTabName: "Visits",
+    fullTabName: "Appointments",
     nextSectionId: "nextAppt",
   },
 ]

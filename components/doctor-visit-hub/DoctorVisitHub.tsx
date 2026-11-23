@@ -1890,7 +1890,7 @@ export default function DoctorVisitHub({
                     onClick={() => handleNavigateToFullTab("appointments")}
                     className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
                   >
-                    <span>Go to full tab (Visits)</span>
+                    <span>Go to full tab (Appointments)</span>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -1957,7 +1957,7 @@ export default function DoctorVisitHub({
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>Schedule in Visits</span>
+                    <span>Schedule in Appointments</span>
                   </button>
                 </div>
               )}
@@ -3887,7 +3887,7 @@ export default function DoctorVisitHub({
                   onClick={() => handleGoToNextSection("summary")}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all cursor-pointer"
                 >
-                  <span>Next: Recent Visits</span>
+                  <span>Next: Appointments</span>
                   <ChevronRight className="h-4 w-4 text-slate-400" />
                 </button>
               </div>
@@ -3915,7 +3915,7 @@ export default function DoctorVisitHub({
                     <Clock className="h-5 w-5" />
                   </div>
                   <div>
-                    <h2 className="text-base md:text-lg font-bold text-white">Recent Visits</h2>
+                    <h2 className="text-base md:text-lg font-bold text-white">Appointments</h2>
                     <p className="text-xs text-slate-400">Past consultations with linked notes, letters & referrals</p>
                   </div>
                 </div>
@@ -3925,8 +3925,8 @@ export default function DoctorVisitHub({
                     type="button"
                     onClick={() => toggleSection("visits")}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-                    title={isSectionOpen("visits") ? "Collapse Recent Visits" : "Expand Recent Visits"}
-                    aria-label={isSectionOpen("visits") ? "Collapse Recent Visits" : "Expand Recent Visits"}
+                    title={isSectionOpen("visits") ? "Collapse Appointments" : "Expand Appointments"}
+                    aria-label={isSectionOpen("visits") ? "Collapse Appointments" : "Expand Appointments"}
                   >
                     {isSectionOpen("visits") ? (
                       <ChevronsDownUp className="h-4 w-4" />
@@ -3948,7 +3948,7 @@ export default function DoctorVisitHub({
                     onClick={() => handleNavigateToFullTab("appointments")}
                     className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors"
                   >
-                    <span>Go to full Visits tab</span>
+                    <span>Go to full Appointments tab</span>
                     <ExternalLink className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -4018,7 +4018,7 @@ export default function DoctorVisitHub({
                                 handleNavigateToFullTab("appointments")
                               }}
                               className="p-1 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-300"
-                              title="Edit visit in Visits"
+                              title="Edit in Appointments"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                             </button>
@@ -4051,7 +4051,7 @@ export default function DoctorVisitHub({
                                 }}
                                 className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 text-xs font-semibold border border-slate-800 transition-colors shrink-0"
                               >
-                                View in Visits
+                                View in Appointments
                               </button>
                             </div>
                             {/* Linked Counts */}
