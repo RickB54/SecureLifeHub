@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
-import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize } from "lucide-react"
+import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize, Info, RotateCcw } from "lucide-react"
 import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, startOfDay, endOfDay, eachHourOfInterval, addWeeks, subWeeks, addMonths, subMonths, parse, addHours } from "date-fns"
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -591,6 +591,114 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
         // Visual feedback
         toast.success(`✓ Skipped ${med.title}`)
+    }
+
+    const handleDeleteAdherenceLog = async (med: any, logType: "taken" | "skipped", index: number) => {
+        if (!confirm(`Remove this ${logType === "taken" ? "Taken" : "Skipped"} log entry?`)) return
+        const meta = med.item_metadata || {}
+        const takenLog = Array.isArray(meta.takenLog) ? [...meta.takenLog] : []
+        const skippedLog = Array.isArray(meta.skippedLog) ? [...meta.skippedLog] : []
+
+        if (logType === "taken") {
+            if (index < 0 || index >= takenLog.length) return
+            takenLog.splice(index, 1)
+        } else {
+            if (index < 0 || index >= skippedLog.length) return
+            skippedLog.splice(index, 1)
+        }
+
+        const latestTaken = takenLog.length > 0
+            ? takenLog
+                .map((e: any) => e?.timestamp || e)
+                .filter(Boolean)
+                .sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime())[0] || null
+            : null
+
+        const updatedMeta: any = {
+            ...meta,
+            takenLog,
+            skippedLog,
+            lastTaken: latestTaken,
+        }
+
+        // For as-needed tracked meds only, restore pill count when undoing a Taken entry
+        if (logType === "taken" && isMedTracked(meta) && isMedAsNeeded(meta)) {
+            const pillsStep = parseFloat(meta.pillsPerDose ?? "1") || 1
+            const currentQty = parseFloat(meta.quantity ?? "0") || 0
+            updatedMeta.quantity = Math.round((currentQty + pillsStep) * 100) / 100
+        }
+
+        updatedMeta.nextDose = calculateNextDose({ item_metadata: updatedMeta })
+
+        await updateItem(med.id, { item_metadata: updatedMeta })
+        upsertSharedHealthRecord({ ...med, item_metadata: updatedMeta })
+        toast.success("Dose log entry removed")
+    }
+
+    const handleResetDoseStatus = async (med: any) => {
+        const meta = med.item_metadata || {}
+        const takenLog = Array.isArray(meta.takenLog) ? [...meta.takenLog] : []
+        const skippedLog = Array.isArray(meta.skippedLog) ? [...meta.skippedLog] : []
+        if (takenLog.length === 0 && skippedLog.length === 0) return
+
+        if (!confirm(`Reset dose status for ${med.title} back to "Not taken"?`)) return
+
+        const today = new Date()
+        const isTodayEntry = (entry: any) => {
+            const ts = entry?.timestamp || entry
+            if (!ts) return false
+            const d = new Date(ts)
+            return !isNaN(d.getTime()) && isSameDay(d, today)
+        }
+
+        const todayTakenCount = takenLog.filter(isTodayEntry).length
+        const todaySkippedCount = skippedLog.filter(isTodayEntry).length
+
+        let nextTakenLog = takenLog
+        let nextSkippedLog = skippedLog
+        let removedTakenCount = 0
+
+        if (todayTakenCount > 0 || todaySkippedCount > 0) {
+            nextTakenLog = takenLog.filter((e) => !isTodayEntry(e))
+            nextSkippedLog = skippedLog.filter((e) => !isTodayEntry(e))
+            removedTakenCount = todayTakenCount
+        } else {
+            // No entries today — remove the single most recent entry across taken/skipped
+            const lastTakenTs = takenLog.length > 0 ? new Date(takenLog[takenLog.length - 1]?.timestamp || takenLog[takenLog.length - 1] || 0).getTime() : -1
+            const lastSkippedTs = skippedLog.length > 0 ? new Date(skippedLog[skippedLog.length - 1]?.timestamp || skippedLog[skippedLog.length - 1] || 0).getTime() : -1
+            if (lastTakenTs >= lastSkippedTs && takenLog.length > 0) {
+                nextTakenLog = takenLog.slice(0, -1)
+                removedTakenCount = 1
+            } else if (skippedLog.length > 0) {
+                nextSkippedLog = skippedLog.slice(0, -1)
+            }
+        }
+
+        const latestTaken = nextTakenLog.length > 0
+            ? nextTakenLog
+                .map((e: any) => e?.timestamp || e)
+                .filter(Boolean)
+                .sort((a: string, b: string) => new Date(b).getTime() - new Date(a).getTime())[0] || null
+            : null
+
+        const updatedMeta: any = {
+            ...meta,
+            takenLog: nextTakenLog,
+            skippedLog: nextSkippedLog,
+            lastTaken: latestTaken,
+        }
+
+        if (removedTakenCount > 0 && isMedTracked(meta) && isMedAsNeeded(meta)) {
+            const pillsStep = parseFloat(meta.pillsPerDose ?? "1") || 1
+            const currentQty = parseFloat(meta.quantity ?? "0") || 0
+            updatedMeta.quantity = Math.round((currentQty + pillsStep * removedTakenCount) * 100) / 100
+        }
+
+        updatedMeta.nextDose = calculateNextDose({ item_metadata: updatedMeta })
+
+        await updateItem(med.id, { item_metadata: updatedMeta })
+        upsertSharedHealthRecord({ ...med, item_metadata: updatedMeta })
+        toast.success(`Reset ${med.title} to Not taken`)
     }
 
     const openRescheduleModal = (med: any) => {
@@ -1292,8 +1400,7 @@ ${selectedMed ? `
                                 return (
                                 <div
                                     key={med.id}
-                                    onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
-                                    className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-all cursor-pointer"
+                                    className="p-6 rounded-2xl bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/20 hover:border-purple-500/40 transition-all"
                                 >
                                     <div className="flex justify-between items-start mb-4">
                                         <div className="flex items-center gap-4 flex-1">
@@ -1302,7 +1409,7 @@ ${selectedMed ? `
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex flex-col min-w-0">
-                                                    <h3 className="text-lg font-bold break-words leading-tight hover:text-purple-400 transition-colors">
+                                                    <h3 className="text-lg font-bold break-words leading-tight">
                                                         {med.title}
                                                     </h3>
                                                     <span className="text-xs text-gray-400">{med.item_metadata?.dosage}</span>
@@ -1343,18 +1450,48 @@ ${selectedMed ? `
                                                 })()}
 
                                                 {/* Status Badges */}
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    {med.item_metadata?.skippedLog && med.item_metadata.skippedLog.length > 0 && (
-                                                        <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30 flex items-center gap-1">
-                                                            <X className="h-3 w-3" /> Skipped {med.item_metadata.skippedLog.length}x
-                                                        </span>
-                                                    )}
-                                                    {med.item_metadata?.takenLog && med.item_metadata.takenLog.length > 0 && (
-                                                        <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30 flex items-center gap-1">
-                                                            <Check className="h-3 w-3" /> Taken {med.item_metadata.takenLog.length}x
-                                                        </span>
-                                                    )}
-                                                </div>
+                                                {(() => {
+                                                    const skippedLog = Array.isArray(med.item_metadata?.skippedLog) ? med.item_metadata.skippedLog : []
+                                                    const takenLog = Array.isArray(med.item_metadata?.takenLog) ? med.item_metadata.takenLog : []
+                                                    const hasLogs = skippedLog.length > 0 || takenLog.length > 0
+                                                    const today = new Date()
+                                                    const hasTodayLog = [...takenLog, ...skippedLog].some((e: any) => {
+                                                        const ts = e?.timestamp || e
+                                                        if (!ts) return false
+                                                        const d = new Date(ts)
+                                                        return !isNaN(d.getTime()) && isSameDay(d, today)
+                                                    })
+                                                    const isDueMed = !isMedAsNeeded(med.item_metadata)
+                                                    return (
+                                                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                                                            {isDueMed && !hasTodayLog && (
+                                                                <span className="px-2 py-0.5 bg-white/5 text-gray-400 text-xs rounded-full border border-white/10 flex items-center gap-1">
+                                                                    Not taken
+                                                                </span>
+                                                            )}
+                                                            {skippedLog.length > 0 && (
+                                                                <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30 flex items-center gap-1">
+                                                                    <X className="h-3 w-3" /> Skipped {skippedLog.length}x
+                                                                </span>
+                                                            )}
+                                                            {takenLog.length > 0 && (
+                                                                <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full border border-green-500/30 flex items-center gap-1">
+                                                                    <Check className="h-3 w-3" /> Taken {takenLog.length}x
+                                                                </span>
+                                                            )}
+                                                            {hasLogs && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleResetDoseStatus(med)}
+                                                                    className="px-2 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white text-xs rounded-full border border-white/10 flex items-center gap-1 transition-colors cursor-pointer"
+                                                                    title="Undo / Reset dose status"
+                                                                >
+                                                                    <RotateCcw className="h-3 w-3" /> Reset
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                })()}
                                                 {/* RX Instructions Display */}
                                                 {med.item_metadata?.rxInstructions && (
                                                     <div className="mt-2 text-xs text-blue-300 bg-blue-500/10 p-2 rounded-lg border border-blue-500/20">
@@ -1404,24 +1541,32 @@ ${selectedMed ? `
 
                                     {/* Additional Actions */}
                                     <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10">
-                                        <button type="button" onClick={(e) => { e.stopPropagation(); handleDrugLookup(med.title) }} className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400" title="AI Drug Info">
+                                        <button
+                                            type="button"
+                                            onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
+                                            className="p-2 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 cursor-pointer"
+                                            title="Details"
+                                            aria-label="Details"
+                                        >
+                                            <Info className="h-5 w-5" />
+                                        </button>
+                                        <button type="button" onClick={() => handleDrugLookup(med.title)} className="p-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 cursor-pointer" title="AI Drug Info">
                                             <Sparkles className="h-5 w-5" />
                                         </button>
-                                        <button type="button" onClick={(e) => { e.stopPropagation(); setSelectedMed(med); setShowEditModal(true) }} className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400" title="Edit">
+                                        <button type="button" onClick={() => { setSelectedMed(med); setShowEditModal(true) }} className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 cursor-pointer" title="Edit">
                                             <Edit className="h-5 w-5" />
                                         </button>
-                                        <button type="button" onClick={async (e) => { e.stopPropagation(); if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400" title="Delete">
+                                        <button type="button" onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }} className="p-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 cursor-pointer" title="Delete">
                                             <Trash className="h-5 w-5" />
                                         </button>
                                         {tracked && (
                                             <button
                                                 type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
+                                                onClick={() => {
                                                     setRefillMed(med)
                                                     setRefillCount(String(med.item_metadata?.totalQuantity || 30))
                                                 }}
-                                                className="ml-auto px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all"
+                                                className="ml-auto px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer"
                                                 title="Record refill & reset pill count baseline"
                                             >
                                                 Refill
@@ -1537,6 +1682,7 @@ ${selectedMed ? `
                         }}
                         onLookupDrug={handleDrugLookup}
                         onOpenDoctors={() => router.push("/?page=type-health-records&tab=doctors", { scroll: false })}
+                        onDeleteLogEntry={(logType, idx) => handleDeleteAdherenceLog(detailMed, logType, idx)}
                     />
                 )
             })()}

@@ -16,6 +16,7 @@ import {
   Check,
   X,
   ExternalLink,
+  Trash2,
 } from "lucide-react"
 import { format } from "date-fns"
 import type { DoctorOption, FacilityOption } from "./health-field-helpers"
@@ -36,6 +37,7 @@ interface MedicationDetailViewProps {
   onRefill?: () => void
   onLookupDrug?: (name: string) => void
   onOpenDoctors?: () => void
+  onDeleteLogEntry?: (logType: "taken" | "skipped", index: number) => void
 }
 
 function safeDate(val?: string | null, fmt = "PPP") {
@@ -75,6 +77,7 @@ export default function MedicationDetailView({
   onRefill,
   onLookupDrug,
   onOpenDoctors,
+  onDeleteLogEntry,
 }: MedicationDetailViewProps) {
   const meta = medication?.item_metadata || {}
   const docInfo = resolveDoctorInfo(
@@ -143,6 +146,15 @@ export default function MedicationDetailView({
           >
             <Edit className="h-3.5 w-3.5" />
             <span>Edit</span>
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors cursor-pointer"
+            title="Close"
+            aria-label="Close"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
       </header>
@@ -225,25 +237,85 @@ export default function MedicationDetailView({
                 label="Last Taken"
                 value={meta.lastTaken ? safeDate(meta.lastTaken, "MMM d, yyyy 'at' h:mm a") : ""}
               />
-              {(meta.takenLog?.length > 0 || meta.skippedLog?.length > 0) && (
-                <DetailRow
-                  label="Adherence Log"
-                  value={
-                    <span className="inline-flex items-center gap-3 text-xs">
-                      {meta.takenLog?.length > 0 && (
-                        <span className="inline-flex items-center gap-1 text-emerald-400">
-                          <Check className="h-3.5 w-3.5" /> Taken {meta.takenLog.length}x
-                        </span>
-                      )}
-                      {meta.skippedLog?.length > 0 && (
-                        <span className="inline-flex items-center gap-1 text-amber-400">
-                          <X className="h-3.5 w-3.5" /> Skipped {meta.skippedLog.length}x
-                        </span>
-                      )}
-                    </span>
-                  }
-                />
-              )}
+              {(meta.takenLog?.length > 0 || meta.skippedLog?.length > 0) && (() => {
+                const entries: Array<{ logType: "taken" | "skipped"; index: number; timestamp: string }> = [
+                  ...(Array.isArray(meta.takenLog)
+                    ? meta.takenLog.map((e: any, index: number) => ({
+                        logType: "taken" as const,
+                        index,
+                        timestamp: e?.timestamp || (typeof e === "string" ? e : ""),
+                      }))
+                    : []),
+                  ...(Array.isArray(meta.skippedLog)
+                    ? meta.skippedLog.map((e: any, index: number) => ({
+                        logType: "skipped" as const,
+                        index,
+                        timestamp: e?.timestamp || (typeof e === "string" ? e : ""),
+                      }))
+                    : []),
+                ].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+
+                return (
+                  <div className="pt-3 mt-2 border-t border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                        Adherence Log ({entries.length})
+                      </span>
+                      <span className="inline-flex items-center gap-3 text-xs">
+                        {meta.takenLog?.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-emerald-400">
+                            <Check className="h-3.5 w-3.5" /> Taken {meta.takenLog.length}x
+                          </span>
+                        )}
+                        {meta.skippedLog?.length > 0 && (
+                          <span className="inline-flex items-center gap-1 text-amber-400">
+                            <X className="h-3.5 w-3.5" /> Skipped {meta.skippedLog.length}x
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                      {entries.map((entry) => (
+                        <div
+                          key={`${entry.logType}-${entry.index}-${entry.timestamp}`}
+                          className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold shrink-0 ${
+                                entry.logType === "taken"
+                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                              }`}
+                            >
+                              {entry.logType === "taken" ? (
+                                <Check className="h-3 w-3" />
+                              ) : (
+                                <X className="h-3 w-3" />
+                              )}
+                              {entry.logType === "taken" ? "Taken" : "Skipped"}
+                            </span>
+                            <span className="text-gray-200 truncate">
+                              {entry.timestamp ? safeDate(entry.timestamp, "MMM d, yyyy 'at' h:mm a") : "Unknown time"}
+                            </span>
+                          </div>
+                          {onDeleteLogEntry && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteLogEntry(entry.logType, entry.index)}
+                              className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
+                              title="Delete log entry"
+                              aria-label="Delete log entry"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
             </section>
           )}
 
