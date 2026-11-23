@@ -23,8 +23,11 @@ import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo }
 import MedicationDetailView from './health-ui/medication-detail-view'
 import {
     isMedTracked,
+    isMedAsNeeded,
     calculatePillCountEstimate,
+    getCountBaselineDateForOption,
     isMedLowStockCalculated as isMedLowStock,
+    type CountStartOption,
 } from '@/lib/pill-count'
 
 // Horizontally stretched oval / ellipse icon (not capsule style)
@@ -436,18 +439,13 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     pillColor: formData.pillColor || "#FFFFFF",
                     trackInventory: Boolean(formData.trackInventory),
                     pillsPerDose: parseFloat(formData.pillsPerDose) || 1,
-                    lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
-                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseFloat(formData.quantity) || 0)) : 0,
-                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseFloat(formData.totalQuantity) || 0)) : 0,
-                    countBaseline: formData.trackInventory
-                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
-                            ? (parseFloat(formData.quantity) || 0)
-                            : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(formData.quantity) || 0))
-                        : 0,
+                    lowStockThreshold: isNaN(parseInt(String(formData.lowStockThreshold), 10)) ? 5 : parseInt(String(formData.lowStockThreshold), 10),
+                    quantity: formData.trackInventory ? (parseFloat(String(formData.quantity)) || 0) : 0,
+                    totalQuantity: formData.trackInventory ? (parseFloat(String(formData.totalQuantity)) || 0) : 0,
+                    countStartOption: (formData.countStartOption || "now") as CountStartOption,
+                    countBaseline: formData.trackInventory ? (parseFloat(String(formData.quantity)) || 0) : 0,
                     countBaselineDate: formData.trackInventory
-                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
-                            ? new Date().toISOString()
-                            : selectedMed?.item_metadata?.countBaselineDate)
+                        ? getCountBaselineDateForOption((formData.countStartOption || "now") as CountStartOption)
                         : null,
                     reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
                     takenLog: [],
@@ -476,51 +474,60 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     const handleEditMed = async (formData: any) => {
         if (!selectedMed) throw new Error("No medication selected to update.")
+        const shouldResetBaseline =
+            Boolean(formData.quantityChanged) ||
+            Boolean(formData.countStartChanged) ||
+            !selectedMed?.item_metadata?.countBaselineDate
+        const nextBaseline = formData.trackInventory
+            ? (shouldResetBaseline
+                ? (parseFloat(String(formData.quantity)) || 0)
+                : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(String(formData.quantity)) || 0))
+            : 0
+        const nextBaselineDate = formData.trackInventory
+            ? (shouldResetBaseline
+                ? getCountBaselineDateForOption((formData.countStartOption || "now") as CountStartOption)
+                : selectedMed?.item_metadata?.countBaselineDate)
+            : null
+        const parsedLowStock = parseInt(String(formData.lowStockThreshold), 10)
+        const updatedMeta = {
+            ...selectedMed.item_metadata,
+            dosage: formData.dosage || "As directed",
+            frequency: formData.frequency || "",
+            prescribedBy: formData.prescribedBy || "",
+            doctor_id: formData.doctor_id || null,
+            facility_id: formData.facility_id || null,
+            facility_name: formData.facility_name || "",
+            pharmacy: formData.pharmacy || "",
+            purpose: formData.purpose || "",
+            genericName: formData.genericName || "",
+            drugClass: formData.drugClass || "",
+            sideEffects: formData.sideEffects || "",
+            interactions: formData.interactions || "",
+            rxInstructions: formData.rxInstructions || "",
+            refillDate: formData.refillDate || "",
+            nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
+            pillShape: normalizePillShape(formData.pillShape),
+            pillColor: formData.pillColor || "#FFFFFF",
+            trackInventory: Boolean(formData.trackInventory),
+            pillsPerDose: parseFloat(String(formData.pillsPerDose)) || 1,
+            lowStockThreshold: isNaN(parsedLowStock) ? 5 : parsedLowStock,
+            quantity: formData.trackInventory ? (parseFloat(String(formData.quantity)) || 0) : 0,
+            totalQuantity: formData.trackInventory ? (parseFloat(String(formData.totalQuantity)) || 0) : 0,
+            countStartOption: (formData.countStartOption || "now") as CountStartOption,
+            countBaseline: nextBaseline,
+            countBaselineDate: nextBaselineDate,
+            reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
+            doseSchedule: formData.doseSchedule || [],
+            startDate: formData.startDate || format(new Date(), 'yyyy-MM-dd'),
+            endDate: formData.endDate || "",
+            scheduleStartDate: formData.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
+            notes: formData.notes || "",
+            lastModified: new Date().toISOString()
+        }
         try {
             const res = await updateItem(selectedMed.id, {
                 title: formData.name || selectedMed.title,
-                item_metadata: {
-                    ...selectedMed.item_metadata,
-                    dosage: formData.dosage || "As directed",
-                    frequency: formData.frequency || "",
-                    prescribedBy: formData.prescribedBy || "",
-                    doctor_id: formData.doctor_id || null,
-                    facility_id: formData.facility_id || null,
-                    facility_name: formData.facility_name || "",
-                    pharmacy: formData.pharmacy || "",
-                    purpose: formData.purpose || "",
-                    genericName: formData.genericName || "",
-                    drugClass: formData.drugClass || "",
-                    sideEffects: formData.sideEffects || "",
-                    interactions: formData.interactions || "",
-                    rxInstructions: formData.rxInstructions || "",
-                    refillDate: formData.refillDate || "",
-                    nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
-                    pillShape: normalizePillShape(formData.pillShape),
-                    pillColor: formData.pillColor || "#FFFFFF",
-                    trackInventory: Boolean(formData.trackInventory),
-                    pillsPerDose: parseFloat(formData.pillsPerDose) || 1,
-                    lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
-                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseFloat(formData.quantity) || 0)) : 0,
-                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseFloat(formData.totalQuantity) || 0)) : 0,
-                    countBaseline: formData.trackInventory
-                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
-                            ? (parseFloat(formData.quantity) || 0)
-                            : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(formData.quantity) || 0))
-                        : 0,
-                    countBaselineDate: formData.trackInventory
-                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
-                            ? new Date().toISOString()
-                            : selectedMed?.item_metadata?.countBaselineDate)
-                        : null,
-                    reminders: (formData.reminders || []).filter((r: any) => r && typeof r === 'string' && r.trim() !== ""),
-                    doseSchedule: formData.doseSchedule || [],
-                    startDate: formData.startDate || format(new Date(), 'yyyy-MM-dd'),
-                    endDate: formData.endDate || "",
-                    scheduleStartDate: formData.scheduleStartDate || format(new Date(), 'yyyy-MM-dd'),
-                    notes: formData.notes || "",
-                    lastModified: new Date().toISOString()
-                }
+                item_metadata: updatedMeta
             })
             if (res === false) {
                 throw new Error("Unable to update medication in your vault. Please verify your connection.")
@@ -528,36 +535,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             upsertSharedHealthRecord({
                 ...selectedMed,
                 title: formData.name || selectedMed.title,
-                item_metadata: {
-                    ...selectedMed.item_metadata,
-                    dosage: formData.dosage || "As directed",
-                    frequency: formData.frequency || "",
-                    prescribedBy: formData.prescribedBy || "",
-                    doctor_id: formData.doctor_id ?? selectedMed.item_metadata?.doctor_id ?? null,
-                    pharmacy: formData.pharmacy ?? selectedMed.item_metadata?.pharmacy ?? "",
-                    purpose: formData.purpose || "",
-                    genericName: formData.genericName || "",
-                    drugClass: formData.drugClass || "",
-                    sideEffects: formData.sideEffects || "",
-                    interactions: formData.interactions || "",
-                    rxInstructions: formData.rxInstructions || "",
-                    notes: formData.notes || "",
-                    trackInventory: Boolean(formData.trackInventory),
-                    pillsPerDose: parseFloat(formData.pillsPerDose) || 1,
-                    lowStockThreshold: typeof formData.lowStockThreshold === 'number' ? formData.lowStockThreshold : (parseInt(formData.lowStockThreshold) || 5),
-                    quantity: formData.trackInventory ? (typeof formData.quantity === 'number' ? formData.quantity : (parseFloat(formData.quantity) || 0)) : 0,
-                    totalQuantity: formData.trackInventory ? (typeof formData.totalQuantity === 'number' ? formData.totalQuantity : (parseFloat(formData.totalQuantity) || 0)) : 0,
-                    countBaseline: formData.trackInventory
-                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
-                            ? (parseFloat(formData.quantity) || 0)
-                            : (parseFloat(selectedMed?.item_metadata?.countBaseline) || parseFloat(formData.quantity) || 0))
-                        : 0,
-                    countBaselineDate: formData.trackInventory
-                        ? (formData.quantityChanged || !selectedMed?.item_metadata?.countBaselineDate
-                            ? new Date().toISOString()
-                            : selectedMed?.item_metadata?.countBaselineDate)
-                        : null,
-                }
+                item_metadata: updatedMeta
             })
             setShowEditModal(false)
             setSelectedMed(null)
@@ -572,6 +550,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const handleTakeMed = async (med: any, overrideTime?: string) => {
         const takenLog = med.item_metadata?.takenLog || []
         const tracked = isMedTracked(med.item_metadata)
+        const asNeeded = isMedAsNeeded(med.item_metadata)
         const quantity = parseFloat(med.item_metadata?.quantity || "0")
         const timestamp = overrideTime || new Date().toISOString()
         const doseQty = getCurrentDoseQuantity(med)
@@ -585,12 +564,15 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             lastTaken: timestamp,
             nextDose: nextDoseTime
         }
-        if (tracked) {
+        // Only decrement stored quantity on Take for "as needed" meds;
+        // scheduled meds already count each scheduled dose once via calculatePillCountEstimate.
+        if (tracked && asNeeded) {
             const pillsStep = parseFloat(med.item_metadata?.pillsPerDose ?? doseQty ?? "1") || 1
-            updatedMeta.quantity = Math.max(0, quantity - pillsStep)
+            updatedMeta.quantity = Math.max(0, Math.round((quantity - pillsStep) * 100) / 100)
         }
 
         await updateItem(med.id, { item_metadata: updatedMeta })
+        upsertSharedHealthRecord({ ...med, item_metadata: updatedMeta })
     }
 
     const handleConfirmRefill = async (e: React.FormEvent) => {
@@ -626,13 +608,13 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     const handleSkipMed = async (med: any) => {
         const skippedLog = med.item_metadata?.skippedLog || []
+        const updatedMeta = {
+            ...med.item_metadata,
+            skippedLog: [...skippedLog, { timestamp: new Date().toISOString(), reason: "Skipped" }]
+        }
 
-        await updateItem(med.id, {
-            item_metadata: {
-                ...med.item_metadata,
-                skippedLog: [...skippedLog, { timestamp: new Date().toISOString(), reason: "Skipped" }]
-            }
-        })
+        await updateItem(med.id, { item_metadata: updatedMeta })
+        upsertSharedHealthRecord({ ...med, item_metadata: updatedMeta })
 
         // Visual feedback
         toast.success(`✓ Skipped ${med.title}`)
@@ -1593,12 +1575,12 @@ ${selectedMed ? `
                                 <label className="text-xs font-bold text-gray-400 uppercase block mb-1.5">New Pill Count</label>
                                 <input
                                     type="number"
-                                    step="0.5"
+                                    step="0.25"
                                     min="0"
                                     required
                                     autoFocus
                                     value={refillCount}
-                                    onChange={(e) => setRefillCount(e.target.value)}
+                                    onChange={(e) => setRefillCount(e.target.value.replace(/^0+(?=\d)/, ""))}
                                     className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                                 />
                             </div>
@@ -2001,11 +1983,13 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
         pillShape: normalizePillShape(medication?.item_metadata?.pillShape),
         pillColor: medication?.item_metadata?.pillColor || "#FFFFFF",
         trackInventory: medication ? isMedTracked(medication.item_metadata) : false,
-        pillsPerDose: medication?.item_metadata?.pillsPerDose ?? 1,
-        lowStockThreshold: medication?.item_metadata?.lowStockThreshold ?? 5,
-        quantity: initialEstimate ? initialEstimate.remaining : (medication?.item_metadata?.quantity ?? 0),
-        totalQuantity: medication?.item_metadata?.totalQuantity ?? 0,
+        pillsPerDose: String(Number(medication?.item_metadata?.pillsPerDose ?? 1) || 1),
+        lowStockThreshold: String(isNaN(Number(medication?.item_metadata?.lowStockThreshold)) ? 5 : Number(medication?.item_metadata?.lowStockThreshold)),
+        quantity: String(Number(initialEstimate ? initialEstimate.remaining : (medication?.item_metadata?.quantity ?? 0)) || 0),
+        totalQuantity: String(Number(medication?.item_metadata?.totalQuantity ?? 0) || 0),
+        countStartOption: ((medication?.item_metadata?.countStartOption as CountStartOption) || "now") as CountStartOption,
         quantityChanged: false,
+        countStartChanged: false,
         notes: medication?.item_metadata?.notes || "",
         reminders: medication?.item_metadata?.reminders || [],
         doseSchedule: medication?.item_metadata?.doseSchedule || [], // Array of { dayIndex: number, quantity: number }
@@ -2093,8 +2077,8 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                 dosage: "10mg",
                 rxInstructions: "Take tablets by mouth daily as directed for tapering",
                 prescribedBy: "Dr. Roberts",
-                quantity: 21,
-                totalQuantity: 21,
+                quantity: "21",
+                totalQuantity: "21",
                 frequency: "Once daily"
             }
             // Merge with existing form but prioritize scanned data
@@ -2505,61 +2489,76 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                         </label>
 
                         {formData.trackInventory && (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-white/10">
-                                <div>
-                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Pills per Dose</label>
-                                    <input
-                                        type="number"
-                                        step="0.5"
-                                        min="0.25"
-                                        value={isNaN(formData.pillsPerDose) ? '' : formData.pillsPerDose}
-                                        onChange={(e) => {
-                                            const val = parseFloat(e.target.value);
-                                            setFormData({ ...formData, pillsPerDose: isNaN(val) ? 1 : val });
-                                        }}
-                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
+                            <div className="space-y-3 pt-2 border-t border-white/10">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                    <div>
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Pills per Dose</label>
+                                        <input
+                                            type="number"
+                                            step="0.25"
+                                            min="0.25"
+                                            value={formData.pillsPerDose}
+                                            onChange={(e) => {
+                                                const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                                                setFormData({ ...formData, pillsPerDose: clean });
+                                            }}
+                                            className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Current Quantity</label>
+                                        <input
+                                            type="number"
+                                            step="0.25"
+                                            min="0"
+                                            value={formData.quantity}
+                                            onChange={(e) => {
+                                                const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                                                setFormData({ ...formData, quantity: clean, quantityChanged: true });
+                                            }}
+                                            className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Total (Bottle)</label>
+                                        <input
+                                            type="number"
+                                            step="0.25"
+                                            min="0"
+                                            value={formData.totalQuantity}
+                                            onChange={(e) => {
+                                                const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                                                setFormData({ ...formData, totalQuantity: clean });
+                                            }}
+                                            className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Low-Stock Alert</label>
+                                        <input
+                                            type="number"
+                                            step="1"
+                                            min="0"
+                                            value={formData.lowStockThreshold}
+                                            onChange={(e) => {
+                                                const clean = e.target.value.replace(/^0+(?=\d)/, "");
+                                                setFormData({ ...formData, lowStockThreshold: clean });
+                                            }}
+                                            className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        />
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Current Quantity</label>
-                                    <input
-                                        type="number"
-                                        step="0.5"
-                                        min="0"
-                                        value={isNaN(formData.quantity) ? '' : formData.quantity}
-                                        onChange={(e) => {
-                                            const val = parseFloat(e.target.value);
-                                            setFormData({ ...formData, quantity: isNaN(val) ? 0 : val, quantityChanged: true });
-                                        }}
-                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Total (Bottle)</label>
-                                    <input
-                                        type="number"
-                                        step="0.5"
-                                        min="0"
-                                        value={isNaN(formData.totalQuantity) ? '' : formData.totalQuantity}
-                                        onChange={(e) => {
-                                            const val = parseFloat(e.target.value);
-                                            setFormData({ ...formData, totalQuantity: isNaN(val) ? 0 : val });
-                                        }}
-                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Low-Stock Alert</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={isNaN(formData.lowStockThreshold) ? '' : formData.lowStockThreshold}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            setFormData({ ...formData, lowStockThreshold: isNaN(val) ? 5 : val });
-                                        }}
-                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    />
+                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Count Starts</label>
+                                    <select
+                                        value={formData.countStartOption}
+                                        onChange={(e) => setFormData({ ...formData, countStartOption: e.target.value as CountStartOption, countStartChanged: true })}
+                                        className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    >
+                                        <option value="now">Now (tonight&apos;s dose still to come)</option>
+                                        <option value="after_today">After today&apos;s dose (already taken)</option>
+                                        <option value="tomorrow">Tomorrow</option>
+                                    </select>
                                 </div>
                             </div>
                         )}
