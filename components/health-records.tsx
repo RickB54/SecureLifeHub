@@ -28,6 +28,7 @@ import {
     removeSharedHealthRecord,
     resolveDoctorInfo,
 } from "@/lib/health-store"
+import { prepareHealthAttachment } from "@/lib/image-downsize"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -424,30 +425,33 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         }
     }
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        if (file.size > 5000000) { alert("File too large (< 5MB)"); return }
 
         setUploading(true)
-        const reader = new FileReader()
-        reader.onloadend = async () => {
-            const base64 = reader.result as string
-            // Create a new Health Record for this file
-            await addItem({
+        try {
+            const prepared = await prepareHealthAttachment(file, { includeDataUrl: true })
+            const created = await addItem({
                 type: "health-record",
                 title: file.name,
                 category: "Health Records",
                 item_metadata: {
                     is_health_record: true,
-                    date: new Date().toISOString(),
+                    date: formatForDateTimeInput(new Date()),
                     type: "document",
-                    url: base64
+                    url: prepared.dataUrl || ""
                 }
             })
+            if (!created) throw new Error("Failed to save medical record image")
+            upsertSharedHealthRecord(created)
+            toast.success(prepared.isImage ? `Uploaded — ${prepared.sizeSummary}` : `Uploaded ${file.name}`)
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to upload file")
+        } finally {
             setUploading(false)
+            if (e.target) e.target.value = ""
         }
-        reader.readAsDataURL(file)
     }
 
     const openLightbox = (item: any) => {

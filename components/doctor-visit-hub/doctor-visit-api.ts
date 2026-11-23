@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase"
-import { uploadVaultFile } from "@/lib/vault-storage"
-import imageCompression from "browser-image-compression"
+import { prepareHealthAttachment } from "@/lib/image-downsize"
 import {
   HealthProfile,
   HealthPrepItem,
@@ -94,31 +93,81 @@ export function savePinHash(hash: string | null): void {
 }
 
 // ==============================================================================
-// IMAGE COMPRESSION & ATTACHMENT UPLOAD
+// IMAGE DOWNSIZING & PRIVATE STORAGE ATTACHMENT HELPERS (health-attachments)
 // ==============================================================================
+
+const ATTACHMENTS_BUCKET = "health-attachments"
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>()
 
 export async function compressAndUploadAttachment(
   file: File,
-  userId: string = "general"
-): Promise<{ url: string; name: string }> {
-  let fileToUpload = file
-
-  if (file.type.startsWith("image/")) {
-    try {
-      const options = {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 1600,
-        useWebWorker: true,
-      }
-      fileToUpload = await imageCompression(file, options)
-    } catch (err) {
-      console.warn("Image compression failed, using original file:", err)
-      fileToUpload = file
-    }
+  userId?: string
+): Promise<{ path: string; url: string; name: string; sizeSummary: string; isImage: boolean }> {
+  if (!userId) {
+    throw new Error("You must be signed in to upload attachments.")
   }
 
-  const url = await uploadVaultFile(fileToUpload, userId)
-  return { url, name: file.name }
+  const prepared = await prepareHealthAttachment(file)
+  const safeName = prepared.file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+  const storagePath = `${userId}/${Date.now()}-${safeName}`
+
+  const { error } = await supabase.storage
+    .from(ATTACHMENTS_BUCKET)
+    .upload(storagePath, prepared.file, {
+      contentType: prepared.file.type || "application/octet-stream",
+      cacheControl: "3600",
+      upsert: false,
+    })
+
+  if (error) {
+    throw new Error(`Attachment upload failed: ${error.message}`)
+  }
+
+  return {
+    path: storagePath,
+    url: storagePath,
+    name: file.name,
+    sizeSummary: prepared.sizeSummary,
+    isImage: prepared.isImage,
+  }
+}
+
+export async function getAttachmentSignedUrl(pathOrUrl?: string | null): Promise<string | null> {
+  if (!pathOrUrl) return null
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://") || pathOrUrl.startsWith("data:")) {
+    return pathOrUrl
+  }
+
+  const now = Date.now()
+  const cached = signedUrlCache.get(pathOrUrl)
+  if (cached && cached.expiresAt > now) {
+    return cached.url
+  }
+
+  const { data, error } = await supabase.storage
+    .from(ATTACHMENTS_BUCKET)
+    .createSignedUrl(pathOrUrl, 300) // 5 min short expiry
+
+  if (error || !data?.signedUrl) {
+    console.warn("Failed to sign attachment URL:", error?.message)
+    return null
+  }
+
+  signedUrlCache.set(pathOrUrl, { url: data.signedUrl, expiresAt: now + 240_000 })
+  return data.signedUrl
+}
+
+export async function deleteHealthAttachment(pathOrUrl?: string | null): Promise<void> {
+  if (!pathOrUrl) return
+  if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://") || pathOrUrl.startsWith("data:")) {
+    return
+  }
+  signedUrlCache.delete(pathOrUrl)
+  try {
+    await supabase.storage.from(ATTACHMENTS_BUCKET).remove([pathOrUrl])
+  } catch (err) {
+    console.warn("Failed to remove old attachment from storage:", err)
+  }
 }
 
 // ==============================================================================
@@ -529,7 +578,12 @@ export async function saveHealthLetter(
 
 export async function deleteHealthLetter(id: string, userId?: string): Promise<void> {
   const cached = getCachedItem<HealthLetter[]>("letters", [])
+  const target = cached.find((i) => i.id === id)
   setCachedItem("letters", cached.filter((i) => i.id !== id))
+
+  if (target?.attachment_url) {
+    await deleteHealthAttachment(target.attachment_url)
+  }
 
   if (userId && navigator.onLine) {
     try {

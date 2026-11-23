@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Trash2, Edit, HelpCircle, Hospital } from "lucide-react"
 import { toast } from "sonner"
 import { upsertSharedHealthRecord, removeSharedHealthRecord } from "@/lib/health-store"
+import { prepareHealthAttachment } from "@/lib/image-downsize"
 
 interface Props {
     records: any[]
@@ -277,14 +278,19 @@ function AddInsuranceModal({ editingPolicy, onClose, onSave, theme }: { editingP
     const labelClass = "text-xs uppercase font-bold opacity-50 ml-1"
     const meta = editingPolicy?.item_metadata || {}
 
-    // Simple file handling for prototype (Base64)
-    const handleFile = (e: any, setUrl: (s: string) => void) => {
-        const file = e.target.files[0]
+    // Downsize card images in browser (<=1600px, WebP/JPEG ~0.7, aim <300KB)
+    const handleFile = async (e: any, setUrl: (s: string) => void) => {
+        const file = e.target.files?.[0]
         if (!file) return
-        if (file.size > 5000000) { toast.error("File too large (max 5MB)"); return }
-        const r = new FileReader()
-        r.onloadend = () => setUrl(r.result as string)
-        r.readAsDataURL(file)
+        try {
+            const prepared = await prepareHealthAttachment(file, { includeDataUrl: true })
+            if (prepared.dataUrl) {
+                setUrl(prepared.dataUrl)
+                toast.success(prepared.sizeSummary)
+            }
+        } catch (err: any) {
+            toast.error(err?.message || "Failed to process image")
+        }
     }
 
     const [frontUrl, setFrontUrl] = useState(meta.cardFrontUrl || "")

@@ -94,6 +94,8 @@ import {
   getSelectedSectionsFromStorage,
   getLastCacheUpdated,
   compressAndUploadAttachment,
+  getAttachmentSignedUrl,
+  deleteHealthAttachment,
 } from "./doctor-visit-api"
 import DoctorVisitMode from "./DoctorVisitMode"
 
@@ -176,6 +178,109 @@ function SectionToolbar({
   )
 }
 
+interface AttachmentThumbnailProps {
+  pathOrUrl: string
+  name?: string | null
+  onOpenFull?: (signedUrl: string, name: string) => void
+}
+
+function AttachmentThumbnail({ pathOrUrl, name, onOpenFull }: AttachmentThumbnailProps) {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState(false)
+
+  const displayName = name || "Attachment"
+  const isPdf =
+    displayName.toLowerCase().endsWith(".pdf") ||
+    pathOrUrl.toLowerCase().includes(".pdf")
+
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setFailed(false)
+    getAttachmentSignedUrl(pathOrUrl)
+      .then((url) => {
+        if (!active) return
+        if (url) {
+          setSignedUrl(url)
+        } else {
+          setFailed(true)
+        }
+      })
+      .catch(() => {
+        if (active) setFailed(true)
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [pathOrUrl])
+
+  if (loading) {
+    return (
+      <div className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
+        <Paperclip className="h-3.5 w-3.5 animate-pulse" />
+        <span>Loading attachment...</span>
+      </div>
+    )
+  }
+
+  if (failed || !signedUrl) {
+    return (
+      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[11px] text-rose-300">
+        <AlertTriangle className="h-3.5 w-3.5" />
+        <span>Attachment unavailable ({displayName})</span>
+      </div>
+    )
+  }
+
+  if (isPdf) {
+    return (
+      <a
+        href={signedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 text-xs font-medium border border-slate-800"
+      >
+        <Paperclip className="h-3.5 w-3.5" />
+        <span>{displayName}</span>
+      </a>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation()
+        if (onOpenFull) {
+          onOpenFull(signedUrl, displayName)
+        } else {
+          window.open(signedUrl, "_blank", "noopener,noreferrer")
+        }
+      }}
+      className="group/thumb flex items-center gap-2.5 p-1.5 pr-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 transition-all text-left cursor-pointer"
+      title="Tap to view full size"
+    >
+      <img
+        src={signedUrl}
+        alt={displayName}
+        loading="lazy"
+        className="h-14 w-14 rounded-lg object-cover bg-black border border-slate-700 shrink-0"
+      />
+      <div className="min-w-0">
+        <div className="text-xs font-semibold text-blue-400 group-hover/thumb:text-blue-300 truncate max-w-[200px]">
+          {displayName}
+        </div>
+        <div className="text-[10px] text-slate-400">Tap to view full size</div>
+      </div>
+    </button>
+  )
+}
+
 interface DoctorVisitHubProps {
   onClose: () => void
   onNavigateTab?: (tab: string) => void
@@ -213,11 +318,13 @@ export default function DoctorVisitHub({
   // 2. Visit Mode State
   const [visitModeActive, setVisitModeActive] = useState(false)
 
-  // 3. Online/Offline State
-  const [isOnline, setIsOnline] = useState(() => (typeof window !== "undefined" ? navigator.onLine : true))
+  // 3. Online/Offline State (fixed SSR default; hydrate in useEffect)
+  const [isOnline, setIsOnline] = useState(true)
   const [lastCacheDate, setLastCacheDate] = useState<string | null>(null)
+  const [attachmentPreview, setAttachmentPreview] = useState<{ url: string; name: string } | null>(null)
 
   useEffect(() => {
+    setIsOnline(navigator.onLine)
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => {
       setIsOnline(false)
@@ -232,32 +339,34 @@ export default function DoctorVisitHub({
     }
   }, [])
 
-  // 4. Section Chips Multi-Select State
+  // 4. Section Chips Multi-Select State (fixed SSR default; hydrate from URL/localStorage after mount)
   const [selectedSections, setSelectedSections] = useState<VisitHubSectionId[]>(() => {
     if (initialSection && VISIT_HUB_SECTIONS.some((s) => s.id === initialSection)) {
       return [initialSection]
     }
-    if (typeof window !== "undefined") {
-      const urlParams = new URLSearchParams(window.location.search)
-      const secParam = urlParams.get("section") as VisitHubSectionId
-      if (secParam && VISIT_HUB_SECTIONS.some((s) => s.id === secParam)) {
-        return [secParam]
-      }
-      const pendingSection = localStorage.getItem("slh-pending-visit-hub-section") as VisitHubSectionId
-      if (pendingSection && VISIT_HUB_SECTIONS.some((s) => s.id === pendingSection)) {
-        localStorage.removeItem("slh-pending-visit-hub-section")
-        return [pendingSection]
-      }
-    }
-    const saved = getSelectedSectionsFromStorage()
-    const allIds = VISIT_HUB_SECTIONS.map((s) => s.id)
-    return saved.length > 0 ? (saved as VisitHubSectionId[]) : allIds
+    return VISIT_HUB_SECTIONS.map((s) => s.id)
   })
 
-  // Sync if initialSection changes
   useEffect(() => {
     if (initialSection && VISIT_HUB_SECTIONS.some((s) => s.id === initialSection)) {
       setSelectedSections([initialSection])
+      return
+    }
+    const urlParams = new URLSearchParams(window.location.search)
+    const secParam = urlParams.get("section") as VisitHubSectionId
+    if (secParam && VISIT_HUB_SECTIONS.some((s) => s.id === secParam)) {
+      setSelectedSections([secParam])
+      return
+    }
+    const pendingSection = localStorage.getItem("slh-pending-visit-hub-section") as VisitHubSectionId
+    if (pendingSection && VISIT_HUB_SECTIONS.some((s) => s.id === pendingSection)) {
+      localStorage.removeItem("slh-pending-visit-hub-section")
+      setSelectedSections([pendingSection])
+      return
+    }
+    const saved = getSelectedSectionsFromStorage()
+    if (saved.length > 0) {
+      setSelectedSections(saved as VisitHubSectionId[])
     }
   }, [initialSection])
 
@@ -417,89 +526,63 @@ export default function DoctorVisitHub({
     visit_id: "",
   })
 
-  // List Sections: Toolbar, Filters, Sorts, and Expanded States
-  const [questionsSort, setQuestionsSort] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_sort_questions") || "newest"
-    }
-    return "newest"
-  })
+  // List Sections: Toolbar, Filters, Sorts, and Expanded States (fixed SSR defaults; hydrate after mount)
+  const [questionsSort, setQuestionsSort] = useState<string>("newest")
   const [questionsSearch, setQuestionsSearch] = useState("")
   const [questionsDoctorFilter, setQuestionsDoctorFilter] = useState("all")
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
 
-  const [notesSort, setNotesSort] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_sort_notes") || "newest"
-    }
-    return "newest"
-  })
+  const [notesSort, setNotesSort] = useState<string>("newest")
   const [notesSearch, setNotesSearch] = useState("")
-  const [notesGivenFilter, setNotesGivenFilter] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_given_notes") || "all"
-    }
-    return "all"
-  })
+  const [notesGivenFilter, setNotesGivenFilter] = useState<string>("all")
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({})
 
-  const [lettersSort, setLettersSort] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_sort_letters") || "newest"
-    }
-    return "newest"
-  })
+  const [lettersSort, setLettersSort] = useState<string>("newest")
   const [lettersSearch, setLettersSearch] = useState("")
   const [lettersDoctorFilter, setLettersDoctorFilter] = useState("all")
-  const [lettersGivenFilter, setLettersGivenFilter] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_given_letters") || "all"
-    }
-    return "all"
-  })
+  const [lettersGivenFilter, setLettersGivenFilter] = useState<string>("all")
   const [expandedLetters, setExpandedLetters] = useState<Record<string, boolean>>({})
 
-  const [referralsSort, setReferralsSort] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_sort_referrals") || "newest"
-    }
-    return "newest"
-  })
+  const [referralsSort, setReferralsSort] = useState<string>("newest")
   const [referralsSearch, setReferralsSearch] = useState("")
   const [referralsDoctorFilter, setReferralsDoctorFilter] = useState("all")
-  const [referralsGivenFilter, setReferralsGivenFilter] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_given_referrals") || "all"
-    }
-    return "all"
-  })
+  const [referralsGivenFilter, setReferralsGivenFilter] = useState<string>("all")
   const [expandedReferrals, setExpandedReferrals] = useState<Record<string, boolean>>({})
 
-  const [visitsSort, setVisitsSort] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_sort_visits") || "newest"
-    }
-    return "newest"
-  })
+  const [visitsSort, setVisitsSort] = useState<string>("newest")
   const [visitsSearch, setVisitsSearch] = useState("")
   const [visitsDoctorFilter, setVisitsDoctorFilter] = useState("all")
   const [expandedVisits, setExpandedVisits] = useState<Record<string, boolean>>({})
 
-  const [summariesSort, setSummariesSort] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_sort_summaries") || "newest"
-    }
-    return "newest"
-  })
+  const [summariesSort, setSummariesSort] = useState<string>("newest")
   const [summariesSearch, setSummariesSearch] = useState("")
   const [summariesDoctorFilter, setSummariesDoctorFilter] = useState("all")
-  const [summariesGivenFilter, setSummariesGivenFilter] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("slh_vh_given_summaries") || "all"
-    }
-    return "all"
-  })
+  const [summariesGivenFilter, setSummariesGivenFilter] = useState<string>("all")
   const [expandedSummaries, setExpandedSummaries] = useState<Record<string, boolean>>({})
+
+  // Hydrate saved sort/filter preferences after mount to prevent hydration mismatch
+  useEffect(() => {
+    const qs = localStorage.getItem("slh_vh_sort_questions")
+    if (qs) setQuestionsSort(qs)
+    const ns = localStorage.getItem("slh_vh_sort_notes")
+    if (ns) setNotesSort(ns)
+    const ng = localStorage.getItem("slh_vh_given_notes")
+    if (ng) setNotesGivenFilter(ng)
+    const ls = localStorage.getItem("slh_vh_sort_letters")
+    if (ls) setLettersSort(ls)
+    const lg = localStorage.getItem("slh_vh_given_letters")
+    if (lg) setLettersGivenFilter(lg)
+    const rs = localStorage.getItem("slh_vh_sort_referrals")
+    if (rs) setReferralsSort(rs)
+    const rg = localStorage.getItem("slh_vh_given_referrals")
+    if (rg) setReferralsGivenFilter(rg)
+    const vs = localStorage.getItem("slh_vh_sort_visits")
+    if (vs) setVisitsSort(vs)
+    const ss = localStorage.getItem("slh_vh_sort_summaries")
+    if (ss) setSummariesSort(ss)
+    const sg = localStorage.getItem("slh_vh_given_summaries")
+    if (sg) setSummariesGivenFilter(sg)
+  }, [])
 
   const handleSortChange = (
     section: "questions" | "notes" | "letters" | "referrals" | "visits" | "summaries",
@@ -602,17 +685,17 @@ export default function DoctorVisitHub({
     id: string
   ) => {
     if (section === "questions") {
-      setExpandedQuestions((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
+      setExpandedQuestions((prev) => ({ ...prev, [id]: !(prev[id] === true) }))
     } else if (section === "notes") {
-      setExpandedNotes((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
+      setExpandedNotes((prev) => ({ ...prev, [id]: !(prev[id] === true) }))
     } else if (section === "letters") {
-      setExpandedLetters((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
+      setExpandedLetters((prev) => ({ ...prev, [id]: !(prev[id] === true) }))
     } else if (section === "referrals") {
-      setExpandedReferrals((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
+      setExpandedReferrals((prev) => ({ ...prev, [id]: !(prev[id] === true) }))
     } else if (section === "visits") {
-      setExpandedVisits((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
+      setExpandedVisits((prev) => ({ ...prev, [id]: !(prev[id] === true) }))
     } else if (section === "summaries") {
-      setExpandedSummaries((prev) => ({ ...prev, [id]: !(prev[id] !== false) }))
+      setExpandedSummaries((prev) => ({ ...prev, [id]: !(prev[id] === true) }))
     }
   }
 
@@ -622,9 +705,9 @@ export default function DoctorVisitHub({
   ) => {
     if (ids.length === 0) return
     const getTargetState = (currentMap: Record<string, boolean>) => {
-      const allExpanded = ids.every((id) => currentMap[id] !== false)
+      const allItemsExpanded = ids.every((id) => currentMap[id] === true)
       const next: Record<string, boolean> = {}
-      ids.forEach((id) => { next[id] = !allExpanded })
+      ids.forEach((id) => { next[id] = !allItemsExpanded })
       return next
     }
 
@@ -1257,6 +1340,12 @@ export default function DoctorVisitHub({
         attachment_name: letterForm.attachment_name || null,
       }
       const saved = await saveHealthLetter(payload, userId)
+      if (
+        editingLetter?.attachment_url &&
+        editingLetter.attachment_url !== saved.attachment_url
+      ) {
+        await deleteHealthAttachment(editingLetter.attachment_url)
+      }
       if (editingLetter) {
         setLetters((prev) => prev.map((l) => (l.id === saved.id ? saved : l)))
       } else {
@@ -1275,16 +1364,24 @@ export default function DoctorVisitHub({
     if (!file) return
     setUploadingFile(true)
     try {
+      const previousPath = letterForm.attachment_url
       const res = await compressAndUploadAttachment(file, userId)
+      // Delete replaced file from storage if it was a different path
+      if (previousPath && previousPath !== res.path && previousPath !== editingLetter?.attachment_url) {
+        await deleteHealthAttachment(previousPath)
+      }
       setLetterForm((prev) => ({
         ...prev,
-        attachment_url: res.url,
+        attachment_url: res.path,
         attachment_name: res.name,
       }))
-    } catch (err) {
+      toast.success(res.isImage ? `Uploaded — ${res.sizeSummary}` : `Attached ${res.name}`)
+    } catch (err: any) {
       console.warn("Upload failed:", err)
+      toast.error(err?.message || "Attachment upload failed")
     } finally {
       setUploadingFile(false)
+      if (e.target) e.target.value = ""
     }
   }
 
@@ -2262,7 +2359,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredQuestions.map((q) => {
-                    const isExpanded = expandedQuestions[q.id] !== false
+                    const isExpanded = expandedQuestions[q.id] === true
                     const dateStr = q.created_at
                       ? formatDateOnly(q.created_at)
                       : ""
@@ -2484,7 +2581,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredNotes.map((n) => {
-                    const isExpanded = expandedNotes[n.id] !== false
+                    const isExpanded = expandedNotes[n.id] === true
                     const dateFormatted = formatDateOnly(n.date)
                     const dateWithLabel = n.date_type ? `${n.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -2522,6 +2619,27 @@ export default function DoctorVisitHub({
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingNote(n)
+                                setNoteForm({
+                                  title: n.title,
+                                  text: n.text,
+                                  date: n.date,
+                                  date_type: n.date_type || "Appointment date",
+                                  doctor_id: n.doctor_id || "",
+                                  doctor_name: resolveDoctorInfo(n.doctor_id, { name: n.doctor_name }, existingDoctors).name,
+                                  visit_id: n.visit_id || "",
+                                })
+                                setNoteModalOpen(true)
+                              }}
+                              className="p-1 rounded-lg hover:bg-teal-500/20 text-slate-400 hover:text-teal-300"
+                              title="Edit note"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -2753,7 +2871,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredLetters.map((l) => {
-                    const isExpanded = expandedLetters[l.id] !== false
+                    const isExpanded = expandedLetters[l.id] === true
                     const dateFormatted = formatDateOnly(l.date)
                     const dateWithLabel = l.date_type ? `${l.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -2772,7 +2890,7 @@ export default function DoctorVisitHub({
                                 l.given_to_doctor ? "text-emerald-400" : "text-blue-400"
                               }`}
                             >
-                              {l.doctor_name || "Doctor Letter"}
+                              {resolveDoctorInfo(l.doctor_id, { name: l.doctor_name }, existingDoctors).name || "Doctor Letter"}
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
@@ -2795,9 +2913,36 @@ export default function DoctorVisitHub({
                             <span className="hidden sm:inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-blue-500/20 text-blue-300 shrink-0">
                               {l.direction}
                             </span>
+                            {l.attachment_url && (
+                              <Paperclip className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                            )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingLetter(l)
+                                setLetterForm({
+                                  doctor_name: resolveDoctorInfo(l.doctor_id, { name: l.doctor_name }, existingDoctors).name,
+                                  doctor_id: l.doctor_id || "",
+                                  visit_id: l.visit_id || "",
+                                  date: l.date,
+                                  date_type: l.date_type || "Letter date",
+                                  direction: l.direction,
+                                  status: l.status,
+                                  notes: l.notes,
+                                  attachment_url: l.attachment_url || "",
+                                  attachment_name: l.attachment_name || "",
+                                })
+                                setLetterModalOpen(true)
+                              }}
+                              className="p-1 rounded-lg hover:bg-amber-500/20 text-slate-400 hover:text-amber-300"
+                              title="Edit letter"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -2913,16 +3058,11 @@ export default function DoctorVisitHub({
 
                             {l.attachment_url && (
                               <div className="pt-1">
-                                <a
-                                  href={l.attachment_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-blue-400 hover:text-blue-300 text-xs font-medium border border-slate-800"
-                                >
-                                  <Paperclip className="h-3.5 w-3.5" />
-                                  <span>{l.attachment_name || "View Attachment"}</span>
-                                </a>
+                                <AttachmentThumbnail
+                                  pathOrUrl={l.attachment_url}
+                                  name={l.attachment_name}
+                                  onOpenFull={(url, name) => setAttachmentPreview({ url, name })}
+                                />
                               </div>
                             )}
                           </div>
@@ -3050,7 +3190,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredReferrals.map((r) => {
-                    const isExpanded = expandedReferrals[r.id] !== false
+                    const isExpanded = expandedReferrals[r.id] === true
                     const dateFormatted = formatDateOnly(r.date)
                     const dateWithLabel = r.date_type ? `${r.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -3069,7 +3209,7 @@ export default function DoctorVisitHub({
                                 r.given_to_doctor ? "text-emerald-400" : "text-blue-400"
                               }`}
                             >
-                              {r.specialist_name}
+                              {resolveDoctorInfo(r.doctor_id, { name: r.specialist_name }, existingDoctors).name || r.specialist_name}
                             </span>
                             <span
                               className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
@@ -3101,6 +3241,32 @@ export default function DoctorVisitHub({
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingReferral(r)
+                                setReferralForm({
+                                  specialist_name: r.specialist_name || "",
+                                  specialty: r.specialty || "",
+                                  doctor_id: r.doctor_id || "",
+                                  referred_by_name: r.referred_by_name || "",
+                                  referred_by_doctor_id: r.referred_by_doctor_id || "",
+                                  visit_id: r.visit_id || "",
+                                  reason: r.reason || "",
+                                  date: r.date || getTodayDateString(),
+                                  date_type: r.date_type || "Referral date",
+                                  status: r.status || "needed",
+                                  phone: r.phone || "",
+                                  notes: r.notes || "",
+                                })
+                                setReferralModalOpen(true)
+                              }}
+                              className="p-1 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-300"
+                              title="Edit referral"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -3356,7 +3522,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredVisitSummaries.map((s) => {
-                    const isExpanded = expandedSummaries[s.id] !== false
+                    const isExpanded = expandedSummaries[s.id] === true
                     const dateFormatted = formatDateOnly(s.date)
                     const dateWithLabel = s.date_type ? `${s.date_type}: ${dateFormatted}` : dateFormatted
                     return (
@@ -3394,6 +3560,27 @@ export default function DoctorVisitHub({
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             {dateWithLabel && <span className="text-[11px] text-slate-400">{dateWithLabel}</span>}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditingSummary(s)
+                                setSummaryForm({
+                                  title: s.title,
+                                  summary_text: s.summary_text,
+                                  date: s.date,
+                                  date_type: s.date_type || "Visit date",
+                                  doctor_id: s.doctor_id || "",
+                                  doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
+                                  visit_id: s.visit_id || "",
+                                })
+                                setSummaryModalOpen(true)
+                              }}
+                              className="p-1 rounded-lg hover:bg-cyan-500/20 text-slate-400 hover:text-cyan-300"
+                              title="Edit visit summary"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -3610,7 +3797,7 @@ export default function DoctorVisitHub({
                   </p>
                 ) : (
                   filteredVisits.map((v) => {
-                    const isExpanded = expandedVisits[v.id] !== false
+                    const isExpanded = expandedVisits[v.id] === true
                     const counts = visitItemCounts[v.id] || { notes: 0, letters: 0, referrals: 0 }
                     const dateStr = formatDateOnly(v.date) || "No date"
                     return (
@@ -3635,6 +3822,17 @@ export default function DoctorVisitHub({
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
                             <span className="text-[11px] text-slate-400">{dateStr}</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleNavigateToFullTab("appointments")
+                              }}
+                              className="p-1 rounded-lg hover:bg-blue-500/20 text-slate-400 hover:text-blue-300"
+                              title="Edit visit in Visits"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
                             {isExpanded ? (
                               <ChevronUp className="h-4 w-4 text-slate-400" />
                             ) : (
@@ -4629,6 +4827,36 @@ export default function DoctorVisitHub({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* FULL-SIZE ATTACHMENT PREVIEW LIGHTBOX */}
+      {attachmentPreview && (
+        <div
+          className="fixed inset-0 z-[100080] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={() => setAttachmentPreview(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] flex flex-col items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between gap-4 text-white">
+              <span className="text-sm font-bold truncate">{attachmentPreview.name}</span>
+              <button
+                type="button"
+                onClick={() => setAttachmentPreview(null)}
+                className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white"
+                title="Close preview"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <img
+              src={attachmentPreview.url}
+              alt={attachmentPreview.name}
+              className="max-h-[80vh] max-w-full rounded-2xl object-contain border border-slate-700 bg-black"
+            />
           </div>
         </div>
       )}
