@@ -26,6 +26,10 @@ import {
     isMedAsNeeded,
     calculatePillCountEstimate,
     getCountBaselineDateForOption,
+    getDefaultReminderForFrequency,
+    getEffectiveReminderTimes,
+    getScheduledNextDose,
+    formatReminderTime12h,
     isMedLowStockCalculated as isMedLowStock,
     type CountStartOption,
 } from '@/lib/pill-count'
@@ -221,81 +225,49 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     // Helper: Calculate next dose date based on reminders and frequency
     const calculateNextDose = (med: any, fromDate = new Date(), isTakeAction = false) => {
         const metadata = med.item_metadata || {}
-        const reminders = metadata.reminders || []
-        const frequency = metadata.frequency || ""
-        const dosesPerDay = parseInt(metadata.dosesPerDay || (frequency.toLowerCase().includes("twice") ? "2" : frequency.toLowerCase().includes("three") ? "3" : "1"))
+        const scheduled = getScheduledNextDose(metadata, fromDate, isTakeAction)
+        if (scheduled) return scheduled
 
-        // If it's a Once Daily medication and we just took it, always go to tomorrow
-        if (isTakeAction && dosesPerDay === 1) {
-            const tomorrow = addDays(fromDate, 1)
-            if (reminders.length > 0) {
-                const [hours, minutes] = reminders[0].split(':').map(Number)
-                tomorrow.setHours(hours, minutes, 0, 0)
-            }
-            return tomorrow.toISOString()
+        const frequency = (metadata.frequency || "").toLowerCase()
+        if (!frequency || frequency.includes("as needed") || frequency === "prn") {
+            return ""
         }
-
-        // 1. If we have reminders, find the next one
-        if (reminders.length > 0) {
-            const reminderDates = reminders.map((time: string) => {
-                const [hours, minutes] = time.split(':').map(Number)
-                const d = new Date(fromDate)
-                d.setHours(hours, minutes, 0, 0)
-                return d
-            }).sort((a: Date, b: Date) => a.getTime() - b.getTime())
-
-            // Find first one today that is AFTER fromDate
-            const nextToday = reminderDates.find((d: Date) => d.getTime() > fromDate.getTime() + 60000) // +1 min grace
-            if (nextToday) return nextToday.toISOString()
-
-            // Otherwise, pick first reminder tomorrow
-            const nextTomorrow = addDays(new Date(reminderDates[0]), 1)
-            return nextTomorrow.toISOString()
-        }
-
-        // 2. Fallback to frequency increments
-        const freq = frequency.toLowerCase()
-        if (freq.includes("once") || freq.includes("daily") || freq === "qd") {
-            return addDays(fromDate, 1).toISOString()
-        } else if (freq.includes("twice") || freq === "bid") {
-            return addHours(fromDate, 12).toISOString()
-        } else if (freq.includes("three") || freq === "tid") {
-            return addHours(fromDate, 8).toISOString()
-        } else if (freq.includes("four") || freq === "qid") {
-            return addHours(fromDate, 6).toISOString()
-        }
-
-        // Default: 24h fallback
+        if (frequency.includes("every other day")) return addDays(fromDate, 2).toISOString()
+        if (frequency.includes("weekly")) return addDays(fromDate, 7).toISOString()
+        if (frequency.includes("twice") || frequency === "bid") return addHours(fromDate, 12).toISOString()
+        if (frequency.includes("three") || frequency === "tid") return addHours(fromDate, 8).toISOString()
+        if (frequency.includes("four") || frequency === "qid") return addHours(fromDate, 6).toISOString()
         return addDays(fromDate, 1).toISOString()
     }
 
-    // Helper: Get dose for current day based on schedule
+    // Helper: Get dose for current day based on schedule + reminder times
     const getCurrentDose = (med: any) => {
         const schedule = med.item_metadata?.doseSchedule || []
         const startDateStr = med.item_metadata?.scheduleStartDate || med.created_at || med.item_metadata?.createdAt
+        const reminderTimes = getEffectiveReminderTimes(med.item_metadata)
+        const timeSuffix = reminderTimes.length > 0
+            ? ` at ${reminderTimes.map(r => formatReminderTime12h(r.hh, r.mm)).join(", ")}`
+            : ""
 
-        if (schedule.length === 0 || !startDateStr) return med.item_metadata?.dosage
+        if (schedule.length === 0 || !startDateStr) {
+            return `${med.item_metadata?.dosage || "As directed"}${timeSuffix}`
+        }
 
         try {
             const start = startOfDay(new Date(startDateStr))
             const today = startOfDay(new Date())
 
-            // Calculate day index (Day 1 = 0, Day 2 = 1...)
             const diffInMs = today.getTime() - start.getTime()
             const dayIndex = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
-
-            // Find schedule entry for this day
             const entry = schedule.find((s: any) => s.dayIndex === dayIndex + 1)
 
             if (entry) {
-                return `${entry.quantity} pill(s)`
+                return `${entry.quantity} pill(s)${timeSuffix}`
             }
 
-            // Default if beyond schedule? Or show "Completed"? 
-            // For now show original dosage as fallback
-            return med.item_metadata?.dosage
+            return `${med.item_metadata?.dosage || "As directed"}${timeSuffix}`
         } catch (e) {
-            return med.item_metadata?.dosage
+            return `${med.item_metadata?.dosage || "As directed"}${timeSuffix}`
         }
     }
 
@@ -407,8 +379,9 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     // Get upcoming reminders (meds due today)
     const upcomingReminders = medRecords.filter(med => {
-        if (!med.item_metadata?.nextDose) return false
-        const nextDose = new Date(med.item_metadata.nextDose)
+        const liveNext = getScheduledNextDose(med.item_metadata) || med.item_metadata?.nextDose
+        if (!liveNext) return false
+        const nextDose = new Date(liveNext)
         const today = new Date()
         return isSameDay(nextDose, today)
     })
@@ -434,7 +407,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
                     interactions: formData.interactions || "",
                     rxInstructions: formData.rxInstructions || "",
                     refillDate: formData.refillDate || "",
-                    nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
+                    nextDose: calculateNextDose({ item_metadata: formData }),
                     pillShape: normalizePillShape(formData.pillShape),
                     pillColor: formData.pillColor || "#FFFFFF",
                     trackInventory: Boolean(formData.trackInventory),
@@ -505,7 +478,7 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             interactions: formData.interactions || "",
             rxInstructions: formData.rxInstructions || "",
             refillDate: formData.refillDate || "",
-            nextDose: formData.nextDose || calculateNextDose({ item_metadata: formData }),
+            nextDose: calculateNextDose({ item_metadata: formData }),
             pillShape: normalizePillShape(formData.pillShape),
             pillColor: formData.pillColor || "#FFFFFF",
             trackInventory: Boolean(formData.trackInventory),
@@ -1357,13 +1330,17 @@ ${selectedMed ? `
                                                     </div>
                                                 </div>
 
-                                                {/* Next Scheduled Time */}
-                                                {med.item_metadata?.nextDose && (
-                                                    <div className="flex items-center gap-2 text-sm text-purple-400 mt-2">
-                                                        <Clock className="h-4 w-4" />
-                                                        Next: {format(new Date(med.item_metadata.nextDose), 'MMM d, h:mm a')}
-                                                    </div>
-                                                )}
+                                                {/* Next Scheduled Time (derived from Reminder Times + Frequency) */}
+                                                {(() => {
+                                                    const liveNextDose = getScheduledNextDose(med.item_metadata) || med.item_metadata?.nextDose
+                                                    if (!liveNextDose) return null
+                                                    return (
+                                                        <div className="flex items-center gap-2 text-sm text-purple-400 mt-2">
+                                                            <Clock className="h-4 w-4" />
+                                                            Next: {format(new Date(liveNextDose), 'MMM d, h:mm a')}
+                                                        </div>
+                                                    )
+                                                })()}
 
                                                 {/* Status Badges */}
                                                 <div className="flex items-center gap-2 mt-2">
@@ -2597,7 +2574,13 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                             <div className="flex gap-2">
                                 <select
                                     value={(() => {
-                                        const freq = formData.frequency?.toLowerCase() || ""
+                                        const freq = formData.frequency?.toLowerCase().trim() || ""
+                                        if (freq === "once daily - morning") return "once_morning"
+                                        if (freq === "once daily - afternoon") return "once_afternoon"
+                                        if (freq === "once daily - evening") return "once_evening"
+                                        if (freq === "once daily - bedtime") return "once_bedtime"
+                                        if (freq === "every other day") return "every_other_day"
+                                        if (freq === "weekly") return "weekly"
                                         if (freq.includes("once")) return "once"
                                         if (freq.includes("twice")) return "twice"
                                         if (freq.includes("three")) return "three"
@@ -2611,20 +2594,37 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                                         let doses = "1"
 
                                         if (val === "once") { freq = "Once Daily"; doses = "1"; }
+                                        else if (val === "once_morning") { freq = "Once Daily - Morning"; doses = "1"; }
+                                        else if (val === "once_afternoon") { freq = "Once Daily - Afternoon"; doses = "1"; }
+                                        else if (val === "once_evening") { freq = "Once Daily - Evening"; doses = "1"; }
+                                        else if (val === "once_bedtime") { freq = "Once Daily - Bedtime"; doses = "1"; }
                                         else if (val === "twice") { freq = "Twice Daily"; doses = "2"; }
                                         else if (val === "three") { freq = "Three Times Daily"; doses = "3"; }
                                         else if (val === "four") { freq = "Four Times Daily"; doses = "4"; }
+                                        else if (val === "every_other_day") { freq = "Every Other Day"; doses = "1"; }
+                                        else if (val === "weekly") { freq = "Weekly"; doses = "1"; }
                                         else if (val === "as_needed") { freq = "As needed"; doses = "1"; }
                                         else { freq = formData.frequency; doses = "1"; }
 
-                                        setFormData({ ...formData, frequency: freq, dosesPerDay: doses })
+                                        const defaultRem = getDefaultReminderForFrequency(freq)
+                                        const nextReminders = defaultRem
+                                            ? [defaultRem]
+                                            : formData.reminders
+
+                                        setFormData({ ...formData, frequency: freq, dosesPerDay: doses, reminders: nextReminders })
                                     }}
                                     className="px-3 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                                 >
                                     <option value="once">Once Daily</option>
+                                    <option value="once_morning">Once Daily - Morning</option>
+                                    <option value="once_afternoon">Once Daily - Afternoon</option>
+                                    <option value="once_evening">Once Daily - Evening</option>
+                                    <option value="once_bedtime">Once Daily - Bedtime</option>
                                     <option value="twice">Twice Daily</option>
                                     <option value="three">3x Daily</option>
                                     <option value="four">4x Daily</option>
+                                    <option value="every_other_day">Every Other Day</option>
+                                    <option value="weekly">Weekly</option>
                                     <option value="as_needed">As Needed</option>
                                     <option value="custom">Custom Text...</option>
                                 </select>

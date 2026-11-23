@@ -32,15 +32,37 @@ export function getCountBaselineDateForOption(
   return now.toISOString()
 }
 
+export function getDefaultReminderForFrequency(frequency?: string): string | null {
+  const f = (frequency || "").toLowerCase().trim()
+  if (f.includes("morning")) return "09:00"
+  if (f.includes("afternoon")) return "13:00"
+  if (f.includes("evening")) return "18:00"
+  if (f.includes("bedtime")) return "21:00"
+  return null
+}
+
+export function getDayIntervalFromFrequency(frequency?: string): number {
+  const f = (frequency || "").toLowerCase().trim()
+  if (f.includes("every other day")) return 2
+  if (f.includes("weekly") || f.includes("once a week") || f.includes("1x a week")) return 7
+  const everyDays = f.match(/every\s+(\d+)\s*day/i)
+  if (everyDays) {
+    const n = parseInt(everyDays[1], 10)
+    if (n > 0) return n
+  }
+  return 1
+}
+
 function getDosesPerDayFromFrequency(frequency?: string): { dosesPerDay: number; isAsNeeded: boolean } {
   const f = (frequency || "").toLowerCase().trim()
   if (!f || f.includes("as needed") || f === "prn") {
     return { dosesPerDay: 0, isAsNeeded: true }
   }
+  if (f.includes("every other day")) return { dosesPerDay: 0.5, isAsNeeded: false }
   if (f.includes("four") || f.includes("4x") || f.includes("4 times")) return { dosesPerDay: 4, isAsNeeded: false }
   if (f.includes("three") || f.includes("3x") || f.includes("3 times")) return { dosesPerDay: 3, isAsNeeded: false }
   if (f.includes("twice") || f.includes("2x") || f.includes("2 times") || f.includes("bid")) return { dosesPerDay: 2, isAsNeeded: false }
-  if (f.includes("once") || f.includes("1x") || f.includes("daily") || f.includes("qd")) return { dosesPerDay: 1, isAsNeeded: false }
+  if (f.includes("once") || f.includes("daily") || f.includes("1x") || f === "qd") return { dosesPerDay: 1, isAsNeeded: false }
 
   const everyHours = f.match(/every\s+(\d+(?:\.\d+)?)\s*(?:hr|hour)/i)
   if (everyHours) {
@@ -69,7 +91,6 @@ export function isMedAsNeeded(meta?: any): boolean {
 
 function parseLocalDate(val?: string | null): Date | null {
   if (!val) return null
-  // Handle YYYY-MM-DD as local midnight to avoid UTC shift
   if (/^\d{4}-\d{2}-\d{2}$/.test(val.trim())) {
     const [y, m, d] = val.trim().split("-").map(Number)
     return new Date(y, m - 1, d)
@@ -78,7 +99,7 @@ function parseLocalDate(val?: string | null): Date | null {
   return isNaN(parsed.getTime()) ? null : parsed
 }
 
-function parseReminderTimes(reminders?: any): Array<{ hh: number; mm: number }> {
+export function parseReminderTimes(reminders?: any): Array<{ hh: number; mm: number }> {
   if (!Array.isArray(reminders)) return []
   const result: Array<{ hh: number; mm: number }> = []
   for (const r of reminders) {
@@ -91,12 +112,83 @@ function parseReminderTimes(reminders?: any): Array<{ hh: number; mm: number }> 
       result.push({ hh, mm })
     }
   }
-  return result
+  return result.sort((a, b) => a.hh * 60 + a.mm - (b.hh * 60 + b.mm))
+}
+
+export function getEffectiveReminderTimes(meta?: any): Array<{ hh: number; mm: number }> {
+  const parsed = parseReminderTimes(meta?.reminders)
+  if (parsed.length > 0) return parsed
+  const def = getDefaultReminderForFrequency(meta?.frequency)
+  return def ? parseReminderTimes([def]) : []
+}
+
+export function formatReminderTime12h(hh: number, mm: number): string {
+  const period = hh >= 12 ? "PM" : "AM"
+  const h12 = hh % 12 === 0 ? 12 : hh % 12
+  return `${h12}:${String(mm).padStart(2, "0")} ${period}`
+}
+
+/**
+ * Computes the next scheduled dose ISO string strictly from Reminder Times + Frequency (local time).
+ * Never uses the medication's creation/save timestamp when reminder times or time-of-day frequency exist.
+ */
+export function getScheduledNextDose(
+  meta?: any,
+  fromDate: Date = new Date(),
+  isTakeAction = false
+): string | null {
+  if (!meta) return null
+  if (isMedAsNeeded(meta)) return null
+
+  const reminderTimes = getEffectiveReminderTimes(meta)
+  const dayInterval = getDayIntervalFromFrequency(meta.frequency)
+  const anchorDate = parseLocalDate(meta.startDate || meta.scheduleStartDate)
+
+  if (reminderTimes.length > 0) {
+    const baseDay = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate())
+
+    // If user just tapped Take on a 1-slot/day med, jump forward by dayInterval (1, 2, or 7 days)
+    if (isTakeAction && reminderTimes.length === 1) {
+      const nextDay = addDays(baseDay, dayInterval)
+      nextDay.setHours(reminderTimes[0].hh, reminderTimes[0].mm, 0, 0)
+      return nextDay.toISOString()
+    }
+
+    // Search forward up to dayInterval + 1 days for the next valid reminder slot after fromDate
+    for (let offset = 0; offset <= Math.max(dayInterval, 7); offset++) {
+      const candidateDay = addDays(baseDay, offset)
+      if (dayInterval > 1 && anchorDate) {
+        const anchorDay = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())
+        const diff = differenceInCalendarDays(candidateDay, anchorDay)
+        if (diff < 0 || diff % dayInterval !== 0) continue
+      }
+      for (const rem of reminderTimes) {
+        const slot = new Date(
+          candidateDay.getFullYear(),
+          candidateDay.getMonth(),
+          candidateDay.getDate(),
+          rem.hh,
+          rem.mm,
+          0,
+          0
+        )
+        if (slot.getTime() > fromDate.getTime() + 60000) {
+          return slot.toISOString()
+        }
+      }
+    }
+
+    const fallback = addDays(baseDay, dayInterval)
+    fallback.setHours(reminderTimes[0].hh, reminderTimes[0].mm, 0, 0)
+    return fallback.toISOString()
+  }
+
+  return null
 }
 
 /**
  * Pure client-side pill count estimator (zero daily DB writes / zero cron).
- * remaining = countBaseline - (scheduled doses since countBaselineDate * pillsPerDose)
+ * Drops at each scheduled dose time (local time), not at midnight.
  * Skipped doses after countBaselineDate do not count.
  * For "as needed" meds, reduces only via Take (meta.quantity).
  */
@@ -139,13 +231,17 @@ export function calculatePillCountEstimate(meta?: any, now: Date = new Date()): 
     : Infinity
   const effectiveEndTs = Math.min(now.getTime(), endOfTreatmentTs)
 
-  const validReminders = parseReminderTimes(meta.reminders)
+  const validReminders = getEffectiveReminderTimes(meta)
+  const dayInterval = getDayIntervalFromFrequency(meta.frequency)
   const schedule: Array<{ dayIndex: number; quantity: number }> = Array.isArray(meta.doseSchedule)
     ? meta.doseSchedule
     : []
   const scheduleStart = parseLocalDate(meta.scheduleStartDate || meta.startDate)
 
-  let dailyRate = (validReminders.length > 0 ? validReminders.length : dosesPerDay) * pillsPerDose
+  let dailyRate =
+    validReminders.length > 0
+      ? (validReminders.length / dayInterval) * pillsPerDose
+      : dosesPerDay * pillsPerDose
   if (schedule.length > 0) {
     const avgSched =
       schedule.reduce((acc, s) => acc + (parseFloat(String(s.quantity)) || 0), 0) / schedule.length
@@ -159,12 +255,19 @@ export function calculatePillCountEstimate(meta?: any, now: Date = new Date()): 
     const startDay = new Date(startLocal.getFullYear(), startLocal.getMonth(), startLocal.getDate())
     const endLocal = new Date(effectiveEndTs)
     const endDay = new Date(endLocal.getFullYear(), endLocal.getMonth(), endLocal.getDate())
+    const anchorDay = startDate
+      ? new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+      : startDay
 
     if (validReminders.length > 0) {
-      // Exact reminder-slot counting: each scheduled time slot in [effectiveStartTs, effectiveEndTs] counts once
+      // Exact local-time reminder-slot counting: drops at each scheduled dose time, not midnight
       const totalDays = Math.max(0, differenceInCalendarDays(endDay, startDay))
       for (let i = 0; i <= totalDays; i++) {
         const d = addDays(startDay, i)
+        if (dayInterval > 1) {
+          const diff = differenceInCalendarDays(d, anchorDay)
+          if (diff < 0 || diff % dayInterval !== 0) continue
+        }
         let perSlotPills = pillsPerDose
         if (schedule.length > 0 && scheduleStart) {
           const dayIdx = differenceInCalendarDays(d, scheduleStart) + 1
@@ -181,7 +284,7 @@ export function calculatePillCountEstimate(meta?: any, now: Date = new Date()): 
         }
       }
     } else {
-      // Fallback when no reminder times are configured
+      // Fallback when no reminder times or time-of-day frequency are configured
       const isMidnightStart =
         startLocal.getHours() === 0 &&
         startLocal.getMinutes() === 0 &&

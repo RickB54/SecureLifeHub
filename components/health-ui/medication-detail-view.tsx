@@ -20,7 +20,7 @@ import {
 import { format } from "date-fns"
 import type { DoctorOption, FacilityOption } from "./health-field-helpers"
 import { resolveDoctorInfo, resolveFacilityInfo } from "@/lib/health-store"
-import type { PillCountEstimate } from "@/lib/pill-count"
+import { getScheduledNextDose, type PillCountEstimate } from "@/lib/pill-count"
 
 interface MedicationDetailViewProps {
   medication: any
@@ -205,7 +205,10 @@ export default function MedicationDetailView({
               <DetailRow label="Current Dose" value={currentDose} />
               <DetailRow
                 label="Next Dose"
-                value={meta.nextDose ? safeDate(meta.nextDose, "MMM d, yyyy 'at' h:mm a") : ""}
+                value={(() => {
+                  const liveNext = getScheduledNextDose(meta) || meta.nextDose
+                  return liveNext ? safeDate(liveNext, "MMM d, yyyy 'at' h:mm a") : ""
+                })()}
               />
               {Array.isArray(meta.reminders) && meta.reminders.length > 0 && (
                 <DetailRow label="Reminder Times" value={meta.reminders.join(", ")} />
