@@ -1415,7 +1415,10 @@ ${selectedMed ? `
             {/* Content */}
             <div className="px-2 md:px-4 pb-6">
                 {viewMode === "list" ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div
+                        className="grid gap-3"
+                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+                    >
                         {filteredMeds.length === 0 ? (
                             <div className="col-span-full text-center text-gray-500 py-12">
                                 <Pill className="h-16 w-16 mx-auto mb-4 opacity-20" />

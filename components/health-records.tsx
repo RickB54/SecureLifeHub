@@ -2,8 +2,8 @@
 
 import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2 } from "lucide-react"
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays } from "date-fns"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info } from "lucide-react"
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays, differenceInCalendarDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
 import Lightbox from "./media/lightbox"
@@ -101,25 +101,6 @@ const getLocalDateTimeString = () => {
     return local.toISOString().slice(0, 16)
 }
 
-interface AppointmentReminderEmail {
-    sendAt: string
-    resendId: string | null
-    status: "scheduled" | "waiting" | "failed" | "skipped"
-    reason?: string | null
-    to?: string
-}
-
-interface ReminderDraft {
-    id: string
-    date: string
-    time: string
-}
-
-const makeReminderId = () =>
-    (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function")
-        ? crypto.randomUUID()
-        : `rem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
 const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 10000): Promise<Response> => {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), timeoutMs)
@@ -130,36 +111,16 @@ const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 1
     }
 }
 
-const RESEND_WINDOW_MS = 29.5 * 24 * 60 * 60 * 1000
-
-const computeReminderDraftFromOffset = (
-    apptDateStr: string,
-    offset: "1w" | "2d" | "1d" | "2h"
-): ReminderDraft => {
-    const base = apptDateStr ? new Date(apptDateStr) : new Date()
-    const validBase = isNaN(base.getTime()) ? new Date() : base
-    if (offset === "2h") {
-        const target = new Date(validBase.getTime() - 2 * 60 * 60 * 1000)
-        return {
-            id: makeReminderId(),
-            date: format(target, "yyyy-MM-dd"),
-            time: format(target, "HH:mm"),
-        }
-    }
-    const daysBack = offset === "1w" ? 7 : offset === "2d" ? 2 : 1
-    const target = subDays(validBase, daysBack)
-    return {
-        id: makeReminderId(),
-        date: format(target, "yyyy-MM-dd"),
-        time: "09:00",
-    }
-}
-
-const formatApptDisplayForEmail = (dateStr: string): string => {
-    if (!dateStr) return ""
+const getAppointmentRelativeBadge = (dateStr?: string): { label: string; tone: "today" | "tomorrow" | "soon" | "past" } | null => {
+    if (!dateStr) return null
     const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
-    return format(d, "EEE, MMM d, yyyy 'at' h:mm a")
+    if (isNaN(d.getTime())) return null
+    const now = new Date()
+    const diff = differenceInCalendarDays(d, now)
+    if (diff === 0) return { label: "Today", tone: "today" }
+    if (diff === 1) return { label: "Tomorrow", tone: "tomorrow" }
+    if (diff > 1) return { label: `in ${diff} days`, tone: "soon" }
+    return { label: "Past", tone: "past" }
 }
 
 export default function HealthDashboard({ records, addItem, updateItem, deleteItem, theme, onOpenHelp, initialTab = "dashboard", mockSettings, setActivePage }: HealthDashboardProps) {
@@ -231,15 +192,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [isGCalConnected, setIsGCalConnected] = useState(false)
     const [addToGoogleCalendar, setAddToGoogleCalendar] = useState(true)
 
-    // Appointment Email Reminders State (Resend one-time scheduled emails)
-    const [apptReminders, setApptReminders] = useState<ReminderDraft[]>([])
-    const [apptReminderEmail, setApptReminderEmail] = useState<string>("")
-    const [remindersTouched, setRemindersTouched] = useState(false)
-    const [sendingTestEmail, setSendingTestEmail] = useState(false)
+    // Appointments UI state (compact search/filter/sort/expand + one-time old reminder cleanup)
+    const [apptSearch, setApptSearch] = useState("")
+    const [apptFilter, setApptFilter] = useState<"all" | "upcoming" | "past">("upcoming")
+    const [apptSort, setApptSort] = useState<"soonest" | "latest" | "doctor">("soonest")
+    const [expandedApptIds, setExpandedApptIds] = useState<Record<string, boolean>>({})
+    const [showPastAppts, setShowPastAppts] = useState(false)
     const [savingAppt, setSavingAppt] = useState(false)
-    const [checkingReminderKey, setCheckingReminderKey] = useState<string | null>(null)
-    const [checkedReminderStatus, setCheckedReminderStatus] = useState<Record<string, { status: string; reason?: string | null }>>({})
-    const promotedWaitingRef = useRef<Set<string>>(new Set())
+    const [cancellingOldReminders, setCancellingOldReminders] = useState(false)
 
     // Check for scheduling conflict with Google Calendar events
     const schedulingConflict = useMemo(() => {
@@ -438,20 +398,43 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         })
     }, [consolidatedRecords])
 
-    const upcomingAppts = useMemo(() => {
-        const todayStart = new Date()
-        todayStart.setHours(0, 0, 0, 0)
+    const allAppointments = useMemo(() => {
         return healthRecords.filter(r => {
-            const isAppt =
+            return (
                 r.item_metadata?.type === "Appointment" ||
                 r.category === "Appointments" ||
                 r.type === "appointment" ||
                 (r.title && r.title.toLowerCase().includes("appointment"))
-            if (!isAppt) return false
-            const d = r.item_metadata?.date ? new Date(r.item_metadata.date) : null
-            return d && d >= todayStart
+            )
         }).sort((a, b) => new Date(a.item_metadata?.date || 0).getTime() - new Date(b.item_metadata?.date || 0).getTime())
     }, [healthRecords])
+
+    const upcomingAppts = useMemo(() => {
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        return allAppointments.filter(r => {
+            const d = r.item_metadata?.date ? new Date(r.item_metadata.date) : null
+            return d && d >= todayStart
+        })
+    }, [allAppointments])
+
+    const pastAppts = useMemo(() => {
+        const todayStart = new Date()
+        todayStart.setHours(0, 0, 0, 0)
+        return allAppointments
+            .filter(r => {
+                const d = r.item_metadata?.date ? new Date(r.item_metadata.date) : null
+                return !d || d < todayStart
+            })
+            .sort((a, b) => new Date(b.item_metadata?.date || 0).getTime() - new Date(a.item_metadata?.date || 0).getTime())
+    }, [allAppointments])
+
+    const apptsWithLegacyReminders = useMemo(() => {
+        return allAppointments.filter(apt => {
+            const list = apt.item_metadata?.reminderEmails
+            return Array.isArray(list) && list.length > 0
+        })
+    }, [allAppointments])
 
     // --- ANALYTICS ---
     // Calculate Streak
@@ -558,7 +541,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
 
 
-    // Shared edit openers so Overview, Visits, Medical History, and Timeline all open the same form
+    // Shared edit openers so Overview, Appointments, Medical History, and Timeline all open the same form
     const openNewAppointmentModal = () => {
         const defaultDate = formatForDateTimeInput(new Date())
         setEditingVital(null)
@@ -573,9 +556,6 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             specialty: "",
             date: defaultDate
         })
-        setApptReminderEmail(user?.email || "")
-        setApptReminders([computeReminderDraftFromOffset(defaultDate, "1d")])
-        setRemindersTouched(false)
         setAddModalType('appointment')
         setShowAddModal(true)
     }
@@ -593,100 +573,58 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             specialty: apt.item_metadata?.specialty || "",
             date: formatForDateTimeInput(apt.item_metadata?.date)
         })
-        setApptReminderEmail(apt.item_metadata?.reminderEmail || user?.email || "")
-        const existingEmails: AppointmentReminderEmail[] = Array.isArray(apt.item_metadata?.reminderEmails)
-            ? [...apt.item_metadata.reminderEmails].sort(
-                (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()
-            )
-            : []
-        const drafts: ReminderDraft[] = existingEmails
-            .map((r) => {
-                const d = new Date(r.sendAt)
-                if (isNaN(d.getTime())) return null
-                return { id: makeReminderId(), date: format(d, "yyyy-MM-dd"), time: format(d, "HH:mm") }
-            })
-            .filter((x): x is ReminderDraft => Boolean(x))
-        setApptReminders(drafts)
-        setRemindersTouched(true)
         setAddModalType('appointment')
         setShowAddModal(true)
     }
 
-    // Promote "waiting" (>30 days ahead) appointment reminders once Visits tab loads (zero extra queries, zero polling)
-    useEffect(() => {
-        if (activeTab !== 'appointments' || upcomingAppts.length === 0) return
-        const now = Date.now()
-        const toPromote = upcomingAppts.filter((apt) => {
-            const list: AppointmentReminderEmail[] = Array.isArray(apt.item_metadata?.reminderEmails)
-                ? apt.item_metadata.reminderEmails
-                : []
-            return list.some((r) => {
-                if (r.status !== "waiting") return false
-                const ts = new Date(r.sendAt).getTime()
-                const key = `${apt.id}:${r.sendAt}`
-                return !isNaN(ts) && ts > now + 30_000 && ts - now <= RESEND_WINDOW_MS && !promotedWaitingRef.current.has(key)
-            })
-        })
-        if (toPromote.length === 0) return
-
-        ;(async () => {
-            for (const apt of toPromote) {
-                const list: AppointmentReminderEmail[] = Array.isArray(apt.item_metadata?.reminderEmails)
-                    ? apt.item_metadata.reminderEmails
-                    : []
-                const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
-                const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
-                let changed = false
-                const updatedList: AppointmentReminderEmail[] = []
-
+    // One-time cleanup: cancel any legacy scheduled Resend emails and clear reminderEmails metadata
+    const handleCancelOldEmailReminders = async () => {
+        if (apptsWithLegacyReminders.length === 0 || cancellingOldReminders) return
+        setCancellingOldReminders(true)
+        try {
+            const allResendIds: string[] = []
+            for (const apt of apptsWithLegacyReminders) {
+                const list = Array.isArray(apt.item_metadata?.reminderEmails) ? apt.item_metadata.reminderEmails : []
                 for (const r of list) {
-                    const ts = new Date(r.sendAt).getTime()
-                    const key = `${apt.id}:${r.sendAt}`
-                    if (r.status === "waiting" && !isNaN(ts) && ts > now + 30_000 && ts - now <= RESEND_WINDOW_MS && !promotedWaitingRef.current.has(key)) {
-                        promotedWaitingRef.current.add(key)
-                        const recipient = (r.to || apt.item_metadata?.reminderEmail || user?.email || "").trim()
-                        if (!recipient) {
-                            updatedList.push(r)
-                            continue
-                        }
-                        try {
-                            const res = await fetch("/api/appointment-reminders", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    action: "schedule",
-                                    to: recipient,
-                                    sendAtIso: r.sendAt,
-                                    reason: apt.title || "Doctor Appointment",
-                                    appointmentDateDisplay: formatApptDisplayForEmail(apt.item_metadata?.date),
-                                    doctor: docInfo.name || "",
-                                    facility: facInfo.name || "",
-                                    address: apt.item_metadata?.location || facInfo.address || "",
-                                }),
-                            })
-                            const data = await res.json().catch(() => ({}))
-                            if (res.ok && data.ok && data.status === "scheduled") {
-                                updatedList.push({ ...r, resendId: data.resendId || null, status: "scheduled" })
-                                changed = true
-                            } else {
-                                updatedList.push(r)
-                            }
-                        } catch {
-                            updatedList.push(r)
-                        }
-                    } else {
-                        updatedList.push(r)
-                    }
-                }
-
-                if (changed) {
-                    const updatedMeta = { ...apt.item_metadata, reminderEmails: updatedList }
-                    await updateItem(apt.id, { item_metadata: updatedMeta })
-                    upsertSharedHealthRecord({ ...apt, item_metadata: updatedMeta })
+                    if (r?.resendId) allResendIds.push(r.resendId)
                 }
             }
-        })()
-    }, [activeTab, upcomingAppts, savedDoctors, savedFacilities, user?.email])
+
+            let cancelledCount = 0
+            if (allResendIds.length > 0) {
+                const res = await fetchWithTimeout("/api/appointment-reminders", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "cancel", resendIds: allResendIds }),
+                }, 12000)
+                const data = await res.json().catch(() => ({}))
+                if (!res.ok || !data.ok) {
+                    throw new Error(data?.error || "Failed to cancel old email reminders in Resend")
+                }
+                cancelledCount = Array.isArray(data.results)
+                    ? data.results.filter((r: any) => r.cancelled).length
+                    : allResendIds.length
+            }
+
+            for (const apt of apptsWithLegacyReminders) {
+                const cleanedMeta = { ...apt.item_metadata }
+                delete cleanedMeta.reminderEmails
+                delete cleanedMeta.reminderEmail
+                await updateItem(apt.id, { item_metadata: cleanedMeta })
+                upsertSharedHealthRecord({ ...apt, item_metadata: cleanedMeta })
+            }
+
+            toast.success(
+                allResendIds.length > 0
+                    ? `Cancelled ${cancelledCount} of ${allResendIds.length} old Resend reminder(s) and cleared ${apptsWithLegacyReminders.length} appointment(s).`
+                    : `Cleared legacy reminder metadata from ${apptsWithLegacyReminders.length} appointment(s).`
+            )
+        } catch (err: any) {
+            toast.error(err?.message || "Could not cancel old email reminders")
+        } finally {
+            setCancellingOldReminders(false)
+        }
+    }
 
     const openEditRecord = (item: any) => {
         if (item.item_metadata?.type === "Appointment" || item.type === "appointment" || item.category === "Appointments") {
@@ -1277,239 +1215,196 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         )
     }
 
-    const renderAppointments = () => (
-        <div className="space-y-4 animate-in fade-in duration-300">
-            <div className="flex flex-wrap justify-between items-center gap-2">
-                <h2 className="text-xl md:text-2xl font-bold">Medical Appointments</h2>
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={openNewAppointmentModal}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl shadow-lg transition-all font-bold text-sm flex items-center gap-2 cursor-pointer"
-                    >
-                        <Plus className="h-4 w-4" /> Schedule Visit
-                    </button>
-                </div>
-            </div>
+    const renderAppointments = () => {
+        const now = new Date()
+        const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999)
+        const thisWeekCount = upcomingAppts.filter(apt => {
+            const d = apt.item_metadata?.date ? new Date(apt.item_metadata.date) : null
+            return d && !isNaN(d.getTime()) && d <= weekEnd
+        }).length
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {upcomingAppts.length === 0 ? (
-                    <div className="col-span-full text-center py-20 bg-black/20 rounded-3xl border border-dashed border-white/10">
-                        <CalendarIcon className="h-16 w-16 text-gray-700 mx-auto mb-4" />
-                        <p className="text-gray-500 italic">No upcoming appointments scheduled.</p>
-                    </div>
-                ) : (
-                    upcomingAppts.map(apt => {
-                        const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
-                        const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
-                        return (
-                        <div key={apt.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20 shadow-lg'} transition-all group relative overflow-hidden`}>
-                            <div className="absolute top-0 right-0 p-4 opacity-50">
-                                <CalendarIcon className="h-24 w-24 text-blue-500/10 -mr-6 -mt-6 transform rotate-12" />
+        const q = apptSearch.trim().toLowerCase()
+        const matchesSearch = (apt: any) => {
+            if (!q) return true
+            const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+            const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
+            return (
+                (apt.title || "").toLowerCase().includes(q) ||
+                (docInfo.name || "").toLowerCase().includes(q) ||
+                (facInfo.name || "").toLowerCase().includes(q) ||
+                (apt.item_metadata?.specialty || "").toLowerCase().includes(q) ||
+                (apt.item_metadata?.location || "").toLowerCase().includes(q) ||
+                (apt.item_metadata?.notes || "").toLowerCase().includes(q)
+            )
+        }
+
+        const sortAppts = (list: any[]) => {
+            return [...list].sort((a, b) => {
+                if (apptSort === "doctor") {
+                    const da = resolveDoctorInfo(a.item_metadata?.doctor_id, { name: a.item_metadata?.doctor }, savedDoctors).name || ""
+                    const db = resolveDoctorInfo(b.item_metadata?.doctor_id, { name: b.item_metadata?.doctor }, savedDoctors).name || ""
+                    return da.localeCompare(db)
+                }
+                const ta = new Date(a.item_metadata?.date || 0).getTime()
+                const tb = new Date(b.item_metadata?.date || 0).getTime()
+                return apptSort === "latest" ? tb - ta : ta - tb
+            })
+        }
+
+        const filteredUpcoming = sortAppts(upcomingAppts.filter(matchesSearch))
+        const filteredPast = sortAppts(pastAppts.filter(matchesSearch))
+
+        const renderApptCard = (apt: any) => {
+            const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+            const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
+            const badge = getAppointmentRelativeBadge(apt.item_metadata?.date)
+            const isExpanded = Boolean(expandedApptIds[apt.id])
+            const badgeCls =
+                badge?.tone === "today"
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                    : badge?.tone === "tomorrow"
+                    ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                    : badge?.tone === "past"
+                    ? "bg-white/5 text-gray-400 border-white/10"
+                    : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+
+            const specialty = apt.item_metadata?.specialty || docInfo.specialty || ""
+            const providerParts = [docInfo.name || "No provider specified", facInfo.name, specialty].filter(Boolean)
+
+            return (
+                <div
+                    key={apt.id}
+                    className={`p-3 rounded-xl border transition-colors space-y-1.5 flex flex-col justify-between ${
+                        theme === 'light'
+                            ? 'bg-white border-gray-200'
+                            : 'bg-blue-950/15 border-blue-500/20 hover:border-blue-500/35'
+                    }`}
+                >
+                    <div className="space-y-1.5">
+                        {/* Line 1: Icon + Reason/Title + Relative Badge */}
+                        <div className="flex items-center justify-between gap-2 min-w-0">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <CalendarIcon className="h-4 w-4 text-blue-400 shrink-0" />
+                                <h3 className="text-sm font-bold text-white leading-tight truncate" title={apt.title}>
+                                    {apt.title}
+                                </h3>
                             </div>
-
-                            <div className="relative z-10 space-y-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
-                                        <CalendarIcon className="h-6 w-6" />
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => openEditAppointment(apt)}
-                                            className="p-2 hover:bg-blue-500/10 text-blue-500 rounded-full transition-colors"
-                                            title="Edit appointment"
-                                        >
-                                            <Edit className="h-4 w-4" />
-                                        </button>
-                                         <button
-                                            type="button"
-                                            onClick={async () => {
-                                                if (confirm("Cancel this appointment?")) {
-                                                    const oldIds = (Array.isArray(apt.item_metadata?.reminderEmails) ? apt.item_metadata.reminderEmails : [])
-                                                        .map((r: any) => r?.resendId)
-                                                        .filter(Boolean)
-                                                    if (oldIds.length > 0) {
-                                                        fetch("/api/appointment-reminders", {
-                                                            method: "POST",
-                                                            headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ action: "cancel", resendIds: oldIds }),
-                                                        }).catch(() => {})
-                                                    }
-                                                    await deleteItem(apt.id)
-                                                    removeSharedHealthRecord(apt.id)
-                                                    toast.success("Appointment removed")
-                                                }
-                                            }}
-                                            className="p-2 hover:bg-red-500/10 text-red-500 rounded-full transition-colors"
-                                            title="Delete appointment"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <h3
-                                        onClick={() => openEditAppointment(apt)}
-                                        className="text-lg font-bold mb-1 line-clamp-1 cursor-pointer hover:text-blue-400 transition-colors"
-                                        title="Tap to edit appointment"
-                                    >
-                                        {apt.title}
-                                    </h3>
-                                    <p className="text-sm text-blue-400 font-bold uppercase tracking-wider">{safeFormat(apt.item_metadata.date, 'MMMM d, yyyy')}</p>
-                                    <p className="text-xs text-gray-500 font-mono mt-1">{safeFormat(apt.item_metadata.date, 'h:mm a')}</p>
-                                </div>
-
-                                <div className="pt-4 border-t border-white/5 space-y-2">
-                                    <div className="flex items-center gap-2 text-xs text-gray-400 flex-wrap">
-                                        <User className="h-3 w-3" />
-                                        <span>{docInfo.name || "No provider specified"}</span>
-                                        {facInfo.name && (
-                                            <span className="text-teal-400 font-medium">&bull; {facInfo.name}</span>
-                                        )}
-                                    </div>
-                                    {Array.isArray(apt.item_metadata?.reminderEmails) && apt.item_metadata.reminderEmails.length > 0 && (
-                                        <div className="space-y-1.5 pt-1">
-                                            {[...apt.item_metadata.reminderEmails]
-                                                .sort((a: AppointmentReminderEmail, b: AppointmentReminderEmail) =>
-                                                    new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()
-                                                )
-                                                .map((rem: AppointmentReminderEmail, idx: number) => {
-                                                const remKey = `${apt.id}:${rem.resendId || rem.sendAt}:${idx}`
-                                                const sendTs = new Date(rem.sendAt).getTime()
-                                                const isPast = !isNaN(sendTs) && sendTs <= Date.now()
-                                                const live = checkedReminderStatus[remKey]
-                                                const isChecking = checkingReminderKey === remKey
-
-                                                const handleCheckStatus = async () => {
-                                                    if (!rem.resendId) {
-                                                        toast.error("No Resend email ID on this reminder")
-                                                        return
-                                                    }
-                                                    setCheckingReminderKey(remKey)
-                                                    try {
-                                                        const res = await fetchWithTimeout("/api/appointment-reminders", {
-                                                            method: "POST",
-                                                            headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ action: "status", resendId: rem.resendId }),
-                                                        })
-                                                        const data = await res.json().catch(() => ({}))
-                                                        if (res.ok && data.ok) {
-                                                            setCheckedReminderStatus((prev) => ({
-                                                                ...prev,
-                                                                [remKey]: { status: data.resendStatus, reason: data.failureReason },
-                                                            }))
-                                                        } else {
-                                                            toast.error(data?.error || "Could not check Resend status")
-                                                        }
-                                                    } catch (err: any) {
-                                                        toast.error(err?.message || "Could not check Resend status")
-                                                    } finally {
-                                                        setCheckingReminderKey(null)
-                                                    }
-                                                }
-
-                                                const realStatus = live?.status?.toLowerCase()
-                                                const realBadgeCls =
-                                                    realStatus === "delivered" || realStatus === "opened" || realStatus === "clicked"
-                                                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                                                        : realStatus === "failed" || realStatus === "bounced" || realStatus === "complained"
-                                                        ? "bg-red-500/15 text-red-400 border-red-500/30"
-                                                        : realStatus === "canceled" || realStatus === "cancelled"
-                                                        ? "bg-gray-500/15 text-gray-400 border-gray-500/30"
-                                                        : "bg-blue-500/15 text-blue-300 border-blue-500/30"
-
-                                                const failureReason = live?.reason || rem.reason || null
-
-                                                return (
-                                                    <div key={remKey} className="space-y-0.5 text-[11px] text-gray-300">
-                                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                                            <Mail className="h-3 w-3 text-blue-400 shrink-0" />
-                                                            {rem.status === "waiting" ? (
-                                                                <>
-                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
-                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-amber-500/15 text-amber-300 border-amber-500/30">
-                                                                        Waiting
-                                                                    </span>
-                                                                </>
-                                                            ) : rem.status === "skipped" ? (
-                                                                <>
-                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
-                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-gray-500/15 text-gray-400 border-gray-500/30">
-                                                                        Skipped
-                                                                    </span>
-                                                                </>
-                                                            ) : rem.status === "failed" && !live ? (
-                                                                <>
-                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
-                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-red-500/15 text-red-400 border-red-500/30">
-                                                                        Failed
-                                                                    </span>
-                                                                </>
-                                                            ) : live ? (
-                                                                <>
-                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
-                                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border capitalize ${realBadgeCls}`}>
-                                                                        {live.status}
-                                                                    </span>
-                                                                    {rem.resendId && (
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={isChecking}
-                                                                            onClick={handleCheckStatus}
-                                                                            className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 transition-colors cursor-pointer disabled:opacity-50"
-                                                                        >
-                                                                            {isChecking ? "Checking..." : "Check status"}
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            ) : !isPast ? (
-                                                                <>
-                                                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-blue-500/15 text-blue-300 border-blue-500/30">
-                                                                        Scheduled for {safeFormat(rem.sendAt, 'MMM d, h:mm a')}
-                                                                    </span>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <span>Email reminder: {safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
-                                                                    {rem.resendId && (
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={isChecking}
-                                                                            onClick={handleCheckStatus}
-                                                                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 transition-colors cursor-pointer disabled:opacity-50"
-                                                                        >
-                                                                            {isChecking ? "Checking..." : "Check status"}
-                                                                        </button>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                        {failureReason && (rem.status === "failed" || realStatus === "failed" || realStatus === "bounced") && (
-                                                            <div className="text-[10px] text-red-400 pl-4 break-words">
-                                                                Reason: {failureReason}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )
-                                            })}
-                                        </div>
-                                    )}
-                                    {apt.item_metadata.notes && (
-                                        <div className="text-xs text-gray-500 italic line-clamp-2">
-                                            "{apt.item_metadata.notes}"
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            {badge && (
+                                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-semibold border shrink-0 ${badgeCls}`}>
+                                    {badge.label}
+                                </span>
+                            )}
                         </div>
-                        )
-                    })
-                )}
-            </div>
 
-            {/* Optional Google Calendar Integration (compact button when disconnected) */}
-            <div className="pt-2">
+                        {/* Line 2: Date & Time */}
+                        <div className="flex items-center gap-1.5 text-xs text-blue-300 font-medium">
+                            <Clock className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+                            <span>
+                                {safeFormat(apt.item_metadata?.date, 'EEE, MMM d, yyyy')} &bull; {safeFormat(apt.item_metadata?.date, 'h:mm a')}
+                            </span>
+                        </div>
+
+                        {/* Line 3: Doctor, Facility, Specialty */}
+                        <div className="flex items-center gap-1.5 text-xs text-gray-300 min-w-0">
+                            <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                            <span className="truncate" title={providerParts.join(" • ")}>
+                                {providerParts.join(" • ")}
+                            </span>
+                        </div>
+
+                        {/* Line 4: Location (muted) */}
+                        {apt.item_metadata?.location && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-400 min-w-0">
+                                <MapPin className="h-3.5 w-3.5 text-gray-500 shrink-0" />
+                                <span className="truncate" title={apt.item_metadata.location}>
+                                    {apt.item_metadata.location}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Line 5: Notes truncated to 1 line with expand toggle */}
+                        {apt.item_metadata?.notes && (
+                            <div className="flex items-start justify-between gap-1.5 pt-0.5">
+                                <p className={`text-xs text-gray-400 italic flex-1 ${isExpanded ? "whitespace-pre-wrap break-words" : "truncate"}`}>
+                                    {apt.item_metadata.notes}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setExpandedApptIds(prev => ({ ...prev, [apt.id]: !prev[apt.id] }))}
+                                    className="p-1 rounded-md hover:bg-white/10 text-gray-400 hover:text-white shrink-0 transition-colors cursor-pointer"
+                                    title={isExpanded ? "Collapse notes" : "Expand full notes"}
+                                    aria-label={isExpanded ? "Collapse notes" : "Expand full notes"}
+                                >
+                                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Bottom Row: Icon-only Edit & Delete */}
+                    <div className="flex items-center justify-end gap-1 pt-2 mt-1 border-t border-white/10">
+                        <button
+                            type="button"
+                            onClick={() => openEditAppointment(apt)}
+                            className="h-8 w-8 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 inline-flex items-center justify-center transition-colors cursor-pointer"
+                            title="Edit appointment"
+                            aria-label="Edit appointment"
+                        >
+                            <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                if (confirm("Delete this appointment?")) {
+                                    await deleteItem(apt.id)
+                                    removeSharedHealthRecord(apt.id)
+                                    toast.success("Appointment removed")
+                                }
+                            }}
+                            className="h-8 w-8 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                            title="Delete appointment"
+                            aria-label="Delete appointment"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            )
+        }
+
+        return (
+            <div className="space-y-3 animate-in fade-in duration-300">
+                {/* Row 1: Compact Header */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-2.5">
+                    <div className="min-w-0">
+                        <h1 className="text-xl md:text-2xl font-bold text-blue-300 leading-tight">Appointments</h1>
+                        <p className="text-xs text-gray-400">Schedule visits, track providers, and keep your care plan organized</p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        {apptsWithLegacyReminders.length > 0 && (
+                            <button
+                                type="button"
+                                disabled={cancellingOldReminders}
+                                onClick={handleCancelOldEmailReminders}
+                                className="h-8 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                                title="Cancel previously scheduled Resend reminders and clear legacy metadata"
+                            >
+                                <Mail className="h-3.5 w-3.5 shrink-0" />
+                                <span>{cancellingOldReminders ? "Cancelling..." : "Cancel old email reminders"}</span>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={openNewAppointmentModal}
+                            className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                            <Plus className="h-4 w-4 shrink-0" />
+                            <span>Schedule Appointment</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Compact Google Calendar Bar */}
                 <GoogleCalendarIntegration
                     theme={theme}
                     existingAppointments={upcomingAppts}
@@ -1517,9 +1412,125 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     onEventsLoaded={setGoogleCalendarEvents}
                     onConnectionChange={setIsGCalConnected}
                 />
+
+                {/* Compact Stat Row */}
+                <div className="grid grid-cols-3 gap-2.5">
+                    <div className="px-3 py-2.5 rounded-lg bg-blue-500/10 border border-blue-500/25">
+                        <div className="text-lg md:text-xl font-bold text-blue-400 leading-tight">{upcomingAppts.length}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">Upcoming</div>
+                    </div>
+                    <div className="px-3 py-2.5 rounded-lg bg-purple-500/10 border border-purple-500/25">
+                        <div className="text-lg md:text-xl font-bold text-purple-400 leading-tight">{thisWeekCount}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">This Week</div>
+                    </div>
+                    <div className="px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/10">
+                        <div className="text-lg md:text-xl font-bold text-gray-300 leading-tight">{pastAppts.length}</div>
+                        <div className="text-[10px] text-gray-400 uppercase tracking-wider">Past</div>
+                    </div>
+                </div>
+
+                {/* Toolbar Row: Search + All / Upcoming / Past + Sort */}
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[180px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                        <input
+                            type="text"
+                            placeholder="Search appointments..."
+                            value={apptSearch}
+                            onChange={(e) => setApptSearch(e.target.value)}
+                            className="w-full h-9 pl-9 pr-3 bg-[#1e1e1e] border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                        />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="h-8 p-0.5 bg-[#1e1e1e] border border-white/10 rounded-lg inline-flex items-center">
+                            {(
+                                [
+                                    { id: "all", label: "All" },
+                                    { id: "upcoming", label: "Upcoming" },
+                                    { id: "past", label: "Past" },
+                                ] as const
+                            ).map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setApptFilter(tab.id)}
+                                    className={`h-full px-3 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                                        apptFilter === tab.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                        <select
+                            value={apptSort}
+                            onChange={(e) => setApptSort(e.target.value as "soonest" | "latest" | "doctor")}
+                            className="h-8 px-2.5 bg-[#1e1e1e] border border-white/10 rounded-lg text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                            aria-label="Sort appointments"
+                        >
+                            <option value="soonest">Soonest first</option>
+                            <option value="latest">Latest first</option>
+                            <option value="doctor">Doctor A-Z</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Main Appointments Grid (Upcoming or Past depending on toggle) */}
+                {apptFilter === "past" ? (
+                    filteredPast.length === 0 ? (
+                        <div className="text-center py-12 bg-black/20 rounded-xl border border-dashed border-white/10 text-gray-500 text-sm italic">
+                            No past appointments found.
+                        </div>
+                    ) : (
+                        <div
+                            className="grid gap-3"
+                            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+                        >
+                            {filteredPast.map(renderApptCard)}
+                        </div>
+                    )
+                ) : (
+                    <>
+                        {filteredUpcoming.length === 0 ? (
+                            <div className="text-center py-12 bg-black/20 rounded-xl border border-dashed border-white/10">
+                                <CalendarIcon className="h-10 w-10 text-gray-700 mx-auto mb-2" />
+                                <p className="text-gray-500 text-sm italic">No upcoming appointments scheduled.</p>
+                            </div>
+                        ) : (
+                            <div
+                                className="grid gap-3"
+                                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+                            >
+                                {filteredUpcoming.map(renderApptCard)}
+                            </div>
+                        )}
+
+                        {/* Collapsed Past Appointments section below */}
+                        {filteredPast.length > 0 && (
+                            <div className="pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPastAppts(prev => !prev)}
+                                    className="flex items-center gap-2 text-xs font-semibold text-gray-400 hover:text-white transition-colors cursor-pointer mb-2"
+                                >
+                                    {showPastAppts ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                    <span>Past appointments ({filteredPast.length})</span>
+                                </button>
+                                {showPastAppts && (
+                                    <div
+                                        className="grid gap-3 opacity-80"
+                                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" }}
+                                    >
+                                        {filteredPast.map(renderApptCard)}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
-        </div>
-    )
+        )
+    }
 
     const renderCheckin = () => {
         return (
@@ -1900,155 +1911,13 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
 
                                     setSavingAppt(true)
                                     try {
-                                        // 1. If editing, cancel any previously scheduled Resend emails (with timeout, never hangs)
-                                        if (editingVital && !editingVital._isDummy) {
-                                            const oldIds = (Array.isArray(editingVital.item_metadata?.reminderEmails)
-                                                ? editingVital.item_metadata.reminderEmails
-                                                : []
-                                            )
-                                                .map((r: any) => r?.resendId)
-                                                .filter(Boolean)
-                                            if (oldIds.length > 0) {
-                                                await fetchWithTimeout("/api/appointment-reminders", {
-                                                    method: "POST",
-                                                    headers: { "Content-Type": "application/json" },
-                                                    body: JSON.stringify({ action: "cancel", resendIds: oldIds }),
-                                                }, 8000).catch(() => {})
-                                            }
-                                        }
-
-                                        // 2. Deduplicate distinct reminder rows and schedule in parallel with per-row timeout/error handling
-                                        const recipient = apptReminderEmail.trim()
                                         const apptDateVal = apptFormData.date || formatForDateTimeInput(new Date())
-                                        const apptDisplay = formatApptDisplayForEmail(apptDateVal)
-
-                                        const seenKeys = new Set<string>()
-                                        const distinctDrafts: Array<{ sendAtIso: string; sendTs: number }> = []
-                                        for (const draft of apptReminders) {
-                                            if (!draft.date || !draft.time) continue
-                                            const key = `${draft.date}T${draft.time}`
-                                            if (seenKeys.has(key)) continue
-                                            const localSend = new Date(key)
-                                            if (isNaN(localSend.getTime())) continue
-                                            seenKeys.add(key)
-                                            distinctDrafts.push({ sendAtIso: localSend.toISOString(), sendTs: localSend.getTime() })
-                                        }
-                                        distinctDrafts.sort((a, b) => a.sendTs - b.sendTs)
-
-                                        let skippedPastCount = 0
-                                        let waitingCount = 0
-                                        let failedCount = 0
-
-                                        const savedReminderEmails: AppointmentReminderEmail[] = recipient && distinctDrafts.length > 0
-                                            ? await Promise.all(
-                                                distinctDrafts.map(async ({ sendAtIso, sendTs }): Promise<AppointmentReminderEmail> => {
-                                                    const now = Date.now()
-                                                    if (sendTs <= now + 30_000) {
-                                                        skippedPastCount++
-                                                        return {
-                                                            sendAt: sendAtIso,
-                                                            resendId: null,
-                                                            status: "skipped",
-                                                            reason: "Reminder time already passed",
-                                                            to: recipient,
-                                                        }
-                                                    }
-                                                    if (sendTs - now > RESEND_WINDOW_MS) {
-                                                        waitingCount++
-                                                        return {
-                                                            sendAt: sendAtIso,
-                                                            resendId: null,
-                                                            status: "waiting",
-                                                            to: recipient,
-                                                        }
-                                                    }
-                                                    try {
-                                                        const remRes = await fetchWithTimeout("/api/appointment-reminders", {
-                                                            method: "POST",
-                                                            headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({
-                                                                action: "schedule",
-                                                                to: recipient,
-                                                                sendAtIso,
-                                                                reason: apptFormData.title.trim(),
-                                                                appointmentDateDisplay: apptDisplay,
-                                                                doctor: apptFormData.doctor || "",
-                                                                facility: apptFormData.facility_name || "",
-                                                                address: apptFormData.location || "",
-                                                            }),
-                                                        }, 10000)
-                                                        const remData = await remRes.json().catch(() => ({}))
-                                                        if (remRes.ok && remData.ok && remData.status === "scheduled") {
-                                                            return {
-                                                                sendAt: remData.sendAt || sendAtIso,
-                                                                resendId: remData.resendId || null,
-                                                                status: "scheduled",
-                                                                to: recipient,
-                                                            }
-                                                        }
-                                                        if (remData.status === "waiting") {
-                                                            waitingCount++
-                                                            return {
-                                                                sendAt: sendAtIso,
-                                                                resendId: null,
-                                                                status: "waiting",
-                                                                to: recipient,
-                                                            }
-                                                        }
-                                                        if (remData.status === "skipped_past") {
-                                                            skippedPastCount++
-                                                            return {
-                                                                sendAt: sendAtIso,
-                                                                resendId: null,
-                                                                status: "skipped",
-                                                                reason: "Reminder time already passed",
-                                                                to: recipient,
-                                                            }
-                                                        }
-                                                        const errMsg = remData?.error || `Resend error (${remRes.status})`
-                                                        failedCount++
-                                                        toast.error(errMsg)
-                                                        return {
-                                                            sendAt: sendAtIso,
-                                                            resendId: null,
-                                                            status: "failed",
-                                                            reason: errMsg,
-                                                            to: recipient,
-                                                        }
-                                                    } catch (remErr: any) {
-                                                        const errMsg = remErr?.name === "AbortError"
-                                                            ? "Reminder request timed out"
-                                                            : (remErr?.message || "Could not schedule email reminder")
-                                                        failedCount++
-                                                        toast.error(errMsg)
-                                                        return {
-                                                            sendAt: sendAtIso,
-                                                            resendId: null,
-                                                            status: "failed",
-                                                            reason: errMsg,
-                                                            to: recipient,
-                                                        }
-                                                    }
-                                                })
-                                            )
-                                            : []
-
-                                        savedReminderEmails.sort(
-                                            (a, b) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime()
-                                        )
-
-                                        if (skippedPastCount > 0) {
-                                            toast.info(`Skipped ${skippedPastCount} reminder${skippedPastCount > 1 ? "s" : ""} already in the past`)
-                                        }
-                                        if (waitingCount > 0) {
-                                            toast.info(`${waitingCount} reminder${waitingCount > 1 ? "s" : ""} >30 days away saved as Waiting`)
-                                        }
-
                                         const payload = {
                                             type: "note",
                                             title: apptFormData.title.trim(),
                                             category: "Health Records",
                                             item_metadata: {
+                                                ...(editingVital?.item_metadata || {}),
                                                 is_health_record: true,
                                                 type: "Appointment",
                                                 date: apptDateVal,
@@ -2059,8 +1928,6 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 location: apptFormData.location || "",
                                                 specialty: apptFormData.specialty || "",
                                                 notes: apptFormData.notes || "",
-                                                reminderEmail: recipient,
-                                                reminderEmails: savedReminderEmails,
                                             }
                                         }
 
@@ -2139,13 +2006,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 name="date"
                                                 required
                                                 value={apptFormData.date || ''}
-                                                onChange={(e) => {
-                                                    const nextDate = e.target.value
-                                                    setApptFormData({ ...apptFormData, date: nextDate })
-                                                    if (!remindersTouched && nextDate) {
-                                                        setApptReminders([computeReminderDraftFromOffset(nextDate, "1d")])
-                                                    }
-                                                }}
+                                                onChange={(e) => setApptFormData({ ...apptFormData, date: e.target.value })}
                                                 className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold"
                                                 style={{ colorScheme: 'dark' }}
                                             />
@@ -2236,167 +2097,6 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             </div>
                                         </div>
                                     )}
-
-                                    {/* Email Reminders (Resend one-time scheduled email) */}
-                                    <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
-                                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                                            <div className="flex items-center gap-2 text-xs font-bold text-white">
-                                                <Mail className="h-4 w-4 text-blue-400" />
-                                                <span>Email Reminder</span>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                disabled={sendingTestEmail}
-                                                onClick={async () => {
-                                                    const to = apptReminderEmail.trim()
-                                                    if (!to || !to.includes("@")) {
-                                                        toast.error("Enter a valid email address first")
-                                                        return
-                                                    }
-                                                    setSendingTestEmail(true)
-                                                    try {
-                                                        const res = await fetch("/api/appointment-reminders", {
-                                                            method: "POST",
-                                                            headers: { "Content-Type": "application/json" },
-                                                            body: JSON.stringify({ action: "test", to }),
-                                                        })
-                                                        const data = await res.json().catch(() => ({}))
-                                                        if (res.ok && data.ok) {
-                                                            toast.success(`Test email sent to ${to}`)
-                                                        } else {
-                                                            toast.error(data?.error || "Failed to send test email")
-                                                        }
-                                                    } catch (err: any) {
-                                                        toast.error(err?.message || "Failed to send test email")
-                                                    } finally {
-                                                        setSendingTestEmail(false)
-                                                    }
-                                                }}
-                                                className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-[11px] font-semibold transition-colors disabled:opacity-50 cursor-pointer"
-                                            >
-                                                {sendingTestEmail ? "Sending..." : "Send test email now"}
-                                            </button>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider block mb-1">
-                                                Email To
-                                            </label>
-                                            <input
-                                                type="email"
-                                                value={apptReminderEmail}
-                                                onChange={(e) => setApptReminderEmail(e.target.value)}
-                                                placeholder="you@example.com"
-                                                className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-sm text-white outline-none focus:border-blue-500/50"
-                                            />
-                                        </div>
-
-                                        <div className="flex flex-wrap items-center gap-1.5">
-                                            <span className="text-[10px] uppercase text-gray-400 font-bold mr-1">Quick set:</span>
-                                            {(
-                                                [
-                                                    { key: "1w", label: "1 week before" },
-                                                    { key: "2d", label: "2 days before" },
-                                                    { key: "1d", label: "1 day before" },
-                                                    { key: "2h", label: "2 hours before" },
-                                                ] as const
-                                            ).map((opt) => (
-                                                <button
-                                                    key={opt.key}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const draft = computeReminderDraftFromOffset(apptFormData.date, opt.key)
-                                                        setRemindersTouched(true)
-                                                        setApptReminders((prev) => {
-                                                            const duplicate = prev.some(
-                                                                (r) => r.date === draft.date && r.time === draft.time
-                                                            )
-                                                            if (duplicate) {
-                                                                toast.info("That reminder time is already added")
-                                                                return prev
-                                                            }
-                                                            return [...prev, draft]
-                                                        })
-                                                    }}
-                                                    className="px-2 py-1 rounded-lg bg-white/5 hover:bg-blue-500/20 border border-white/10 text-[11px] text-gray-200 hover:text-blue-200 transition-colors cursor-pointer"
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            {apptReminders.map((rem) => (
-                                                <div key={rem.id} className="flex items-center gap-2">
-                                                    <input
-                                                        type="date"
-                                                        value={rem.date}
-                                                        onChange={(e) => {
-                                                            const nextVal = e.target.value
-                                                            setRemindersTouched(true)
-                                                            setApptReminders((prev) =>
-                                                                prev.map((item) => (item.id === rem.id ? { ...item, date: nextVal } : item))
-                                                            )
-                                                        }}
-                                                        className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white outline-none focus:border-blue-500/50"
-                                                        style={{ colorScheme: 'dark' }}
-                                                    />
-                                                    <input
-                                                        type="time"
-                                                        value={rem.time}
-                                                        onChange={(e) => {
-                                                            const nextVal = e.target.value
-                                                            setRemindersTouched(true)
-                                                            setApptReminders((prev) =>
-                                                                prev.map((item) => (item.id === rem.id ? { ...item, time: nextVal } : item))
-                                                            )
-                                                        }}
-                                                        className="w-32 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white outline-none focus:border-blue-500/50"
-                                                        style={{ colorScheme: 'dark' }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setRemindersTouched(true)
-                                                            setApptReminders((prev) => prev.filter((item) => item.id !== rem.id))
-                                                        }}
-                                                        className="p-2 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 transition-colors cursor-pointer"
-                                                        title="Remove reminder"
-                                                    >
-                                                        <X className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setRemindersTouched(true)
-                                                    setApptReminders((prev) => {
-                                                        const candidates: Array<"1d" | "2h" | "2d" | "1w"> = ["1d", "2h", "2d", "1w"]
-                                                        for (const c of candidates) {
-                                                            const d = computeReminderDraftFromOffset(apptFormData.date, c)
-                                                            if (!prev.some((r) => r.date === d.date && r.time === d.time)) {
-                                                                return [...prev, d]
-                                                            }
-                                                        }
-                                                        const base = apptFormData.date ? new Date(apptFormData.date) : new Date()
-                                                        const valid = isNaN(base.getTime()) ? new Date() : base
-                                                        return [
-                                                            ...prev,
-                                                            {
-                                                                id: makeReminderId(),
-                                                                date: format(valid, "yyyy-MM-dd"),
-                                                                time: "08:00",
-                                                            },
-                                                        ]
-                                                    })
-                                                }}
-                                                className="inline-flex items-center gap-1 text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
-                                            >
-                                                <Plus className="h-3.5 w-3.5" /> Add another reminder
-                                            </button>
-                                        </div>
-                                    </div>
 
                                     {isGCalConnected && (
                                         <label className="flex items-center gap-3 p-3.5 rounded-2xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all">

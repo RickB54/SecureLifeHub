@@ -392,31 +392,36 @@ export default function GoogleCalendarIntegration({
     return ""
   }
 
-  // Not connected view — compact single button only
+  // Not connected view — single compact bar
   if (!isConnected) {
     return (
-      <div className="flex flex-col items-start gap-2">
-        <button
-          type="button"
-          onClick={handleConnect}
-          disabled={isLoading}
-          className="h-8 px-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-          title="Connect Google Calendar (optional)"
-        >
-          {isLoading ? (
-            <>
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              <span>Connecting...</span>
-            </>
-          ) : (
-            <>
-              <CalendarIcon className="h-3.5 w-3.5 text-blue-400" />
-              <span>Connect Google Calendar</span>
-            </>
-          )}
-        </button>
+      <div className="space-y-1.5">
+        <div className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/10 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-gray-400">
+            <CalendarIcon className="h-4 w-4 text-blue-400 shrink-0" />
+            <span>Google Calendar not connected (optional)</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleConnect}
+            disabled={isLoading}
+            className="h-8 px-3 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {isLoading ? (
+              <>
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                <span>Connecting...</span>
+              </>
+            ) : (
+              <>
+                <CalendarIcon className="h-3.5 w-3.5" />
+                <span>Connect Google Calendar</span>
+              </>
+            )}
+          </button>
+        </div>
         {error && (
-          <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 text-xs text-amber-300 max-w-lg whitespace-pre-wrap">
+          <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 text-xs text-amber-300 whitespace-pre-wrap">
             <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-amber-400" />
             <span>{error}</span>
           </div>
