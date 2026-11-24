@@ -8,7 +8,6 @@ import {
   Clock,
   Calendar,
   User,
-  Building2,
   Shield,
   AlertCircle,
   FileText,
@@ -17,11 +16,16 @@ import {
   X,
   ExternalLink,
   Trash2,
+  Printer,
+  FileDown,
 } from "lucide-react"
-import { format } from "date-fns"
 import type { DoctorOption, FacilityOption } from "./health-field-helpers"
-import { resolveDoctorInfo, resolveFacilityInfo } from "@/lib/health-store"
-import { getScheduledNextDose, type PillCountEstimate } from "@/lib/pill-count"
+import type { PillCountEstimate } from "@/lib/pill-count"
+import {
+  UNCATEGORIZED_MED_CATEGORY,
+  extractNormalizedMedicationData,
+  type LabelValueField,
+} from "@/lib/medication-export"
 
 interface MedicationDetailViewProps {
   medication: any
@@ -35,20 +39,10 @@ interface MedicationDetailViewProps {
   onBack: () => void
   onEdit: () => void
   onRefill?: () => void
+  onExport?: () => void
   onLookupDrug?: (name: string) => void
   onOpenDoctors?: () => void
   onDeleteLogEntry?: (logType: "taken" | "skipped", index: number) => void
-}
-
-function safeDate(val?: string | null, fmt = "PPP") {
-  if (!val) return ""
-  try {
-    const d = new Date(val)
-    if (isNaN(d.getTime())) return val
-    return format(d, fmt)
-  } catch {
-    return val
-  }
 }
 
 function DetailRow({ label, value }: { label: string; value?: React.ReactNode }) {
@@ -58,9 +52,22 @@ function DetailRow({ label, value }: { label: string; value?: React.ReactNode })
       <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 shrink-0">
         {label}
       </span>
-      <span className="text-sm text-gray-100 sm:text-right break-words">{value}</span>
+      <span className="text-sm text-gray-100 sm:text-right break-words whitespace-pre-wrap">{value}</span>
     </div>
   )
+}
+
+function renderFieldRows(
+  rows: LabelValueField[],
+  overrideRender?: Partial<Record<string, React.ReactNode>>
+) {
+  return rows.map((row) => (
+    <DetailRow
+      key={row.key}
+      label={row.label}
+      value={overrideRender && row.key in overrideRender ? overrideRender[row.key] : row.value}
+    />
+  ))
 }
 
 export default function MedicationDetailView({
@@ -68,52 +75,17 @@ export default function MedicationDetailView({
   doctors,
   facilities = [],
   pillIcon,
-  isTracked,
-  isLowStock,
-  pillEstimate,
-  currentDose,
   onBack,
   onEdit,
   onRefill,
+  onExport,
   onLookupDrug,
   onOpenDoctors,
   onDeleteLogEntry,
 }: MedicationDetailViewProps) {
-  const meta = medication?.item_metadata || {}
-  const docInfo = resolveDoctorInfo(
-    meta.doctor_id,
-    { name: meta.prescribedBy },
-    doctors
-  )
-  const facInfo = resolveFacilityInfo(
-    meta.facility_id,
-    { name: meta.facility_name || docInfo.location },
-    facilities
-  )
-
-  const hasClinical = Boolean(
-    meta.genericName ||
-      meta.drugClass ||
-      meta.purpose ||
-      meta.sideEffects ||
-      meta.interactions ||
-      meta.rxInstructions
-  )
-
-  const hasSchedule = Boolean(
-    meta.frequency ||
-      meta.nextDose ||
-      meta.startDate ||
-      meta.endDate ||
-      meta.lastTaken ||
-      (Array.isArray(meta.reminders) && meta.reminders.length > 0) ||
-      (Array.isArray(meta.takenLog) && meta.takenLog.length > 0) ||
-      (Array.isArray(meta.skippedLog) && meta.skippedLog.length > 0)
-  )
-
-  const hasCareTeam = Boolean(docInfo.name || facInfo.name || meta.pharmacy)
-
-  const hasNotes = Boolean(meta.notes || meta.aiDrugInfo)
+  // Single shared source of fields (identical to Full Details & Quick Reference export)
+  const data = extractNormalizedMedicationData(medication, doctors, facilities)
+  const safetyList = data.safetyRows(true)
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#121212] text-white flex flex-col overflow-hidden">
@@ -128,11 +100,33 @@ export default function MedicationDetailView({
           <span>Back</span>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {onExport && (
+            <>
+              <button
+                type="button"
+                onClick={onExport}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                title="Print medication"
+                aria-label="Print medication"
+              >
+                <Printer className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={onExport}
+                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                title="Export PDF"
+                aria-label="Export PDF"
+              >
+                <FileDown className="h-4 w-4" />
+              </button>
+            </>
+          )}
           {onLookupDrug && (
             <button
               type="button"
-              onClick={() => onLookupDrug(medication.title)}
+              onClick={() => onLookupDrug(data.name)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/25 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -170,192 +164,172 @@ export default function MedicationDetailView({
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-lg sm:text-xl font-bold text-white truncate">
-                  {medication.title}
+                  {data.name}
                 </h1>
-                {isLowStock && (
+                {data.category && data.category !== UNCATEGORIZED_MED_CATEGORY && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                    {data.category}
+                  </span>
+                )}
+                {data.isLowStock && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
                     <AlertCircle className="h-3 w-3" /> Low Stock
                   </span>
                 )}
               </div>
               <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
-                {meta.dosage && <span className="text-gray-200 font-medium">{meta.dosage}</span>}
-                {meta.dosage && meta.frequency && <span>&bull;</span>}
-                {meta.frequency && <span>{meta.frequency}</span>}
-                {meta.genericName && (
+                {data.dosage && <span className="text-gray-200 font-medium">{data.dosage}</span>}
+                {data.dosage && data.form && <span>&bull;</span>}
+                {data.form && <span>{data.form}</span>}
+                {(data.dosage || data.form) && data.frequency && <span>&bull;</span>}
+                {data.frequency && <span>{data.frequency}</span>}
+                {data.genericName && (
                   <>
                     <span>&bull;</span>
-                    <span className="italic">{meta.genericName}</span>
+                    <span className="italic">{data.genericName}</span>
                   </>
                 )}
               </div>
             </div>
           </section>
 
-          {/* Clinical Overview */}
-          {hasClinical && (
+          {/* 1. Medication Overview */}
+          {data.overviewRows.length > 0 && (
             <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-purple-400 mb-2 flex items-center gap-1.5">
-                <Pill className="h-3.5 w-3.5" /> Clinical Details
+                <Pill className="h-3.5 w-3.5" /> Medication Overview
               </h2>
-              <DetailRow label="Generic Name" value={meta.genericName} />
-              <DetailRow label="Drug Class" value={meta.drugClass} />
-              <DetailRow label="Purpose" value={meta.purpose} />
-              <DetailRow label="RX Instructions" value={meta.rxInstructions} />
-              <DetailRow label="Common Side Effects" value={meta.sideEffects} />
-              <DetailRow label="Drug Interactions" value={meta.interactions} />
+              {renderFieldRows(data.overviewRows)}
             </section>
           )}
 
-          {/* Schedule & Dosing */}
-          {hasSchedule && (
+          {/* 2. Schedule & Dosing */}
+          {(data.scheduleRows.length > 0 ||
+            data.doseScheduleRows.length > 0 ||
+            data.adherenceEntries.length > 0) && (
             <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" /> Schedule &amp; Dosing
               </h2>
-              <DetailRow label="Frequency" value={meta.frequency} />
-              <DetailRow label="Current Dose" value={currentDose} />
-              <DetailRow
-                label="Next Dose"
-                value={(() => {
-                  const liveNext = getScheduledNextDose(meta) || meta.nextDose
-                  return liveNext ? safeDate(liveNext, "MMM d, yyyy 'at' h:mm a") : ""
-                })()}
-              />
-              {Array.isArray(meta.reminders) && meta.reminders.length > 0 && (
-                <DetailRow label="Reminder Times" value={meta.reminders.join(", ")} />
-              )}
-              <DetailRow
-                label="Start Date"
-                value={meta.startDate ? safeDate(meta.startDate, "MMM d, yyyy") : ""}
-              />
-              <DetailRow
-                label="End Date"
-                value={meta.endDate ? safeDate(meta.endDate, "MMM d, yyyy") : ""}
-              />
-              <DetailRow
-                label="Last Taken"
-                value={meta.lastTaken ? safeDate(meta.lastTaken, "MMM d, yyyy 'at' h:mm a") : ""}
-              />
-              {(meta.takenLog?.length > 0 || meta.skippedLog?.length > 0) && (() => {
-                const entries: Array<{ logType: "taken" | "skipped"; index: number; timestamp: string }> = [
-                  ...(Array.isArray(meta.takenLog)
-                    ? meta.takenLog.map((e: any, index: number) => ({
-                        logType: "taken" as const,
-                        index,
-                        timestamp: e?.timestamp || (typeof e === "string" ? e : ""),
-                      }))
-                    : []),
-                  ...(Array.isArray(meta.skippedLog)
-                    ? meta.skippedLog.map((e: any, index: number) => ({
-                        logType: "skipped" as const,
-                        index,
-                        timestamp: e?.timestamp || (typeof e === "string" ? e : ""),
-                      }))
-                    : []),
-                ].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime())
+              {renderFieldRows(data.scheduleRows)}
 
-                return (
-                  <div className="pt-3 mt-2 border-t border-white/10 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
-                        Adherence Log ({entries.length})
-                      </span>
-                      <span className="inline-flex items-center gap-3 text-xs">
-                        {meta.takenLog?.length > 0 && (
-                          <span className="inline-flex items-center gap-1 text-emerald-400">
-                            <Check className="h-3.5 w-3.5" /> Taken {meta.takenLog.length}x
-                          </span>
-                        )}
-                        {meta.skippedLog?.length > 0 && (
-                          <span className="inline-flex items-center gap-1 text-amber-400">
-                            <X className="h-3.5 w-3.5" /> Skipped {meta.skippedLog.length}x
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-                      {entries.map((entry) => (
-                        <div
-                          key={`${entry.logType}-${entry.index}-${entry.timestamp}`}
-                          className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold shrink-0 ${
-                                entry.logType === "taken"
-                                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                                  : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
-                              }`}
-                            >
-                              {entry.logType === "taken" ? (
-                                <Check className="h-3 w-3" />
-                              ) : (
-                                <X className="h-3 w-3" />
-                              )}
-                              {entry.logType === "taken" ? "Taken" : "Skipped"}
-                            </span>
-                            <span className="text-gray-200 truncate">
-                              {entry.timestamp ? safeDate(entry.timestamp, "MMM d, yyyy 'at' h:mm a") : "Unknown time"}
-                            </span>
-                          </div>
-                          {onDeleteLogEntry && (
-                            <button
-                              type="button"
-                              onClick={() => onDeleteLogEntry(entry.logType, entry.index)}
-                              className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
-                              title="Delete log entry"
-                              aria-label="Delete log entry"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
+              {/* Periodic Dose Schedule Table */}
+              {data.doseScheduleRows.length > 0 && (
+                <div className="pt-3 mt-2 border-t border-white/10 space-y-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block">
+                    Periodic Dose Schedule
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {data.doseScheduleRows.map((dr, i) => (
+                      <div
+                        key={i}
+                        className="px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <div className="font-semibold text-gray-200">{dr.dayLabel}</div>
+                          {dr.dateLabel && <div className="text-[10px] text-gray-400">{dr.dateLabel}</div>}
                         </div>
-                      ))}
-                    </div>
+                        <span className="font-bold text-purple-300">{dr.quantityLabel}</span>
+                      </div>
+                    ))}
                   </div>
-                )
-              })()}
+                </div>
+              )}
+
+              {/* Adherence Log */}
+              {data.adherenceEntries.length > 0 && (
+                <div className="pt-3 mt-2 border-t border-white/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                      Adherence Log ({data.adherenceEntries.length})
+                    </span>
+                    <span className="inline-flex items-center gap-3 text-xs">
+                      {data.takenCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-emerald-400">
+                          <Check className="h-3.5 w-3.5" /> Taken {data.takenCount}x
+                        </span>
+                      )}
+                      {data.skippedCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-amber-400">
+                          <X className="h-3.5 w-3.5" /> Skipped {data.skippedCount}x
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                    {data.adherenceEntries.map((entry) => (
+                      <div
+                        key={`${entry.logType}-${entry.index}-${entry.timestamp}`}
+                        className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 text-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold shrink-0 ${
+                              entry.logType === "taken"
+                                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                : "bg-amber-500/15 text-amber-400 border border-amber-500/30"
+                            }`}
+                          >
+                            {entry.logType === "taken" ? (
+                              <Check className="h-3 w-3" />
+                            ) : (
+                              <X className="h-3 w-3" />
+                            )}
+                            {entry.logType === "taken" ? "Taken" : "Skipped"}
+                          </span>
+                          <span className="text-gray-200 truncate">{entry.formattedTime}</span>
+                        </div>
+                        {onDeleteLogEntry && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteLogEntry(entry.logType, entry.index)}
+                            className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
+                            title="Delete log entry"
+                            aria-label="Delete log entry"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </section>
           )}
 
-          {/* Prescriber & Pharmacy */}
-          {hasCareTeam && (
+          {/* 3. Prescriber & Pharmacy */}
+          {data.prescriberPharmacyRows.length > 0 && (
             <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-teal-400 mb-2 flex items-center gap-1.5">
                 <User className="h-3.5 w-3.5" /> Prescriber &amp; Pharmacy
               </h2>
-              {docInfo.name && (
-                <DetailRow
-                  label="Prescribing Doctor"
-                  value={
-                    onOpenDoctors ? (
-                      <button
-                        type="button"
-                        onClick={onOpenDoctors}
-                        className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium underline underline-offset-2 cursor-pointer"
-                      >
-                        <span>{docInfo.name}</span>
-                        {docInfo.specialty && (
-                          <span className="text-gray-400 no-underline text-xs">({docInfo.specialty})</span>
-                        )}
-                        <ExternalLink className="h-3 w-3" />
-                      </button>
-                    ) : (
-                      docInfo.name
-                    )
-                  }
-                />
-              )}
-              {facInfo.name && <DetailRow label="Facility" value={facInfo.name} />}
-              {facInfo.address && <DetailRow label="Facility Address" value={facInfo.address} />}
-              {docInfo.phone && <DetailRow label="Doctor Phone" value={docInfo.phone} />}
-              <DetailRow label="Pharmacy" value={meta.pharmacy} />
+              {renderFieldRows(data.prescriberPharmacyRows, {
+                ...(data.doctorName && onOpenDoctors
+                  ? {
+                      doctor: (
+                        <button
+                          type="button"
+                          onClick={onOpenDoctors}
+                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium underline underline-offset-2 cursor-pointer"
+                        >
+                          <span>{data.doctorName}</span>
+                          {data.doctorSpecialty && (
+                            <span className="text-gray-400 no-underline text-xs">
+                              ({data.doctorSpecialty})
+                            </span>
+                          )}
+                          <ExternalLink className="h-3 w-3" />
+                        </button>
+                      ),
+                    }
+                  : {}),
+              })}
             </section>
           )}
 
-          {/* Inventory & Refills — ONLY shown when pill tracking is ON */}
-          {isTracked && (
+          {/* 4. Inventory & Refills — ONLY shown when pill tracking is ON */}
+          {data.isTracked && data.inventoryRows.length > 0 && (
             <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
@@ -371,41 +345,21 @@ export default function MedicationDetailView({
                   </button>
                 )}
               </div>
-              <DetailRow
-                label="Estimated Remaining"
-                value={`Est. ${pillEstimate?.remaining ?? meta.quantity ?? 0} left`}
-              />
-              {pillEstimate?.runOutDateStr && (
-                <DetailRow
-                  label="Estimated Run-Out"
-                  value={`Runs out about ${pillEstimate.runOutDateStr}`}
-                />
-              )}
-              <DetailRow label="Pills per Dose" value={`${meta.pillsPerDose ?? 1}`} />
-              <DetailRow label="Total Quantity (Bottle)" value={meta.totalQuantity ? `${meta.totalQuantity}` : ""} />
-              <DetailRow label="Low-Stock Alert At" value={`≤ ${meta.lowStockThreshold ?? 5}`} />
-              <DetailRow
-                label="Refill Date"
-                value={meta.refillDate ? safeDate(meta.refillDate, "MMM d, yyyy") : ""}
-              />
+              {renderFieldRows(data.inventoryRows)}
             </section>
           )}
 
-          {/* Notes & AI Info */}
-          {hasNotes && (
-            <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4 space-y-2.5">
+          {/* 5. Safety, Instructions & Private Notes */}
+          {(safetyList.length > 0 || data.medInfoText) && (
+            <section className="rounded-xl bg-[#1a1a1a] border border-white/10 p-4 space-y-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> Notes &amp; Reference
+                <FileText className="h-3.5 w-3.5" /> Safety, Instructions &amp; Notes
               </h2>
-              {meta.notes && (
-                <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
-                  {meta.notes}
-                </p>
-              )}
-              {meta.aiDrugInfo && (
-                <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-200 space-y-1">
-                  <div className="font-semibold text-blue-300">Saved AI Drug Info</div>
-                  <p className="whitespace-pre-wrap">{typeof meta.aiDrugInfo === "string" ? meta.aiDrugInfo : JSON.stringify(meta.aiDrugInfo)}</p>
+              {renderFieldRows(safetyList)}
+              {data.medInfoText && (
+                <div className="rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-200 space-y-1 mt-2">
+                  <div className="font-semibold text-blue-300">Saved Medication Reference Info</div>
+                  <p className="whitespace-pre-wrap">{data.medInfoText}</p>
                 </div>
               )}
             </section>

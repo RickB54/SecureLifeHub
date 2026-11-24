@@ -4,10 +4,8 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
-import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize, Info, RotateCcw } from "lucide-react"
+import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize, Info, RotateCcw, FolderCog, Tag } from "lucide-react"
 import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, startOfDay, endOfDay, eachHourOfInterval, addWeeks, subWeeks, addMonths, subMonths, parse, addHours } from "date-fns"
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
 import { toast } from 'sonner'
 import { lookupDrugInfo, type DrugInfo } from '@/lib/drug-database'
 import {
@@ -21,6 +19,20 @@ import {
 } from './health-ui/health-field-helpers'
 import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
 import MedicationDetailView from './health-ui/medication-detail-view'
+import {
+    MedicationCategorySelect,
+    ManageCategoriesModal,
+    MedicationExportModal,
+} from './health-ui/medication-export-modal'
+import {
+    UNCATEGORIZED_MED_CATEGORY,
+    formatMedDateOnly,
+    parseMedLocalDate,
+    getAllMedicationCategories,
+    getMedCategory,
+    loadSavedCustomMedCategories,
+    saveCustomMedCategories,
+} from '@/lib/medication-export'
 import {
     isMedTracked,
     isMedAsNeeded,
@@ -124,6 +136,17 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const [viewMode, setViewMode] = useState<"list" | "timeline">("list")
     const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("day")
     const [showFullTimeline, setShowFullTimeline] = useState(false) // NEW: Toggle full timeline view
+    const [categoryFilter, setCategoryFilter] = useState<string>("all")
+    const [customCategories, setCustomCategories] = useState<string[]>([])
+    const [showManageCategories, setShowManageCategories] = useState(false)
+    const [exportModalState, setExportModalState] = useState<{ open: boolean; singleMed: any | null }>({
+        open: false,
+        singleMed: null,
+    })
+
+    useEffect(() => {
+        setCustomCategories(loadSavedCustomMedCategories())
+    }, [])
 
     // Global handler for triggering Import Rx from child modals
     useEffect(() => {
@@ -204,23 +227,28 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             const specificNames = ["Hydroxyzine", "Prednisone", "Loratadine", "Famotidine"];
             const isSpecificMed = specificNames.some(name => r.title?.includes(name));
 
-            const isMed = (r.category && r.category.toLowerCase() === "medications") ||
+            const isMed = Boolean(r.item_metadata?.is_medication) ||
+                (r.category && r.category.toLowerCase() === "medications") ||
                 (r.type && r.type.toLowerCase() === "medication") ||
                 (r.type === "note" && r.category === "Medications") ||
                 // Catch imported prescriptions explicitly
                 (r.item_metadata?.notes === "Imported Prescription") ||
+                (typeof r.item_metadata?.notes === "string" && (
+                    r.item_metadata.notes.includes("Pill Library") ||
+                    r.item_metadata.notes.startsWith("Imported from ")
+                )) ||
                 isSpecificMed
 
             return isMed
         })
 
-        console.log("📊 Total medRecords found:", filtered.length)
-        console.log("📊 Total all records:", records.length)
-        console.log("📋 First 3 records sample:", records.slice(0, 3).map(r => ({ title: r.title, type: r.type, category: r.category })))
-        console.log("📋 First 3 med records:", filtered.slice(0, 3).map(m => ({ title: m.title, dosage: m.item_metadata?.dosage })))
-
         return filtered
     }, [records]) // Re-run whenever records changes!
+
+    const allMedCategories = useMemo(
+        () => getAllMedicationCategories(medRecords, customCategories),
+        [medRecords, customCategories]
+    )
 
     // Helper: Calculate next dose date based on reminders and frequency
     const calculateNextDose = (med: any, fromDate = new Date(), isTakeAction = false) => {
@@ -254,7 +282,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         }
 
         try {
-            const start = startOfDay(new Date(startDateStr))
+            const parsedStart = parseMedLocalDate(startDateStr) || new Date(startDateStr)
+            const start = startOfDay(parsedStart)
             const today = startOfDay(new Date())
 
             const diffInMs = today.getTime() - start.getTime()
@@ -279,7 +308,8 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         if (schedule.length === 0 || !startDateStr) return 1
 
         try {
-            const start = startOfDay(new Date(startDateStr))
+            const parsedStart = parseMedLocalDate(startDateStr) || new Date(startDateStr)
+            const start = startOfDay(parsedStart)
             const today = startOfDay(new Date())
             const diffInMs = today.getTime() - start.getTime()
             const dayIndex = Math.floor(diffInMs / (1000 * 60 * 60 * 24))
@@ -371,11 +401,89 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         return () => clearInterval(interval)
     }, [medRecords, lastReminderTime])
 
-    // Filter by search
-    const filteredMeds = medRecords.filter(med =>
-        med.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        med.item_metadata?.dosage?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const handleCreateCustomCategory = (rawName: string) => {
+        const clean = rawName.trim()
+        if (!clean || clean.toLowerCase() === UNCATEGORIZED_MED_CATEGORY.toLowerCase()) return
+        setCustomCategories((prev) => {
+            if (prev.some((p) => p.toLowerCase() === clean.toLowerCase())) return prev
+            const next = [...prev, clean]
+            saveCustomMedCategories(next)
+            return next
+        })
+    }
+
+    const handleRenameCategory = async (oldName: string, newName: string) => {
+        const cleanNew = newName.trim()
+        if (!cleanNew || cleanNew === oldName) return
+
+        // Persist new custom category name & replace old custom entry if present
+        setCustomCategories((prev) => {
+            const filtered = prev.filter((c) => c.toLowerCase() !== oldName.toLowerCase() && c.toLowerCase() !== cleanNew.toLowerCase())
+            const next = [...filtered, cleanNew]
+            saveCustomMedCategories(next)
+            return next
+        })
+
+        // Update every medication currently using oldName
+        const matching = medRecords.filter((m) => getMedCategory(m).toLowerCase() === oldName.toLowerCase())
+        await Promise.all(
+            matching.map(async (m) => {
+                const updatedMeta = {
+                    ...m.item_metadata,
+                    category: cleanNew,
+                    lastModified: new Date().toISOString(),
+                }
+                await updateItem(m.id, { item_metadata: updatedMeta })
+                upsertSharedHealthRecord({ ...m, item_metadata: updatedMeta })
+            })
+        )
+
+        if (categoryFilter.toLowerCase() === oldName.toLowerCase()) {
+            setCategoryFilter(cleanNew)
+        }
+        toast.success(`Renamed "${oldName}" to "${cleanNew}" (${matching.length} medication${matching.length === 1 ? "" : "s"} updated)`)
+    }
+
+    const handleDeleteCategory = async (catName: string) => {
+        setCustomCategories((prev) => {
+            const next = prev.filter((c) => c.toLowerCase() !== catName.toLowerCase())
+            saveCustomMedCategories(next)
+            return next
+        })
+
+        const matching = medRecords.filter((m) => getMedCategory(m).toLowerCase() === catName.toLowerCase())
+        await Promise.all(
+            matching.map(async (m) => {
+                const updatedMeta = {
+                    ...m.item_metadata,
+                    category: "",
+                    lastModified: new Date().toISOString(),
+                }
+                await updateItem(m.id, { item_metadata: updatedMeta })
+                upsertSharedHealthRecord({ ...m, item_metadata: updatedMeta })
+            })
+        )
+
+        if (categoryFilter.toLowerCase() === catName.toLowerCase()) {
+            setCategoryFilter("all")
+        }
+        toast.success(`Removed "${catName}" — ${matching.length} medication${matching.length === 1 ? "" : "s"} moved to Uncategorized`)
+    }
+
+    // Filter by search + category
+    const filteredMeds = medRecords.filter(med => {
+        const q = searchQuery.toLowerCase().trim()
+        const matchesSearch = !q ||
+            med.title?.toLowerCase().includes(q) ||
+            med.item_metadata?.dosage?.toLowerCase().includes(q) ||
+            med.item_metadata?.genericName?.toLowerCase().includes(q) ||
+            med.item_metadata?.purpose?.toLowerCase().includes(q) ||
+            getMedCategory(med).toLowerCase().includes(q)
+
+        if (!matchesSearch) return false
+        if (categoryFilter === "all") return true
+        return getMedCategory(med) === categoryFilter
+    })
 
     // Get upcoming reminders (meds due today)
     const upcomingReminders = medRecords.filter(med => {
@@ -388,18 +496,29 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     const handleAddMed = async (formData: any) => {
         try {
+            if (formData.category && formData.category.trim()) {
+                handleCreateCustomCategory(formData.category.trim())
+            }
             const res = await addItem({
                 type: "note", // Changed from "medication" to comply with database constraint
                 category: "Medications",
                 title: formData.name || "Untitled Medication",
                 item_metadata: {
+                    is_medication: true,
+                    category: formData.category?.trim() || "",
                     dosage: formData.dosage || "As directed",
+                    dosageForm: formData.dosageForm?.trim() || "",
                     frequency: formData.frequency || "",
                     prescribedBy: formData.prescribedBy || "",
                     doctor_id: formData.doctor_id || null,
                     facility_id: formData.facility_id || null,
                     facility_name: formData.facility_name || "",
                     pharmacy: formData.pharmacy || "",
+                    pharmacyPhone: formData.pharmacyPhone?.trim() || "",
+                    pharmacyAddress: formData.pharmacyAddress?.trim() || "",
+                    rxNumber: formData.rxNumber?.trim() || "",
+                    refillsRemaining: formData.refillsRemaining !== undefined && formData.refillsRemaining !== null ? String(formData.refillsRemaining).trim() : "",
+                    lastFilledDate: formData.lastFilledDate || "",
                     purpose: formData.purpose || "",
                     genericName: formData.genericName || "",
                     drugClass: formData.drugClass || "",
@@ -447,6 +566,9 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
 
     const handleEditMed = async (formData: any) => {
         if (!selectedMed) throw new Error("No medication selected to update.")
+        if (formData.category && formData.category.trim()) {
+            handleCreateCustomCategory(formData.category.trim())
+        }
         const shouldResetBaseline =
             Boolean(formData.quantityChanged) ||
             Boolean(formData.countStartChanged) ||
@@ -464,13 +586,21 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         const parsedLowStock = parseInt(String(formData.lowStockThreshold), 10)
         const updatedMeta = {
             ...selectedMed.item_metadata,
+            is_medication: true,
+            category: formData.category?.trim() || "",
             dosage: formData.dosage || "As directed",
+            dosageForm: formData.dosageForm?.trim() || "",
             frequency: formData.frequency || "",
             prescribedBy: formData.prescribedBy || "",
             doctor_id: formData.doctor_id || null,
             facility_id: formData.facility_id || null,
             facility_name: formData.facility_name || "",
             pharmacy: formData.pharmacy || "",
+            pharmacyPhone: formData.pharmacyPhone?.trim() || "",
+            pharmacyAddress: formData.pharmacyAddress?.trim() || "",
+            rxNumber: formData.rxNumber?.trim() || "",
+            refillsRemaining: formData.refillsRemaining !== undefined && formData.refillsRemaining !== null ? String(formData.refillsRemaining).trim() : "",
+            lastFilledDate: formData.lastFilledDate || "",
             purpose: formData.purpose || "",
             genericName: formData.genericName || "",
             drugClass: formData.drugClass || "",
@@ -730,171 +860,6 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         setShowRescheduleModal(false)
         toast.success(`✓ ${selectedMed.title} rescheduled to ${format(newDateTime, 'PPp')}`)
     }
-
-    const handlePrintAll = () => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-
-        const content = `
-            <html>
-                <head>
-                    <title>Complete Medication Profile - SecureLifeHub</title>
-                    <style>
-                        body { font-family: -apple-system, sans-serif; padding: 50px; color: #1a1a1a; line-height: 1.4; }
-                        .header { border-bottom: 4px solid #9333ea; padding-bottom: 20px; margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end; }
-                        h1 { margin: 0; color: #000; font-size: 32px; letter-spacing: -0.02em; }
-                        .summary-box { background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 40px; border: 1px solid #eee; }
-                        .med-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 25px; margin-bottom: 25px; page-break-inside: avoid; }
-                        .med-name { font-size: 20px; font-weight: 800; color: #000; margin-bottom: 5px; text-transform: uppercase; }
-                        .med-meta { color: #6b7280; font-size: 14px; font-weight: 600; margin-bottom: 15px; }
-                        .grid { display: grid; grid-template-cols: 1fr 1fr 1fr; gap: 20px; margin-bottom: 15px; }
-                        .item { border-left: 2px solid #ddd; padding-left: 10px; }
-                        .label { font-size: 10px; color: #9ca3af; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
-                        .value { font-size: 13px; font-weight: 600; }
-                        .notes { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; font-style: italic; color: #4b5563; font-size: 13px; }
-                        .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #9ca3af; border-top: 1px solid #eee; padding-top: 20px; }
-                        @media print { .no-print { display: none; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div>
-                            <h1>Medical Profile</h1>
-                            <div style="color: #9333ea; font-weight: 700;">CONFIDENTIAL HEALTH RECORD</div>
-                        </div>
-                        <div style="text-align: right; font-size: 12px; color: #666;">Generated: ${format(new Date(), 'PPP')}</div>
-                    </div>
-
-                    <div class="summary-box">
-                        <strong>Patient:</strong> ${user?.email || 'Vault User'}<br>
-                        <strong>Total Active Medications:</strong> ${medRecords.length}<br>
-                        <strong>Report Purpose:</strong> Clinical Review / Doctor Visit
-                    </div>
-
-                    ${medRecords.map(med => `
-                        <div class="med-card">
-                            <div class="med-name">${med.title}</div>
-                            <div class="med-meta">${med.item_metadata?.dosage || 'No dosage set'} • ${med.item_metadata?.frequency || 'As directed'}</div>
-                            
-                            <div class="grid">
-                                <div class="item">
-                                    <div class="label">Prescribed By</div>
-                                    <div class="value">${med.item_metadata?.prescribedBy || 'N/A'}</div>
-                                </div>
-                                <div class="item">
-                                    <div class="label">Duration</div>
-                                    <div class="value">${med.item_metadata?.startDate || 'N/A'} to ${med.item_metadata?.endDate || 'Ongoing'}</div>
-                                </div>
-                                <div class="item">
-                                    <div class="label">Inventory</div>
-                                    <div class="value">${med.item_metadata?.quantity || 0} pills left</div>
-                                </div>
-                            </div>
-
-                            <div class="item" style="margin-bottom: 15px; border-left: 2px solid #9333ea;">
-                                <div class="label">Instructions</div>
-                                <div class="value">${med.item_metadata?.rxInstructions || 'None provided'}</div>
-                            </div>
-
-                            ${med.item_metadata?.notes ? `
-                                <div class="notes">
-                                    <strong>Doctor/Patient Notes:</strong> ${med.item_metadata.notes}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `).join('')}
-
-                    <div class="footer">
-                        This clinical summary was securely exported from SecureLifeHub. Please verify all dosages with your primary care physician.
-                    </div>
-
-                    <script>window.print(); setTimeout(() => window.close(), 500);</script>
-                </body>
-            </html>
-        `;
-
-        printWindow.document.write(content);
-        printWindow.document.close();
-    }
-
-    const handleExportAllPDF = () => {
-        const doc = new jsPDF()
-
-        // Header
-        doc.setFillColor(147, 51, 234)
-        doc.rect(0, 0, 210, 45, 'F')
-
-        doc.setTextColor(255, 255, 255)
-        doc.setFontSize(28)
-        doc.setFont('helvetica', 'bold')
-        doc.text("Medication Profile", 15, 20)
-
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
-        doc.text(`Patient: ${user?.email || 'N/A'}`, 15, 32)
-        doc.text(`Report Date: ${format(new Date(), 'PPP')}`, 15, 38)
-
-        // Summary Statistics
-        doc.setTextColor(30, 41, 59)
-        doc.setFontSize(12)
-        doc.text(`Total Medications: ${medRecords.length}`, 15, 60)
-
-        // Main Table
-        autoTable(doc, {
-            startY: 70,
-            head: [['Medication', 'Dosage & Frequency', 'Dates', 'Doctor', 'Notes']],
-            body: medRecords.map(med => [
-                med.title.toUpperCase(),
-                `${med.item_metadata?.dosage || 'N/A'}\n${med.item_metadata?.frequency || 'N/A'}`,
-                `${med.item_metadata?.startDate || 'N/A'}\nto ${med.item_metadata?.endDate || 'Ongoing'}`,
-                med.item_metadata?.prescribedBy || 'N/A',
-                med.item_metadata?.notes ? (med.item_metadata.notes.substring(0, 50) + (med.item_metadata.notes.length > 50 ? '...' : '')) : 'N/A'
-            ]),
-            headStyles: { fillColor: [147, 51, 234], fontSize: 10, fontStyle: 'bold' },
-            bodyStyles: { fontSize: 9, cellPadding: 6 },
-            columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 40 },
-                4: { fontStyle: 'italic', fontSize: 8 }
-            },
-            alternateRowStyles: { fillColor: [249, 250, 251] }
-        })
-
-        // Detailed blocks for each med if requested (appending to same PDF)
-        let finalY = (doc as any).lastAutoTable.finalY + 20
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'bold')
-        doc.text("Instructional Details", 15, finalY)
-        doc.setDrawColor(226, 232, 240)
-        doc.line(15, finalY + 2, 195, finalY + 2)
-
-        finalY += 15
-        medRecords.forEach((med, index) => {
-            if (finalY > 260) {
-                doc.addPage()
-                finalY = 20
-            }
-            doc.setFontSize(10)
-            doc.setFont('helvetica', 'bold')
-            doc.text(`${index + 1}. ${med.title.toUpperCase()}`, 15, finalY)
-            doc.setFont('helvetica', 'normal')
-            doc.setFontSize(9)
-            const instructions = doc.splitTextToSize(`Instructions: ${med.item_metadata?.rxInstructions || 'N/A'}`, 170)
-            doc.text(instructions, 20, finalY + 5)
-            finalY += (instructions.length * 5) + 8
-        })
-
-        // Footer
-        const pageCount = (doc as any).internal.getNumberOfPages()
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i)
-            doc.setFontSize(8)
-            doc.setTextColor(150)
-            doc.text(`Page ${i} of ${pageCount} | SecureLifeHub Clinical Export`, 105, 285, { align: 'center' })
-        }
-
-        doc.save(`Complete_Medication_Profile_${format(new Date(), 'yyyy-MM-dd')}.pdf`)
-    }
-
 
     const handleAIQuestion = async () => {
         if (!aiQuestion.trim()) return
@@ -1269,19 +1234,19 @@ ${selectedMed ? `
                     <div className="flex flex-wrap items-center gap-1.5">
                         <button
                             type="button"
-                            onClick={handlePrintAll}
+                            onClick={() => setExportModalState({ open: true, singleMed: null })}
                             className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                            title="Print Master List"
-                            aria-label="Print Master List"
+                            title="Print / Export Medications"
+                            aria-label="Print Medications"
                         >
                             <Printer className="h-4 w-4" />
                         </button>
                         <button
                             type="button"
-                            onClick={handleExportAllPDF}
+                            onClick={() => setExportModalState({ open: true, singleMed: null })}
                             className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                            title="Export Master PDF"
-                            aria-label="Export Master PDF"
+                            title="Download PDF / Export Medications"
+                            aria-label="Export Medications PDF"
                         >
                             <FileDown className="h-4 w-4" />
                         </button>
@@ -1354,7 +1319,7 @@ ${selectedMed ? `
                     </div>
                 </div>
 
-                {/* Row 2: Search, Pill Library, Import Rx, List / Timeline */}
+                {/* Row 2: Search, Category Filter, Manage Categories, Pill Library, Import Rx, List / Timeline */}
                 <div className="flex flex-wrap items-center gap-2">
                     <div className="relative flex-1 min-w-[180px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -1367,6 +1332,29 @@ ${selectedMed ? `
                         />
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
+                        <select
+                            aria-label="Filter by category"
+                            value={categoryFilter}
+                            onChange={(e) => setCategoryFilter(e.target.value)}
+                            className="h-9 px-2.5 bg-[#1e1e1e] border border-white/10 rounded-lg text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                        >
+                            <option value="all">All Categories</option>
+                            {allMedCategories.map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {cat}
+                                </option>
+                            ))}
+                            <option value={UNCATEGORIZED_MED_CATEGORY}>{UNCATEGORIZED_MED_CATEGORY}</option>
+                        </select>
+                        <button
+                            type="button"
+                            onClick={() => setShowManageCategories(true)}
+                            className="h-9 px-2.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="Manage categories (rename or delete)"
+                        >
+                            <FolderCog className="h-3.5 w-3.5 shrink-0" />
+                            <span>Manage categories</span>
+                        </button>
                         <button
                             type="button"
                             onClick={() => setShowPillLibrary(true)}
@@ -1451,19 +1439,24 @@ ${selectedMed ? `
                                     key={med.id}
                                     className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 hover:border-purple-500/35 transition-colors space-y-1.5"
                                 >
-                                    {/* Line 1: [icon] Name + Dosage */}
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        {getPillIcon(med, "h-7 w-7")}
-                                        <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
-                                            <h3 className="text-sm font-bold text-white leading-tight truncate">
-                                                {med.title}
-                                            </h3>
-                                            {med.item_metadata?.dosage && (
-                                                <span className="text-xs text-gray-400 font-medium shrink-0">
-                                                    {med.item_metadata.dosage}
-                                                </span>
-                                            )}
+                                    {/* Line 1: [icon] Name + Dosage + Category badge */}
+                                    <div className="flex items-center justify-between gap-2 min-w-0">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            {getPillIcon(med, "h-7 w-7")}
+                                            <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
+                                                <h3 className="text-sm font-bold text-white leading-tight truncate">
+                                                    {med.title}
+                                                </h3>
+                                                {med.item_metadata?.dosage && (
+                                                    <span className="text-xs text-gray-400 font-medium shrink-0">
+                                                        {med.item_metadata.dosage}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
+                                        <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[10px] font-semibold shrink-0 max-w-[130px] truncate" title={getMedCategory(med)}>
+                                            {getMedCategory(med)}
+                                        </span>
                                     </div>
 
                                     {/* Line 2: Frequency + Est. left + Status chips inline */}
@@ -1671,6 +1664,9 @@ ${selectedMed ? `
                     isOpen={showPillLibrary}
                     onClose={() => setShowPillLibrary(false)}
                     theme={theme}
+                    addItem={addItem}
+                    categories={allMedCategories}
+                    onCreateCategory={handleCreateCustomCategory}
                 />
             )}
 
@@ -1681,6 +1677,8 @@ ${selectedMed ? `
                     onClose={() => setShowMockDrugs(false)}
                     onAddMockDrug={handleAddMed}
                     theme={theme}
+                    categories={allMedCategories}
+                    onCreateCategory={handleCreateCustomCategory}
                 />
             )}
 
@@ -1717,9 +1715,36 @@ ${selectedMed ? `
                         onLookupDrug={handleDrugLookup}
                         onOpenDoctors={() => router.push("/?page=type-health-records&tab=doctors", { scroll: false })}
                         onDeleteLogEntry={(logType, idx) => handleDeleteAdherenceLog(detailMed, logType, idx)}
+                        onExport={() => setExportModalState({ open: true, singleMed: detailMed })}
                     />
                 )
             })()}
+
+            {/* Manage Categories Modal */}
+            {showManageCategories && (
+                <ManageCategoriesModal
+                    isOpen={showManageCategories}
+                    onClose={() => setShowManageCategories(false)}
+                    categories={allMedCategories}
+                    medications={medRecords}
+                    onAddCategory={handleCreateCustomCategory}
+                    onRenameCategory={handleRenameCategory}
+                    onDeleteCategory={handleDeleteCategory}
+                />
+            )}
+
+            {/* Unified Medication Export Dialog (PDF / Print / Plain Text) */}
+            {exportModalState.open && (
+                <MedicationExportModal
+                    isOpen={exportModalState.open}
+                    onClose={() => setExportModalState({ open: false, singleMed: null })}
+                    allMedications={medRecords}
+                    singleMedication={exportModalState.singleMed}
+                    categories={allMedCategories}
+                    doctors={savedDoctors}
+                    facilities={savedFacilities}
+                />
+            )}
 
             {/* Refill Modal */}
             {refillMed && (
@@ -1763,6 +1788,10 @@ ${selectedMed ? `
                     doctors={savedDoctors}
                     facilities={savedFacilities}
                     suggestions={extractHealthSuggestions(records)}
+                    categories={allMedCategories}
+                    onCreateCategory={handleCreateCustomCategory}
+                    onOpenManageCategories={() => setShowManageCategories(true)}
+                    onOpenExport={(med: any) => setExportModalState({ open: true, singleMed: med })}
                 />
             )}
 
@@ -1864,7 +1893,7 @@ ${selectedMed ? `
                                             </div>
                                             <div>
                                                 <span className="text-gray-500">Refill Date:</span>
-                                                <span className="ml-2 font-medium">{med.item_metadata?.refillDate ? format(new Date(med.item_metadata.refillDate), 'PP') : 'N/A'}</span>
+                                                <span className="ml-2 font-medium">{med.item_metadata?.refillDate ? formatMedDateOnly(med.item_metadata.refillDate) : 'N/A'}</span>
                                             </div>
                                         </div>
 
@@ -1895,10 +1924,13 @@ ${selectedMed ? `
 
                         <div className="mt-8 flex gap-4">
                             <button
-                                onClick={() => window.print()}
-                                className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+                                onClick={() => {
+                                    setShowMedSummary(false)
+                                    setExportModalState({ open: true, singleMed: null })
+                                }}
+                                className="flex-1 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                <Download className="h-5 w-5" /> Print/Save PDF
+                                <Download className="h-5 w-5" /> Print / Export PDF
                             </button>
                             <button
                                 onClick={() => setShowMedSummary(false)}
@@ -2118,19 +2150,41 @@ ${selectedMed ? `
 
 
 // Medication Modal with Pill Shape/Color Selection
-function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillData, onLookupDrug, doctors = [], facilities = [], suggestions }: any) {
+function MedicationModal({
+    isOpen,
+    onClose,
+    onSave,
+    medication,
+    theme,
+    prefillData,
+    onLookupDrug,
+    doctors = [],
+    facilities = [],
+    suggestions,
+    categories = [],
+    onCreateCategory,
+    onOpenManageCategories,
+    onOpenExport,
+}: any) {
     const initialEstimate = medication ? calculatePillCountEstimate(medication.item_metadata) : null
     const [formData, setFormData] = useState({
         name: medication?.title || "",
+        category: medication?.item_metadata?.category || "",
         genericName: medication?.item_metadata?.genericName || "",
         drugClass: medication?.item_metadata?.drugClass || "",
         dosage: medication?.item_metadata?.dosage || "",
+        dosageForm: medication?.item_metadata?.dosageForm || "",
         frequency: medication?.item_metadata?.frequency || "",
         prescribedBy: medication?.item_metadata?.prescribedBy || "",
         doctor_id: medication?.item_metadata?.doctor_id || null as string | null,
         facility_id: medication?.item_metadata?.facility_id || null as string | null,
         facility_name: medication?.item_metadata?.facility_name || "",
         pharmacy: medication?.item_metadata?.pharmacy || "",
+        pharmacyPhone: medication?.item_metadata?.pharmacyPhone || "",
+        pharmacyAddress: medication?.item_metadata?.pharmacyAddress || "",
+        rxNumber: medication?.item_metadata?.rxNumber || "",
+        refillsRemaining: medication?.item_metadata?.refillsRemaining !== undefined && medication?.item_metadata?.refillsRemaining !== null ? String(medication.item_metadata.refillsRemaining) : "",
+        lastFilledDate: medication?.item_metadata?.lastFilledDate || "",
         purpose: medication?.item_metadata?.purpose || "",
         sideEffects: medication?.item_metadata?.sideEffects || "",
         interactions: medication?.item_metadata?.interactions || "",
@@ -2246,186 +2300,27 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
         }, 2000)
     }
 
-    const handlePrint = () => {
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) return;
-
-        const content = `
-            <html>
-                <head>
-                    <title>Medication Report: ${formData.name}</title>
-                    <style>
-                        body { font-family: -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif; padding: 40px; color: #1a1a1a; line-height: 1.5; }
-                        .header { border-bottom: 3px solid #9333ea; padding-bottom: 20px; margin-bottom: 30px; }
-                        h1 { margin: 0; color: #000; font-size: 28px; }
-                        .subtitle { color: #666; font-size: 18px; margin-top: 5px; }
-                        .section { margin-bottom: 30px; }
-                        .section-header { font-weight: 900; text-transform: uppercase; font-size: 11px; color: #9333ea; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-bottom: 15px; letter-spacing: 0.1em; }
-                        .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 40px; }
-                        .label { font-weight: 700; font-size: 12px; color: #666; margin-bottom: 2px; }
-                        .value { font-size: 15px; color: #000; margin-bottom: 15px; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                        th, td { border: 1px solid #eee; padding: 12px; text-align: left; font-size: 13px; }
-                        th { background: #f9fafb; font-weight: 700; color: #374151; }
-                        .notes-block { background: #f3f4f6; padding: 20px; border-radius: 8px; font-style: italic; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>${formData.name}</h1>
-                        <div class="subtitle">${formData.dosage} • ${formData.frequency}</div>
-                    </div>
-                    
-                    <div class="grid">
-                        <div class="section">
-                            <div class="section-header">Prescription Details</div>
-                            <div class="label">Prescribed By</div><div class="value">${formData.prescribedBy || 'N/A'}</div>
-                            <div class="label">Purpose</div><div class="value">${formData.purpose || 'N/A'}</div>
-                            <div class="label">RX Instructions</div><div class="value">${formData.rxInstructions || 'N/A'}</div>
-                        </div>
-                        <div class="section">
-                            <div class="section-header">Treatment Overview</div>
-                            <div class="label">Inventory</div><div class="value">${formData.quantity} pills left (Bottle of ${formData.totalQuantity})</div>
-                            <div class="label">Duration</div><div class="value">${formData.startDate} to ${formData.endDate || 'Ongoing'}</div>
-                            <div class="label">Next Dose</div><div class="value">${formData.nextDose ? format(new Date(formData.nextDose), 'PPp') : 'Not scheduled'}</div>
-                        </div>
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">History & Intake Logs</div>
-                        ${medication?.item_metadata?.takenLog?.length > 0 ? `
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Time</th>
-                                        <th>Dose Amount</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${medication.item_metadata.takenLog.map((log: any) => `
-                                        <tr>
-                                            <td>${format(new Date(log.timestamp), 'MMM d, yyyy')}</td>
-                                            <td>${format(new Date(log.timestamp), 'h:mm a')}</td>
-                                            <td>${log.dosage || formData.dosage}</td>
-                                            <td style="color: #059669; font-weight: bold;">✓ Taken</td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        ` : '<p>No history records found in clinical vault.</p>'}
-                    </div>
-
-                    <div class="section">
-                        <div class="section-header">Safety & Notes</div>
-                        <div class="label">Interactions</div><div class="value">${formData.interactions || 'None reported'}</div>
-                        <div class="label">Private Notes</div>
-                        <div class="notes-block">${formData.notes || 'No private notes attached.'}</div>
-                    </div>
-
-                    <footer style="margin-top: 60px; border-top: 1px solid #eee; pt: 20px; font-size: 11px; text-align: center; color: #9ca3af;">
-                        This document was generated securely from SecureLifeHub on ${format(new Date(), 'PPpp')}.
-                    </footer>
-
-                    <script>window.print(); setTimeout(() => window.close(), 500);</script>
-                </body>
-            </html>
-        `;
-
-        printWindow.document.write(content);
-        printWindow.document.close();
-    }
-
-    const handleExportPDF = () => {
-        const doc = new jsPDF()
-
-        // Header
-        doc.setFillColor(147, 51, 234) // Purple
-        doc.rect(0, 0, 210, 40, 'F')
-
-        doc.setTextColor(255, 255, 255)
-        doc.setFontSize(24)
-        doc.setFont('helvetica', 'bold')
-        doc.text(formData.name, 15, 20)
-
-        doc.setFontSize(12)
-        doc.setFont('helvetica', 'normal')
-        doc.text(`${formData.dosage} | ${formData.frequency}`, 15, 30)
-
-        // Information Grid
-        doc.setTextColor(100, 116, 139)
-        doc.setFontSize(10)
-        doc.text("PRESCRIPTION DETAILS", 15, 50)
-        doc.setDrawColor(226, 232, 240)
-        doc.line(15, 52, 195, 52)
-
-        doc.setTextColor(30, 41, 59)
-        doc.setFont('helvetica', 'bold')
-        doc.text("Prescribed By:", 15, 60); doc.setFont('helvetica', 'normal'); doc.text(formData.prescribedBy || 'N/A', 50, 60)
-        doc.setFont('helvetica', 'bold')
-        doc.text("Purpose:", 15, 67); doc.setFont('helvetica', 'normal'); doc.text(formData.purpose || 'N/A', 50, 67)
-        doc.setFont('helvetica', 'bold')
-        doc.text("Start Date:", 15, 74); doc.setFont('helvetica', 'normal'); doc.text(formData.startDate || 'N/A', 50, 74)
-        doc.setFont('helvetica', 'bold')
-        doc.text("End Date:", 15, 81); doc.setFont('helvetica', 'normal'); doc.text(formData.endDate || 'Ongoing', 50, 81)
-
-        // Instructions
-        doc.setTextColor(100, 116, 139)
-        doc.text("INSTRUCTIONS", 15, 95)
-        doc.line(15, 97, 195, 97)
-        doc.setTextColor(30, 41, 59)
-        const instructions = doc.splitTextToSize(formData.rxInstructions || 'No instructions provided.', 170)
-        doc.text(instructions, 15, 105)
-
-        // Logs Table
-        const logs = medication?.item_metadata?.takenLog || []
-        if (logs.length > 0) {
-            autoTable(doc, {
-                startY: 125,
-                head: [['Date', 'Time', 'Dose', 'Status']],
-                body: logs.map((log: any) => [
-                    format(new Date(log.timestamp), 'MMM d, yyyy'),
-                    format(new Date(log.timestamp), 'h:mm a'),
-                    log.dosage || formData.dosage,
-                    'Taken'
-                ]),
-                headStyles: { fillColor: [147, 51, 234], fontStyle: 'bold' },
-                bodyStyles: { fontSize: 8, cellPadding: 2 },
-                alternateRowStyles: { fillColor: [249, 250, 251] },
-                margin: { left: 15, right: 15 }
-            })
-        }
-
-        // Footer
-        doc.setFontSize(8)
-        doc.setTextColor(150)
-        doc.text(`Generated by SecureLifeHub Vault on ${format(new Date(), 'PPP')}`, 105, 285, { align: 'center' })
-
-        doc.save(`${formData.name}_Clinical_Report.pdf`)
-    }
-
     return (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
             <div className={`w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl my-8 ${theme === 'light' ? 'bg-white' : 'bg-[#1e1e1e] border border-white/10'}`}>
                 <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center gap-4">
                         <h2 className="text-2xl font-bold">{medication ? 'Edit' : 'Add'} Medication</h2>
-                        {medication && (
+                        {medication && onOpenExport && (
                             <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
                                 <button
                                     type="button"
-                                    onClick={handlePrint}
-                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all"
-                                    title="Print Medical Report"
+                                    onClick={() => onOpenExport(medication)}
+                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all cursor-pointer"
+                                    title="Print Medication"
                                 >
                                     <Printer className="h-5 w-5" />
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleExportPDF}
-                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all"
-                                    title="Export Clinical PDF"
+                                    onClick={() => onOpenExport(medication)}
+                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all cursor-pointer"
+                                    title="Export Medication PDF"
                                 >
                                     <FileDown className="h-5 w-5" />
                                 </button>
@@ -2535,6 +2430,51 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                                 onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
                                 className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
+                        </div>
+                    </div>
+
+                    {/* Category & Dosage Form */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="text-sm font-bold text-gray-400 uppercase block">Category</label>
+                                {onOpenManageCategories && (
+                                    <button
+                                        type="button"
+                                        onClick={onOpenManageCategories}
+                                        className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors cursor-pointer"
+                                    >
+                                        Manage categories
+                                    </button>
+                                )}
+                            </div>
+                            <MedicationCategorySelect
+                                value={formData.category}
+                                onChange={(cat) => setFormData({ ...formData, category: cat })}
+                                categories={categories}
+                                onCreateCategory={onCreateCategory}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Form (Optional)</label>
+                            <input
+                                list="med-dosage-forms"
+                                placeholder="e.g., Tablet, Capsule, Liquid, Inhaler..."
+                                value={formData.dosageForm}
+                                onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
+                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                            />
+                            <datalist id="med-dosage-forms">
+                                <option value="Tablet" />
+                                <option value="Capsule" />
+                                <option value="Oral Solution / Liquid" />
+                                <option value="Topical Cream / Ointment" />
+                                <option value="Inhaler" />
+                                <option value="Nasal Spray" />
+                                <option value="Eye Drops" />
+                                <option value="Injection" />
+                                <option value="Patch" />
+                            </datalist>
                         </div>
                     </div>
 
@@ -2882,6 +2822,74 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                         </div>
                     </div>
 
+                    {/* Optional Pharmacy & Refill Details */}
+                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 space-y-4">
+                        <div className="text-xs font-bold text-purple-300 uppercase tracking-wider">
+                            Pharmacy &amp; Refill Details (Optional)
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Pharmacy Phone</label>
+                                <input
+                                    type="tel"
+                                    placeholder="e.g., (555) 123-4567"
+                                    value={formData.pharmacyPhone}
+                                    onChange={(e) => setFormData({ ...formData, pharmacyPhone: e.target.value })}
+                                    className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Pharmacy Address</label>
+                                <input
+                                    placeholder="e.g., 123 Main St, Suite 100"
+                                    value={formData.pharmacyAddress}
+                                    onChange={(e) => setFormData({ ...formData, pharmacyAddress: e.target.value })}
+                                    className="w-full px-4 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Rx Number</label>
+                                <input
+                                    placeholder="e.g., RX-849201"
+                                    value={formData.rxNumber}
+                                    onChange={(e) => setFormData({ ...formData, rxNumber: e.target.value })}
+                                    className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Refills Remaining</label>
+                                <input
+                                    placeholder="e.g., 3"
+                                    value={formData.refillsRemaining}
+                                    onChange={(e) => setFormData({ ...formData, refillsRemaining: e.target.value })}
+                                    className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Last Filled Date</label>
+                                <input
+                                    type="date"
+                                    value={formData.lastFilledDate}
+                                    onChange={(e) => setFormData({ ...formData, lastFilledDate: e.target.value })}
+                                    className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                    style={{ colorScheme: 'dark' }}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-gray-400 uppercase mb-1.5 block">Next Refill Date</label>
+                                <input
+                                    type="date"
+                                    value={formData.refillDate}
+                                    onChange={(e) => setFormData({ ...formData, refillDate: e.target.value })}
+                                    className="w-full px-3 py-2.5 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                    style={{ colorScheme: 'dark' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Reminder Times */}
                     <div>
                         <label className="text-sm font-bold text-gray-400 uppercase mb-2 block flex justify-between">
@@ -3020,7 +3028,10 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
                                         <div className="text-[10px] text-gray-500 font-bold uppercase flex justify-between">
                                             <span>Day {entry.dayIndex}</span>
                                             <span className="text-[9px] opacity-70">
-                                                {formData.scheduleStartDate ? format(addDays(new Date(formData.scheduleStartDate), entry.dayIndex - 1), 'MMM d') : ''}
+                                                {(() => {
+                                                    const base = parseMedLocalDate(formData.scheduleStartDate)
+                                                    return base ? format(addDays(base, entry.dayIndex - 1), 'MMM d') : ''
+                                                })()}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
@@ -3111,12 +3122,34 @@ function MedicationModal({ isOpen, onClose, onSave, medication, theme, prefillDa
 }
 
 // Pill Library Modal - View all available icons
-export function PillLibraryModal({ isOpen, onClose, theme, addItem }: any) {
+export function PillLibraryModal({ isOpen, onClose, theme, addItem, categories, onCreateCategory }: any) {
     const [selectedShape, setSelectedShape] = useState<string | null>(null)
     const [selectedColor, setSelectedColor] = useState<string | null>(null)
     const [quickAddName, setQuickAddName] = useState("")
     const [quickAddDosage, setQuickAddDosage] = useState("")
+    const [quickAddCategory, setQuickAddCategory] = useState("")
+    const [localCustomCats, setLocalCustomCats] = useState<string[]>(() => loadSavedCustomMedCategories())
     const [isSaving, setIsSaving] = useState(false)
+
+    const effectiveCategories = useMemo(
+        () => (Array.isArray(categories) && categories.length > 0 ? categories : getAllMedicationCategories([], localCustomCats)),
+        [categories, localCustomCats]
+    )
+
+    const handleCreateCat = (cat: string) => {
+        if (onCreateCategory) {
+            onCreateCategory(cat)
+            return
+        }
+        const clean = cat.trim()
+        if (!clean) return
+        setLocalCustomCats((prev) => {
+            if (prev.some((p) => p.toLowerCase() === clean.toLowerCase())) return prev
+            const next = [...prev, clean]
+            saveCustomMedCategories(next)
+            return next
+        })
+    }
 
     const mgSizes = ["5mg", "10mg", "20mg", "25mg", "50mg", "75mg", "100mg", "150mg", "200mg", "250mg", "300mg", "500mg", "1000mg"]
 
@@ -3212,29 +3245,52 @@ export function PillLibraryModal({ isOpen, onClose, theme, addItem }: any) {
                                         className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-purple-500/50 transition-all font-bold"
                                     />
                                 </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Category</label>
+                                    <MedicationCategorySelect
+                                        value={quickAddCategory}
+                                        onChange={setQuickAddCategory}
+                                        categories={effectiveCategories}
+                                        onCreateCategory={handleCreateCat}
+                                    />
+                                </div>
 
                                 <button
                                     onClick={async () => {
-                                        if (!quickAddName || !quickAddDosage) return alert("Please enter name and dosage")
+                                        if (!quickAddName || !quickAddDosage) {
+                                            toast.error("Please enter medication name and dosage")
+                                            return
+                                        }
+                                        if (!addItem) {
+                                            toast.error("Unable to save medication right now")
+                                            return
+                                        }
                                         setIsSaving(true)
                                         try {
-                                            await addItem({
+                                            if (quickAddCategory.trim()) handleCreateCat(quickAddCategory.trim())
+                                            const created = await addItem({
                                                 type: "note",
                                                 category: "Medications",
-                                                title: quickAddName,
+                                                title: quickAddName.trim(),
                                                 item_metadata: {
-                                                    dosage: quickAddDosage,
+                                                    is_medication: true,
+                                                    category: quickAddCategory.trim() || "",
+                                                    dosage: quickAddDosage.trim(),
                                                     pillShape: selectedShape,
                                                     pillColor: selectedColor,
-                                                    notes: "Quick added from Pill Library"
+                                                    startDate: format(new Date(), 'yyyy-MM-dd'),
+                                                    notes: "Quick added from Pill Library",
+                                                    createdAt: new Date().toISOString(),
+                                                    lastModified: new Date().toISOString(),
                                                 }
                                             })
-                                            alert(`${quickAddName} added to your list!`)
+                                            if (created) upsertSharedHealthRecord(created)
+                                            toast.success(`${quickAddName.trim()} added to your medications!`)
                                             setQuickAddName("")
                                             setQuickAddDosage("")
                                         } catch (e) {
                                             console.error(e)
-                                            alert("Failed to add medication")
+                                            toast.error("Failed to add medication")
                                         } finally {
                                             setIsSaving(false)
                                         }
@@ -3258,7 +3314,7 @@ export function PillLibraryModal({ isOpen, onClose, theme, addItem }: any) {
 }
 
 // Rx Import Modal - Add specific prescriptions
-function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme }: any) {
+function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme, categories = [], onCreateCategory }: any) {
     // Categories and Presets
     const MED_CATEGORIES = [
         {
@@ -3319,6 +3375,7 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme }: any) {
 
     const [activeCategory, setActiveCategory] = useState(MED_CATEGORIES[0].id)
     const [selectedMeds, setSelectedMeds] = useState<string[]>([])
+    const [importCategory, setImportCategory] = useState<string>("Short-term / Temporary")
     const [isImporting, setIsImporting] = useState(false)
 
     const currentCat = MED_CATEGORIES.find(c => c.id === activeCategory) || MED_CATEGORIES[0]
@@ -3359,6 +3416,7 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme }: any) {
 
                         await onAddMockDrug({
                             name: drug.name,
+                            category: importCategory,
                             dosage: drug.dosage,
                             frequency: drug.frequency,
                             prescribedBy: "Quick Import",
@@ -3477,28 +3535,45 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme }: any) {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="mt-12 pt-10 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="text-3xl font-black italic uppercase tracking-tighter text-purple-500">{selectedMeds.length}</div>
-                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 border-l border-white/10 pl-4 py-1">Medications Selected for Import</div>
-                        {selectedMeds.length > 0 && (
-                            <button onClick={() => setSelectedMeds([])} className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 ml-4">Clear All</button>
-                        )}
+                <div className="mt-10 pt-8 border-t border-white/5 space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
+                        <div>
+                            <div className="text-xs font-bold uppercase tracking-wider text-purple-300">Assign Medication Category</div>
+                            <div className="text-xs text-gray-400">Imported medications will be saved under this category</div>
+                        </div>
+                        <div className="w-full sm:w-72">
+                            <MedicationCategorySelect
+                                value={importCategory}
+                                onChange={setImportCategory}
+                                categories={categories}
+                                onCreateCategory={onCreateCategory}
+                            />
+                        </div>
                     </div>
-                    <div className="flex gap-4 w-full md:w-auto">
-                        <button
-                            onClick={onClose}
-                            className="flex-1 md:flex-none px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase italic tracking-tighter transition-all"
-                        >
-                            Back To Hub
-                        </button>
-                        <button
-                            onClick={handleImportSelected}
-                            disabled={selectedMeds.length === 0 || isImporting}
-                            className="flex-1 md:flex-none px-12 py-5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black uppercase italic tracking-tighter hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_10px_30px_rgba(147,51,234,0.3)] disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3"
-                        >
-                            {isImporting ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /> Import Selected Now</>}
-                        </button>
+
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className="text-3xl font-black italic uppercase tracking-tighter text-purple-500">{selectedMeds.length}</div>
+                            <div className="text-xs font-black uppercase tracking-widest text-gray-500 border-l border-white/10 pl-4 py-1">Medications Selected for Import</div>
+                            {selectedMeds.length > 0 && (
+                                <button onClick={() => setSelectedMeds([])} className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 ml-4">Clear All</button>
+                            )}
+                        </div>
+                        <div className="flex gap-4 w-full md:w-auto">
+                            <button
+                                onClick={onClose}
+                                className="flex-1 md:flex-none px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase italic tracking-tighter transition-all"
+                            >
+                                Back To Hub
+                            </button>
+                            <button
+                                onClick={handleImportSelected}
+                                disabled={selectedMeds.length === 0 || isImporting}
+                                className="flex-1 md:flex-none px-12 py-5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black uppercase italic tracking-tighter hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_10px_30px_rgba(147,51,234,0.3)] disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3"
+                            >
+                                {isImporting ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /> Import Selected Now</>}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
