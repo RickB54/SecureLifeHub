@@ -1322,7 +1322,46 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             </div>
                         )}
 
-                        {/* Line 5: Notes truncated to 1 line with expand toggle */}
+                        {/* Line 5: Compact existing email reminder labels (if present) */}
+                        {Array.isArray(apt.item_metadata?.reminderEmails) && apt.item_metadata.reminderEmails.length > 0 && (
+                            <div className="space-y-0.5 pt-0.5">
+                                {[...apt.item_metadata.reminderEmails]
+                                    .sort((a: any, b: any) => new Date(a.sendAt).getTime() - new Date(b.sendAt).getTime())
+                                    .map((rem: any, idx: number) => {
+                                        const sendTs = new Date(rem.sendAt).getTime()
+                                        const isPast = !isNaN(sendTs) && sendTs <= Date.now()
+                                        const statusLabel =
+                                            rem.status === "waiting"
+                                                ? "Waiting"
+                                                : rem.status === "skipped"
+                                                ? "Skipped"
+                                                : rem.status === "failed"
+                                                ? "Failed"
+                                                : isPast
+                                                ? "Past"
+                                                : "Scheduled"
+                                        const remBadgeCls =
+                                            rem.status === "waiting"
+                                                ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                                                : rem.status === "failed"
+                                                ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                                : rem.status === "skipped" || isPast
+                                                ? "bg-white/5 text-gray-400 border-white/10"
+                                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                                        return (
+                                            <div key={`${rem.sendAt}-${idx}`} className="flex items-center gap-1.5 text-[11px] text-gray-400 min-w-0">
+                                                <Mail className="h-3 w-3 text-blue-400 shrink-0" />
+                                                <span className="truncate">{safeFormat(rem.sendAt, 'MMM d, h:mm a')}</span>
+                                                <span className={`px-1.5 py-0 rounded text-[10px] font-medium border shrink-0 ${remBadgeCls}`}>
+                                                    {statusLabel}
+                                                </span>
+                                            </div>
+                                        )
+                                    })}
+                            </div>
+                        )}
+
+                        {/* Line 6: Notes truncated to 1 line with expand toggle */}
                         {apt.item_metadata?.notes && (
                             <div className="flex items-start justify-between gap-1.5 pt-0.5">
                                 <p className={`text-xs text-gray-400 italic flex-1 ${isExpanded ? "whitespace-pre-wrap break-words" : "truncate"}`}>
