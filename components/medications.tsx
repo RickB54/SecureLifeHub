@@ -4,10 +4,10 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
-import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize, Info, RotateCcw, FolderCog, Tag } from "lucide-react"
+import { Plus, Edit, Trash, Download, Search, Bell, Calendar as CalendarIcon, Clock, Activity, Pill, AlertCircle, Check, X, MessageSquare, Send, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Circle, Droplets, Square, Hexagon, Package, Loader2, FileText, MapPin, Triangle, Wind, Thermometer, Shield, Heart, Printer, FileDown, HelpCircle, Minimize, Info, RotateCcw, FolderCog, Tag, ExternalLink, RefreshCw } from "lucide-react"
 import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, startOfDay, endOfDay, eachHourOfInterval, addWeeks, subWeeks, addMonths, subMonths, parse, addHours } from "date-fns"
 import { toast } from 'sonner'
-import { lookupDrugInfo, type DrugInfo } from '@/lib/drug-database'
+import { fetchOfficialDrugLabels, trimLabelPreview, type OfficialDrugLabel } from '@/lib/drug-database'
 import {
     DoctorCombobox,
     FacilityCombobox,
@@ -129,8 +129,27 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
     const [aiQuestion, setAiQuestion] = useState("")
     const [aiResponse, setAiResponse] = useState("")
     const [showDrugInfo, setShowDrugInfo] = useState(false)
-    const [drugInfo, setDrugInfo] = useState<any>(null)
+    const [drugLabels, setDrugLabels] = useState<OfficialDrugLabel[]>([])
+    const [selectedLabelIdx, setSelectedLabelIdx] = useState(0)
     const [drugLookupTarget, setDrugLookupTarget] = useState("")
+    const [drugLookupGeneric, setDrugLookupGeneric] = useState("")
+    const [drugLookupSourceMed, setDrugLookupSourceMed] = useState<any>(null)
+    const [drugLookupError, setDrugLookupError] = useState<string | null>(null)
+    const [expandedLabelSections, setExpandedLabelSections] = useState<Record<string, boolean>>({})
+    const [showFillPreview, setShowFillPreview] = useState(false)
+    const [fillChecked, setFillChecked] = useState<{
+        genericName: boolean
+        drugClass: boolean
+        purpose: boolean
+        sideEffects: boolean
+        interactions: boolean
+    }>({
+        genericName: true,
+        drugClass: true,
+        purpose: true,
+        sideEffects: true,
+        interactions: true,
+    })
     const [prefillTarget, setPrefillTarget] = useState<any>(null)
     const [loadingDrugInfo, setLoadingDrugInfo] = useState(false)
     const [currentDate, setCurrentDate] = useState(new Date())
@@ -158,65 +177,109 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
         }
     }, [])
 
-    // AI Drug Lookup Function
-    const handleDrugLookup = async (medName: string) => {
-        if (!medName || !medName.trim()) {
+    // Official FDA / DailyMed Drug Label Lookup (runs ONLY when user taps button; 7-day browser localStorage cache)
+    const runDrugLabelQuery = async (medName: string, genericName = "", bypassCache = false) => {
+        const cleanName = (medName || "").trim()
+        const cleanGen = (genericName || "").trim()
+        if (!cleanName && !cleanGen) {
             toast.error("Please enter a medication name to look up.")
             return
         }
-        setDrugLookupTarget(medName.trim())
+        setDrugLookupTarget(cleanName || cleanGen)
+        setDrugLookupGeneric(cleanGen)
         setShowDrugInfo(true)
         setLoadingDrugInfo(true)
-        setDrugInfo(null)
+        setDrugLookupError(null)
+        setExpandedLabelSections({})
+        setShowFillPreview(false)
+        setSelectedLabelIdx(0)
 
         try {
-            await new Promise(resolve => setTimeout(resolve, 500)) // smooth UI transition
-            const info = lookupDrugInfo(medName.trim())
-            if (info) {
-                setDrugInfo(info)
-            } else {
-                setDrugInfo({ unavailable: true, name: medName.trim() })
-            }
-        } catch (error) {
-            console.error("Drug lookup error:", error)
-            setDrugInfo({ unavailable: true, name: medName.trim() })
+            const res = await fetchOfficialDrugLabels(cleanName, cleanGen, bypassCache)
+            setDrugLabels(res.labels || [])
+        } catch (error: any) {
+            console.error("FDA label lookup error:", error)
+            setDrugLabels([])
+            setDrugLookupError(error?.message || "Unable to reach official FDA label directory.")
         } finally {
             setLoadingDrugInfo(false)
         }
     }
 
-    const handleFillFields = (info: any) => {
-        if (!info || info.unavailable) return
+    const handleDrugLookup = async (medName: string, genericName = "", sourceMed: any = null) => {
+        setDrugLookupSourceMed(sourceMed ?? (showEditModal ? selectedMed : null))
+        await runDrugLabelQuery(medName, genericName, false)
+    }
 
-        const sideEffectsStr = Array.isArray(info.sideEffects?.common)
-            ? info.sideEffects.common.join(", ")
-            : (typeof info.sideEffects === 'string' ? info.sideEffects : "")
+    const activeDrugLabel: OfficialDrugLabel | null = drugLabels[selectedLabelIdx] || null
 
-        const usesStr = Array.isArray(info.uses)
-            ? info.uses.join("; ")
-            : (info.uses || "")
+    const getCondensedFieldSnippet = (text: string, maxLen = 450) => {
+        const clean = (text || "").trim()
+        if (!clean) return ""
+        if (clean.length <= maxLen) return clean
+        const slice = clean.slice(0, maxLen)
+        const dotIdx = slice.lastIndexOf(". ")
+        if (dotIdx > maxLen * 0.45) return slice.slice(0, dotIdx + 1).trim()
+        const spaceIdx = slice.lastIndexOf(" ")
+        return `${(spaceIdx > maxLen * 0.6 ? slice.slice(0, spaceIdx) : slice).trim()}…`
+    }
 
-        const prefill = {
-            name: info.name,
-            genericName: info.genericName,
-            drugClass: info.drugClass,
-            purpose: usesStr,
-            sideEffects: sideEffectsStr,
-            verificationNote: "Verify with your pharmacist or doctor"
+    const openFillFieldsPreview = (label: OfficialDrugLabel) => {
+        setFillChecked({
+            genericName: Boolean(label.genericName),
+            drugClass: Boolean(label.drugClass),
+            purpose: Boolean(label.usesText),
+            sideEffects: Boolean(label.sideEffectsText),
+            interactions: Boolean(label.interactionsText),
+        })
+        setShowFillPreview(true)
+    }
+
+    const handleApproveFillFields = () => {
+        if (!activeDrugLabel) return
+
+        const approvedFields: Record<string, string> = {}
+        if (fillChecked.genericName && activeDrugLabel.genericName) {
+            approvedFields.genericName = activeDrugLabel.genericName
+        }
+        if (fillChecked.drugClass && activeDrugLabel.drugClass) {
+            approvedFields.drugClass = activeDrugLabel.drugClass
+        }
+        if (fillChecked.purpose && activeDrugLabel.usesText) {
+            approvedFields.purpose = getCondensedFieldSnippet(activeDrugLabel.usesText, 380)
+        }
+        if (fillChecked.sideEffects && activeDrugLabel.sideEffectsText) {
+            approvedFields.sideEffects = getCondensedFieldSnippet(activeDrugLabel.sideEffectsText, 600)
+        }
+        if (fillChecked.interactions && activeDrugLabel.interactionsText) {
+            approvedFields.interactions = getCondensedFieldSnippet(activeDrugLabel.interactionsText, 600)
         }
 
-        setPrefillTarget(prefill)
-        setShowDrugInfo(false)
+        if (Object.keys(approvedFields).length === 0) {
+            toast.error("Select at least one field to fill.")
+            return
+        }
 
-        // If neither modal is open, open Add (or Edit if a med was selected)
+        // NEVER saves or creates a medication record by itself:
+        // - If Add or Edit form is already open, fill only approved fields into that open form.
+        // - If opened from an existing medication card or Detail screen, open EDIT for that exact medication (never Add!).
         if (!showAddModal && !showEditModal) {
-            if (selectedMed) {
+            const targetExisting = drugLookupSourceMed || selectedMed
+            if (targetExisting) {
+                setSelectedMed(targetExisting)
                 setShowEditModal(true)
             } else {
                 setShowAddModal(true)
             }
         }
-        toast.success("Medication details filled! Please enter your prescribed dosage and schedule.")
+
+        setPrefillTarget({
+            token: Date.now(),
+            fields: approvedFields,
+        })
+        setShowFillPreview(false)
+        setShowDrugInfo(false)
+        toast.success("Selected label fields copied into form — click Update/Add Medication to save.")
     }
 
     // Filter medications - MUST use useMemo to re-run when records change!
@@ -1599,12 +1662,12 @@ ${selectedMed ? `
                                                     <Info className="h-4 w-4" />
                                                 </button>
                                             </HealthTooltip>
-                                            <HealthTooltip content="Look up Med Info (uses, side effects, and drug interactions)">
+                                            <HealthTooltip content="Look up official FDA & DailyMed drug label (uses, side effects, warnings, and interactions)">
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleDrugLookup(med.title)}
+                                                    onClick={() => handleDrugLookup(med.title, med.item_metadata?.genericName || "", med)}
                                                     className="h-8 w-8 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 inline-flex items-center justify-center transition-colors cursor-pointer"
-                                                    aria-label="Med Info lookup"
+                                                    aria-label="Official FDA Drug Info lookup"
                                                 >
                                                     <Sparkles className="h-4 w-4" />
                                                 </button>
@@ -1760,7 +1823,7 @@ ${selectedMed ? `
                             setRefillMed(detailMed)
                             setRefillCount(String(detailMed.item_metadata?.totalQuantity || 30))
                         }}
-                        onLookupDrug={handleDrugLookup}
+                        onLookupDrug={(name, gen) => handleDrugLookup(name, gen || detailMed.item_metadata?.genericName || "", detailMed)}
                         onOpenDoctors={() => router.push("/?page=type-health-records&tab=doctors", { scroll: false })}
                         onDeleteLogEntry={(logType, idx) => handleDeleteAdherenceLog(detailMed, logType, idx)}
                         onExport={() => setExportModalState({ open: true, singleMed: detailMed })}
@@ -1826,13 +1889,20 @@ ${selectedMed ? `
             {/* Modals */}
             {(showAddModal || showEditModal) && (
                 <MedicationModal
+                    key={selectedMed?.id || "new-medication"}
                     isOpen={showAddModal || showEditModal}
                     onClose={() => { setShowAddModal(false); setShowEditModal(false); setSelectedMed(null); setPrefillTarget(null) }}
                     onSave={showAddModal ? handleAddMed : handleEditMed}
                     medication={selectedMed}
+                    existingMedications={medRecords}
+                    onOpenExisting={(existingMed: any) => {
+                        setShowAddModal(false)
+                        setSelectedMed(existingMed)
+                        setShowEditModal(true)
+                    }}
                     theme={theme}
                     prefillData={prefillTarget}
-                    onLookupDrug={handleDrugLookup}
+                    onLookupDrug={(name: string, gen?: string) => handleDrugLookup(name, gen || "", selectedMed)}
                     doctors={savedDoctors}
                     facilities={savedFacilities}
                     suggestions={extractHealthSuggestions(records)}
@@ -1991,174 +2061,409 @@ ${selectedMed ? `
                 </div>
             )}
 
-            {/* AI Drug Info Modal */}
+            {/* Official FDA / DailyMed Drug Label Modal */}
             {showDrugInfo && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-                    <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-[#1e1e1e] border border-blue-500/30 rounded-3xl p-8 shadow-2xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-3xl font-bold flex items-center gap-3">
-                                <Sparkles className="h-8 w-8 text-blue-400" />
-                                AI Drug Information
+                <div
+                    className="fixed inset-0 z-[125] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+                    onClick={() => { setShowDrugInfo(false); setShowFillPreview(false) }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#1e1e1e] border border-blue-500/30 rounded-3xl p-6 md:p-8 shadow-2xl"
+                    >
+                        <div className="flex justify-between items-center mb-5">
+                            <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2.5 text-white">
+                                <Sparkles className="h-6 w-6 text-blue-400 shrink-0" />
+                                <span>Official FDA Drug Label</span>
                             </h2>
-                            <button onClick={() => setShowDrugInfo(false)} className="p-2 hover:bg-white/10 rounded-lg">
-                                <X className="h-6 w-6" />
-                            </button>
+                            <HealthTooltip content="Close drug label viewer">
+                                <button
+                                    type="button"
+                                    onClick={() => { setShowDrugInfo(false); setShowFillPreview(false) }}
+                                    aria-label="Close drug label viewer"
+                                    className="p-2 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white cursor-pointer"
+                                >
+                                    <X className="h-6 w-6" />
+                                </button>
+                            </HealthTooltip>
                         </div>
 
                         {loadingDrugInfo ? (
                             <div className="text-center py-12">
-                                <Loader2 className="h-12 w-12 animate-spin text-blue-400 mx-auto mb-4" />
-                                <p className="text-gray-400">Looking up clinical drug information...</p>
+                                <Loader2 className="h-10 w-10 animate-spin text-blue-400 mx-auto mb-3" />
+                                <p className="text-sm text-gray-300">Querying official FDA &amp; DailyMed drug labels for &ldquo;{drugLookupTarget}&rdquo;...</p>
                             </div>
-                        ) : drugInfo?.unavailable ? (
+                        ) : !activeDrugLabel ? (
                             <div className="text-center py-12 px-4 space-y-4">
-                                <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
-                                    <AlertCircle className="h-8 w-8 text-amber-400" />
+                                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto">
+                                    <AlertCircle className="h-7 w-7 text-amber-400" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Information unavailable</h3>
-                                <p className="text-gray-400 max-w-md mx-auto text-sm">
-                                    Accurate clinical drug information for &ldquo;{drugLookupTarget || drugInfo.name}&rdquo; is not available in our verified drug directory.
-                                </p>
+                                <h3 className="text-xl font-bold text-white">
+                                    No official label found for {drugLookupTarget || "this medication"}
+                                </h3>
+                                {drugLookupError && (
+                                    <p className="text-xs text-red-300 max-w-md mx-auto">{drugLookupError}</p>
+                                )}
+                                <div className="flex items-center justify-center gap-3 pt-1">
+                                    <HealthTooltip content="Query openFDA and DailyMed again without using cache">
+                                        <button
+                                            type="button"
+                                            onClick={() => runDrugLabelQuery(drugLookupTarget, drugLookupGeneric, true)}
+                                            className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            <span>Retry</span>
+                                        </button>
+                                    </HealthTooltip>
+                                </div>
                                 <div className="inline-flex items-center gap-2 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold">
                                     <Shield className="h-4 w-4 shrink-0" />
                                     <span>Verify with your pharmacist or doctor.</span>
                                 </div>
                             </div>
-                        ) : drugInfo?.error ? (
-                            <div className="text-center py-12 text-red-400">
-                                {drugInfo.error}
-                            </div>
-                        ) : drugInfo && (
-                            <div className="space-y-6">
-                                {/* Verification Alert Banner */}
-                                <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-200 text-xs flex items-center justify-between gap-3">
-                                    <div className="flex items-center gap-2">
-                                        <Shield className="h-4 w-4 text-purple-400 shrink-0" />
-                                        <span><strong>Clinical Note:</strong> Verify with your pharmacist or doctor.</span>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => handleFillFields(drugInfo)}
-                                        className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-md"
-                                    >
-                                        <Sparkles className="h-3.5 w-3.5" />
-                                        Fill fields
-                                    </button>
-                                </div>
-
-                                {/* Drug Header */}
-                                <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl p-6 border border-blue-500/20">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-                                        <h3 className="text-3xl font-bold text-white">{drugInfo.name}</h3>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleFillFields(drugInfo)}
-                                            className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-purple-900/30 self-start sm:self-auto"
-                                        >
-                                            <Sparkles className="h-4 w-4" />
-                                            Fill fields
-                                        </button>
-                                    </div>
-                                    <div className="text-gray-300 space-y-1 text-sm">
-                                        <div><strong className="text-white">Generic Name:</strong> {drugInfo.genericName}</div>
-                                        <div><strong className="text-white">Drug Class:</strong> {drugInfo.drugClass}</div>
-                                        <div><strong className="text-white">Brand Names:</strong> {Array.isArray(drugInfo.brandNames) ? drugInfo.brandNames.join(", ") : drugInfo.brandNames}</div>
-                                    </div>
-                                </div>
-
-                                {/* Uses */}
-                                <div className="bg-black/20 rounded-xl p-6 border border-white/5">
-                                    <h4 className="text-xl font-bold text-green-400 mb-3 flex items-center gap-2">
-                                        <Check className="h-5 w-5" /> Uses & Indications
-                                    </h4>
-                                    <ul className="list-disc list-inside space-y-2 text-gray-300">
-                                        {drugInfo.uses?.map((use: string, idx: number) => (
-                                            <li key={idx}>{use}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-
-                                {/* Mechanism of Action */}
-                                <div className="bg-black/20 rounded-xl p-6 border border-white/5">
-                                    <h4 className="text-xl font-bold text-cyan-400 mb-3 flex items-center gap-2">
-                                        <Activity className="h-5 w-5" /> How It Works
-                                    </h4>
-                                    <p className="text-gray-300">{drugInfo.mechanism}</p>
-                                </div>
-
-                                {/* Side Effects */}
-                                <div className="bg-black/20 rounded-xl p-6 border border-white/5">
-                                    <h4 className="text-xl font-bold text-yellow-400 mb-3 flex items-center gap-2">
-                                        <AlertCircle className="h-5 w-5" /> Side Effects
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {drugInfo.sideEffects?.common?.length > 0 && (
-                                            <div>
-                                                <div className="font-bold text-gray-400 mb-2">Common:</div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {drugInfo.sideEffects.common.map((effect: string, idx: number) => (
-                                                        <span key={idx} className="px-3 py-1 bg-yellow-500/10 text-yellow-300 rounded-full text-sm border border-yellow-500/20">
-                                                            {effect}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                        {drugInfo.sideEffects?.serious?.length > 0 && (
-                                            <div>
-                                                <div className="font-bold text-red-400 mb-2">Serious (Seek Medical Help):</div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {drugInfo.sideEffects.serious.map((effect: string, idx: number) => (
-                                                        <span key={idx} className="px-3 py-1 bg-red-500/10 text-red-300 rounded-full text-sm border border-red-500/20">
-                                                            {effect}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Drug Interactions */}
-                                {drugInfo.interactions?.length > 0 && (
-                                    <div className="bg-black/20 rounded-xl p-6 border border-white/5">
-                                        <h4 className="text-xl font-bold text-red-400 mb-3 flex items-center gap-2">
-                                            <AlertCircle className="h-5 w-5" /> Drug Interactions
-                                        </h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {drugInfo.interactions.map((interaction: string, idx: number) => (
-                                                <span key={idx} className="px-3 py-1 bg-red-500/10 text-red-300 rounded-lg text-sm border border-red-500/20">
-                                                    {interaction}
-                                                </span>
-                                            ))}
+                        ) : (
+                            <div className="space-y-5">
+                                {/* Multi-label Chooser when several official labels match */}
+                                {drugLabels.length > 1 && (
+                                    <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+                                        <div className="text-xs font-bold uppercase tracking-wider text-blue-300">
+                                            Matching Official Labels ({drugLabels.length}) — Choose Label
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                            {drugLabels.map((lbl, idx) => {
+                                                const active = idx === selectedLabelIdx
+                                                return (
+                                                    <HealthTooltip
+                                                        key={lbl.id}
+                                                        content={`${lbl.title} — ${lbl.manufacturer}${lbl.effectiveDate ? ` (${lbl.effectiveDate})` : ""}`}
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedLabelIdx(idx)
+                                                                setExpandedLabelSections({})
+                                                                setShowFillPreview(false)
+                                                            }}
+                                                            className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                                                                active
+                                                                    ? "bg-blue-600/20 border-blue-500 text-white"
+                                                                    : "bg-black/25 border-white/10 text-gray-300 hover:bg-white/[0.05]"
+                                                            }`}
+                                                        >
+                                                            <div className="text-xs font-bold truncate">{lbl.title}</div>
+                                                            <div className="text-[11px] text-gray-400 truncate mt-0.5">
+                                                                {lbl.manufacturer}
+                                                                {lbl.effectiveDate ? ` • ${lbl.effectiveDate}` : ""}
+                                                            </div>
+                                                        </button>
+                                                    </HealthTooltip>
+                                                )
+                                            })}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Warnings */}
-                                {drugInfo.warnings?.length > 0 && (
-                                    <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-xl p-6 border border-orange-500/30">
-                                        <h4 className="text-xl font-bold text-orange-400 mb-3 flex items-center gap-2">
-                                            <AlertCircle className="h-5 w-5" /> Important Warnings
-                                        </h4>
-                                        <ul className="list-disc list-inside space-y-2 text-gray-300">
-                                            {drugInfo.warnings.map((warning: string, idx: number) => (
-                                                <li key={idx}>{warning}</li>
-                                            ))}
-                                        </ul>
+                                {/* Verification Alert Banner */}
+                                <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 text-purple-200 text-xs flex items-center justify-between gap-3 flex-wrap">
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="h-4 w-4 text-purple-400 shrink-0" />
+                                        <span><strong>Clinical Note:</strong> Verify with your pharmacist or doctor.</span>
+                                    </div>
+                                    <HealthTooltip content="Preview and choose which label fields to copy into the form (never touches dose or schedule, and does not auto-save)">
+                                        <button
+                                            type="button"
+                                            onClick={() => openFillFieldsPreview(activeDrugLabel)}
+                                            className="px-4 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all shadow-md cursor-pointer"
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                            Fill fields
+                                        </button>
+                                    </HealthTooltip>
+                                </div>
+
+                                {/* Safe Fill Fields Checkbox Preview */}
+                                {showFillPreview && (
+                                    <div className="p-4 rounded-2xl bg-purple-950/35 border border-purple-500/40 space-y-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-white">Approve Fields to Copy into Form</h4>
+                                                <p className="text-[11px] text-gray-300">
+                                                    Only checked values are copied into the open form. Dosage, quantity, schedule, and reminder times are never changed, and nothing is saved until you click Update/Add Medication.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowFillPreview(false)}
+                                                className="p-1 text-gray-400 hover:text-white cursor-pointer"
+                                                aria-label="Close fill preview"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                                            {[
+                                                { key: "genericName" as const, label: "Generic name", val: activeDrugLabel.genericName },
+                                                { key: "drugClass" as const, label: "Drug class", val: activeDrugLabel.drugClass },
+                                                { key: "purpose" as const, label: "Purpose (from Indications)", val: getCondensedFieldSnippet(activeDrugLabel.usesText, 380) },
+                                                { key: "sideEffects" as const, label: "Common side effects", val: getCondensedFieldSnippet(activeDrugLabel.sideEffectsText, 600) },
+                                                { key: "interactions" as const, label: "Drug interactions", val: getCondensedFieldSnippet(activeDrugLabel.interactionsText, 600) },
+                                            ]
+                                                .filter((item) => Boolean(item.val))
+                                                .map((item) => (
+                                                    <label
+                                                        key={item.key}
+                                                        className="flex items-start gap-2.5 p-2.5 rounded-xl bg-black/30 border border-white/10 hover:border-purple-500/40 cursor-pointer text-xs"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={fillChecked[item.key]}
+                                                            onChange={(e) =>
+                                                                setFillChecked((prev) => ({
+                                                                    ...prev,
+                                                                    [item.key]: e.target.checked,
+                                                                }))
+                                                            }
+                                                            className="mt-0.5 rounded border-gray-600 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="font-bold text-purple-200">{item.label}</div>
+                                                            <div className="text-gray-300 line-clamp-2 mt-0.5 whitespace-pre-wrap">{item.val}</div>
+                                                        </div>
+                                                    </label>
+                                                ))}
+                                        </div>
+
+                                        <div className="flex items-center justify-end gap-2 pt-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowFillPreview(false)}
+                                                className="px-3.5 py-1.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-xs font-semibold cursor-pointer"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <HealthTooltip content="Copy only the checked fields into the medication form without saving">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleApproveFillFields}
+                                                    className="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                                                >
+                                                    <Check className="h-3.5 w-3.5" />
+                                                    <span>Fill approved fields</span>
+                                                </button>
+                                            </HealthTooltip>
+                                        </div>
                                     </div>
                                 )}
 
-                                {/* Pregnancy */}
-                                {drugInfo.pregnancy && (
-                                    <div className="bg-black/20 rounded-xl p-4 border border-white/5 text-sm text-gray-400">
-                                        <strong>Pregnancy & Breastfeeding:</strong> {drugInfo.pregnancy}
+                                {/* Drug Header */}
+                                <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 rounded-2xl p-5 md:p-6 border border-blue-500/20 space-y-3">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                        <h3 className="text-2xl md:text-3xl font-bold text-white leading-tight">{activeDrugLabel.title}</h3>
+                                        <HealthTooltip content="Preview and choose which label fields to copy into the form">
+                                            <button
+                                                type="button"
+                                                onClick={() => openFillFieldsPreview(activeDrugLabel)}
+                                                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-purple-900/30 self-start sm:self-auto shrink-0 cursor-pointer"
+                                            >
+                                                <Sparkles className="h-4 w-4" />
+                                                Fill fields
+                                            </button>
+                                        </HealthTooltip>
+                                    </div>
+                                    <div className="text-gray-300 space-y-1 text-sm">
+                                        {activeDrugLabel.genericName && (
+                                            <div><strong className="text-white">Generic Name:</strong> {activeDrugLabel.genericName}</div>
+                                        )}
+                                        {activeDrugLabel.drugClass && (
+                                            <div><strong className="text-white">Drug Class:</strong> {activeDrugLabel.drugClass}</div>
+                                        )}
+                                        {activeDrugLabel.brandNames.length > 0 && (
+                                            <div><strong className="text-white">Brand Names:</strong> {activeDrugLabel.brandNames.join(", ")}</div>
+                                        )}
+                                    </div>
+                                    <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-200">
+                                        <span>
+                                            Source: FDA label, {activeDrugLabel.manufacturer}
+                                            {activeDrugLabel.effectiveDate ? `, ${activeDrugLabel.effectiveDate}` : ""}
+                                        </span>
+                                        <HealthTooltip content="Open official full package insert on DailyMed (NIH)">
+                                            <a
+                                                href={activeDrugLabel.dailyMedUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-blue-300 hover:text-white font-semibold underline underline-offset-2"
+                                            >
+                                                <span>View on DailyMed</span>
+                                                <ExternalLink className="h-3.5 w-3.5" />
+                                            </a>
+                                        </HealthTooltip>
+                                    </div>
+                                </div>
+
+                                {/* Helper for 600-char trimmed verbatim FDA label sections */}
+                                {[
+                                    {
+                                        key: "uses",
+                                        title: "Uses & Indications",
+                                        icon: Check,
+                                        colorCls: "text-green-400",
+                                        boxCls: "bg-black/20 border-white/5",
+                                        text: activeDrugLabel.usesText,
+                                    },
+                                    {
+                                        key: "mechanism",
+                                        title: "How It Works",
+                                        icon: Activity,
+                                        colorCls: "text-cyan-400",
+                                        boxCls: "bg-black/20 border-white/5",
+                                        text: activeDrugLabel.mechanismText,
+                                    },
+                                    {
+                                        key: "sideEffects",
+                                        title: "Side Effects",
+                                        icon: AlertCircle,
+                                        colorCls: "text-yellow-400",
+                                        boxCls: "bg-black/20 border-white/5",
+                                        text: activeDrugLabel.sideEffectsText,
+                                    },
+                                    {
+                                        key: "interactions",
+                                        title: "Drug Interactions",
+                                        icon: AlertCircle,
+                                        colorCls: "text-red-400",
+                                        boxCls: "bg-black/20 border-white/5",
+                                        text: activeDrugLabel.interactionsText,
+                                    },
+                                ]
+                                    .filter((sec) => Boolean(sec.text))
+                                    .map((sec) => {
+                                        const isExpanded = Boolean(expandedLabelSections[sec.key])
+                                        const { preview, isTrimmed } = trimLabelPreview(sec.text, 600)
+                                        const IconComp = sec.icon
+                                        return (
+                                            <div key={sec.key} className={`rounded-xl p-5 border ${sec.boxCls}`}>
+                                                <h4 className={`text-lg font-bold ${sec.colorCls} mb-2.5 flex items-center gap-2`}>
+                                                    <IconComp className="h-5 w-5 shrink-0" /> {sec.title}
+                                                </h4>
+                                                <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+                                                    {isExpanded ? sec.text : preview}
+                                                </p>
+                                                {isTrimmed && (
+                                                    <HealthTooltip content={isExpanded ? "Collapse section back to summary length" : "Expand full verbatim FDA label section"}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setExpandedLabelSections((prev) => ({
+                                                                    ...prev,
+                                                                    [sec.key]: !prev[sec.key],
+                                                                }))
+                                                            }
+                                                            className="mt-2 text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
+                                                        >
+                                                            {isExpanded ? "Show less" : "Show more"}
+                                                        </button>
+                                                    </HealthTooltip>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+
+                                {/* Important Warnings (Boxed Warning FIRST, then Warnings & Precautions) */}
+                                {(activeDrugLabel.boxedWarningText || activeDrugLabel.warningsText) && (
+                                    <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 rounded-xl p-5 border border-orange-500/30 space-y-4">
+                                        <h4 className="text-lg font-bold text-orange-400 flex items-center gap-2">
+                                            <AlertCircle className="h-5 w-5 shrink-0" /> Important Warnings
+                                        </h4>
+
+                                        {activeDrugLabel.boxedWarningText && (() => {
+                                            const isExpanded = Boolean(expandedLabelSections["boxedWarning"])
+                                            const { preview, isTrimmed } = trimLabelPreview(activeDrugLabel.boxedWarningText, 600)
+                                            return (
+                                                <div className="p-3.5 rounded-xl bg-red-950/50 border border-red-500/40 space-y-1.5">
+                                                    <div className="text-xs font-black uppercase tracking-wider text-red-300">
+                                                        Boxed Warning
+                                                    </div>
+                                                    <p className="text-sm text-red-100 whitespace-pre-wrap leading-relaxed">
+                                                        {isExpanded ? activeDrugLabel.boxedWarningText : preview}
+                                                    </p>
+                                                    {isTrimmed && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setExpandedLabelSections((prev) => ({
+                                                                    ...prev,
+                                                                    boxedWarning: !prev.boxedWarning,
+                                                                }))
+                                                            }
+                                                            className="text-xs font-semibold text-red-300 hover:text-white cursor-pointer"
+                                                        >
+                                                            {isExpanded ? "Show less" : "Show more"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
+
+                                        {activeDrugLabel.warningsText && (() => {
+                                            const isExpanded = Boolean(expandedLabelSections["warnings"])
+                                            const { preview, isTrimmed } = trimLabelPreview(activeDrugLabel.warningsText, 600)
+                                            return (
+                                                <div>
+                                                    <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">
+                                                        {isExpanded ? activeDrugLabel.warningsText : preview}
+                                                    </p>
+                                                    {isTrimmed && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setExpandedLabelSections((prev) => ({
+                                                                    ...prev,
+                                                                    warnings: !prev.warnings,
+                                                                }))
+                                                            }
+                                                            className="mt-2 text-xs font-semibold text-orange-300 hover:text-orange-200 cursor-pointer"
+                                                        >
+                                                            {isExpanded ? "Show less" : "Show more"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
                                     </div>
                                 )}
+
+                                {/* Pregnancy & Breastfeeding */}
+                                {activeDrugLabel.pregnancyText && (() => {
+                                    const isExpanded = Boolean(expandedLabelSections["pregnancy"])
+                                    const { preview, isTrimmed } = trimLabelPreview(activeDrugLabel.pregnancyText, 600)
+                                    return (
+                                        <div className="bg-black/20 rounded-xl p-4 border border-white/5 text-sm text-gray-300 space-y-1.5">
+                                            <strong className="text-white block">Pregnancy &amp; Breastfeeding:</strong>
+                                            <p className="whitespace-pre-wrap leading-relaxed">
+                                                {isExpanded ? activeDrugLabel.pregnancyText : preview}
+                                            </p>
+                                            {isTrimmed && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setExpandedLabelSections((prev) => ({
+                                                            ...prev,
+                                                            pregnancy: !prev.pregnancy,
+                                                        }))
+                                                    }
+                                                    className="text-xs font-semibold text-blue-400 hover:text-blue-300 cursor-pointer"
+                                                >
+                                                    {isExpanded ? "Show less" : "Show more"}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )
+                                })()}
 
                                 <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-4 text-sm text-blue-300 flex items-start gap-2">
                                     <Shield className="h-4 w-4 shrink-0 mt-0.5" />
-                                    <span><strong>Note:</strong> Verify with your pharmacist or doctor. This clinical overview is for informational support only. Dosing, quantity, and administration schedules must always follow your actual prescription.</span>
+                                    <span><strong>Note:</strong> Verify with your pharmacist or doctor. Official FDA label excerpts are provided verbatim for reference; dosing, quantity, and schedules must follow your actual prescription.</span>
                                 </div>
                             </div>
                         )}
@@ -2169,20 +2474,22 @@ ${selectedMed ? `
                                 <span>Verify with your pharmacist or doctor</span>
                             </div>
                             <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                                {drugInfo && !drugInfo.unavailable && (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleFillFields(drugInfo)}
-                                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-purple-900/30 transition-all"
-                                    >
-                                        <Sparkles className="h-4 w-4" />
-                                        Fill fields
-                                    </button>
+                                {activeDrugLabel && (
+                                    <HealthTooltip content="Preview and choose which label fields to copy into the form">
+                                        <button
+                                            type="button"
+                                            onClick={() => openFillFieldsPreview(activeDrugLabel)}
+                                            className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg shadow-purple-900/30 transition-all cursor-pointer"
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            Fill fields
+                                        </button>
+                                    </HealthTooltip>
                                 )}
                                 <button
                                     type="button"
-                                    onClick={() => setShowDrugInfo(false)}
-                                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold transition-all"
+                                    onClick={() => { setShowDrugInfo(false); setShowFillPreview(false) }}
+                                    className="px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-sm transition-all cursor-pointer"
                                 >
                                     Close
                                 </button>
@@ -2203,6 +2510,8 @@ function MedicationModal({
     onClose,
     onSave,
     medication,
+    existingMedications = [],
+    onOpenExisting,
     theme,
     prefillData,
     onLookupDrug,
@@ -2263,35 +2572,41 @@ function MedicationModal({
     const [isStyleExpanded, setIsStyleExpanded] = useState(false)
     const [showQRScanner, setShowQRScanner] = useState(false)
     const [scanningQR, setScanningQR] = useState(false)
+    const [confirmedDuplicateKey, setConfirmedDuplicateKey] = useState<string | null>(null)
 
-    // Prefill fields from AI Drug Lookup when user taps "Fill fields"
-    // NEVER prefill dosage, quantity, or schedule
+    // Duplicate check when adding a NEW medication (not editing)
+    const normalizedInputName = formData.name.trim().toLowerCase()
+    const normalizedInputDose = (formData.dosage.trim() || "as directed").toLowerCase()
+    const currentDuplicateKey = `${normalizedInputName}__${normalizedInputDose}`
+
+    const duplicateExistingMed = useMemo(() => {
+        if (medication || !normalizedInputName) return null
+        return existingMedications.find((m: any) => {
+            const mName = (m.title || "").trim().toLowerCase()
+            if (mName !== normalizedInputName) return false
+            const mDose = ((m.item_metadata?.dosage || "").trim() || "as directed").toLowerCase()
+            return mDose === normalizedInputDose || (formData.dosage.trim() === "" && (m.item_metadata?.dosage || "").trim() === "")
+        }) || null
+    }, [medication, existingMedications, normalizedInputName, normalizedInputDose, formData.dosage])
+
+    // Apply ONLY user-approved fields from Official FDA Label Lookup
+    // NEVER touch dosage, quantity, schedule, reminder times, or notes, and NEVER auto-save
     useEffect(() => {
-        if (prefillData) {
-            setFormData(prev => {
-                const noteText = prefillData.verificationNote || "Verify with your pharmacist or doctor"
-                let newNotes = prev.notes
-                if (!newNotes || !newNotes.includes(noteText)) {
-                    newNotes = newNotes ? `${newNotes}\n\nNote: ${noteText}` : `Note: ${noteText}`
-                }
-                return {
-                    ...prev,
-                    name: prev.name ? prev.name : (prefillData.name || ""),
-                    genericName: prefillData.genericName || prev.genericName,
-                    drugClass: prefillData.drugClass || prev.drugClass,
-                    purpose: prefillData.purpose || prev.purpose,
-                    sideEffects: prefillData.sideEffects || prev.sideEffects,
-                    notes: newNotes
-                    // DO NOT TOUCH: dosage, quantity, totalQuantity, frequency, reminders, doseSchedule
-                }
-            })
+        if (prefillData?.fields) {
+            const f = prefillData.fields
+            setFormData(prev => ({
+                ...prev,
+                ...(f.genericName !== undefined ? { genericName: f.genericName } : {}),
+                ...(f.drugClass !== undefined ? { drugClass: f.drugClass } : {}),
+                ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),
+                ...(f.sideEffects !== undefined ? { sideEffects: f.sideEffects } : {}),
+                ...(f.interactions !== undefined ? { interactions: f.interactions } : {}),
+            }))
         }
     }, [prefillData])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
+    const performSave = async () => {
         setSaveError(null)
-
         if (!formData.name.trim()) {
             const err = "Medication name is required."
             setSaveError(err)
@@ -2317,10 +2632,18 @@ function MedicationModal({
             const msg = err?.message || "Failed to save medication. Please check your connection and try again."
             setSaveError(msg)
             toast.error(msg)
-            // NEVER clear formData and NEVER close on error
         } finally {
             setIsSaving(false)
         }
+    }
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!medication && duplicateExistingMed && confirmedDuplicateKey !== currentDuplicateKey) {
+            toast.warning(`"${duplicateExistingMed.title}" (${duplicateExistingMed.item_metadata?.dosage || "As directed"}) is already in your list. Choose "Open existing" or "Add anyway".`)
+            return
+        }
+        await performSave()
     }
 
     const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2456,15 +2779,15 @@ function MedicationModal({
                             <div className="flex items-center justify-between mb-2">
                                 <label className="text-sm font-bold text-gray-400 uppercase block">Medication Name *</label>
                                 {onLookupDrug && (
-                                    <HealthTooltip content="Look up clinical uses, common side effects, and interactions without overwriting your dose or schedule">
+                                    <HealthTooltip content="Look up official FDA & DailyMed drug label without overwriting your dose or schedule">
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                if (!formData.name.trim()) {
-                                                    toast.error("Please enter a name first to look up clinical details.")
+                                                if (!formData.name.trim() && !formData.genericName.trim()) {
+                                                    toast.error("Please enter a medication or generic name first.")
                                                     return
                                                 }
-                                                onLookupDrug(formData.name.trim())
+                                                onLookupDrug(formData.name.trim(), formData.genericName.trim())
                                             }}
                                             className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold transition-colors cursor-pointer"
                                         >
@@ -2492,6 +2815,47 @@ function MedicationModal({
                             />
                         </div>
                     </div>
+
+                    {/* Duplicate Warning Banner when adding a new medication */}
+                    {!medication && duplicateExistingMed && confirmedDuplicateKey !== currentDuplicateKey && (
+                        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/35 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div className="flex items-start gap-2.5 text-amber-200">
+                                <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-bold text-amber-300">Already in your list: </span>
+                                    <span>
+                                        <strong>{duplicateExistingMed.title}</strong> ({duplicateExistingMed.item_metadata?.dosage || "As directed"}) already exists in your medications.
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                {onOpenExisting && (
+                                    <HealthTooltip content="Switch to editing the existing medication record instead of creating a duplicate">
+                                        <button
+                                            type="button"
+                                            onClick={() => onOpenExisting(duplicateExistingMed)}
+                                            className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-bold transition-colors cursor-pointer"
+                                        >
+                                            Open existing
+                                        </button>
+                                    </HealthTooltip>
+                                )}
+                                <HealthTooltip content="Create a separate medication entry anyway">
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setConfirmedDuplicateKey(currentDuplicateKey)
+                                            await performSave()
+                                        }}
+                                        disabled={isSaving}
+                                        className="px-3 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-200 font-semibold transition-colors cursor-pointer"
+                                    >
+                                        Add anyway
+                                    </button>
+                                </HealthTooltip>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Category & Dosage Form */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

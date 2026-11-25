@@ -230,8 +230,8 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
     ],
     steps: [
       {
-        heading: "Adding a Medication & Pill Library",
-        body: "Tap + Add Med to save a medication's name, strength/dosage, form (tablet, capsule, inhaler, etc.), category, schedule, prescriber, pharmacy details, Rx number, and pill shape/color. You can also use Pill Library to preview pill shapes/colors and quick-add a drug.",
+        heading: "Adding a Medication, Duplicate Check & Pill Library",
+        body: "Tap + Add Med to save a medication's name, strength/dosage, form (tablet, capsule, inhaler, etc.), category, schedule, prescriber, pharmacy details, Rx number, and pill shape/color. If a medication with the same name and strength is already in your list, an 'Already in your list' banner lets you choose Open existing (to edit it instead of creating a copy) or Add anyway. You can also use Pill Library to preview pill shapes/colors and quick-add a drug.",
       },
       {
         heading: "Track Pill Count & How the Estimate Works",
@@ -246,8 +246,8 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
         body: "Tap Take to log a dose, Skip to skip a scheduled dose (skipped doses are not subtracted from your pill count), or Reschedule to set a one-off reminder time. Tap Reset on the card to undo today's logged status back to Not taken.",
       },
       {
-        heading: "Info (i) Detail Screen & Med Info Lookup",
-        body: "Tap the teal Info (i) icon on any card to open the full-screen clinical sheet showing every saved field and your adherence log. Tap the blue AI sparkles icon (or Look up Drug Info in the form) to view clinical uses, common/serious side effects, and interactions, with a Fill fields button that never overwrites your personal dose or schedule.",
+        heading: "Info (i) Detail Screen, Official FDA Label Lookup & Safe Fill Fields",
+        body: "Tap the teal Info (i) icon on any card to open the full-screen clinical sheet showing every saved field and your adherence log. Tap the blue sparkles icon (or Look up Drug Info in Add/Edit) to fetch official FDA & DailyMed drug labels for ANY medication (searching generic name first, then brand name, cached locally in your browser for 7 days). If multiple labels match, pick the manufacturer/date from the list; tap Show more on any trimmed section to read full FDA wording or open the DailyMed link. Tap Fill fields to preview checkboxes for Generic name, Drug class, Purpose, Common side effects, and Drug interactions — only checked items are copied into the open form, never touching your dose/schedule and never saving until you click Update/Add Medication.",
       },
       {
         heading: "Categories & Manage Categories",

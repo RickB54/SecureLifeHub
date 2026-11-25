@@ -47,7 +47,7 @@ export function MedicationCategorySelect({
   categories,
   onChange,
   onCreateCategory,
-  label = "Category",
+  label = "",
   compact = false,
 }: MedicationCategorySelectProps) {
   const [addingNew, setAddingNew] = useState(false)

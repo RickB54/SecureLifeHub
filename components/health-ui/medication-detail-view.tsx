@@ -41,7 +41,7 @@ interface MedicationDetailViewProps {
   onEdit: () => void
   onRefill?: () => void
   onExport?: () => void
-  onLookupDrug?: (name: string) => void
+  onLookupDrug?: (name: string, genericName?: string) => void
   onOpenDoctors?: () => void
   onDeleteLogEntry?: (logType: "taken" | "skipped", index: number) => void
 }
@@ -129,11 +129,11 @@ export default function MedicationDetailView({
             </>
           )}
           {onLookupDrug && (
-            <HealthTooltip content="Look up clinical uses, side effects, and interactions">
+            <HealthTooltip content="Look up official FDA & DailyMed drug label (uses, side effects, warnings, and interactions)">
               <button
                 type="button"
-                onClick={() => onLookupDrug(data.name)}
-                aria-label="Look up AI Drug Info"
+                onClick={() => onLookupDrug(data.name, data.genericName)}
+                aria-label="Look up official FDA Drug Info"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/25 text-xs font-semibold transition-colors cursor-pointer"
               >
                 <Sparkles className="h-3.5 w-3.5" />
