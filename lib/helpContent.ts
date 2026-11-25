@@ -353,8 +353,8 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
         body: "When you pick up a new bottle, tap Refill on the medication card or detail screen and enter the new pill count — this resets your count baseline to today. To manually fix a count at any time, open Edit (pencil icon), change Current Quantity, and save.",
       },
       {
-        heading: "Skip, Take, Reschedule & Reset",
-        body: "Tap Take to log a dose, Skip to skip a scheduled dose (skipped doses are not subtracted from your pill count), or Reschedule to set a one-off reminder time. Tap Reset on the card to undo today's logged status back to Not taken.",
+        heading: "Skip, Take, Reschedule, Reminder Popup & Reset",
+        body: "Tap Take to log a dose, Skip to skip a scheduled dose (skipped doses are not subtracted from your pill count), or Reschedule to set a one-off reminder time. When a 'Time to Take Meds' reminder popup appears, you can tap TAKE NOW, Skip, or Snooze right from the notice. Tap Reset on the card to undo today's logged status back to Not taken.",
       },
       {
         heading: "Info (i) Detail Screen, Official FDA Label Lookup & Safe Fill Fields",

@@ -1745,22 +1745,42 @@ ${selectedMed ? `
                             )}
                         </div>
 
-                        <div className="flex gap-4">
-                            <button
-                                onClick={() => {
-                                    handleTakeMed(activeReminder)
-                                    setActiveReminder(null)
-                                }}
-                                className="flex-1 py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-green-900/20 transition-all transform hover:scale-105"
-                            >
-                                TAKE NOW
-                            </button>
-                            <button
-                                onClick={() => setActiveReminder(null)} // Snooze just closes for now (will re-trigger in 1 min if logic isn't smart, but we check lastReminderTime so it won't until next day)
-                                className="px-6 py-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-lg transition-all"
-                            >
-                                Snooze
-                            </button>
+                        <div className="flex flex-wrap sm:flex-nowrap items-stretch gap-3">
+                            <HealthTooltip content="Log this scheduled dose as taken right now">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        handleTakeMed(activeReminder)
+                                        setActiveReminder(null)
+                                    }}
+                                    className="flex-1 min-w-[130px] py-3.5 px-4 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-base shadow-lg shadow-green-900/20 transition-all transform hover:scale-[1.02] inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                    <Check className="h-5 w-5 shrink-0" />
+                                    <span>TAKE NOW</span>
+                                </button>
+                            </HealthTooltip>
+                            <HealthTooltip content="Record this scheduled dose as skipped (not subtracted from pill count)">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        handleSkipMed(activeReminder)
+                                        setActiveReminder(null)
+                                    }}
+                                    className="py-3.5 px-4 bg-red-500/20 hover:bg-red-500/30 border border-red-500/35 text-red-300 hover:text-red-200 rounded-xl font-bold text-base transition-all inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                    <X className="h-5 w-5 shrink-0" />
+                                    <span>Skip</span>
+                                </button>
+                            </HealthTooltip>
+                            <HealthTooltip content="Dismiss reminder notice without logging Take or Skip">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveReminder(null)}
+                                    className="py-3.5 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold text-base transition-all inline-flex items-center justify-center cursor-pointer"
+                                >
+                                    Snooze
+                                </button>
+                            </HealthTooltip>
                         </div>
                     </div>
                 </div>
