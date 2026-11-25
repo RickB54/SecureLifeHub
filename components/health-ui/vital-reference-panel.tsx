@@ -13,22 +13,56 @@ import {
 import { VitalEvalResult, VerdictTone } from "@/lib/vitalsEvaluate"
 import { useVitalsProfile } from "@/lib/vitalsProfile"
 import { HealthTooltip, FieldHelpPopover } from "./health-tooltip"
-import { ProfileAgeInput, ProfileSexToggle, ProfileHeightInput } from "./vitals-profile-control"
+import { ProfileAgeInput, ProfileSexToggle, ProfileHeightInput, focusVitalsProfileField } from "./vitals-profile-control"
 
 const NEUTRAL_CHIP = "bg-white/5 text-gray-300 border-white/15"
 const chipCls = (tone: VerdictTone) => (tone === "neutral" ? NEUTRAL_CHIP : VITAL_TONE_STYLES[tone].chip)
 const dotCls = (tone: VerdictTone) => (tone === "neutral" ? "bg-gray-500" : VITAL_TONE_STYLES[tone].dot)
 
-/** Small colored verdict chip shown on the vital card even when the panel is collapsed. */
+/** Small colored verdict chip shown on the vital card even when the panel is collapsed (wraps up to 2 lines, or prompts for missing profile field). */
 export function VitalVerdictChip({ result }: { result: VitalEvalResult | null }) {
-  if (!result?.verdict || result.blocker) return null
+  if (!result) return null
+
+  if (result.blocker) {
+    return (
+      <HealthTooltip content={result.blocker}>
+        <span className={`inline-flex max-w-full items-start gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold leading-tight ${NEUTRAL_CHIP}`}>
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-400 mt-1" />
+          <span className="line-clamp-2 whitespace-normal break-words text-left">Ask pediatrician</span>
+        </span>
+      </HealthTooltip>
+    )
+  }
+
+  if (!result.verdict) {
+    const missing = result.prompts[0]
+    if (!missing) return null
+    const addLabel =
+      missing.field === "height" ? "Add height" : missing.field === "sex" ? "Add sex" : "Add age"
+    return (
+      <HealthTooltip content={`${missing.text} Tap to jump to My Profile.`}>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            focusVitalsProfileField(missing.field)
+          }}
+          className="inline-flex max-w-full items-center gap-1 rounded-md border border-sky-500/35 bg-sky-500/15 hover:bg-sky-500/25 px-1.5 py-0.5 text-[11px] font-semibold leading-tight text-sky-200 transition-colors cursor-pointer"
+        >
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
+          <span>{addLabel}</span>
+        </button>
+      </HealthTooltip>
+    )
+  }
+
   return (
     <HealthTooltip content={`${result.verdict.line} ${VITALS_FOOTER_DISCLAIMER}`}>
       <span
-        className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold leading-tight ${chipCls(result.verdict.tone)}`}
+        className={`inline-flex max-w-full items-start gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold leading-tight ${chipCls(result.verdict.tone)}`}
       >
-        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotCls(result.verdict.tone)}`} />
-        <span className="truncate">{result.verdict.chip}</span>
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full mt-1 ${dotCls(result.verdict.tone)}`} />
+        <span className="line-clamp-2 whitespace-normal break-words text-left">{result.verdict.chip}</span>
       </span>
     </HealthTooltip>
   )

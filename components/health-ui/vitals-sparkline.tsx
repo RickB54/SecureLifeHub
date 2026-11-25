@@ -16,16 +16,16 @@ interface VitalsSparklineProps {
 }
 
 /**
- * Compact ~32px tall inline SVG sparkline of up to 14 entries with no axes.
+ * Compact 40x16px inline SVG sparkline of up to 14 entries with thin lines and no axes.
  */
 export function VitalsSparkline({ id, points, color, multi = false }: VitalsSparklineProps) {
   const slice = points.slice(-14)
   if (slice.length === 0) return null
 
-  const width = 92
-  const height = 32
-  const padX = 3
-  const padY = 4
+  const width = 40
+  const height = 16
+  const padX = 1.5
+  const padY = 2
   const innerW = width - padX * 2
   const innerH = height - padY * 2
 
@@ -49,10 +49,10 @@ export function VitalsSparkline({ id, points, color, multi = false }: VitalsSpar
       const yDia = toY(valid[0].diastolic!)
       return (
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0 overflow-visible" aria-hidden="true">
-          <line x1={padX} y1={ySys} x2={width - padX} y2={ySys} stroke="#ef4444" strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="2 2" />
-          <line x1={padX} y1={yDia} x2={width - padX} y2={yDia} stroke="#3b82f6" strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="2 2" />
-          <circle cx={width - padX - 2} cy={ySys} r={2.5} fill="#ef4444" />
-          <circle cx={width - padX - 2} cy={yDia} r={2.5} fill="#3b82f6" />
+          <line x1={padX} y1={ySys} x2={width - padX} y2={ySys} stroke="#ef4444" strokeOpacity={0.4} strokeWidth={1} strokeDasharray="2 1.5" />
+          <line x1={padX} y1={yDia} x2={width - padX} y2={yDia} stroke="#3b82f6" strokeOpacity={0.4} strokeWidth={1} strokeDasharray="2 1.5" />
+          <circle cx={width - padX - 1} cy={ySys} r={1.5} fill="#ef4444" />
+          <circle cx={width - padX - 1} cy={yDia} r={1.5} fill="#3b82f6" />
         </svg>
       )
     }
@@ -63,10 +63,10 @@ export function VitalsSparkline({ id, points, color, multi = false }: VitalsSpar
 
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0 overflow-visible" aria-hidden="true">
-        <polyline fill="none" stroke="#ef4444" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" points={sysPts} />
-        <polyline fill="none" stroke="#3b82f6" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" points={diaPts} />
-        <circle cx={toX(lastIdx)} cy={toY(valid[lastIdx].systolic!)} r={2} fill="#ef4444" />
-        <circle cx={toX(lastIdx)} cy={toY(valid[lastIdx].diastolic!)} r={2} fill="#3b82f6" />
+        <polyline fill="none" stroke="#ef4444" strokeWidth={1.15} strokeLinecap="round" strokeLinejoin="round" points={sysPts} />
+        <polyline fill="none" stroke="#3b82f6" strokeWidth={1.15} strokeLinecap="round" strokeLinejoin="round" points={diaPts} />
+        <circle cx={toX(lastIdx)} cy={toY(valid[lastIdx].systolic!)} r={1.4} fill="#ef4444" />
+        <circle cx={toX(lastIdx)} cy={toY(valid[lastIdx].diastolic!)} r={1.4} fill="#3b82f6" />
       </svg>
     )
   }
@@ -88,17 +88,17 @@ export function VitalsSparkline({ id, points, color, multi = false }: VitalsSpar
     const y = height / 2
     return (
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0 overflow-visible" aria-hidden="true">
-        <line x1={padX} y1={y} x2={width - padX} y2={y} stroke={color} strokeOpacity={0.35} strokeWidth={1.5} strokeDasharray="2 2" />
-        <circle cx={width - padX - 2} cy={y} r={2.5} fill={color} />
+        <line x1={padX} y1={y} x2={width - padX} y2={y} stroke={color} strokeOpacity={0.4} strokeWidth={1} strokeDasharray="2 1.5" />
+        <circle cx={width - padX - 1} cy={y} r={1.5} fill={color} />
       </svg>
     )
   }
 
   const lineCoords = valid.map((p, i) => ({ x: toX(i), y: toY(p.value!) }))
   const polyPoints = lineCoords.map((pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(" ")
-  const areaPath = `M ${lineCoords[0].x.toFixed(1)} ${(height - 2).toFixed(1)} L ${lineCoords
+  const areaPath = `M ${lineCoords[0].x.toFixed(1)} ${(height - 1).toFixed(1)} L ${lineCoords
     .map((pt) => `${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`)
-    .join(" L ")} L ${lineCoords[lineCoords.length - 1].x.toFixed(1)} ${(height - 2).toFixed(1)} Z`
+    .join(" L ")} L ${lineCoords[lineCoords.length - 1].x.toFixed(1)} ${(height - 1).toFixed(1)} Z`
   const gradId = `spark-grad-${id}`
   const last = lineCoords[lineCoords.length - 1]
 
@@ -106,13 +106,13 @@ export function VitalsSparkline({ id, points, color, multi = false }: VitalsSpar
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="shrink-0 overflow-visible" aria-hidden="true">
       <defs>
         <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.22} />
           <stop offset="100%" stopColor={color} stopOpacity={0} />
         </linearGradient>
       </defs>
       <path d={areaPath} fill={`url(#${gradId})`} />
-      <polyline fill="none" stroke={color} strokeWidth={1.85} strokeLinecap="round" strokeLinejoin="round" points={polyPoints} />
-      <circle cx={last.x} cy={last.y} r={2.2} fill={color} />
+      <polyline fill="none" stroke={color} strokeWidth={1.2} strokeLinecap="round" strokeLinejoin="round" points={polyPoints} />
+      <circle cx={last.x} cy={last.y} r={1.5} fill={color} />
     </svg>
   )
 }

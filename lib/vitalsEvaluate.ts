@@ -149,9 +149,9 @@ function evalWeight(entries: any[], ctx: VitalEvalContext): VitalEvalResult {
     r.blocker = WEIGHT_REF.under20Message
     return r
   }
-  if (ctx.age === null) r.prompts.push({ field: "age", text: "Add your age (BMI categories are for adults 20+)." })
   const inches = ctx.heightInches
   if (inches === null) r.prompts.push({ field: "height", text: "Add your height to calculate BMI and your healthy weight range." })
+  if (ctx.age === null) r.prompts.push({ field: "age", text: "Add your age (BMI categories are for adults 20+)." })
 
   const latest = entries[entries.length - 1]
   const v = latest ? parseNumericVital(latest.item_metadata?.value) : null
@@ -174,7 +174,7 @@ function evalWeight(entries: any[], ctx: VitalEvalContext): VitalEvalResult {
       r.activeKey = band.key
       r.verdict = {
         tone: band.tone,
-        chip: `BMI ${fmt(bmiRounded, 1)} · ${band.label}`,
+        chip: `BMI ${fmt(bmiRounded, 1)} - ${band.label}`,
         line: `BMI ${fmt(bmiRounded, 1)}: ${band.label} range.`,
       }
       r.stats.unshift({ label: "Your BMI", value: `${fmt(bmiRounded, 1)} (${band.label})`, tone: band.tone })
@@ -289,10 +289,11 @@ function evalHeartRate(entries: any[], ctx: VitalEvalContext): VitalEvalResult {
   const latest = entries[entries.length - 1]
   const v = latest ? parseNumericVital(latest.item_metadata?.value) : null
   if (v === null || !latest) return r
+  r.marker = `Your latest: ${fmt(v)} bpm on ${shortDay(dayKeyOf(latest.item_metadata?.date))}`
+  if (ctx.age === null) return r
   const band = pickBand(r.bands, v)
   r.activeKey = band.key
   r.verdict = verdictFromBand(band)
-  r.marker = `Your latest: ${fmt(v)} bpm on ${shortDay(dayKeyOf(latest.item_metadata?.date))}`
   return r
 }
 
@@ -496,7 +497,6 @@ function evalWater(entries: any[], ctx: VitalEvalContext): VitalEvalResult {
     r.blocker = WATER_REF.under19Message
     return r
   }
-  if (ctx.age === null) r.prompts.push({ field: "age", text: "Add your age (these amounts are for adults 19+)." })
   const m = WATER_REF.male
   const f = WATER_REF.female
   const menText = `Men: ${m.totalL} L (${m.totalFlOz} fl oz) total; from beverages about ${m.beverageL.toFixed(1)} L (about ${m.beverageCups} cups, ${m.beverageFlOz} fl oz)`
@@ -507,6 +507,7 @@ function evalWater(entries: any[], ctx: VitalEvalContext): VitalEvalResult {
   } else {
     r.stats.push({ label: "Your adequate intake", value: ctx.sex === "male" ? menText : womenText })
   }
+  if (ctx.age === null) r.prompts.push({ field: "age", text: "Add your age (these amounts are for adults 19+)." })
 
   const latest = entries[entries.length - 1]
   if (!latest) return r

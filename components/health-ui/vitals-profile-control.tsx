@@ -3,19 +3,52 @@
 import React from "react"
 import { UserCircle2 } from "lucide-react"
 import { useVitalsProfile, VitalsProfileData } from "@/lib/vitalsProfile"
+import { VitalPromptField } from "@/lib/vitalsEvaluate"
 import { HealthTooltip, FieldHelpPopover } from "./health-tooltip"
 
 const inputCls =
-  "h-7 rounded-md border border-white/15 bg-black/60 px-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-rose-500"
+  "h-7 rounded-md border border-white/15 bg-black/60 px-1.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500"
 
-function SegBtn({ active, onClick, children, tip }: { active: boolean; onClick: () => void; children: React.ReactNode; tip: string }) {
+export function focusVitalsProfileField(field: VitalPromptField) {
+  if (typeof document === "undefined") return
+  const bar = document.getElementById("vitals-my-profile-bar")
+  const targetId =
+    field === "age"
+      ? "vitals-profile-age"
+      : field === "sex"
+      ? "vitals-profile-sex-male"
+      : "vitals-profile-height-primary"
+  const el = document.getElementById(targetId) as HTMLElement | null
+  ;(bar || el)?.scrollIntoView({ behavior: "smooth", block: "center" })
+  if (el) {
+    window.setTimeout(() => {
+      el.focus({ preventScroll: true })
+      if (el instanceof HTMLInputElement) el.select()
+    }, 220)
+  }
+}
+
+function SegBtn({
+  id,
+  active,
+  onClick,
+  children,
+  tip,
+}: {
+  id?: string
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+  tip: string
+}) {
   return (
     <HealthTooltip content={tip}>
       <button
+        id={id}
         type="button"
         onClick={onClick}
         aria-pressed={active}
-        className={`px-2 h-6 rounded text-[11px] font-semibold transition-colors cursor-pointer ${
+        className={`px-2 h-6 rounded text-[11px] font-semibold transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-rose-500 ${
           active ? "bg-rose-500/25 text-rose-200 border border-rose-500/40" : "text-gray-400 hover:text-white border border-transparent"
         }`}
       >
@@ -32,6 +65,7 @@ export function ProfileAgeInput({ compact }: { compact?: boolean }) {
       {!compact && <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Age</span>}
       <HealthTooltip content="Your age in years (saved only on this device). Used by all Vitals references.">
         <input
+          id={!compact ? "vitals-profile-age" : undefined}
           type="number"
           inputMode="numeric"
           min={0}
@@ -68,7 +102,12 @@ export function ProfileSexToggle({ compact }: { compact?: boolean }) {
     <span className="inline-flex items-center gap-1.5">
       {!compact && <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Sex</span>}
       <span role="group" aria-label="Sex" className="inline-flex rounded-md border border-white/15 bg-black/50 p-0.5">
-        <SegBtn active={profile.sex === "male"} onClick={() => updateProfile({ sex: "male" })} tip="Use reference values for men">
+        <SegBtn
+          id={!compact ? "vitals-profile-sex-male" : undefined}
+          active={profile.sex === "male"}
+          onClick={() => updateProfile({ sex: "male" })}
+          tip="Use reference values for men"
+        >
           Male
         </SegBtn>
         <SegBtn active={profile.sex === "female"} onClick={() => updateProfile({ sex: "female" })} tip="Use reference values for women">
@@ -88,6 +127,7 @@ export function ProfileHeightInput({ compact }: { compact?: boolean }) {
         <>
           <HealthTooltip content="Height: feet">
             <input
+              id={!compact ? "vitals-profile-height-primary" : undefined}
               type="number"
               inputMode="numeric"
               min={0}
@@ -116,6 +156,7 @@ export function ProfileHeightInput({ compact }: { compact?: boolean }) {
       ) : (
         <HealthTooltip content="Height in centimeters">
           <input
+            id={!compact ? "vitals-profile-height-primary" : undefined}
             type="number"
             inputMode="decimal"
             min={30}
@@ -143,7 +184,10 @@ export function ProfileHeightInput({ compact }: { compact?: boolean }) {
 /** One small shared "My Profile" bar for the Vitals page (localStorage on this device only). */
 export function VitalsProfileControl() {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2">
+    <div
+      id="vitals-my-profile-bar"
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2"
+    >
       <span className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-200">
         <UserCircle2 className="h-4 w-4 text-rose-400" />
         My Profile

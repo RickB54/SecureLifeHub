@@ -1119,9 +1119,9 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     : VITAL_TONE_STYLES[bpVerdict.tone]
                                 return (
                                     <HealthTooltip content={`${bpVerdict.line} ${VITALS_FOOTER_DISCLAIMER}`}>
-                                        <span className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold leading-tight ${st.chip}`}>
-                                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.dot}`} />
-                                            <span className="truncate">{bpVerdict.chip}</span>
+                                        <span className={`inline-flex max-w-full items-start gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold leading-tight ${st.chip}`}>
+                                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full mt-1 ${st.dot}`} />
+                                            <span className="line-clamp-2 whitespace-normal break-words text-left">{bpVerdict.chip}</span>
                                         </span>
                                     </HealthTooltip>
                                 )
@@ -1132,68 +1132,75 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     <div
                                         key={group.id}
                                         onClick={() => vitalsLayout.toggleCardExpanded(group.id)}
-                                        className={`px-3.5 py-2.5 min-h-[78px] rounded-2xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer select-none ${
+                                        className={`px-3 py-2 rounded-2xl border flex flex-col justify-center gap-0.5 transition-all cursor-pointer select-none ${
                                             theme === 'light'
                                                 ? 'bg-white border-gray-200 hover:border-gray-300'
                                                 : 'bg-black border-white/10 hover:border-white/25'
                                         }`}
                                     >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                            <div className={`h-9 w-9 rounded-xl ${iconBadgeMap[group.color] || 'bg-blue-500/10 text-blue-500'} flex items-center justify-center shrink-0`}>
-                                                <group.icon className="h-4 w-4" />
-                                            </div>
-                                            <div className="min-w-0 flex-1 space-y-0.5">
-                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                    <span className="text-xs font-bold uppercase tracking-wide text-gray-300 truncate">
-                                                        {group.title}
-                                                    </span>
-                                                    {latest && (group.id === 'bp' ? renderBpChip() : refResult ? <VitalVerdictChip result={refResult} /> : null)}
+                                        {/* Row 1: Icon + Full Title on left; Mini 40x16 Sparkline + Chevron on right */}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className={`h-6 w-6 rounded-lg ${iconBadgeMap[group.color] || 'bg-blue-500/10 text-blue-500'} flex items-center justify-center shrink-0`}>
+                                                    <group.icon className="h-3.5 w-3.5" />
                                                 </div>
-                                                {latest ? (
-                                                    <div className="flex flex-wrap items-baseline gap-x-1.5 text-xs min-w-0">
-                                                        <span className="text-base font-black font-mono leading-tight">
+                                                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-200 whitespace-nowrap leading-none">
+                                                    {group.title}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {latest && (
+                                                    <VitalsSparkline
+                                                        id={group.id}
+                                                        points={group.data}
+                                                        color={color}
+                                                        multi={Boolean((group as any).multi)}
+                                                    />
+                                                )}
+                                                <HealthTooltip content={`Expand ${group.title}`}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            vitalsLayout.toggleCardExpanded(group.id)
+                                                        }}
+                                                        aria-expanded={false}
+                                                        aria-label={`Expand ${group.title}`}
+                                                        className="p-1 rounded-md bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                                    >
+                                                        <ChevronDown className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </HealthTooltip>
+                                            </div>
+                                        </div>
+
+                                        {/* Row 2: Value + Unit + Date, followed by Verdict/Profile Chip on its own line */}
+                                        <div className="pl-8 space-y-0.5 min-w-0">
+                                            {latest ? (
+                                                <>
+                                                    <div className="flex flex-wrap items-baseline gap-x-1 text-xs leading-tight">
+                                                        <span className="text-sm font-black font-mono leading-tight">
                                                             {latest.item_metadata.value}
                                                         </span>
                                                         {latest.item_metadata.unit && (
-                                                            <span className="text-[10px] text-gray-400 uppercase">
+                                                            <span className="text-[10px] text-gray-400 uppercase leading-none">
                                                                 {latest.item_metadata.unit}
                                                             </span>
                                                         )}
                                                         {latest.item_metadata.date && (
-                                                            <span className="text-[11px] text-gray-500 truncate">
+                                                            <span className="text-[11px] text-gray-500 whitespace-nowrap leading-none">
                                                                 · {formatVitalDateNoShift(latest.item_metadata.date)}
                                                             </span>
                                                         )}
                                                     </div>
-                                                ) : (
-                                                    <div className="text-xs text-gray-500 italic">No entries</div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                            {latest && (
-                                                <VitalsSparkline
-                                                    id={group.id}
-                                                    points={group.data}
-                                                    color={color}
-                                                    multi={Boolean((group as any).multi)}
-                                                />
+                                                    <div>
+                                                        {group.id === 'bp' ? renderBpChip() : refResult ? <VitalVerdictChip result={refResult} /> : null}
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="text-xs text-gray-500 italic leading-tight py-1">No entries</div>
                                             )}
-                                            <HealthTooltip content={`Expand ${group.title}`}>
-                                                <button
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        vitalsLayout.toggleCardExpanded(group.id)
-                                                    }}
-                                                    aria-expanded={false}
-                                                    aria-label={`Expand ${group.title}`}
-                                                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
-                                                >
-                                                    <ChevronDown className="h-4 w-4" />
-                                                </button>
-                                            </HealthTooltip>
                                         </div>
                                     </div>
                                 )
