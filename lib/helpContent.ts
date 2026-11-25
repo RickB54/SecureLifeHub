@@ -205,8 +205,52 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
     ],
   },
   {
+    id: "vitals-bp-reference",
+    title: "6. Vitals & Blood Pressure Reference",
+    subtitle: "Tracking vital sign trends, 2025 AHA/ACC goal categories, and typical blood pressure ranges by age & sex",
+    badgeColor: "rose",
+    keywords: [
+      "vitals",
+      "blood pressure",
+      "bp",
+      "reference",
+      "chart",
+      "systolic",
+      "diastolic",
+      "hypertension",
+      "normal",
+      "elevated",
+      "stage 1",
+      "stage 2",
+      "severe",
+      "age",
+      "sex",
+      "aha",
+      "nhanes",
+      "90/60",
+    ],
+    steps: [
+      {
+        heading: "Opening the Blood Pressure Reference Chart",
+        body: "On the Vitals tab, find the Blood Pressure card and tap the Blood Pressure Reference bar (or the small chart icon next to BLOOD PRESSURE). It stays collapsed by default so your Vitals dashboard stays compact, and uses zero network or database queries.",
+      },
+      {
+        heading: "Age & Sex Controls (Saved Only on This Device)",
+        body: "Enter your Age (18 and older for adult data) and choose Male or Female. Your selection is saved only in localStorage on this browser/device. For ages under 18, no adult numbers are shown because pediatric blood pressure depends on age, sex, and height percentiles.",
+      },
+      {
+        heading: "Part A: Goal Categories (2025 AHA/ACC Adult Guideline)",
+        body: "Goal categories are the same for all adults regardless of age or sex: Normal (<120 AND <80), Elevated (120–129 AND <80), Stage 1 hypertension (130–139 OR 80–89), Stage 2 hypertension (140+ OR 90+), and Severe (>180 and/or >120). Your most recent logged blood pressure reading is automatically marked using the higher category when systolic and diastolic fall in different tiers. Readings below about 90/60 may be low — tell your doctor if you feel dizzy or faint.",
+      },
+      {
+        heading: "Part B: Typical Survey Readings vs Clinical Target",
+        body: "Part B shows typical middle range (25th–75th percentile), average (mean and median), and usual full range (5th–95th percentile) measured in US adults without high blood pressure (CDC/NCHS Report No. 35, NHANES 2001–2008). These typical readings describe what adults in that age/sex group measured — they are NOT a target. The clinical goal for all adults remains the Normal category, and reference charts are never a medical diagnosis.",
+      },
+    ],
+  },
+  {
     id: "medications",
-    title: "6. Medications (Meds), Pill Counts, Categories & Quick Import",
+    title: "7. Medications (Meds), Pill Counts, Categories & Quick Import",
     subtitle: "Complete guide to tracking prescriptions, pill estimates, categories, and importing",
     badgeColor: "purple",
     keywords: [
@@ -261,7 +305,7 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
   },
   {
     id: "exporting-pdfs",
-    title: "7. Exporting PDFs, Printing & Copy as Text",
+    title: "8. Exporting PDFs, Printing & Copy as Text",
     subtitle: "Quick Reference vs Full Details, picking medications, and plain-text sharing",
     badgeColor: "amber",
     keywords: [
@@ -297,7 +341,7 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
   },
   {
     id: "security-locks",
-    title: "8. Security, Module Access Locks & PIN",
+    title: "9. Security, Module Access Locks & PIN",
     subtitle: "Protecting Health Hub with a PIN lock and changing the default 1234 PIN",
     badgeColor: "cyan",
     keywords: [
@@ -326,7 +370,7 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
   },
   {
     id: "tips-troubleshooting",
-    title: "9. Helpful Tips & Troubleshooting",
+    title: "10. Helpful Tips & Troubleshooting",
     subtitle: "Clinical safety reminders and refreshing cached screens",
     badgeColor: "slate",
     keywords: [

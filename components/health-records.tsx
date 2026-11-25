@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays, differenceInCalendarDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -36,6 +36,7 @@ import {
 } from "@/lib/health-store"
 import { prepareHealthAttachment } from "@/lib/image-downsize"
 import { HealthTooltip } from "./health-ui/health-tooltip"
+import { BloodPressureReference } from "./health-ui/blood-pressure-reference"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -148,6 +149,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [historicalLogDateFilter, setHistoricalLogDateFilter] = useState<'all' | '7d' | '30d' | '1y'>('all')
     const [historicalLogStatusFilter, setHistoricalLogStatusFilter] = useState<'active' | 'archived'>('active')
     const [showPillLibrary, setShowPillLibrary] = useState(false)
+    const [showBpReference, setShowBpReference] = useState(false)
 
     // Calendar State
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -951,7 +953,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         const color = colorMap[group.color]
 
                         return (
-                            <div key={group.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20'} transition-all shadow-xl group overflow-hidden relative`}>
+                            <div key={group.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20'} ${group.id === 'bp' && showBpReference ? 'md:col-span-2 lg:col-span-3' : ''} transition-all shadow-xl group overflow-hidden relative`}>
                                 <div className={`absolute top-0 right-0 w-32 h-32 bg-${group.color}-500 opacity-[0.03] rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110 duration-500`}></div>
 
                                 <div className="flex justify-between items-start mb-6 relative z-10">
@@ -961,6 +963,23 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                     <div className="text-right flex flex-col items-end">
                                         <div className="flex items-center gap-2 mb-1">
                                             <div className="text-xs font-black uppercase text-gray-500">{group.title}</div>
+                                            {group.id === 'bp' && (
+                                                <HealthTooltip content={showBpReference ? "Hide Blood Pressure Reference" : "Blood Pressure Reference chart"}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowBpReference((prev) => !prev)}
+                                                        aria-expanded={showBpReference}
+                                                        aria-label="Toggle Blood Pressure Reference chart"
+                                                        className={`p-1.5 rounded transition-all cursor-pointer ${
+                                                            showBpReference
+                                                                ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
+                                                                : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
+                                                        }`}
+                                                    >
+                                                        <BarChart3 className="h-3 w-3" />
+                                                    </button>
+                                                </HealthTooltip>
+                                            )}
                                             {latest ? (
                                                 <button
                                                     onClick={() => {
@@ -1032,6 +1051,16 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         </div>
                                     )}
                                 </div>
+
+                                {group.id === 'bp' && (
+                                    <BloodPressureReference
+                                        isOpen={showBpReference}
+                                        onToggle={() => setShowBpReference((prev) => !prev)}
+                                        latestBpRecord={latest}
+                                        theme={theme}
+                                        onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
+                                    />
+                                )}
                             </div>
                         )
                     })}
