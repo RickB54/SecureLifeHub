@@ -1,8 +1,168 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2, Zap, StickyNote, Pin, Tag, Folder, ChevronDown, Search, RefreshCw, Palette } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { X, ChevronLeft, ChevronRight, BookOpen, Shield, Heart, Activity, Briefcase, Car, Plane, Target, Settings, HelpCircle, LayoutDashboard, Database, Key, CreditCard, User, Globe, FileText, Smartphone, AlertCircle, Image, Pill, Clock, Sun, RotateCcw, Trash, Lock, DollarSign, Sparkles, Maximize2, Printer, Archive, LayoutGrid, ListTodo, TrendingUp, CheckCircle2, Zap, StickyNote, Pin, Tag, Folder, ChevronDown, ChevronUp, ChevronsDownUp, ChevronsUpDown, Search, RefreshCw, Palette } from "lucide-react"
 import Logo from "../logo"
+import { HEALTH_HUB_GUIDE_INTRO, HEALTH_HUB_HELP_SECTIONS } from "@/lib/helpContent"
+import { HealthTooltip } from "@/components/health-ui/health-tooltip"
+
+function HealthHubHelpGuide() {
+    const [searchQuery, setSearchQuery] = useState("")
+    const [openIds, setOpenIds] = useState<Record<string, boolean>>(() => ({
+        [HEALTH_HUB_HELP_SECTIONS[0]?.id || "overview-tabs"]: true,
+    }))
+
+    const trimmedQuery = searchQuery.trim().toLowerCase()
+
+    const filteredSections = useMemo(() => {
+        if (!trimmedQuery) return HEALTH_HUB_HELP_SECTIONS
+        return HEALTH_HUB_HELP_SECTIONS.map((sec) => {
+            const secMatches =
+                sec.title.toLowerCase().includes(trimmedQuery) ||
+                sec.subtitle.toLowerCase().includes(trimmedQuery) ||
+                sec.keywords.some((k) => k.toLowerCase().includes(trimmedQuery))
+
+            const matchingSteps = sec.steps.filter(
+                (st) =>
+                    st.heading.toLowerCase().includes(trimmedQuery) ||
+                    st.body.toLowerCase().includes(trimmedQuery)
+            )
+
+            if (secMatches) {
+                return { ...sec, steps: matchingSteps.length > 0 ? matchingSteps : sec.steps }
+            }
+            if (matchingSteps.length > 0) {
+                return { ...sec, steps: matchingSteps }
+            }
+            return null
+        }).filter(Boolean) as typeof HEALTH_HUB_HELP_SECTIONS
+    }, [trimmedQuery])
+
+    const allOpen =
+        filteredSections.length > 0 &&
+        filteredSections.every((sec) => (trimmedQuery ? true : Boolean(openIds[sec.id])))
+
+    const toggleSection = (id: string) => {
+        setOpenIds((prev) => ({ ...prev, [id]: !prev[id] }))
+    }
+
+    const handleToggleAll = () => {
+        const nextState = !allOpen
+        const map: Record<string, boolean> = {}
+        HEALTH_HUB_HELP_SECTIONS.forEach((s) => {
+            map[s.id] = nextState
+        })
+        setOpenIds(map)
+    }
+
+    const colorMap: Record<string, string> = {
+        blue: "border-blue-500/25 bg-blue-500/5 text-blue-300",
+        emerald: "border-emerald-500/25 bg-emerald-500/5 text-emerald-300",
+        teal: "border-teal-500/25 bg-teal-500/5 text-teal-300",
+        rose: "border-rose-500/25 bg-rose-500/5 text-rose-300",
+        indigo: "border-indigo-500/25 bg-indigo-500/5 text-indigo-300",
+        purple: "border-purple-500/25 bg-purple-500/5 text-purple-300",
+        amber: "border-amber-500/25 bg-amber-500/5 text-amber-300",
+        cyan: "border-cyan-500/25 bg-cyan-500/5 text-cyan-300",
+        slate: "border-white/15 bg-white/[0.03] text-gray-300",
+    }
+
+    return (
+        <div className="space-y-4">
+            <p className="text-sm text-gray-300 leading-relaxed">{HEALTH_HUB_GUIDE_INTRO}</p>
+
+            {/* Search + Expand/Collapse All Toolbar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sticky top-0 z-10 bg-[#141414]/95 backdrop-blur-md py-2">
+                <div className="relative flex-1">
+                    <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search Health Hub topics (e.g. pill count, categories, PDF, PIN, Visit Mode)..."
+                        aria-label="Search Health Hub help guide"
+                        className="w-full h-9 pl-9 pr-8 rounded-xl bg-black/40 border border-white/15 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                    />
+                    {searchQuery && (
+                        <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            aria-label="Clear help search"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white cursor-pointer"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                        </button>
+                    )}
+                </div>
+                {!trimmedQuery && (
+                    <HealthTooltip content={allOpen ? "Collapse all guide sections" : "Expand all guide sections"}>
+                        <button
+                            type="button"
+                            onClick={handleToggleAll}
+                            className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-200 inline-flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                        >
+                            {allOpen ? <ChevronsDownUp className="h-3.5 w-3.5" /> : <ChevronsUpDown className="h-3.5 w-3.5" />}
+                            <span>{allOpen ? "Collapse all" : "Expand all"}</span>
+                        </button>
+                    </HealthTooltip>
+                )}
+            </div>
+
+            {filteredSections.length === 0 ? (
+                <div className="py-10 text-center text-xs text-gray-400 border border-dashed border-white/10 rounded-2xl">
+                    No Health Hub help topics matched &ldquo;{searchQuery}&rdquo;. Try another keyword.
+                </div>
+            ) : (
+                <div className="space-y-2.5">
+                    {filteredSections.map((sec) => {
+                        const isOpen = trimmedQuery ? true : Boolean(openIds[sec.id])
+                        const accentCls = colorMap[sec.badgeColor] || colorMap.slate
+                        return (
+                            <div
+                                key={sec.id}
+                                id={`help-${sec.id}`}
+                                className={`rounded-2xl border transition-colors overflow-hidden ${accentCls}`}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => toggleSection(sec.id)}
+                                    aria-expanded={isOpen}
+                                    className="w-full px-4 py-3 flex items-center justify-between gap-3 text-left hover:bg-white/[0.03] transition-colors cursor-pointer"
+                                >
+                                    <div className="min-w-0">
+                                        <h4 className="text-sm font-bold text-white leading-snug">{sec.title}</h4>
+                                        <p className="text-xs text-gray-400 mt-0.5">{sec.subtitle}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/30 text-gray-300 border border-white/10">
+                                            {sec.steps.length} {sec.steps.length === 1 ? "topic" : "topics"}
+                                        </span>
+                                        {isOpen ? (
+                                            <ChevronUp className="h-4 w-4 text-gray-300" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4 text-gray-400" />
+                                        )}
+                                    </div>
+                                </button>
+
+                                {isOpen && (
+                                    <div className="px-4 pb-4 pt-2 border-t border-white/10 space-y-2.5 bg-black/25">
+                                        {sec.steps.map((step, sIdx) => (
+                                            <div key={sIdx} className="p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1">
+                                                <div className="text-xs font-bold text-white">{step.heading}</div>
+                                                <p className="text-xs text-gray-300 leading-relaxed">{step.body}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
+}
 
 interface HelpPage {
     id: string
@@ -43,6 +203,13 @@ export const HELP_MAP: Record<string, string> = {
     // Health
     "type-health-records": "health",
     "health-records": "health",
+    "doctor-visit-hub": "health",
+    "type-doctor-visit-hub": "health",
+    "type-visit-hub-notes": "health",
+    "type-visit-hub-letters": "health",
+    "type-visit-hub-referrals": "health",
+    "type-visit-hub-questions": "health",
+    "type-visit-hub-summary": "health",
     "type-vitals": "health",
     "vitals": "health",
     "type-medications": "health",
@@ -487,116 +654,9 @@ const HELP_PAGES: HelpPage[] = [
     },
     {
         id: "health",
-        title: "Medical & Health Hub",
+        title: "Health Hub Guide",
         icon: Heart,
-        content: (
-            <div className="space-y-6">
-                <p className="text-gray-300">Your central command for all health-related data. Use these modules to build a complete medical history for you and your family.</p>
-                <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {/* Medical Records */}
-                    <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <FileText className="h-5 w-5 text-emerald-400" />
-                            <h5 className="font-black text-emerald-400 text-xs uppercase tracking-widest">Medical Records & Files</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            A secure archive for clinic notes, lab results, and diagnostic images. Store PDFs or high-resolution photos of paper records.
-                            <br /><br />
-                            <strong>How to use:</strong> Tag records by physician or facility. Use the "Upload" button to add photos of physical documents; our system preserves them with military-grade encryption.
-                        </p>
-                    </div>
-
-                    {/* Medications */}
-                    <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Pill className="h-5 w-5 text-rose-400" />
-                            <h5 className="font-black text-rose-400 text-xs uppercase tracking-widest">Medication Timeline</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            Master your prescription schedule. Record exactly when you take your doses to build a compliance history.
-                            <br /><br />
-                            <strong>How to use:</strong> Set up reminders for daily or as-needed (PRN) meds. Tapering schedules are dynamically calculated based on your intake logs.
-                        </p>
-                    </div>
-
-                    {/* Vitals */}
-                    <div className="p-5 rounded-2xl bg-blue-500/5 border border-blue-500/10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Activity className="h-5 w-5 text-blue-400" />
-                            <h5 className="font-black text-blue-400 text-xs uppercase tracking-widest">Vital Logging & Trends</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            Track Blood Pressure, Weight, Blood Glucose, and Heart Rate. Interactive charts show you how these metrics change over weeks or months.
-                            <br /><br />
-                            <strong>How to use:</strong> Log data immediately after measurement. Our AI summary identifies trends that might be relevant for your doctor.
-                        </p>
-                    </div>
-
-                    {/* Health Diary */}
-                    <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <BookOpen className="h-5 w-5 text-amber-400" />
-                            <h5 className="font-black text-amber-400 text-xs uppercase tracking-widest">Health & Symptom Diary</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            Document daily pain levels, energy, mood, or specific symptoms. This is your personal health journal.
-                            <br /><br />
-                            <strong>How to use:</strong> Maintain a "Streak" by logging daily. This data is invaluable during physician consultations to prove chronic patterns.
-                        </p>
-                    </div>
-
-                    {/* Health Portals */}
-                    <div className="p-5 rounded-2xl bg-purple-500/5 border border-purple-500/10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Globe className="h-5 w-5 text-purple-400" />
-                            <h5 className="font-black text-purple-400 text-xs uppercase tracking-widest">Health Portals (Links)</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            A directory for external websites like Quest Diagnostics, LabCorp, or hospital systems.
-                            <br /><br />
-                            <strong>How to use:</strong> Add the direct URL and any notes about your login. Use the "Open" shortcut to launch the portal in a new tab instantly.
-                        </p>
-                    </div>
-
-                    {/* My Doctors */}
-                    <div className="p-5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
-                        <div className="flex items-center gap-3 mb-3">
-                            <User className="h-5 w-5 text-indigo-400" />
-                            <h5 className="font-black text-indigo-400 text-xs uppercase tracking-widest">My Medical Team</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            Store contact info for specialists, primary care, and facilities.
-                            <br /><br />
-                            <strong>How to use:</strong> Keep phone numbers, address links, and specialty details ready for coordination between doctors.
-                        </p>
-                    </div>
-
-                    {/* Capacity & Energy */}
-                    <div className="p-5 rounded-3xl bg-blue-600/10 border border-blue-500/20 shadow-lg">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Sun className="h-6 w-6 text-blue-400" />
-                            <h5 className="font-black text-blue-400 text-xs uppercase tracking-[0.2em]">Capacity Planner (Spoon Theory)</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            Manage your cognitive and physical load based on 'Energy Tokens' (Spoons). Record your daily availability to prevent burnout.
-                            <br /><br />
-                            <strong>Vitality Trend:</strong> Our algorithm analyzes your mood and energy dips to suggest "Priority Shifts"—moving complex tasks to times of highest capacity.
-                        </p>
-                    </div>
-                    
-                    <div className="p-5 rounded-3xl bg-yellow-600/10 border border-yellow-500/20">
-                        <div className="flex items-center gap-3 mb-3">
-                            <Database className="h-5 w-5 text-yellow-400" />
-                            <h5 className="font-black text-yellow-400 text-xs uppercase tracking-widest">Mock Health Data</h5>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                            To help you understand the health trends, we may pre-populate this hub with sample vitals and records. 
-                            <strong>Note:</strong> Mock data is clearly marked with a banner. You can remove it anytime in Settings.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        )
+        content: <HealthHubHelpGuide />
     },
     {
         id: "dr-ai",

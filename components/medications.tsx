@@ -19,6 +19,7 @@ import {
 } from './health-ui/health-field-helpers'
 import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
 import MedicationDetailView from './health-ui/medication-detail-view'
+import { HealthTooltip, FieldHelpPopover } from './health-ui/health-tooltip'
 import {
     MedicationCategorySelect,
     ManageCategoriesModal,
@@ -468,6 +469,19 @@ export default function Medications({ records, addItem, updateItem, deleteItem, 
             setCategoryFilter("all")
         }
         toast.success(`Removed "${catName}" — ${matching.length} medication${matching.length === 1 ? "" : "s"} moved to Uncategorized`)
+    }
+
+    const handleUpdateExistingMedCategory = async (med: any, newCategory: string) => {
+        const cleanCat = (newCategory || "").trim()
+        if (cleanCat) handleCreateCustomCategory(cleanCat)
+        const updatedMeta = {
+            ...med.item_metadata,
+            is_medication: true,
+            category: cleanCat,
+            lastModified: new Date().toISOString(),
+        }
+        await updateItem(med.id, { item_metadata: updatedMeta })
+        upsertSharedHealthRecord({ ...med, item_metadata: updatedMeta })
     }
 
     // Filter by search + category
@@ -1232,48 +1246,56 @@ ${selectedMed ? `
                         <p className="text-xs text-gray-400">Track medications, set reminders, and maintain your health</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                            type="button"
-                            onClick={() => setExportModalState({ open: true, singleMed: null })}
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                            title="Print / Export Medications"
-                            aria-label="Print Medications"
-                        >
-                            <Printer className="h-4 w-4" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setExportModalState({ open: true, singleMed: null })}
-                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                            title="Download PDF / Export Medications"
-                            aria-label="Export Medications PDF"
-                        >
-                            <FileDown className="h-4 w-4" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowMedSummary(true)}
-                            className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                            <FileText className="h-4 w-4 shrink-0" />
-                            <span>Med Summary</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowQuickAI(!showQuickAI)}
-                            className="h-8 px-3 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                            <Sparkles className="h-4 w-4 shrink-0" />
-                            <span>AI Assistant</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowAddModal(true)}
-                            className="h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                            <Plus className="h-4 w-4 shrink-0" />
-                            <span>Add Med</span>
-                        </button>
+                        <HealthTooltip content="Print medications (Quick Reference or Full Details)">
+                            <button
+                                type="button"
+                                onClick={() => setExportModalState({ open: true, singleMed: null })}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                                aria-label="Print Medications"
+                            >
+                                <Printer className="h-4 w-4" />
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Download PDF or copy plain-text medication list">
+                            <button
+                                type="button"
+                                onClick={() => setExportModalState({ open: true, singleMed: null })}
+                                className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                                aria-label="Export Medications PDF"
+                            >
+                                <FileDown className="h-4 w-4" />
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Open a quick read-only medication summary for doctor visits">
+                            <button
+                                type="button"
+                                onClick={() => setShowMedSummary(true)}
+                                className="h-8 px-3 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <FileText className="h-4 w-4 shrink-0" />
+                                <span>Med Summary</span>
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Ask AI questions about your medications, side effects, or interactions">
+                            <button
+                                type="button"
+                                onClick={() => setShowQuickAI(!showQuickAI)}
+                                className="h-8 px-3 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <Sparkles className="h-4 w-4 shrink-0" />
+                                <span>AI Assistant</span>
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Add a new medication or supplement">
+                            <button
+                                type="button"
+                                onClick={() => setShowAddModal(true)}
+                                className="h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <Plus className="h-4 w-4 shrink-0" />
+                                <span>Add Med</span>
+                            </button>
+                        </HealthTooltip>
                     </div>
                 </div>
 
@@ -1332,60 +1354,71 @@ ${selectedMed ? `
                         />
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <select
-                            aria-label="Filter by category"
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value)}
-                            className="h-9 px-2.5 bg-[#1e1e1e] border border-white/10 rounded-lg text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                        >
-                            <option value="all">All Categories</option>
-                            {allMedCategories.map((cat) => (
-                                <option key={cat} value={cat}>
-                                    {cat}
-                                </option>
-                            ))}
-                            <option value={UNCATEGORIZED_MED_CATEGORY}>{UNCATEGORIZED_MED_CATEGORY}</option>
-                        </select>
-                        <button
-                            type="button"
-                            onClick={() => setShowManageCategories(true)}
-                            className="h-9 px-2.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                            title="Manage categories (rename or delete)"
-                        >
-                            <FolderCog className="h-3.5 w-3.5 shrink-0" />
-                            <span>Manage categories</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowPillLibrary(true)}
-                            className="h-9 px-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                            <Package className="h-4 w-4 shrink-0" />
-                            <span>Pill Library</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowMockDrugs(true)}
-                            className="h-9 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                            <Activity className="h-4 w-4 shrink-0" />
-                            <span>Import Rx</span>
-                        </button>
+                        <HealthTooltip content="Filter displayed medications by category">
+                            <select
+                                aria-label="Filter by category"
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value)}
+                                className="h-9 px-2.5 bg-[#1e1e1e] border border-white/10 rounded-lg text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                            >
+                                <option value="all">All Categories</option>
+                                {allMedCategories.map((cat) => (
+                                    <option key={cat} value={cat}>
+                                        {cat}
+                                    </option>
+                                ))}
+                                <option value={UNCATEGORIZED_MED_CATEGORY}>{UNCATEGORIZED_MED_CATEGORY}</option>
+                            </select>
+                        </HealthTooltip>
+                        <HealthTooltip content="Create, rename, or delete medication categories">
+                            <button
+                                type="button"
+                                onClick={() => setShowManageCategories(true)}
+                                className="h-9 px-2.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <FolderCog className="h-3.5 w-3.5 shrink-0" />
+                                <span>Manage categories</span>
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Preview pill shapes & colors and quick-add a medication">
+                            <button
+                                type="button"
+                                onClick={() => setShowPillLibrary(true)}
+                                className="h-9 px-3 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <Package className="h-4 w-4 shrink-0" />
+                                <span>Pill Library</span>
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Quick-import medication templates from common preset groups">
+                            <button
+                                type="button"
+                                onClick={() => setShowMockDrugs(true)}
+                                className="h-9 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-sm font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <Activity className="h-4 w-4 shrink-0" />
+                                <span>Import Rx</span>
+                            </button>
+                        </HealthTooltip>
                         <div className="h-8 p-0.5 bg-[#1e1e1e] border border-white/10 rounded-lg inline-flex items-center">
-                            <button
-                                type="button"
-                                onClick={() => setViewMode("list")}
-                                className={`h-full px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${viewMode === "list" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
-                            >
-                                List
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setViewMode("timeline")}
-                                className={`h-full px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${viewMode === "timeline" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
-                            >
-                                Timeline
-                            </button>
+                            <HealthTooltip content="Show medications as cards in a 3-column grid">
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode("list")}
+                                    className={`h-full px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${viewMode === "list" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
+                                >
+                                    List
+                                </button>
+                            </HealthTooltip>
+                            <HealthTooltip content="Show scheduled doses on a Day, Week, or Month calendar">
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode("timeline")}
+                                    className={`h-full px-3 rounded-md text-sm font-medium transition-colors cursor-pointer ${viewMode === "timeline" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"}`}
+                                >
+                                    Timeline
+                                </button>
+                            </HealthTooltip>
                         </div>
                     </div>
                 </div>
@@ -1486,14 +1519,15 @@ ${selectedMed ? `
                                             </span>
                                         )}
                                         {hasLogs && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleResetDoseStatus(med)}
-                                                className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white text-[10px] rounded-md border border-white/10 inline-flex items-center gap-0.5 transition-colors cursor-pointer"
-                                                title="Undo / Reset dose status"
-                                            >
-                                                <RotateCcw className="h-2.5 w-2.5" /> Reset
-                                            </button>
+                                            <HealthTooltip content="Undo today's logged dose status back to Not taken">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleResetDoseStatus(med)}
+                                                    className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white text-[10px] rounded-md border border-white/10 inline-flex items-center gap-0.5 transition-colors cursor-pointer"
+                                                >
+                                                    <RotateCcw className="h-2.5 w-2.5" /> Reset
+                                                </button>
+                                            </HealthTooltip>
                                         )}
                                     </div>
 
@@ -1526,77 +1560,88 @@ ${selectedMed ? `
                                     {/* One compact bottom row: Skip/Take/Reschedule left, Info/AI/Edit/Delete/Refill right */}
                                     <div className="flex flex-wrap items-center justify-between gap-1.5 pt-2 mt-1 border-t border-white/10">
                                         <div className="flex items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => handleSkipMed(med)}
-                                                className="h-8 px-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                            >
-                                                <X className="h-3.5 w-3.5" /> Skip
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleTakeMed(med)}
-                                                className="h-8 px-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                            >
-                                                <Check className="h-3.5 w-3.5" /> Take
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => openRescheduleModal(med)}
-                                                className="h-8 px-2.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                            >
-                                                <Clock className="h-3.5 w-3.5" /> Reschedule
-                                            </button>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
-                                                className="h-8 w-8 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 inline-flex items-center justify-center transition-colors cursor-pointer"
-                                                title="Details"
-                                                aria-label="Details"
-                                            >
-                                                <Info className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleDrugLookup(med.title)}
-                                                className="h-8 w-8 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 inline-flex items-center justify-center transition-colors cursor-pointer"
-                                                title="AI Drug Info"
-                                                aria-label="AI Drug Info"
-                                            >
-                                                <Sparkles className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => { setSelectedMed(med); setShowEditModal(true) }}
-                                                className="h-8 w-8 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 inline-flex items-center justify-center transition-colors cursor-pointer"
-                                                title="Edit"
-                                                aria-label="Edit"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }}
-                                                className="h-8 w-8 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 inline-flex items-center justify-center transition-colors cursor-pointer"
-                                                title="Delete"
-                                                aria-label="Delete"
-                                            >
-                                                <Trash className="h-4 w-4" />
-                                            </button>
-                                            {tracked && (
+                                            <HealthTooltip content="Skip this dose (skipped doses are not subtracted from pill count)">
                                                 <button
                                                     type="button"
-                                                    onClick={() => {
-                                                        setRefillMed(med)
-                                                        setRefillCount(String(med.item_metadata?.totalQuantity || 30))
-                                                    }}
-                                                    className="h-8 px-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer"
-                                                    title="Record refill & reset pill count baseline"
+                                                    onClick={() => handleSkipMed(med)}
+                                                    className="h-8 px-2.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
                                                 >
-                                                    Refill
+                                                    <X className="h-3.5 w-3.5" /> Skip
                                                 </button>
+                                            </HealthTooltip>
+                                            <HealthTooltip content="Mark dose as taken right now">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleTakeMed(med)}
+                                                    className="h-8 px-2.5 rounded-lg bg-green-500/20 hover:bg-green-500/30 text-green-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    <Check className="h-3.5 w-3.5" /> Take
+                                                </button>
+                                            </HealthTooltip>
+                                            <HealthTooltip content="Reschedule next dose date and reminder time">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openRescheduleModal(med)}
+                                                    className="h-8 px-2.5 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs font-semibold transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    <Clock className="h-3.5 w-3.5" /> Reschedule
+                                                </button>
+                                            </HealthTooltip>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <HealthTooltip content="Open full medication detail sheet">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => router.push(`/?page=type-health-records&tab=meds&medId=${med.id}`, { scroll: false })}
+                                                    className="h-8 w-8 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                    aria-label="Medication details"
+                                                >
+                                                    <Info className="h-4 w-4" />
+                                                </button>
+                                            </HealthTooltip>
+                                            <HealthTooltip content="Look up Med Info (uses, side effects, and drug interactions)">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDrugLookup(med.title)}
+                                                    className="h-8 w-8 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                    aria-label="Med Info lookup"
+                                                >
+                                                    <Sparkles className="h-4 w-4" />
+                                                </button>
+                                            </HealthTooltip>
+                                            <HealthTooltip content="Edit medication details, schedule, or category">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setSelectedMed(med); setShowEditModal(true) }}
+                                                    className="h-8 w-8 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                    aria-label="Edit medication"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                </button>
+                                            </HealthTooltip>
+                                            <HealthTooltip content="Delete medication">
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => { if (confirm(`Delete ${med.title}?`)) { await deleteItem(med.id); removeSharedHealthRecord(med.id); toast.success("Medication deleted") } }}
+                                                    className="h-8 w-8 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                                    aria-label="Delete medication"
+                                                >
+                                                    <Trash className="h-4 w-4" />
+                                                </button>
+                                            </HealthTooltip>
+                                            {tracked && (
+                                                <HealthTooltip content="Record a refill and reset the remaining pill count baseline to today">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setRefillMed(med)
+                                                            setRefillCount(String(med.item_metadata?.totalQuantity || 30))
+                                                        }}
+                                                        className="h-8 px-2.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                                                    >
+                                                        Refill
+                                                    </button>
+                                                </HealthTooltip>
                                             )}
                                         </div>
                                     </div>
@@ -1676,9 +1721,12 @@ ${selectedMed ? `
                     isOpen={showMockDrugs}
                     onClose={() => setShowMockDrugs(false)}
                     onAddMockDrug={handleAddMed}
+                    onUpdateExistingCategory={handleUpdateExistingMedCategory}
+                    existingMedications={medRecords}
                     theme={theme}
                     categories={allMedCategories}
                     onCreateCategory={handleCreateCustomCategory}
+                    onOpenManageCategories={() => setShowManageCategories(true)}
                 />
             )}
 
@@ -2308,26 +2356,32 @@ function MedicationModal({
                         <h2 className="text-2xl font-bold">{medication ? 'Edit' : 'Add'} Medication</h2>
                         {medication && onOpenExport && (
                             <div className="flex items-center gap-1 bg-gray-800 rounded-lg p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => onOpenExport(medication)}
-                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all cursor-pointer"
-                                    title="Print Medication"
-                                >
-                                    <Printer className="h-5 w-5" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onOpenExport(medication)}
-                                    className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all cursor-pointer"
-                                    title="Export Medication PDF"
-                                >
-                                    <FileDown className="h-5 w-5" />
-                                </button>
+                                <HealthTooltip content="Print this medication">
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenExport(medication)}
+                                        aria-label="Print Medication"
+                                        className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all cursor-pointer"
+                                    >
+                                        <Printer className="h-5 w-5" />
+                                    </button>
+                                </HealthTooltip>
+                                <HealthTooltip content="Download PDF or copy plain text for this medication">
+                                    <button
+                                        type="button"
+                                        onClick={() => onOpenExport(medication)}
+                                        aria-label="Export Medication PDF"
+                                        className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-all cursor-pointer"
+                                    >
+                                        <FileDown className="h-5 w-5" />
+                                    </button>
+                                </HealthTooltip>
                             </div>
                         )}
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-white"><X className="h-6 w-6" /></button>
+                    <HealthTooltip content="Close medication form">
+                        <button type="button" onClick={onClose} aria-label="Close medication form" className="text-gray-400 hover:text-white cursor-pointer"><X className="h-6 w-6" /></button>
+                    </HealthTooltip>
                 </div>
 
                 {/* QR Code Scanner Section */}
@@ -2340,20 +2394,24 @@ function MedicationModal({
                             <p className="text-xs text-gray-400 mt-1">Scan medication barcode to auto-fill fields</p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={() => (window as any).showMockDrugModalFromAddMed()}
-                                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-purple-900/20"
-                            >
-                                <Download className="h-4 w-4" /> Import Rx
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowQRScanner(!showQRScanner)}
-                                className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-sm font-medium transition-all"
-                            >
-                                {showQRScanner ? 'Hide Scanner' : 'Open Scanner'}
-                            </button>
+                            <HealthTooltip content="Open Rx Quick Import preset templates">
+                                <button
+                                    type="button"
+                                    onClick={() => (window as any).showMockDrugModalFromAddMed()}
+                                    className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-purple-900/20 cursor-pointer"
+                                >
+                                    <Download className="h-4 w-4" /> Import Rx
+                                </button>
+                            </HealthTooltip>
+                            <HealthTooltip content="Scan or upload a prescription bottle barcode image">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowQRScanner(!showQRScanner)}
+                                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-sm font-medium transition-all cursor-pointer"
+                                >
+                                    {showQRScanner ? 'Hide Scanner' : 'Open Scanner'}
+                                </button>
+                            </HealthTooltip>
                         </div>
                     </div>
 
@@ -2398,19 +2456,21 @@ function MedicationModal({
                             <div className="flex items-center justify-between mb-2">
                                 <label className="text-sm font-bold text-gray-400 uppercase block">Medication Name *</label>
                                 {onLookupDrug && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (!formData.name.trim()) {
-                                                toast.error("Please enter a name first to look up clinical details.")
-                                                return
-                                            }
-                                            onLookupDrug(formData.name.trim())
-                                        }}
-                                        className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold transition-colors"
-                                    >
-                                        <Sparkles className="h-3 w-3" /> Look up Drug Info
-                                    </button>
+                                    <HealthTooltip content="Look up clinical uses, common side effects, and interactions without overwriting your dose or schedule">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!formData.name.trim()) {
+                                                    toast.error("Please enter a name first to look up clinical details.")
+                                                    return
+                                                }
+                                                onLookupDrug(formData.name.trim())
+                                            }}
+                                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 font-semibold transition-colors cursor-pointer"
+                                        >
+                                            <Sparkles className="h-3 w-3" /> Look up Drug Info
+                                        </button>
+                                    </HealthTooltip>
                                 )}
                             </div>
                             <FieldSuggestionInput
@@ -2437,18 +2497,27 @@ function MedicationModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="text-sm font-bold text-gray-400 uppercase block">Category</label>
+                                <div className="flex items-center gap-1.5">
+                                    <label className="text-sm font-bold text-gray-400 uppercase">Category</label>
+                                    <FieldHelpPopover
+                                        title="Medication Category"
+                                        content="Group your medications (Every Day Usage, As Needed, Surgery, Supplements, or create your own) for filtering and grouped PDF exports."
+                                    />
+                                </div>
                                 {onOpenManageCategories && (
-                                    <button
-                                        type="button"
-                                        onClick={onOpenManageCategories}
-                                        className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors cursor-pointer"
-                                    >
-                                        Manage categories
-                                    </button>
+                                    <HealthTooltip content="Create, rename, or delete medication categories">
+                                        <button
+                                            type="button"
+                                            onClick={onOpenManageCategories}
+                                            className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors cursor-pointer"
+                                        >
+                                            Manage categories
+                                        </button>
+                                    </HealthTooltip>
                                 )}
                             </div>
                             <MedicationCategorySelect
+                                label=""
                                 value={formData.category}
                                 onChange={(cat) => setFormData({ ...formData, category: cat })}
                                 categories={categories}
@@ -2572,24 +2641,38 @@ function MedicationModal({
 
                     {/* Optional Pill Count Tracking */}
                     <div className="p-4 rounded-xl bg-white/[0.03] border border-white/10 space-y-4">
-                        <label className="flex items-center gap-3 cursor-pointer select-none">
-                            <input
-                                type="checkbox"
-                                checked={Boolean(formData.trackInventory)}
-                                onChange={(e) => setFormData({ ...formData, trackInventory: e.target.checked })}
-                                className="h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                        <div className="flex items-start justify-between gap-2">
+                            <HealthTooltip content="Enable client-side remaining pill estimate and low-stock warning">
+                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(formData.trackInventory)}
+                                        onChange={(e) => setFormData({ ...formData, trackInventory: e.target.checked })}
+                                        className="h-4 w-4 rounded border-gray-600 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                                    />
+                                    <div>
+                                        <span className="text-sm font-bold text-white">Track pill count</span>
+                                        <p className="text-xs text-gray-400">Optional — enable to count remaining pills and show low-stock alerts</p>
+                                    </div>
+                                </label>
+                            </HealthTooltip>
+                            <FieldHelpPopover
+                                title="Track Pill Count"
+                                content="Estimates your remaining pills automatically at each scheduled reminder time (or when you tap Take for As-Needed meds) with zero daily background database writes."
                             />
-                            <div>
-                                <span className="text-sm font-bold text-white">Track pill count</span>
-                                <p className="text-xs text-gray-400">Optional — enable to count remaining pills and show low-stock alerts</p>
-                            </div>
-                        </label>
+                        </div>
 
                         {formData.trackInventory && (
                             <div className="space-y-3 pt-2 border-t border-white/10">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                     <div>
-                                        <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Pills per Dose</label>
+                                        <div className="flex items-center gap-1 mb-1.5">
+                                            <label className="text-[11px] font-bold text-gray-400 uppercase">Pills per Dose</label>
+                                            <FieldHelpPopover
+                                                title="Pills per Dose"
+                                                content="How many tablets, capsules, or units are subtracted each time one scheduled dose occurs (e.g. 1, 0.5, or 2)."
+                                            />
+                                        </div>
                                         <input
                                             type="number"
                                             step="0.25"
@@ -2631,7 +2714,13 @@ function MedicationModal({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Low-Stock Alert</label>
+                                        <div className="flex items-center gap-1 mb-1.5">
+                                            <label className="text-[11px] font-bold text-gray-400 uppercase">Low-Stock Alert</label>
+                                            <FieldHelpPopover
+                                                title="Low-Stock Alert"
+                                                content="Shows a red LOW STOCK badge on the medication card when your estimated remaining pills reach or drop below this number."
+                                            />
+                                        </div>
                                         <input
                                             type="number"
                                             step="1"
@@ -2646,7 +2735,13 @@ function MedicationModal({
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-bold text-gray-400 uppercase mb-1.5 block">Count Starts</label>
+                                    <div className="flex items-center gap-1.5 mb-1.5">
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase">Count Starts</label>
+                                        <FieldHelpPopover
+                                            title="Count Starts"
+                                            content="Choose 'Now' if today's upcoming dose hasn't been taken yet; 'After today's dose' or 'Tomorrow' if your Current Quantity already reflects today's doses so today isn't subtracted twice."
+                                        />
+                                    </div>
                                     <select
                                         value={formData.countStartOption}
                                         onChange={(e) => setFormData({ ...formData, countStartOption: e.target.value as CountStartOption, countStartChanged: true })}
@@ -3313,9 +3408,19 @@ export function PillLibraryModal({ isOpen, onClose, theme, addItem, categories, 
     )
 }
 
-// Rx Import Modal - Add specific prescriptions
-function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme, categories = [], onCreateCategory }: any) {
-    // Categories and Presets
+// Rx Import Modal - Full-viewport fit, compact 3-across cards, group-default category, Manage categories, and Safe Import
+function MockDrugsModal({
+    isOpen,
+    onClose,
+    onAddMockDrug,
+    onUpdateExistingCategory,
+    existingMedications = [],
+    theme,
+    categories = [],
+    onCreateCategory,
+    onOpenManageCategories,
+}: any) {
+    // Preset Groups (unchanged)
     const MED_CATEGORIES = [
         {
             id: "rash",
@@ -3375,10 +3480,53 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme, categories = []
 
     const [activeCategory, setActiveCategory] = useState(MED_CATEGORIES[0].id)
     const [selectedMeds, setSelectedMeds] = useState<string[]>([])
-    const [importCategory, setImportCategory] = useState<string>("Short-term / Temporary")
+    const [importCategory, setImportCategory] = useState<string>(MED_CATEGORIES[0].label)
+    const [hasManuallyPickedCategory, setHasManuallyPickedCategory] = useState(false)
+    const [duplicateAction, setDuplicateAction] = useState<"skip" | "update_category">("skip")
     const [isImporting, setIsImporting] = useState(false)
 
     const currentCat = MED_CATEGORIES.find(c => c.id === activeCategory) || MED_CATEGORIES[0]
+
+    // Combine user categories + defaults + current group name so dropdown updates live after Manage Categories
+    const dropdownCategories = useMemo(() => {
+        const set = new Set<string>(categories)
+        if (currentCat?.label) set.add(currentCat.label)
+        return Array.from(set)
+    }, [categories, currentCat])
+
+    // If a manually picked custom category was deleted in Manage Categories, sync immediately
+    useEffect(() => {
+        if (!importCategory) return
+        const groupLabels = MED_CATEGORIES.map(g => g.label.toLowerCase())
+        const existsInCategories = categories.some((c: string) => c.toLowerCase() === importCategory.toLowerCase())
+        const isPresetGroupLabel = groupLabels.includes(importCategory.toLowerCase())
+        if (!existsInCategories && !isPresetGroupLabel) {
+            setImportCategory("")
+        }
+    }, [categories])
+
+    const handleSwitchGroup = (catId: string) => {
+        setActiveCategory(catId)
+        const target = MED_CATEGORIES.find(c => c.id === catId)
+        if (target && !hasManuallyPickedCategory) {
+            setImportCategory(target.label)
+        }
+    }
+
+    const handleManualCategoryChange = (newCat: string) => {
+        setHasManuallyPickedCategory(true)
+        setImportCategory(newCat)
+    }
+
+    const findExistingMatch = (drug: { name: string; dosage: string }) => {
+        const n = drug.name.trim().toLowerCase()
+        const d = (drug.dosage || "").trim().toLowerCase()
+        return existingMedications.find((m: any) => {
+            const mName = (m.title || "").trim().toLowerCase()
+            const mDose = (m.item_metadata?.dosage || "").trim().toLowerCase()
+            return mName === n && mDose === d
+        })
+    }
 
     const handleToggleMed = (medName: string) => {
         setSelectedMeds(prev =>
@@ -3397,185 +3545,425 @@ function MockDrugsModal({ isOpen, onClose, onAddMockDrug, theme, categories = []
         }
     }
 
+    // Count how many selected presets already exist in user's medication list
+    const selectedDuplicateCount = useMemo(() => {
+        let dupes = 0
+        const seen = new Set<string>()
+        for (const cat of MED_CATEGORIES) {
+            for (const drug of cat.meds) {
+                const key = `${drug.name}__${drug.dosage}`
+                if (selectedMeds.includes(drug.name) && !seen.has(key)) {
+                    seen.add(key)
+                    if (findExistingMatch(drug)) dupes++
+                }
+            }
+        }
+        return dupes
+    }, [selectedMeds, existingMedications])
+
     const handleImportSelected = async () => {
-        if (selectedMeds.length === 0) return alert("Select at least one medication to import")
+        if (selectedMeds.length === 0) {
+            toast.error("Select at least one medication to import")
+            return
+        }
 
         setIsImporting(true)
         try {
-            let count = 0
+            let addedCount = 0
+            let skippedCount = 0
+            let updatedCatCount = 0
+            const processedKeys = new Set<string>()
+
             for (const cat of MED_CATEGORIES) {
                 for (const drug of cat.meds) {
-                    if (selectedMeds.includes(drug.name)) {
-                        // Logic to calculate reminders based on frequency strings
-                        let reminders: string[] = []
-                        if (drug.frequency.includes("Once daily")) reminders = ["09:00"]
-                        else if (drug.frequency.includes("Twice daily")) reminders = ["09:00", "20:00"]
-                        else if (drug.frequency.includes("Every 4 hours")) reminders = ["08:00", "12:00", "16:00", "20:00"]
-                        else if (drug.frequency.includes("Every 6 hours")) reminders = ["06:00", "12:00", "18:00", "00:00"]
-                        else if (drug.frequency.includes("Every 12 hours")) reminders = ["08:00", "20:00"]
+                    if (!selectedMeds.includes(drug.name)) continue
+                    const dedupeKey = `${drug.name.toLowerCase()}__${(drug.dosage || "").toLowerCase()}`
+                    if (processedKeys.has(dedupeKey)) continue
+                    processedKeys.add(dedupeKey)
 
-                        await onAddMockDrug({
-                            name: drug.name,
-                            category: importCategory,
-                            dosage: drug.dosage,
-                            frequency: drug.frequency,
-                            prescribedBy: "Quick Import",
-                            purpose: drug.purpose,
-                            sideEffects: "",
-                            refillDate: "",
-                            nextDose: new Date(Date.now() + 3600000).toISOString(), // Start in 1 hour
-                            pillShape: drug.shape || "round",
-                            pillColor: drug.color || "#FFFFFF",
-                            quantity: drug.quantity,
-                            totalQuantity: drug.quantity,
-                            reminders: reminders,
-                            notes: "Imported from " + cat.label
-                        })
-                        count++
+                    const existing = findExistingMatch(drug)
+                    if (existing) {
+                        if (duplicateAction === "update_category" && onUpdateExistingCategory) {
+                            await onUpdateExistingCategory(existing, importCategory)
+                            updatedCatCount++
+                        } else {
+                            skippedCount++
+                        }
+                        continue
                     }
+
+                    // Safe Import: Track pill count OFF and no reminder times unless the preset explicitly defines them
+                    const presetReminders = Array.isArray((drug as any).reminders) ? (drug as any).reminders : []
+
+                    await onAddMockDrug({
+                        name: drug.name,
+                        category: importCategory,
+                        dosage: drug.dosage,
+                        frequency: drug.frequency,
+                        prescribedBy: "Quick Import",
+                        purpose: drug.purpose,
+                        sideEffects: "",
+                        refillDate: "",
+                        nextDose: "",
+                        pillShape: drug.shape || "round",
+                        pillColor: drug.color || "#FFFFFF",
+                        trackInventory: false,
+                        quantity: 0,
+                        totalQuantity: 0,
+                        reminders: presetReminders,
+                        notes: "Imported from " + cat.label
+                    })
+                    addedCount++
                 }
             }
-            alert(`✅ Successfully imported ${count} medications!`)
+
+            const parts: string[] = []
+            if (addedCount > 0) parts.push(`Imported ${addedCount} medication${addedCount === 1 ? "" : "s"}`)
+            if (updatedCatCount > 0) parts.push(`updated category on ${updatedCatCount} existing`)
+            if (skippedCount > 0) parts.push(`skipped ${skippedCount} already in your list`)
+
+            toast.success(parts.length > 0 ? parts.join(", ") : "No changes needed")
             onClose()
         } catch (e) {
             console.error(e)
-            alert("Error importing medications")
+            toast.error("Error importing medications")
         } finally {
             setIsImporting(false)
         }
     }
 
+    if (!isOpen) return null
+
+    const getPresetShapeIcon = (shape?: string) => {
+        const norm = normalizePillShape(shape)
+        return PILL_SHAPES.find(s => s.id === norm)?.icon || Circle
+    }
+
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 overflow-y-auto">
-            <div className={`w-full max-w-6xl rounded-[2.5rem] p-8 md:p-12 shadow-[0_0_50px_rgba(0,0,0,0.5)] border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-[#121212] border-white/10'}`}>
-                <div className="flex justify-between items-start mb-10">
-                    <div>
-                        <h2 className="text-4xl font-black italic uppercase tracking-tighter text-white flex items-center gap-4">
-                            <Download className="h-10 w-10 text-purple-500" />
-                            Rx Quick Import
+        <div
+            className="fixed inset-0 z-[115] h-[100dvh] w-full bg-black/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-3 overflow-hidden"
+            onClick={onClose}
+        >
+            <div
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                    paddingTop: "max(0.5rem, env(safe-area-inset-top))",
+                    paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+                }}
+                className={`w-full max-w-6xl h-[100dvh] sm:h-[min(92dvh,860px)] max-h-[100dvh] flex flex-col overflow-hidden sm:rounded-2xl shadow-2xl border ${
+                    theme === 'light' ? 'bg-white border-gray-200 text-gray-900' : 'bg-[#121212] border-white/10 text-white'
+                }`}
+            >
+                {/* 1. STICKY HEADER */}
+                <header className="shrink-0 px-4 sm:px-5 py-2.5 border-b border-white/10 flex items-center justify-between gap-3 bg-[#151515]">
+                    <div className="min-w-0">
+                        <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2 leading-tight">
+                            <Download className="h-5 w-5 text-purple-400 shrink-0" />
+                            <span className="truncate">Rx Quick Import</span>
                         </h2>
-                        <p className="text-gray-500 font-bold uppercase tracking-widest text-sm mt-2">Select category and import sets or individual meds</p>
+                        <p className="text-xs text-gray-400 truncate">
+                            Select a preset group and pick individual templates or whole sets to import
+                        </p>
                     </div>
-                    <button onClick={onClose} className="p-4 hover:bg-white/5 rounded-full transition-all group">
-                        <X className="h-8 w-8 text-gray-500 group-hover:text-white transition-colors" />
-                    </button>
-                </div>
+                    <HealthTooltip content="Close Rx Quick Import">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            aria-label="Close Rx Quick Import"
+                            className="h-9 w-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 flex items-center justify-center text-gray-200 hover:text-white transition-colors shrink-0 cursor-pointer"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </HealthTooltip>
+                </header>
 
-                {/* Main Content Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                    {/* Left Sidebar: Categories */}
-                    <div className="lg:col-span-1 space-y-3">
-                        <div className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-4 pl-2">Categories</div>
-                        {MED_CATEGORIES.map(cat => (
-                            <button
-                                key={cat.id}
-                                onClick={() => setActiveCategory(cat.id)}
-                                className={`w-full flex items-center gap-4 p-5 rounded-2xl border-2 transition-all ${activeCategory === cat.id
-                                    ? 'bg-purple-600/10 border-purple-500 text-white shadow-lg'
-                                    : 'bg-white/5 border-transparent text-gray-500 hover:bg-white/10'}`}
-                            >
-                                <cat.icon className={`h-6 w-6 ${activeCategory === cat.id ? 'text-purple-400' : 'text-gray-600'}`} />
-                                <span className={`font-black uppercase italic tracking-tighter text-lg`}>{cat.label}</span>
-                            </button>
-                        ))}
+                {/* 2. MIDDLE AREA (ONLY THIS SCROLLS) */}
+                <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
+                    {/* Mobile Group Selector (compact wrapping chips, zero horizontal scroll) */}
+                    <div className="md:hidden shrink-0 px-3 py-2 border-b border-white/10 bg-[#161616]">
+                        <div className="flex flex-wrap gap-1.5">
+                            {MED_CATEGORIES.map(cat => {
+                                const active = activeCategory === cat.id
+                                return (
+                                    <button
+                                        key={cat.id}
+                                        type="button"
+                                        onClick={() => handleSwitchGroup(cat.id)}
+                                        className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                                            active
+                                                ? 'bg-purple-600/25 border-purple-500 text-white'
+                                                : 'bg-white/5 border-white/10 text-gray-400 hover:text-white'
+                                        }`}
+                                    >
+                                        <cat.icon className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-purple-300' : 'text-gray-500'}`} />
+                                        <span className="leading-tight text-left">{cat.label}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
 
-                    {/* Right Panel: Med Selection */}
-                    <div className="lg:col-span-3 space-y-6">
-                        <div className="flex justify-between items-center bg-white/5 p-6 rounded-3xl border border-white/5">
-                            <div className="flex items-center gap-4">
-                                <div className={`p-4 rounded-2xl bg-gradient-to-br ${currentCat.id === 'rash' ? 'from-red-500/20 to-orange-500/20' : currentCat.id === 'cold' ? 'from-blue-500/20 to-cyan-500/20' : currentCat.id === 'pain' ? 'from-purple-500/20 to-pink-500/20' : 'from-teal-500/20 to-emerald-500/20'}`}>
-                                    <currentCat.icon className={`h-8 w-8 ${currentCat.color}`} />
+                    {/* Desktop/Tablet Narrow Left Group List */}
+                    <aside className="hidden md:flex md:w-48 lg:w-56 shrink-0 flex-col border-r border-white/10 p-3 space-y-1.5 overflow-y-auto custom-scrollbar bg-[#141414]">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500 px-1.5 pb-1">
+                            Preset Groups
+                        </div>
+                        {MED_CATEGORIES.map(cat => {
+                            const active = activeCategory === cat.id
+                            return (
+                                <HealthTooltip key={cat.id} content={`View ${cat.label} templates (${cat.meds.length} presets)`} side="right">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSwitchGroup(cat.id)}
+                                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                                            active
+                                                ? 'bg-purple-600/20 border-purple-500 text-white shadow-sm'
+                                                : 'bg-white/[0.03] border-transparent text-gray-400 hover:bg-white/[0.07] hover:text-gray-200'
+                                        }`}
+                                    >
+                                        <cat.icon className={`h-4 w-4 shrink-0 ${active ? 'text-purple-400' : 'text-gray-500'}`} />
+                                        <span className="text-xs font-semibold leading-snug line-clamp-2">{cat.label}</span>
+                                    </button>
+                                </HealthTooltip>
+                            )
+                        })}
+                    </aside>
+
+                    {/* Scrollable Right Panel: Group Header + Compact 3-Across Medication Cards */}
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-3 sm:p-4 space-y-3 custom-scrollbar">
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.04] border border-white/10">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`p-2 rounded-lg shrink-0 bg-gradient-to-br ${
+                                    currentCat.id === 'rash'
+                                        ? 'from-red-500/20 to-orange-500/20'
+                                        : currentCat.id === 'cold'
+                                        ? 'from-blue-500/20 to-cyan-500/20'
+                                        : currentCat.id === 'pain'
+                                        ? 'from-purple-500/20 to-pink-500/20'
+                                        : 'from-teal-500/20 to-emerald-500/20'
+                                }`}>
+                                    <currentCat.icon className={`h-5 w-5 ${currentCat.color}`} />
                                 </div>
-                                <div>
-                                    <h3 className="text-2xl font-black uppercase italic tracking-tighter">{currentCat.label}</h3>
-                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">{currentCat.meds.length} Presets Available</p>
+                                <div className="min-w-0">
+                                    <h3 className="text-sm sm:text-base font-bold text-white leading-tight">{currentCat.label}</h3>
+                                    <p className="text-[11px] text-gray-400">{currentCat.meds.length} preset templates</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={handleSelectAll}
-                                className="px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-black uppercase tracking-widest transition-all"
-                            >
-                                {currentCat.meds.every(m => selectedMeds.includes(m.name)) ? 'Deselect All' : 'Select All in Category'}
-                            </button>
+                            <HealthTooltip content={currentCat.meds.every(m => selectedMeds.includes(m.name)) ? "Uncheck all templates in this group" : "Select all templates in this group"}>
+                                <button
+                                    type="button"
+                                    onClick={handleSelectAll}
+                                    className="h-8 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-gray-200 transition-colors cursor-pointer shrink-0"
+                                >
+                                    {currentCat.meds.every(m => selectedMeds.includes(m.name)) ? 'Deselect All' : 'Select All in Group'}
+                                </button>
+                            </HealthTooltip>
                         </div>
 
-                        {/* Med Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar p-1">
-                            {currentCat.meds.map((med, idx) => (
-                                <div
-                                    key={idx}
-                                    onClick={() => handleToggleMed(med.name)}
-                                    className={`p-6 rounded-[2rem] border-2 transition-all cursor-pointer group relative ${selectedMeds.includes(med.name)
-                                        ? 'bg-purple-600/10 border-purple-500/50 shadow-xl'
-                                        : 'bg-black/20 border-white/5 hover:border-white/10'}`}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`p-4 rounded-xl transition-all ${selectedMeds.includes(med.name) ? 'bg-purple-500 text-white' : 'bg-white/5 text-gray-500 group-hover:text-white'}`}>
-                                            <Circle className="h-8 w-8" fill={med.color} stroke="white" strokeWidth={0.5} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex justify-between items-start">
-                                                <h4 className="text-xl font-black uppercase italic tracking-tighter truncate pr-8">{med.name}</h4>
-                                                <div className={`h-6 w-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedMeds.includes(med.name) ? 'bg-purple-500 border-purple-500' : 'border-gray-700'}`}>
-                                                    {selectedMeds.includes(med.name) && <Check className="h-4 w-4 text-white" />}
+                        {/* Compact Medication Cards Grid: 1 on phones, 2 on tablets, 3+ on desktop */}
+                        <div className="grid grid-cols-1 sm:[grid-template-columns:repeat(auto-fill,minmax(220px,1fr))] gap-2.5">
+                            {currentCat.meds.map((med, idx) => {
+                                const isSelected = selectedMeds.includes(med.name)
+                                const existingMatch = findExistingMatch(med)
+                                const ShapeIcon = getPresetShapeIcon(med.shape)
+                                return (
+                                    <div
+                                        key={idx}
+                                        onClick={() => handleToggleMed(med.name)}
+                                        role="checkbox"
+                                        aria-checked={isSelected}
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault()
+                                                handleToggleMed(med.name)
+                                            }
+                                        }}
+                                        className={`p-3 rounded-xl border transition-all cursor-pointer select-none flex flex-col justify-between gap-2 ${
+                                            isSelected
+                                                ? 'bg-purple-600/15 border-purple-500 shadow-md'
+                                                : 'bg-white/[0.02] border-white/10 hover:border-white/25 hover:bg-white/[0.04]'
+                                        }`}
+                                    >
+                                        <div className="flex items-start gap-2.5">
+                                            <div className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                                                isSelected ? 'bg-purple-500/25 border-purple-400/40' : 'bg-white/5 border-white/10'
+                                            }`}>
+                                                <ShapeIcon
+                                                    className="h-4 w-4"
+                                                    fill={med.color}
+                                                    stroke="white"
+                                                    strokeWidth={1}
+                                                    style={{ color: med.color }}
+                                                />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between gap-1.5">
+                                                    <h4 className="text-sm font-bold text-white leading-snug line-clamp-2 break-words">
+                                                        {med.name}
+                                                    </h4>
+                                                    <div className={`h-4 w-4 mt-0.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                                                        isSelected ? 'bg-purple-600 border-purple-500' : 'border-gray-600 bg-black/30'
+                                                    }`}>
+                                                        {isSelected && <Check className="h-3 w-3 text-white" />}
+                                                    </div>
+                                                </div>
+                                                <div className="text-xs font-semibold text-purple-300 mt-0.5">
+                                                    {med.dosage}
                                                 </div>
                                             </div>
-                                            <div className="text-sm font-black text-gray-500 uppercase tracking-widest mt-1">{med.dosage}</div>
-                                            <div className="flex flex-wrap gap-2 mt-4 text-[10px] font-black uppercase tracking-widest">
-                                                <span className="px-2 py-1 bg-white/5 rounded-lg border border-white/5">{med.frequency}</span>
-                                                <span className="px-2 py-1 bg-white/5 rounded-lg border border-white/5 text-gray-500">{med.purpose}</span>
-                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-1 pt-0.5 text-[10px]">
+                                            <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-300 font-medium">
+                                                {med.frequency}
+                                            </span>
+                                            <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 truncate max-w-full">
+                                                {med.purpose}
+                                            </span>
+                                            {existingMatch && (
+                                                <HealthTooltip content="A medication with this exact name and strength is already in your list. Skipped on import unless you choose 'Update category' below.">
+                                                    <span className="px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/35 text-amber-300 font-semibold">
+                                                        Already in your list
+                                                    </span>
+                                                </HealthTooltip>
+                                            )}
                                         </div>
                                     </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+
+                {/* 3. STICKY FOOTER */}
+                <footer className="shrink-0 px-3 sm:px-5 py-2.5 border-t border-white/10 bg-[#151515] space-y-2.5">
+                    {/* Row A: Category Dropdown + Manage Categories + Duplicate Handling */}
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
+                                    Assign medication category
+                                </span>
+                                <FieldHelpPopover
+                                    title="Assign Medication Category"
+                                    content="Defaults to the current preset group name until you pick another category. Imported drugs start safe with Track pill count OFF and no reminder alarms."
+                                />
+                                {onOpenManageCategories && (
+                                    <HealthTooltip content="Create, rename, or delete medication categories">
+                                        <button
+                                            type="button"
+                                            onClick={onOpenManageCategories}
+                                            className="ml-1 text-xs text-purple-400 hover:text-purple-300 underline underline-offset-2 font-semibold cursor-pointer"
+                                        >
+                                            Manage categories
+                                        </button>
+                                    </HealthTooltip>
+                                )}
+                            </div>
+                            <div className="w-full sm:w-64">
+                                <MedicationCategorySelect
+                                    compact
+                                    label=""
+                                    value={importCategory}
+                                    onChange={handleManualCategoryChange}
+                                    categories={dropdownCategories}
+                                    onCreateCategory={(newCat) => {
+                                        onCreateCategory?.(newCat)
+                                        setHasManuallyPickedCategory(true)
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        {selectedDuplicateCount > 0 && (
+                            <div className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-500/30 rounded-lg px-2.5 py-1.5">
+                                <span className="text-amber-300 font-medium">
+                                    {selectedDuplicateCount} already in list:
+                                </span>
+                                <div className="inline-flex rounded-md bg-black/40 p-0.5 border border-white/10">
+                                    <HealthTooltip content="Skip medications that are already in your list">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDuplicateAction("skip")}
+                                            className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                                                duplicateAction === "skip" ? "bg-amber-600 text-white" : "text-gray-300 hover:text-white"
+                                            }`}
+                                        >
+                                            Skip
+                                        </button>
+                                    </HealthTooltip>
+                                    <HealthTooltip content="Keep existing medication details and only update its category to the one chosen here">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDuplicateAction("update_category")}
+                                            className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                                                duplicateAction === "update_category" ? "bg-purple-600 text-white" : "text-gray-300 hover:text-white"
+                                            }`}
+                                        >
+                                            Update category
+                                        </button>
+                                    </HealthTooltip>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Footer Actions */}
-                <div className="mt-10 pt-8 border-t border-white/5 space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/[0.03] border border-white/10">
-                        <div>
-                            <div className="text-xs font-bold uppercase tracking-wider text-purple-300">Assign Medication Category</div>
-                            <div className="text-xs text-gray-400">Imported medications will be saved under this category</div>
-                        </div>
-                        <div className="w-full sm:w-72">
-                            <MedicationCategorySelect
-                                value={importCategory}
-                                onChange={setImportCategory}
-                                categories={categories}
-                                onCreateCategory={onCreateCategory}
-                            />
-                        </div>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="flex items-center gap-4">
-                            <div className="text-3xl font-black italic uppercase tracking-tighter text-purple-500">{selectedMeds.length}</div>
-                            <div className="text-xs font-black uppercase tracking-widest text-gray-500 border-l border-white/10 pl-4 py-1">Medications Selected for Import</div>
-                            {selectedMeds.length > 0 && (
-                                <button onClick={() => setSelectedMeds([])} className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 ml-4">Clear All</button>
-                            )}
+                    {/* Row B: Selected Counter + Clear All + Disclaimer + Action Buttons */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1 border-t border-white/5">
+                        <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                            <div className="inline-flex items-center gap-1.5 text-xs">
+                                <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/30 text-purple-300 font-bold">
+                                    {selectedMeds.length}
+                                </span>
+                                <span className="text-gray-300 font-medium">selected</span>
+                                {selectedMeds.length > 0 && (
+                                    <HealthTooltip content="Uncheck all selected templates">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedMeds([])}
+                                            className="text-xs font-semibold text-red-400 hover:text-red-300 ml-1 cursor-pointer"
+                                        >
+                                            Clear all
+                                        </button>
+                                    </HealthTooltip>
+                                )}
+                            </div>
+                            <span className="text-[11px] text-gray-400">
+                                Preset doses are templates. Check them against your prescription.
+                            </span>
                         </div>
-                        <div className="flex gap-4 w-full md:w-auto">
-                            <button
-                                onClick={onClose}
-                                className="flex-1 md:flex-none px-10 py-5 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase italic tracking-tighter transition-all"
-                            >
-                                Back To Hub
-                            </button>
-                            <button
-                                onClick={handleImportSelected}
-                                disabled={selectedMeds.length === 0 || isImporting}
-                                className="flex-1 md:flex-none px-12 py-5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-black uppercase italic tracking-tighter hover:from-purple-500 hover:to-pink-500 transition-all shadow-[0_10px_30px_rgba(147,51,234,0.3)] disabled:opacity-50 disabled:grayscale flex items-center justify-center gap-3"
-                            >
-                                {isImporting ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Plus className="h-6 w-6" /> Import Selected Now</>}
-                            </button>
+
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+                            <HealthTooltip content="Close without importing">
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    className="h-9 px-3.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 text-xs font-semibold transition-colors cursor-pointer"
+                                >
+                                    Back to hub
+                                </button>
+                            </HealthTooltip>
+                            <HealthTooltip content="Import selected medications with Track pill count OFF">
+                                <button
+                                    type="button"
+                                    onClick={handleImportSelected}
+                                    disabled={selectedMeds.length === 0 || isImporting}
+                                    className="h-9 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-900/30 disabled:opacity-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                                >
+                                    {isImporting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <Plus className="h-4 w-4" />
+                                            <span>Import selected now</span>
+                                        </>
+                                    )}
+                                </button>
+                            </HealthTooltip>
                         </div>
                     </div>
-                </div>
+                </footer>
             </div>
         </div>
     )

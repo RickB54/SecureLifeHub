@@ -20,6 +20,7 @@ import {
   FileDown,
 } from "lucide-react"
 import type { DoctorOption, FacilityOption } from "./health-field-helpers"
+import { HealthTooltip } from "./health-tooltip"
 import type { PillCountEstimate } from "@/lib/pill-count"
 import {
   UNCATEGORIZED_MED_CATEGORY,
@@ -91,65 +92,75 @@ export default function MedicationDetailView({
     <div className="fixed inset-0 z-[100] bg-[#121212] text-white flex flex-col overflow-hidden">
       {/* Sticky Compact Header */}
       <header className="sticky top-0 z-10 bg-[#181818]/95 backdrop-blur-md border-b border-white/10 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Back</span>
-        </button>
+        <HealthTooltip content="Back to Medications list">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-200 text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back</span>
+          </button>
+        </HealthTooltip>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           {onExport && (
             <>
-              <button
-                type="button"
-                onClick={onExport}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                title="Print medication"
-                aria-label="Print medication"
-              >
-                <Printer className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={onExport}
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                title="Export PDF"
-                aria-label="Export PDF"
-              >
-                <FileDown className="h-4 w-4" />
-              </button>
+              <HealthTooltip content="Print this medication">
+                <button
+                  type="button"
+                  onClick={onExport}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Print medication"
+                >
+                  <Printer className="h-4 w-4" />
+                </button>
+              </HealthTooltip>
+              <HealthTooltip content="Export PDF or copy plain text for this medication">
+                <button
+                  type="button"
+                  onClick={onExport}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer"
+                  aria-label="Export PDF"
+                >
+                  <FileDown className="h-4 w-4" />
+                </button>
+              </HealthTooltip>
             </>
           )}
           {onLookupDrug && (
+            <HealthTooltip content="Look up clinical uses, side effects, and interactions">
+              <button
+                type="button"
+                onClick={() => onLookupDrug(data.name)}
+                aria-label="Look up AI Drug Info"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/25 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Med Info</span>
+              </button>
+            </HealthTooltip>
+          )}
+          <HealthTooltip content="Edit medication fields, category, schedule, or pill count">
             <button
               type="button"
-              onClick={() => onLookupDrug(data.name)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 border border-blue-500/25 text-xs font-semibold transition-colors cursor-pointer"
+              onClick={onEdit}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-colors cursor-pointer"
             >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">AI Info</span>
+              <Edit className="h-3.5 w-3.5" />
+              <span>Edit</span>
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <Edit className="h-3.5 w-3.5" />
-            <span>Edit</span>
-          </button>
-          <button
-            type="button"
-            onClick={onBack}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors cursor-pointer"
-            title="Close"
-            aria-label="Close"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          </HealthTooltip>
+          <HealthTooltip content="Close detail view">
+            <button
+              type="button"
+              onClick={onBack}
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </HealthTooltip>
         </div>
       </header>
 
@@ -280,15 +291,16 @@ export default function MedicationDetailView({
                           <span className="text-gray-200 truncate">{entry.formattedTime}</span>
                         </div>
                         {onDeleteLogEntry && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteLogEntry(entry.logType, entry.index)}
-                            className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
-                            title="Delete log entry"
-                            aria-label="Delete log entry"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <HealthTooltip content="Delete this adherence log entry">
+                            <button
+                              type="button"
+                              onClick={() => onDeleteLogEntry(entry.logType, entry.index)}
+                              className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-colors shrink-0 cursor-pointer"
+                              aria-label="Delete log entry"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </HealthTooltip>
                         )}
                       </div>
                     ))}
@@ -308,19 +320,21 @@ export default function MedicationDetailView({
                 ...(data.doctorName && onOpenDoctors
                   ? {
                       doctor: (
-                        <button
-                          type="button"
-                          onClick={onOpenDoctors}
-                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium underline underline-offset-2 cursor-pointer"
-                        >
-                          <span>{data.doctorName}</span>
-                          {data.doctorSpecialty && (
-                            <span className="text-gray-400 no-underline text-xs">
-                              ({data.doctorSpecialty})
-                            </span>
-                          )}
-                          <ExternalLink className="h-3 w-3" />
-                        </button>
+                        <HealthTooltip content="Open provider in My Doctors">
+                          <button
+                            type="button"
+                            onClick={onOpenDoctors}
+                            className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium underline underline-offset-2 cursor-pointer"
+                          >
+                            <span>{data.doctorName}</span>
+                            {data.doctorSpecialty && (
+                              <span className="text-gray-400 no-underline text-xs">
+                                ({data.doctorSpecialty})
+                              </span>
+                            )}
+                            <ExternalLink className="h-3 w-3" />
+                          </button>
+                        </HealthTooltip>
                       ),
                     }
                   : {}),
@@ -336,13 +350,15 @@ export default function MedicationDetailView({
                   <Calendar className="h-3.5 w-3.5" /> Inventory &amp; Refills (Estimate)
                 </h2>
                 {onRefill && (
-                  <button
-                    type="button"
-                    onClick={onRefill}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition-colors cursor-pointer"
-                  >
-                    Refill
-                  </button>
+                  <HealthTooltip content="Record a refill and reset the remaining pill count baseline to today">
+                    <button
+                      type="button"
+                      onClick={onRefill}
+                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-[11px] font-bold transition-colors cursor-pointer"
+                    >
+                      Refill
+                    </button>
+                  </HealthTooltip>
                 )}
               </div>
               {renderFieldRows(data.inventoryRows)}

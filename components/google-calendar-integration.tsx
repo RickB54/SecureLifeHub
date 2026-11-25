@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { toast } from "sonner"
 import { GoogleCalendarItem, GoogleCalendarEventItem } from "@/lib/google-calendar"
+import { HealthTooltip } from "./health-ui/health-tooltip"
 
 interface GoogleCalendarIntegrationProps {
   theme: string
@@ -401,24 +402,26 @@ export default function GoogleCalendarIntegration({
             <CalendarIcon className="h-4 w-4 text-blue-400 shrink-0" />
             <span>Google Calendar not connected (optional)</span>
           </div>
-          <button
-            type="button"
-            onClick={handleConnect}
-            disabled={isLoading}
-            className="h-8 px-3 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {isLoading ? (
-              <>
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                <span>Connecting...</span>
-              </>
-            ) : (
-              <>
-                <CalendarIcon className="h-3.5 w-3.5" />
-                <span>Connect Google Calendar</span>
-              </>
-            )}
-          </button>
+          <HealthTooltip content="Connect your Google account to view upcoming calendar events alongside your Health Hub appointments">
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={isLoading}
+              className="h-8 px-3 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Connecting...</span>
+                </>
+              ) : (
+                <>
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  <span>Connect Google Calendar</span>
+                </>
+              )}
+            </button>
+          </HealthTooltip>
         </div>
         {error && (
           <div className="p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2 text-xs text-amber-300 whitespace-pre-wrap">
@@ -476,33 +479,40 @@ export default function GoogleCalendarIntegration({
           )}
 
           {/* Refresh on-demand */}
-          <button
-            onClick={() => loadEvents(true)}
-            disabled={isRefreshing || isLoading}
-            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700"
-            title="Refresh events (caches for 10 minutes)"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-blue-400" : ""}`} />
-            <span>Refresh</span>
-          </button>
+          <HealthTooltip content="Refresh calendar events from Google (cached for 10 minutes)">
+            <button
+              type="button"
+              onClick={() => loadEvents(true)}
+              disabled={isRefreshing || isLoading}
+              className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer border border-slate-700"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-blue-400" : ""}`} />
+              <span>Refresh</span>
+            </button>
+          </HealthTooltip>
 
           {/* Schedule button */}
-          <button
-            onClick={onScheduleAppointment}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" /> Schedule Visit
-          </button>
+          <HealthTooltip content="Schedule a new appointment in Health Hub">
+            <button
+              type="button"
+              onClick={onScheduleAppointment}
+              className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-md shadow-blue-500/20 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" /> Schedule Visit
+            </button>
+          </HealthTooltip>
 
           {/* Disconnect button */}
-          <button
-            onClick={handleDisconnect}
-            disabled={isLoading}
-            className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/30 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
-            title="Disconnect Google Calendar"
-          >
-            <LogOut className="h-3.5 w-3.5" /> Disconnect
-          </button>
+          <HealthTooltip content="Disconnect Google Calendar and revoke saved tokens">
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={isLoading}
+              className="px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/30 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Disconnect
+            </button>
+          </HealthTooltip>
         </div>
       </div>
 

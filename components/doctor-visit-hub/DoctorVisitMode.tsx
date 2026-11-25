@@ -1,8 +1,10 @@
 "use client"
 
-import React from "react"
+import React, { useState } from "react"
 import {
   Printer,
+  Copy,
+  Check,
   X,
   Calendar,
   AlertTriangle,
@@ -16,6 +18,8 @@ import {
   MapPin,
   CheckCircle2,
 } from "lucide-react"
+import { toast } from "sonner"
+import { HealthTooltip } from "@/components/health-ui/health-tooltip"
 import {
   HealthProfile,
   HealthQuestion,
@@ -53,8 +57,45 @@ export default function DoctorVisitMode({
   visitSummaries = [],
   theme = "dark",
 }: DoctorVisitModeProps) {
+  const [copiedText, setCopiedText] = useState(false)
+
   const handlePrint = () => {
     window.print()
+  }
+
+  const handleCopyAsText = async () => {
+    const lines: string[] = [
+      `DOCTOR VISIT SUMMARY — ${new Date().toLocaleDateString()}`,
+      "==================================================",
+    ]
+    if (nextAppt) {
+      lines.push(`Next Appointment: ${nextAppt.doctor || nextAppt.title}${nextAppt.facility_name ? ` (${nextAppt.facility_name})` : ""} — ${nextAppt.date}`)
+    }
+    lines.push(`Allergies: ${profile.allergies || "No known drug allergies reported"}`)
+    lines.push(`Conditions: ${profile.conditions || "None listed"}`)
+    lines.push("")
+    lines.push(`CURRENT MEDICATIONS (${medications.length}):`)
+    if (medications.length === 0) {
+      lines.push("  - None listed")
+    } else {
+      medications.forEach((m) => {
+        lines.push(`  - ${m.name}${m.dose ? ` ${m.dose}` : ""}${m.frequency ? ` (${m.frequency})` : ""}${m.instructions ? ` — ${m.instructions}` : ""}`)
+      })
+    }
+    const pendingQs = questions.filter((q) => !q.answered)
+    if (pendingQs.length > 0) {
+      lines.push("")
+      lines.push(`QUESTIONS FOR DOCTOR (${pendingQs.length}):`)
+      pendingQs.forEach((q, idx) => lines.push(`  ${idx + 1}. ${q.question}`))
+    }
+    try {
+      await navigator.clipboard.writeText(lines.join("\n"))
+      setCopiedText(true)
+      setTimeout(() => setCopiedText(false), 2000)
+      toast.success("Copied visit summary as plain text")
+    } catch {
+      toast.error("Unable to copy text")
+    }
   }
 
   const unansweredQuestions = questions.filter((q) => !q.answered)
@@ -119,23 +160,36 @@ export default function DoctorVisitMode({
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
-            title="Print or Save as PDF"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print / PDF</span>
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
-            title="Exit Visit Mode"
-          >
-            <X className="h-6 w-6" />
-          </button>
+          <HealthTooltip content="Copy a plain-text consultation summary for a patient portal message">
+            <button
+              type="button"
+              onClick={handleCopyAsText}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-gray-100 font-bold text-xs sm:text-sm transition-all cursor-pointer"
+            >
+              {copiedText ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              <span>{copiedText ? "Copied!" : "Copy as text"}</span>
+            </button>
+          </HealthTooltip>
+          <HealthTooltip content="Print or save this high-contrast visit sheet as PDF">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-500/20 transition-all cursor-pointer"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print / PDF</span>
+            </button>
+          </HealthTooltip>
+          <HealthTooltip content="Exit Visit Mode and return to Doctor Visit Hub">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Exit Visit Mode"
+              className="p-2 rounded-xl hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </HealthTooltip>
         </div>
       </header>
 

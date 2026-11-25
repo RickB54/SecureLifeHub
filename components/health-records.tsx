@@ -35,6 +35,7 @@ import {
     resolveFacilityInfo,
 } from "@/lib/health-store"
 import { prepareHealthAttachment } from "@/lib/image-downsize"
+import { HealthTooltip } from "./health-ui/health-tooltip"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -1367,45 +1368,48 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                 <p className={`text-xs text-gray-400 italic flex-1 ${isExpanded ? "whitespace-pre-wrap break-words" : "truncate"}`}>
                                     {apt.item_metadata.notes}
                                 </p>
-                                <button
-                                    type="button"
-                                    onClick={() => setExpandedApptIds(prev => ({ ...prev, [apt.id]: !prev[apt.id] }))}
-                                    className="p-1 rounded-md hover:bg-white/10 text-gray-400 hover:text-white shrink-0 transition-colors cursor-pointer"
-                                    title={isExpanded ? "Collapse notes" : "Expand full notes"}
-                                    aria-label={isExpanded ? "Collapse notes" : "Expand full notes"}
-                                >
-                                    {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
-                                </button>
+                                <HealthTooltip content={isExpanded ? "Collapse appointment notes" : "Expand full appointment notes"}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setExpandedApptIds(prev => ({ ...prev, [apt.id]: !prev[apt.id] }))}
+                                        className="p-1 rounded-md hover:bg-white/10 text-gray-400 hover:text-white shrink-0 transition-colors cursor-pointer"
+                                        aria-label={isExpanded ? "Collapse notes" : "Expand full notes"}
+                                    >
+                                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <Info className="h-3.5 w-3.5" />}
+                                    </button>
+                                </HealthTooltip>
                             </div>
                         )}
                     </div>
 
                     {/* Bottom Row: Icon-only Edit & Delete */}
                     <div className="flex items-center justify-end gap-1 pt-2 mt-1 border-t border-white/10">
-                        <button
-                            type="button"
-                            onClick={() => openEditAppointment(apt)}
-                            className="h-8 w-8 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 inline-flex items-center justify-center transition-colors cursor-pointer"
-                            title="Edit appointment"
-                            aria-label="Edit appointment"
-                        >
-                            <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                if (confirm("Delete this appointment?")) {
-                                    await deleteItem(apt.id)
-                                    removeSharedHealthRecord(apt.id)
-                                    toast.success("Appointment removed")
-                                }
-                            }}
-                            className="h-8 w-8 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 inline-flex items-center justify-center transition-colors cursor-pointer"
-                            title="Delete appointment"
-                            aria-label="Delete appointment"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </button>
+                        <HealthTooltip content="Edit appointment">
+                            <button
+                                type="button"
+                                onClick={() => openEditAppointment(apt)}
+                                className="h-8 w-8 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                aria-label="Edit appointment"
+                            >
+                                <Edit className="h-4 w-4" />
+                            </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Delete appointment">
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    if (confirm("Delete this appointment?")) {
+                                        await deleteItem(apt.id)
+                                        removeSharedHealthRecord(apt.id)
+                                        toast.success("Appointment removed")
+                                    }
+                                }}
+                                className="h-8 w-8 rounded-lg bg-red-500/15 hover:bg-red-500/25 text-red-400 inline-flex items-center justify-center transition-colors cursor-pointer"
+                                aria-label="Delete appointment"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        </HealthTooltip>
                     </div>
                 </div>
             )
@@ -1421,25 +1425,28 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
                         {apptsWithLegacyReminders.length > 0 && (
+                            <HealthTooltip content="Cancel any previously scheduled email reminders and clear legacy reminder metadata">
+                                <button
+                                    type="button"
+                                    disabled={cancellingOldReminders}
+                                    onClick={handleCancelOldEmailReminders}
+                                    className="h-8 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                                    <span>{cancellingOldReminders ? "Cancelling..." : "Cancel old email reminders"}</span>
+                                </button>
+                            </HealthTooltip>
+                        )}
+                        <HealthTooltip content="Schedule a new medical appointment">
                             <button
                                 type="button"
-                                disabled={cancellingOldReminders}
-                                onClick={handleCancelOldEmailReminders}
-                                className="h-8 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                                title="Cancel previously scheduled Resend reminders and clear legacy metadata"
+                                onClick={openNewAppointmentModal}
+                                className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
                             >
-                                <Mail className="h-3.5 w-3.5 shrink-0" />
-                                <span>{cancellingOldReminders ? "Cancelling..." : "Cancel old email reminders"}</span>
+                                <Plus className="h-4 w-4 shrink-0" />
+                                <span>Schedule Appointment</span>
                             </button>
-                        )}
-                        <button
-                            type="button"
-                            onClick={openNewAppointmentModal}
-                            className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                            <Plus className="h-4 w-4 shrink-0" />
-                            <span>Schedule Appointment</span>
-                        </button>
+                        </HealthTooltip>
                     </div>
                 </div>
 
@@ -1484,33 +1491,36 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <div className="h-8 p-0.5 bg-[#1e1e1e] border border-white/10 rounded-lg inline-flex items-center">
                             {(
                                 [
-                                    { id: "all", label: "All" },
-                                    { id: "upcoming", label: "Upcoming" },
-                                    { id: "past", label: "Past" },
+                                    { id: "all", label: "All", tip: "Show upcoming appointments with collapsible past visits below" },
+                                    { id: "upcoming", label: "Upcoming", tip: "Show upcoming appointments" },
+                                    { id: "past", label: "Past", tip: "Show past appointments only" },
                                 ] as const
                             ).map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    onClick={() => setApptFilter(tab.id)}
-                                    className={`h-full px-3 rounded-md text-xs font-medium transition-colors cursor-pointer ${
-                                        apptFilter === tab.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
-                                    }`}
-                                >
-                                    {tab.label}
-                                </button>
+                                <HealthTooltip key={tab.id} content={tab.tip}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setApptFilter(tab.id)}
+                                        className={`h-full px-3 rounded-md text-xs font-medium transition-colors cursor-pointer ${
+                                            apptFilter === tab.id ? "bg-blue-600 text-white" : "text-gray-400 hover:text-white"
+                                        }`}
+                                    >
+                                        {tab.label}
+                                    </button>
+                                </HealthTooltip>
                             ))}
                         </div>
-                        <select
-                            value={apptSort}
-                            onChange={(e) => setApptSort(e.target.value as "soonest" | "latest" | "doctor")}
-                            className="h-8 px-2.5 bg-[#1e1e1e] border border-white/10 rounded-lg text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-                            aria-label="Sort appointments"
-                        >
-                            <option value="soonest">Soonest first</option>
-                            <option value="latest">Latest first</option>
-                            <option value="doctor">Doctor A-Z</option>
-                        </select>
+                        <HealthTooltip content="Sort appointments by date or doctor name">
+                            <select
+                                value={apptSort}
+                                onChange={(e) => setApptSort(e.target.value as "soonest" | "latest" | "doctor")}
+                                className="h-8 px-2.5 bg-[#1e1e1e] border border-white/10 rounded-lg text-xs text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                aria-label="Sort appointments"
+                            >
+                                <option value="soonest">Soonest first</option>
+                                <option value="latest">Latest first</option>
+                                <option value="doctor">Doctor A-Z</option>
+                            </select>
+                        </HealthTooltip>
                     </div>
                 </div>
 

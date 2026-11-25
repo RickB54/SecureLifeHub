@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import type { DoctorOption, FacilityOption } from "./health-field-helpers"
+import { HealthTooltip, FieldHelpPopover } from "./health-tooltip"
 import {
   DEFAULT_MED_CATEGORIES,
   MED_EXPORT_PREFS_KEY,
@@ -213,7 +214,7 @@ export function ManageCategoriesModal({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[140] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
@@ -225,9 +226,11 @@ export function ManageCategoriesModal({
             <FolderCog className="h-5 w-5 text-purple-400" />
             <h3 className="text-base font-bold">Manage Medication Categories</h3>
           </div>
-          <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-white cursor-pointer">
-            <X className="h-5 w-5" />
-          </button>
+          <HealthTooltip content="Close">
+            <button type="button" onClick={onClose} aria-label="Close manage categories" className="p-1 text-gray-400 hover:text-white cursor-pointer">
+              <X className="h-5 w-5" />
+            </button>
+          </HealthTooltip>
         </div>
 
         {/* Add new category */}
@@ -300,27 +303,31 @@ export function ManageCategoriesModal({
                       <span className="ml-2 text-xs text-gray-400">({count})</span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          setEditingCat(cat)
-                          setRenameVal(cat)
-                        }}
-                        className="p-1.5 rounded-md hover:bg-white/10 text-gray-400 hover:text-purple-300 cursor-pointer"
-                        title="Rename category"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => handleConfirmDelete(cat)}
-                        className="p-1.5 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 cursor-pointer"
-                        title="Delete category (moves meds to Uncategorized)"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <HealthTooltip content="Rename category (updates every medication using it)">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            setEditingCat(cat)
+                            setRenameVal(cat)
+                          }}
+                          aria-label={`Rename ${cat}`}
+                          className="p-1.5 rounded-md hover:bg-white/10 text-gray-400 hover:text-purple-300 cursor-pointer"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                      </HealthTooltip>
+                      <HealthTooltip content="Delete category (moves its medications to Uncategorized)">
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => handleConfirmDelete(cat)}
+                          aria-label={`Delete ${cat}`}
+                          className="p-1.5 rounded-md hover:bg-red-500/20 text-gray-400 hover:text-red-400 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </HealthTooltip>
                     </div>
                   </>
                 )}
@@ -560,39 +567,51 @@ export function MedicationExportModal({
                 : `${resolvedTargetMedications.length} of ${allMedications.length} medication(s) selected`}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-white cursor-pointer">
-            <X className="h-5 w-5" />
-          </button>
+          <HealthTooltip content="Close export dialog">
+            <button type="button" onClick={onClose} aria-label="Close export dialog" className="p-1 text-gray-400 hover:text-white cursor-pointer">
+              <X className="h-5 w-5" />
+            </button>
+          </HealthTooltip>
         </div>
 
         {/* a) Format */}
         <div className="space-y-1.5">
-          <label className="text-xs font-bold uppercase tracking-wider text-gray-400 block">Format</label>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-400">Format</label>
+            <FieldHelpPopover
+              title="Quick Reference vs Full Details"
+              content="Quick Reference prints a compact 1-page table with only refill and prescriber essentials. Full Details generates a summary table plus one complete clinical sheet per medication."
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setFormatType("quick")}
-              className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
-                formatType === "quick"
-                  ? "bg-purple-600/20 border-purple-500 text-white"
-                  : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.06]"
-              }`}
-            >
-              <div className="text-sm font-bold">Quick Reference</div>
-              <div className="text-[11px] text-gray-400 mt-0.5">Compact 1-page table for refills or handing to a doctor</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFormatType("full")}
-              className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
-                formatType === "full"
-                  ? "bg-purple-600/20 border-purple-500 text-white"
-                  : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.06]"
-              }`}
-            >
-              <div className="text-sm font-bold">Full Details</div>
-              <div className="text-[11px] text-gray-400 mt-0.5">Summary + one complete clinical sheet per medication</div>
-            </button>
+            <HealthTooltip content="One compact table for pharmacy refills or handing to a doctor (hides side effects, notes, and estimates)">
+              <button
+                type="button"
+                onClick={() => setFormatType("quick")}
+                className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+                  formatType === "quick"
+                    ? "bg-purple-600/20 border-purple-500 text-white"
+                    : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.06]"
+                }`}
+              >
+                <div className="text-sm font-bold">Quick Reference</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">Compact 1-page table for refills or handing to a doctor</div>
+              </button>
+            </HealthTooltip>
+            <HealthTooltip content="Complete clinical profile: 1-page summary followed by one detailed sheet per medication">
+              <button
+                type="button"
+                onClick={() => setFormatType("full")}
+                className={`p-3 rounded-xl border text-left transition-colors cursor-pointer ${
+                  formatType === "full"
+                    ? "bg-purple-600/20 border-purple-500 text-white"
+                    : "bg-white/[0.03] border-white/10 text-gray-300 hover:bg-white/[0.06]"
+                }`}
+              >
+                <div className="text-sm font-bold">Full Details</div>
+                <div className="text-[11px] text-gray-400 mt-0.5">Summary + one complete clinical sheet per medication</div>
+              </button>
+            </HealthTooltip>
           </div>
         </div>
 
@@ -735,9 +754,15 @@ export function MedicationExportModal({
         {/* c) Patient Name & Group by Category */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-1">
-              Patient Name (Optional)
-            </label>
+            <div className="flex items-center gap-1.5 mb-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                Patient Name (Optional)
+              </label>
+              <FieldHelpPopover
+                title="Patient Name"
+                content="Printed in the PDF/print header for your doctor or pharmacist. Saved locally on this device only — never uploaded."
+              />
+            </div>
             <input
               type="text"
               placeholder="Printed in header (saved on this device)"
@@ -747,16 +772,22 @@ export function MedicationExportModal({
             />
           </div>
           {!singleMedication && (
-            <div className="flex items-end pb-1.5">
-              <label className="flex items-center gap-2 text-xs text-gray-200 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={groupByCategory}
-                  onChange={(e) => setGroupByCategory(e.target.checked)}
-                  className="rounded border-gray-600 text-purple-600 focus:ring-0"
-                />
-                <span>Group by category</span>
-              </label>
+            <div className="flex items-end pb-1.5 gap-1.5">
+              <HealthTooltip content="Organize medications under category headings sorted A–Z within each category">
+                <label className="flex items-center gap-2 text-xs text-gray-200 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={groupByCategory}
+                    onChange={(e) => setGroupByCategory(e.target.checked)}
+                    className="rounded border-gray-600 text-purple-600 focus:ring-0"
+                  />
+                  <span>Group by category</span>
+                </label>
+              </HealthTooltip>
+              <FieldHelpPopover
+                title="Group by Category"
+                content="When ON, exported medications are grouped under their category headings (Every Day Usage, As Needed, etc.) and sorted A–Z inside each group."
+              />
             </div>
           )}
         </div>
@@ -768,66 +799,84 @@ export function MedicationExportModal({
               Full Details Options
             </div>
             <div className="flex flex-wrap gap-4 text-xs text-gray-200">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includePrivateNotes}
-                  onChange={(e) => setIncludePrivateNotes(e.target.checked)}
-                  className="rounded border-gray-600 text-purple-600 focus:ring-0"
+              <div className="inline-flex items-center gap-1">
+                <HealthTooltip content="Off by default so personal notes stay private unless you explicitly include them">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={includePrivateNotes}
+                      onChange={(e) => setIncludePrivateNotes(e.target.checked)}
+                      className="rounded border-gray-600 text-purple-600 focus:ring-0"
+                    />
+                    <span>Include private notes</span>
+                  </label>
+                </HealthTooltip>
+                <FieldHelpPopover
+                  title="Include Private Notes"
+                  content="OFF by default to protect private notes when handing a printout to a provider. Turn ON only when you want personal notes printed."
                 />
-                <span>Include private notes</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includeAdherence}
-                  onChange={(e) => setIncludeAdherence(e.target.checked)}
-                  className="rounded border-gray-600 text-purple-600 focus:ring-0"
-                />
-                <span>Include adherence</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={includeMedInfo}
-                  onChange={(e) => setIncludeMedInfo(e.target.checked)}
-                  className="rounded border-gray-600 text-purple-600 focus:ring-0"
-                />
-                <span>Include Med Info text</span>
-              </label>
+              </div>
+              <HealthTooltip content="Include Taken and Skipped dose log summary and recent timestamps">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeAdherence}
+                    onChange={(e) => setIncludeAdherence(e.target.checked)}
+                    className="rounded border-gray-600 text-purple-600 focus:ring-0"
+                  />
+                  <span>Include adherence</span>
+                </label>
+              </HealthTooltip>
+              <HealthTooltip content="Include saved clinical drug reference text for the selected medications">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={includeMedInfo}
+                    onChange={(e) => setIncludeMedInfo(e.target.checked)}
+                    className="rounded border-gray-600 text-purple-600 focus:ring-0"
+                  />
+                  <span>Include Med Info text</span>
+                </label>
+              </HealthTooltip>
             </div>
           </div>
         )}
 
         {/* e) Action Buttons */}
         <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-white/10">
-          <button
-            type="button"
-            disabled={exporting}
-            onClick={() => runAction("copy")}
-            className="h-9 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
-            <span>{copied ? "Copied!" : "Copy as text"}</span>
-          </button>
-          <button
-            type="button"
-            disabled={exporting}
-            onClick={() => runAction("print")}
-            className="h-9 px-3.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <Printer className="h-4 w-4" />
-            <span>Print</span>
-          </button>
-          <button
-            type="button"
-            disabled={exporting}
-            onClick={() => runAction("pdf")}
-            className="h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-            <span>Download PDF</span>
-          </button>
+          <HealthTooltip content="Copy a clean plain-text medication list to paste into a pharmacy or patient portal message">
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => runAction("copy")}
+              className="h-9 px-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {copied ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              <span>{copied ? "Copied!" : "Copy as text"}</span>
+            </button>
+          </HealthTooltip>
+          <HealthTooltip content="Open a print-ready Letter view for your printer">
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => runAction("print")}
+              className="h-9 px-3.5 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-blue-300 text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print</span>
+            </button>
+          </HealthTooltip>
+          <HealthTooltip content="Generate and download a Letter-size PDF right in your browser">
+            <button
+              type="button"
+              disabled={exporting}
+              onClick={() => runAction("pdf")}
+              className="h-9 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+              <span>Download PDF</span>
+            </button>
+          </HealthTooltip>
         </div>
       </div>
     </div>

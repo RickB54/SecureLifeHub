@@ -29,6 +29,7 @@ import {
   FACILITY_TYPES,
   type FacilityType,
 } from "./health-ui/health-field-helpers"
+import { HealthTooltip } from "./health-ui/health-tooltip"
 import {
   getCachedHealthRecords,
   loadSharedHealthRecords,
@@ -463,76 +464,85 @@ export default function Doctors({
           </p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== "undefined") {
-                localStorage.setItem("slh-health-target-tab", "dashboard")
-              }
-              if (setActivePage) {
-                setActivePage("type-health-records")
-              } else if (typeof window !== "undefined") {
-                window.location.href = "/?page=type-health-records"
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
-            title="Back to Health Hub Overview"
-          >
-            <Hospital className="h-4 w-4 text-rose-400" />
-            Health Hub
-          </button>
+          <HealthTooltip content="Return to Health Hub Overview">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("slh-health-target-tab", "dashboard")
+                }
+                if (setActivePage) {
+                  setActivePage("type-health-records")
+                } else if (typeof window !== "undefined") {
+                  window.location.href = "/?page=type-health-records"
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
+            >
+              <Hospital className="h-4 w-4 text-rose-400" />
+              Health Hub
+            </button>
+          </HealthTooltip>
           {subTab === "doctors" ? (
-            <button
-              type="button"
-              onClick={() => {
-                resetForm()
-                setShowAddModal(true)
-              }}
-              className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-2xl shadow-xl shadow-rose-500/20 transition-all font-bold flex items-center gap-2 cursor-pointer"
-            >
-              <Plus className="h-5 w-5" /> Add Provider
-            </button>
+            <HealthTooltip content="Add a new doctor, specialist, or care provider">
+              <button
+                type="button"
+                onClick={() => {
+                  resetForm()
+                  setShowAddModal(true)
+                }}
+                className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-3 rounded-2xl shadow-xl shadow-rose-500/20 transition-all font-bold flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="h-5 w-5" /> Add Provider
+              </button>
+            </HealthTooltip>
           ) : (
-            <button
-              type="button"
-              onClick={() => {
-                resetFacilityForm()
-                setShowFacilityModal(true)
-              }}
-              className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-2xl shadow-xl shadow-teal-500/20 transition-all font-bold flex items-center gap-2 cursor-pointer"
-            >
-              <Plus className="h-5 w-5" /> Add Facility
-            </button>
+            <HealthTooltip content="Add a hospital, clinic, lab, imaging center, or pharmacy">
+              <button
+                type="button"
+                onClick={() => {
+                  resetFacilityForm()
+                  setShowFacilityModal(true)
+                }}
+                className="bg-teal-600 hover:bg-teal-500 text-white px-6 py-3 rounded-2xl shadow-xl shadow-teal-500/20 transition-all font-bold flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="h-5 w-5" /> Add Facility
+              </button>
+            </HealthTooltip>
           )}
         </div>
       </div>
 
       {/* Two Sub-Tabs: Doctors | Facilities */}
       <div className="flex items-center gap-2 border-b border-white/10 pb-3">
-        <button
-          type="button"
-          onClick={() => setSubTab("doctors")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-            subTab === "doctors"
-              ? "bg-rose-600 text-white shadow-md shadow-rose-600/20"
-              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          <Stethoscope className="h-4 w-4" />
-          Doctors ({doctors.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setSubTab("facilities")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
-            subTab === "facilities"
-              ? "bg-teal-600 text-white shadow-md shadow-teal-600/20"
-              : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          <Building2 className="h-4 w-4" />
-          Facilities ({facilities.length})
-        </button>
+        <HealthTooltip content="View and manage your doctors and specialists">
+          <button
+            type="button"
+            onClick={() => setSubTab("doctors")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+              subTab === "doctors"
+                ? "bg-rose-600 text-white shadow-md shadow-rose-600/20"
+                : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <Stethoscope className="h-4 w-4" />
+            Doctors ({doctors.length})
+          </button>
+        </HealthTooltip>
+        <HealthTooltip content="View and manage hospitals, clinics, labs, imaging centers, and pharmacies">
+          <button
+            type="button"
+            onClick={() => setSubTab("facilities")}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all cursor-pointer ${
+              subTab === "facilities"
+                ? "bg-teal-600 text-white shadow-md shadow-teal-600/20"
+                : "bg-white/5 text-gray-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            Facilities ({facilities.length})
+          </button>
+        </HealthTooltip>
       </div>
 
       {/* ==================== DOCTORS TAB ==================== */}
@@ -579,28 +589,32 @@ export default function Doctors({
                         <Stethoscope className="h-6 w-6" />
                       </div>
                       <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleEditDoctor(dr)}
-                          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400"
-                          title="Edit provider"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (confirm("Delete this provider?")) {
-                              await deleteItem(dr.id)
-                              removeSharedHealthRecord(dr.id)
-                              toast.success("Provider deleted")
-                            }
-                          }}
-                          className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-400"
-                          title="Delete provider"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <HealthTooltip content="Edit provider">
+                          <button
+                            type="button"
+                            onClick={() => handleEditDoctor(dr)}
+                            aria-label={`Edit ${dr.title}`}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 cursor-pointer"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Delete provider">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (confirm("Delete this provider?")) {
+                                await deleteItem(dr.id)
+                                removeSharedHealthRecord(dr.id)
+                                toast.success("Provider deleted")
+                              }
+                            }}
+                            aria-label={`Delete ${dr.title}`}
+                            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-400 cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </HealthTooltip>
                       </div>
                     </div>
 
@@ -760,15 +774,17 @@ export default function Doctors({
               </select>
             </div>
 
-            <button
-              type="button"
-              disabled={importingFacilities}
-              onClick={handleImportFacilitiesFromDoctors}
-              className="px-4 py-2.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shrink-0"
-            >
-              <Sparkles className="h-4 w-4" />
-              {importingFacilities ? "Importing..." : "Create facilities from existing doctors"}
-            </button>
+            <HealthTooltip content="Automatically build facility records from hospital/clinic names already entered on your doctors and link them together">
+              <button
+                type="button"
+                disabled={importingFacilities}
+                onClick={handleImportFacilitiesFromDoctors}
+                className="px-4 py-2.5 rounded-xl bg-teal-600/20 hover:bg-teal-600/30 text-teal-300 border border-teal-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+              >
+                <Sparkles className="h-4 w-4" />
+                {importingFacilities ? "Importing..." : "Create facilities from existing doctors"}
+              </button>
+            </HealthTooltip>
           </div>
 
           {/* Facilities Collapsed List */}
@@ -826,32 +842,36 @@ export default function Doctors({
                       </div>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEditFacility(fac)
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-teal-500/20 text-gray-400 hover:text-teal-300"
-                          title="Edit facility"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            if (confirm(`Delete ${fac.title}?`)) {
-                              await deleteItem(fac.id)
-                              removeSharedHealthRecord(fac.id)
-                              toast.success("Facility deleted")
-                            }
-                          }}
-                          className="p-1.5 rounded-lg hover:bg-rose-500/20 text-gray-400 hover:text-rose-400"
-                          title="Delete facility"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <HealthTooltip content="Edit facility">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditFacility(fac)
+                            }}
+                            aria-label={`Edit ${fac.title}`}
+                            className="p-1.5 rounded-lg hover:bg-teal-500/20 text-gray-400 hover:text-teal-300 cursor-pointer"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                        </HealthTooltip>
+                        <HealthTooltip content="Delete facility">
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              if (confirm(`Delete ${fac.title}?`)) {
+                                await deleteItem(fac.id)
+                                removeSharedHealthRecord(fac.id)
+                                toast.success("Facility deleted")
+                              }
+                            }}
+                            aria-label={`Delete ${fac.title}`}
+                            className="p-1.5 rounded-lg hover:bg-rose-500/20 text-gray-400 hover:text-rose-400 cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </HealthTooltip>
                         {isExpanded ? (
                           <ChevronUp className="h-4 w-4 text-gray-400" />
                         ) : (

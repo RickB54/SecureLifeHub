@@ -38,9 +38,11 @@ import {
   ShieldCheck,
   Phone,
   FileCheck2,
+  Copy,
 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { toast } from "sonner"
+import { HealthTooltip, FieldHelpPopover } from "@/components/health-ui/health-tooltip"
 import {
   DoctorCombobox,
   FacilityCombobox,
@@ -1581,16 +1583,17 @@ export default function DoctorVisitHub({
       {/* 1. TOP HEADER */}
       <header className="flex-shrink-0 bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between gap-3 backdrop-blur-md">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white text-xs md:text-sm font-semibold transition-all cursor-pointer border border-slate-700/60"
-            title="Return to Health Hub"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="hidden sm:inline">Health Hub</span>
-            <span className="sm:hidden">Back</span>
-          </button>
+          <HealthTooltip content="Return to Health Hub Overview">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white text-xs md:text-sm font-semibold transition-all cursor-pointer border border-slate-700/60"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Health Hub</span>
+              <span className="sm:hidden">Back</span>
+            </button>
+          </HealthTooltip>
           <div className="flex items-center gap-2 min-w-0">
             <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
               <Stethoscope className="h-5 w-5" />
@@ -1603,30 +1606,32 @@ export default function DoctorVisitHub({
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           {/* Global Expand All / Collapse All Toggle Icon */}
-          <button
-            type="button"
-            onClick={handleToggleGlobalExpandAll}
-            className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all cursor-pointer"
-            title={allExpanded ? "Collapse all sections and items" : "Expand all sections and items"}
-            aria-label={allExpanded ? "Collapse all sections and items" : "Expand all sections and items"}
-          >
-            {allExpanded ? (
-              <ChevronsDownUp className="h-4 w-4" />
-            ) : (
-              <ChevronsUpDown className="h-4 w-4" />
-            )}
-          </button>
+          <HealthTooltip content={allExpanded ? "Collapse all sections and item cards" : "Expand all sections and item cards"}>
+            <button
+              type="button"
+              onClick={handleToggleGlobalExpandAll}
+              className="p-1.5 sm:p-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/60 transition-all cursor-pointer"
+              aria-label={allExpanded ? "Collapse all sections and items" : "Expand all sections and items"}
+            >
+              {allExpanded ? (
+                <ChevronsDownUp className="h-4 w-4" />
+              ) : (
+                <ChevronsUpDown className="h-4 w-4" />
+              )}
+            </button>
+          </HealthTooltip>
 
           {/* Visit Mode Toggle Button */}
-          <button
-            type="button"
-            onClick={() => setVisitModeActive(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs md:text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
-            title="Open large text, high contrast Visit Mode for doctors"
-          >
-            <Eye className="h-4 w-4" />
-            <span>Visit Mode</span>
-          </button>
+          <HealthTooltip content="Open large-text, high-contrast Visit Mode to hand to your doctor, print, or copy as text">
+            <button
+              type="button"
+              onClick={() => setVisitModeActive(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs md:text-sm shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            >
+              <Eye className="h-4 w-4" />
+              <span>Visit Mode</span>
+            </button>
+          </HealthTooltip>
         </div>
       </header>
 
@@ -1809,38 +1814,39 @@ export default function DoctorVisitHub({
           {VISIT_HUB_SECTIONS.map((sec) => {
             const isSelected = selectedSections.includes(sec.id)
             return (
-              <button
-                key={sec.id}
-                type="button"
-                onClick={() => handleToggleChip(sec.id)}
-                className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
-                  isSelected
-                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
-                    : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
-                }`}
-                title={`Toggle ${sec.label} section`}
-              >
-                {isSelected && <Check className="h-3.5 w-3.5 text-blue-200" />}
-                <span>{sec.shortLabel}</span>
-              </button>
+              <HealthTooltip key={sec.id} content={`${isSelected ? "Hide" : "Show"} ${sec.label} section`}>
+                <button
+                  type="button"
+                  onClick={() => handleToggleChip(sec.id)}
+                  className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold transition-all flex items-center gap-1 cursor-pointer select-none ${
+                    isSelected
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
+                      : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
+                  }`}
+                >
+                  {isSelected && <Check className="h-3.5 w-3.5 text-blue-200" />}
+                  <span>{sec.shortLabel}</span>
+                </button>
+              </HealthTooltip>
             )
           })}
 
           <div className="h-4 w-px bg-slate-700 mx-1" />
 
           {/* ALL CHIP */}
-          <button
-            type="button"
-            onClick={handleToggleAll}
-            className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer select-none ${
-              isAllSelected
-                ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
-                : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
-            }`}
-            title={isAllSelected ? "Collapse all back to one section" : "Show all sections in order"}
-          >
-            All
-          </button>
+          <HealthTooltip content={isAllSelected ? "Collapse back to Next Appointment only" : "Show every Visit Hub section in order"}>
+            <button
+              type="button"
+              onClick={handleToggleAll}
+              className={`px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all cursor-pointer select-none ${
+                isAllSelected
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/25 border border-blue-400/40"
+                  : "bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/50"
+              }`}
+            >
+              All
+            </button>
+          </HealthTooltip>
         </div>
       </nav>
 
@@ -2827,24 +2833,32 @@ export default function DoctorVisitHub({
                             </div>
 
                             {/* Given to Doctor Tracker */}
-                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-                              <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-300">
-                                <input
-                                  type="checkbox"
-                                  checked={!!n.given_to_doctor}
-                                  onChange={(e) =>
-                                    handleUpdateGivenStatus(
-                                      "health_notes",
-                                      n.id,
-                                      e.target.checked,
-                                      n.given_method || "visit",
-                                      n.given_date || getTodayDateString()
-                                    )
-                                  }
-                                  className="rounded border-slate-700 text-teal-600 focus:ring-0"
+                            <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs flex-wrap">
+                              <div className="flex items-center gap-1.5">
+                                <HealthTooltip content="Track whether you already shared this note with your doctor (at visit or via portal)">
+                                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-300">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!n.given_to_doctor}
+                                      onChange={(e) =>
+                                        handleUpdateGivenStatus(
+                                          "health_notes",
+                                          n.id,
+                                          e.target.checked,
+                                          n.given_method || "visit",
+                                          n.given_date || getTodayDateString()
+                                        )
+                                      }
+                                      className="rounded border-slate-700 text-teal-600 focus:ring-0"
+                                    />
+                                    <span>Given to doctor</span>
+                                  </label>
+                                </HealthTooltip>
+                                <FieldHelpPopover
+                                  title="Given to Doctor"
+                                  content="Check this once you hand or send an item to your doctor. Choose 'At visit' or 'Via portal' and the date so the card turns green."
                                 />
-                                <span>Given to doctor</span>
-                              </label>
+                              </div>
                               {n.given_to_doctor && (
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <select
@@ -3777,40 +3791,62 @@ export default function DoctorVisitHub({
                                 {s.doctor_name && <span>&bull; Dr. {s.doctor_name}</span>}
                               </div>
                               <div className="flex items-center gap-1">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setEditingSummary(s)
-                                    setSummaryForm({
-                                      title: s.title,
-                                      summary_text: s.summary_text,
-                                      date: s.date,
-                                      date_type: s.date_type || "Visit date",
-                                      doctor_id: s.doctor_id || "",
-                                      doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
-                                      facility_id: s.facility_id || "",
-                                      facility_name: resolveFacilityInfo(s.facility_id, { name: s.facility_name }, existingFacilities).name,
-                                      visit_id: s.visit_id || "",
-                                    })
-                                    setSummaryModalOpen(true)
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
-                                  title="Edit summary"
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleDeleteSummary(s.id)
-                                  }}
-                                  className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
-                                  title="Delete summary"
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </button>
+                                <HealthTooltip content="Copy visit summary as plain text">
+                                  <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
+                                      try {
+                                        await navigator.clipboard.writeText(`${s.title}\n${dateWithLabel}\n\n${s.summary_text}`)
+                                        toast.success("Copied visit summary as text")
+                                      } catch {
+                                        toast.error("Failed to copy text")
+                                      }
+                                    }}
+                                    aria-label="Copy summary as text"
+                                    className="p-1.5 text-slate-400 hover:text-cyan-300 rounded-lg hover:bg-slate-900 transition-colors cursor-pointer"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </button>
+                                </HealthTooltip>
+                                <HealthTooltip content="Edit summary">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setEditingSummary(s)
+                                      setSummaryForm({
+                                        title: s.title,
+                                        summary_text: s.summary_text,
+                                        date: s.date,
+                                        date_type: s.date_type || "Visit date",
+                                        doctor_id: s.doctor_id || "",
+                                        doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
+                                        facility_id: s.facility_id || "",
+                                        facility_name: resolveFacilityInfo(s.facility_id, { name: s.facility_name }, existingFacilities).name,
+                                        visit_id: s.visit_id || "",
+                                      })
+                                      setSummaryModalOpen(true)
+                                    }}
+                                    aria-label="Edit summary"
+                                    className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </HealthTooltip>
+                                <HealthTooltip content="Delete summary">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDeleteSummary(s.id)
+                                    }}
+                                    aria-label="Delete summary"
+                                    className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition-colors"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </HealthTooltip>
                               </div>
                             </div>
 
