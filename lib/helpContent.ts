@@ -206,8 +206,8 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
   },
   {
     id: "vitals-bp-reference",
-    title: "6. Vitals & Blood Pressure Reference",
-    subtitle: "Tracking vital sign trends, 2025 AHA/ACC goal categories, and typical blood pressure ranges by age & sex",
+    title: "6. Vitals, My Profile & Reference Ranges",
+    subtitle: "Vital sign trends, shared My Profile, Blood Pressure Reference, and reference panels for every vital",
     badgeColor: "rose",
     keywords: [
       "vitals",
@@ -228,6 +228,26 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
       "aha",
       "nhanes",
       "90/60",
+      "my profile",
+      "height",
+      "weight",
+      "bmi",
+      "temperature",
+      "fever",
+      "blood oxygen",
+      "spo2",
+      "heart rate",
+      "exercise zones",
+      "glucose",
+      "fasting",
+      "a1c",
+      "sleep",
+      "sleep score",
+      "water",
+      "calories",
+      "steps",
+      "activity",
+      "units",
     ],
     steps: [
       {
@@ -245,6 +265,30 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
       {
         heading: "Part B: Typical Survey Readings vs Clinical Target",
         body: "Part B shows typical middle range (25th–75th percentile), average (mean and median), and usual full range (5th–95th percentile) measured in US adults without high blood pressure (CDC/NCHS Report No. 35, NHANES 2001–2008). These typical readings describe what adults in that age/sex group measured — they are NOT a target. The clinical goal for all adults remains the Normal category, and reference charts are never a medical diagnosis.",
+      },
+      {
+        heading: "My Profile (Shared Age, Sex & Height)",
+        body: "The small My Profile bar at the top of Vitals holds your age, sex and height (ft/in or cm). Every reference panel, including Blood Pressure, uses these same values. They are saved only in this browser's local storage and never sent anywhere. If a panel needs a value you have not entered, it shows a small inline prompt where you can fill it in.",
+      },
+      {
+        heading: "Reference Panels on Every Vital Card",
+        body: "Each vital card (Weight, Temperature, Blood Oxygen, Heart Rate, Glucose, Sleep Duration, Sleep Score, Water Intake, Calorie Intake, Steps, Activity) has a collapsed Reference bar and a small chart icon. Open it to see color-coded bands (green = in range, yellow = borderline, orange = needs attention, red = get care), a marker for your latest logged value, a one-line verdict, notes and the source. The verdict also appears as a small colored chip on the card. With no entries, only the reference is shown. Everything uses vitals already on screen; nothing is downloaded.",
+      },
+      {
+        heading: "Units Are Converted Before Comparing",
+        body: "Readings are converted before comparing (lb/kg, °F/°C, mmol/L to mg/dL, and oz/mL/L/cups) and shown in the unit you logged.",
+      },
+      {
+        heading: "Weight (BMI), Temperature, Blood Oxygen & Heart Rate",
+        body: "Weight uses BMI from your latest weight and profile height (CDC bands for adults 20+), plus your healthy weight range (BMI 18.5 to 24.9) and how far you are from it; under 20 it only shows a pediatric note. Temperature uses oral bands in °F and °C. Blood Oxygen uses SpO2 bands (95 to 100% normal). Heart Rate picks the normal resting range for your age, and adults see exercise zones based on about 220 minus age.",
+      },
+      {
+        heading: "Glucose Context & A1C Table",
+        body: "Glucose is compared by context: Fasting, 2 hours after eating, or Random. Choose the context in the Log Vital form's State/Context menu (Glucose group). For older entries with no context, pick one inside the Glucose Reference panel (saved on this device only). Under 70 is always flagged as low. An A1C reference table is shown for lab results.",
+      },
+      {
+        heading: "Sleep, Water, Calories, Steps & Activity",
+        body: "Sleep Duration compares your latest night and 7-night average to the recommended hours for your age. Sleep Score labels are approximate and device-specific, compared with your own 7-day average. Water compares your latest day's beverages to the adequate intake for your sex. Calories compare your latest day's total to the Dietary Guidelines range for your age, sex and chosen Activity level. Steps uses informal tiers plus your 7-day average. Activity totals this week (Monday to Sunday) against the 150 to 300 minute weekly goal.",
       },
     ],
   },

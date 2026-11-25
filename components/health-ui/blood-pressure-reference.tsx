@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useMemo } from "react"
+import { useVitalsProfile } from "@/lib/vitalsProfile"
 import { BarChart3, ChevronDown, ChevronUp, AlertTriangle, HelpCircle } from "lucide-react"
 import {
   BP_REF,
@@ -13,7 +14,6 @@ import {
 } from "@/lib/bpReference"
 import { HealthTooltip, FieldHelpPopover } from "./health-tooltip"
 
-const LOCAL_STORAGE_KEY = "slh_bp_reference_prefs_v1"
 
 interface BloodPressureReferenceProps {
   isOpen: boolean
@@ -165,40 +165,13 @@ export function BloodPressureReference({
   theme = "dark",
   onOpenHelp,
 }: BloodPressureReferenceProps) {
-  const [ageInput, setAgeInput] = useState<string>("45")
-  const [sex, setSex] = useState<BpSex>("male")
-  const [hydrated, setHydrated] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    try {
-      const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY)
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (typeof parsed?.age === "string" || typeof parsed?.age === "number") {
-          setAgeInput(String(parsed.age))
-        }
-        if (parsed?.sex === "male" || parsed?.sex === "female") {
-          setSex(parsed.sex)
-        }
-      }
-    } catch {
-      // Ignore malformed localStorage entry
-    }
-    setHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (!hydrated || typeof window === "undefined") return
-    try {
-      window.localStorage.setItem(
-        LOCAL_STORAGE_KEY,
-        JSON.stringify({ age: ageInput, sex })
-      )
-    } catch {
-      // Ignore storage quota errors
-    }
-  }, [ageInput, sex, hydrated])
+  // Shared "My Profile" (age & sex) used by every Vitals reference — no separate copies.
+  const { profile, updateProfile } = useVitalsProfile()
+  const ageInput = profile.age
+  const setAgeInput = (age: string) => updateProfile({ age })
+  const sex: BpSex = profile.sex === "female" ? "female" : "male"
+  const hasSex = profile.sex === "male" || profile.sex === "female"
+  const setSex = (next: BpSex) => updateProfile({ sex: next })
 
   const parsedAge = useMemo(() => {
     const trimmed = ageInput.trim()
@@ -353,7 +326,7 @@ export function BloodPressureReference({
             </div>
 
             <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-              <span>Saved on this device only</span>
+              <span>Shared My Profile · this device only</span>
               <FieldHelpPopover
                 title="How Blood Pressure Reference Works"
                 content="Part A shows the 2025 AHA/ACC clinical goal categories, which are the same for all adults (18+) regardless of age or sex. Part B shows typical survey measurements by age and sex from CDC/NHANES — these are descriptive averages, not a clinical target. Your Age and Sex choices stay in localStorage on this device with zero network traffic."
@@ -491,6 +464,12 @@ export function BloodPressureReference({
               </div>
 
               {/* 3. PART B: TYPICAL READINGS FOR SELECTED AGE & SEX */}
+              {!hasSex ? (
+                <div className="rounded-xl border border-sky-500/30 bg-sky-500/10 p-3 text-xs text-sky-100 min-w-0 space-y-1">
+                  <div className="font-semibold">Typical readings by age and sex</div>
+                  <div>Choose Male or Female above (shared My Profile) to see typical readings for your age and sex.</div>
+                </div>
+              ) : (
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 space-y-3 min-w-0 flex flex-col justify-between">
                 <div className="space-y-3 min-w-0">
                   <div>
@@ -590,6 +569,7 @@ export function BloodPressureReference({
                   Source: CDC/NCHS National Health Statistics Reports No. 35 (2011), NHANES 2001-2008, adults not taking blood pressure medication with readings below 140/90. Data is older, group ranges are broad, and it is not medical advice.
                 </p>
               </div>
+              )}
             </div>
           )}
 

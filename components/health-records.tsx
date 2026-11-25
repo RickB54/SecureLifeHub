@@ -37,6 +37,10 @@ import {
 import { prepareHealthAttachment } from "@/lib/image-downsize"
 import { HealthTooltip } from "./health-ui/health-tooltip"
 import { BloodPressureReference } from "./health-ui/blood-pressure-reference"
+import { VitalReferencePanel, VitalVerdictChip } from "./health-ui/vital-reference-panel"
+import { VitalsProfileControl } from "./health-ui/vitals-profile-control"
+import { useVitalsProfile, useGlucoseContextOverrides } from "@/lib/vitalsProfile"
+import { evaluateVital, VitalEvalResult } from "@/lib/vitalsEvaluate"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -150,6 +154,10 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [historicalLogStatusFilter, setHistoricalLogStatusFilter] = useState<'active' | 'archived'>('active')
     const [showPillLibrary, setShowPillLibrary] = useState(false)
     const [showBpReference, setShowBpReference] = useState(false)
+    // Collapsible per-vital Reference panels (collapsed by default) + shared local-only My Profile
+    const [openVitalRefs, setOpenVitalRefs] = useState<Record<string, boolean>>({})
+    const vitalsProfile = useVitalsProfile()
+    const { overrides: glucoseCtxOverrides, setOverrideForEntry: setGlucoseCtxOverride } = useGlucoseContextOverrides()
 
     // Calendar State
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -945,12 +953,24 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     </div>
                 </div>
 
+                <VitalsProfileControl />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
                     {vitalGroups.map((group) => {
                         const activeFilter = activeVitalRecords.filter(v => v.title === group.title)
                         const latest = activeFilter[activeFilter.length - 1]
                         const colorMap: any = { rose: '#f43f5e', orange: '#f97316', yellow: '#eab308', cyan: '#06b6d4', red: '#ef4444', emerald: '#10b981', violet: '#8b5cf6', blue: '#3b82f6' }
                         const color = colorMap[group.color]
+                        const refResult: VitalEvalResult | null = group.id === 'bp' ? null : evaluateVital(group.id, activeFilter, {
+                            age: vitalsProfile.parsedAge,
+                            infantAgeDetail: vitalsProfile.profile.infantAgeDetail,
+                            sex: vitalsProfile.profile.sex,
+                            heightInches: vitalsProfile.heightInches,
+                            calorieActivity: vitalsProfile.profile.calorieActivity,
+                            glucoseOverrides: glucoseCtxOverrides,
+                        })
+                        const isRefOpen = Boolean(openVitalRefs[group.id])
+                        const toggleRef = () => setOpenVitalRefs((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
 
                         return (
                             <div key={group.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20'} ${group.id === 'bp' && showBpReference ? 'md:col-span-2 lg:col-span-3' : ''} transition-all shadow-xl group overflow-hidden relative`}>
@@ -972,6 +992,23 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                         aria-label="Toggle Blood Pressure Reference chart"
                                                         className={`p-1.5 rounded transition-all cursor-pointer ${
                                                             showBpReference
+                                                                ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
+                                                                : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
+                                                        }`}
+                                                    >
+                                                        <BarChart3 className="h-3 w-3" />
+                                                    </button>
+                                                </HealthTooltip>
+                                            )}
+                                            {refResult && (
+                                                <HealthTooltip content={isRefOpen ? `Hide ${group.title} Reference` : `${group.title} Reference chart`}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={toggleRef}
+                                                        aria-expanded={isRefOpen}
+                                                        aria-label={`Toggle ${group.title} Reference chart`}
+                                                        className={`p-1.5 rounded transition-all cursor-pointer ${
+                                                            isRefOpen
                                                                 ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
                                                                 : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
                                                         }`}
@@ -1010,6 +1047,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             {latest ? latest.item_metadata.value : '--'}
                                             <span className="text-xs text-gray-500 ml-1 font-normal uppercase">{latest?.item_metadata.unit || ""}</span>
                                         </div>
+                                        {latest && refResult && (
+                                            <div className="mt-1 max-w-[180px] flex justify-end">
+                                                <VitalVerdictChip result={refResult} />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1059,6 +1101,17 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         latestBpRecord={latest}
                                         theme={theme}
                                         onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
+                                    />
+                                )}
+                                {refResult && (
+                                    <VitalReferencePanel
+                                        title={group.title}
+                                        isOpen={isRefOpen}
+                                        onToggle={toggleRef}
+                                        result={refResult}
+                                        theme={theme}
+                                        onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
+                                        onGlucoseContextChange={setGlucoseCtxOverride}
                                     />
                                 )}
                             </div>
@@ -1920,6 +1973,11 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                                 <option className="bg-[#1a1a1a]">Post Workout</option>
                                                 <option className="bg-[#1a1a1a]">Waking Up</option>
                                                 <option className="bg-[#1a1a1a]">Feeling Stress</option>
+                                                <optgroup label="Glucose" className="bg-[#1a1a1a]">
+                                                    <option className="bg-[#1a1a1a]">Fasting</option>
+                                                    <option className="bg-[#1a1a1a]">2 hours after eating</option>
+                                                    <option className="bg-[#1a1a1a]">Random</option>
+                                                </optgroup>
                                             </select>
                                         </div>
                                     </div>
