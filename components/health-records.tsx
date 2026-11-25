@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3 } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, SlidersHorizontal, FileDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3 } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays, differenceInCalendarDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -41,6 +41,12 @@ import { VitalReferencePanel, VitalVerdictChip } from "./health-ui/vital-referen
 import { VitalsProfileControl } from "./health-ui/vitals-profile-control"
 import { useVitalsProfile, useGlucoseContextOverrides } from "@/lib/vitalsProfile"
 import { evaluateVital, VitalEvalResult } from "@/lib/vitalsEvaluate"
+import { VITAL_TONE_STYLES, VITALS_FOOTER_DISCLAIMER } from "@/lib/vitalsReference"
+import { useVitalsLayoutPrefs, formatVitalDateNoShift } from "@/lib/vitalsLayoutPrefs"
+import { getBpCardVerdict, VitalExportBlockInput } from "@/lib/vitalsPdfExport"
+import { VitalsSparkline } from "./health-ui/vitals-sparkline"
+import { VitalsArrangeModal, ArrangeVitalItem } from "./health-ui/vitals-arrange-modal"
+import { VitalsPdfModal } from "./health-ui/vitals-pdf-modal"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -156,6 +162,8 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [showBpReference, setShowBpReference] = useState(false)
     // Collapsible per-vital Reference panels (collapsed by default) + shared local-only My Profile
     const [openVitalRefs, setOpenVitalRefs] = useState<Record<string, boolean>>({})
+    const [showArrangeVitalsModal, setShowArrangeVitalsModal] = useState(false)
+    const [showVitalsPdfModal, setShowVitalsPdfModal] = useState(false)
     const vitalsProfile = useVitalsProfile()
     const { overrides: glucoseCtxOverrides, setOverrideForEntry: setGlucoseCtxOverride } = useGlucoseContextOverrides()
 
@@ -476,7 +484,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }
 
     const weightData = activeVitalRecords.filter(r => r.title === "Weight").map(r => ({
-        date: r.item_metadata?.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
+        date: r.item_metadata?.date ? formatVitalDateNoShift(r.item_metadata.date) : 'N/A',
         value: parseFloat(r.item_metadata?.value ?? '0') || 0
     }))
 
@@ -485,11 +493,36 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         const sys = parseInt(parts[0]) || 0
         const dia = parseInt(parts[1]) || 0
         return {
-            date: r.item_metadata?.date ? format(new Date(r.item_metadata.date), 'MMM d') : 'N/A',
+            date: r.item_metadata?.date ? formatVitalDateNoShift(r.item_metadata.date) : 'N/A',
             systolic: sys,
             diastolic: dia
         }
     })
+
+    const vitalsWithEntriesSet = useMemo(() => {
+        const titleToId: Record<string, string> = {
+            "Blood Pressure": "bp",
+            "Weight": "weight",
+            "Temperature": "temp",
+            "Blood Oxygen": "ox",
+            "Heart Rate": "hr",
+            "Glucose": "gluc",
+            "Sleep Duration": "sleep",
+            "Sleep Score": "sleep_score",
+            "Water Intake": "water",
+            "Calorie Intake": "cal",
+            "Steps": "steps",
+            "Activity (Mins)": "activity",
+        }
+        const set = new Set<string>()
+        for (const r of activeVitalRecords) {
+            const id = titleToId[r.title]
+            if (id) set.add(id)
+        }
+        return set
+    }, [activeVitalRecords])
+
+    const vitalsLayout = useVitalsLayoutPrefs(vitalsWithEntriesSet)
 
     // --- HELPERS ---
     const getVitalIcon = (type: string) => {
@@ -908,20 +941,85 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     )
 
     const renderVitals = () => {
-        const vitalGroups = [
+        const baseVitalGroups = [
             { id: 'bp', title: 'Blood Pressure', icon: Activity, color: 'rose', data: bpData, multi: true },
             { id: 'weight', title: 'Weight', icon: Weight, color: 'orange', data: weightData },
-            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
-            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: safeFormat(r.item_metadata?.date, 'MMM d'), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'temp', title: 'Temperature', icon: Activity, color: 'yellow', data: activeVitalRecords.filter(v => v.title === "Temperature").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'ox', title: 'Blood Oxygen', icon: Droplets, color: 'cyan', data: activeVitalRecords.filter(v => v.title === "Blood Oxygen").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'hr', title: 'Heart Rate', icon: Heart, color: 'red', data: activeVitalRecords.filter(v => v.title === "Heart Rate").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'gluc', title: 'Glucose', icon: Utensils, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Glucose").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'sleep', title: 'Sleep Duration', icon: Moon, color: 'violet', data: activeVitalRecords.filter(v => v.title === "Sleep Duration").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'sleep_score', title: 'Sleep Score', icon: Sparkles, color: 'indigo', data: activeVitalRecords.filter(v => v.title === "Sleep Score").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'water', title: 'Water Intake', icon: GlassWater, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Water Intake").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'cal', title: 'Calorie Intake', icon: Flame, color: 'orange', data: activeVitalRecords.filter(v => v.title === "Calorie Intake").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'steps', title: 'Steps', icon: TrendingUp, color: 'emerald', data: activeVitalRecords.filter(v => v.title === "Steps").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
+            { id: 'activity', title: 'Activity (Mins)', icon: Activity, color: 'blue', data: activeVitalRecords.filter(v => v.title === "Activity (Mins)").map(r => ({ date: formatVitalDateNoShift(r.item_metadata?.date), value: parseFloat(r.item_metadata?.value ?? '0') })) },
         ]
+
+        const colorMap: Record<string, string> = {
+            rose: '#f43f5e',
+            orange: '#f97316',
+            yellow: '#eab308',
+            cyan: '#06b6d4',
+            red: '#ef4444',
+            emerald: '#10b981',
+            violet: '#8b5cf6',
+            indigo: '#6366f1',
+            blue: '#3b82f6',
+        }
+
+        const iconBadgeMap: Record<string, string> = {
+            rose: 'bg-rose-500/10 text-rose-500',
+            orange: 'bg-orange-500/10 text-orange-500',
+            yellow: 'bg-yellow-500/10 text-yellow-500',
+            cyan: 'bg-cyan-500/10 text-cyan-500',
+            red: 'bg-red-500/10 text-red-500',
+            emerald: 'bg-emerald-500/10 text-emerald-500',
+            violet: 'bg-violet-500/10 text-violet-500',
+            indigo: 'bg-indigo-500/10 text-indigo-400',
+            blue: 'bg-blue-500/10 text-blue-500',
+        }
+
+        const groupsById = Object.fromEntries(baseVitalGroups.map((g) => [g.id, g]))
+        const evalCtx = {
+            age: vitalsProfile.parsedAge,
+            infantAgeDetail: vitalsProfile.profile.infantAgeDetail,
+            sex: vitalsProfile.profile.sex,
+            heightInches: vitalsProfile.heightInches,
+            calorieActivity: vitalsProfile.profile.calorieActivity,
+            glucoseOverrides: glucoseCtxOverrides,
+        }
+
+        const arrangeItemsMap: Record<string, ArrangeVitalItem> = {}
+        const orderedExportBlocks: VitalExportBlockInput[] = []
+        for (const id of vitalsLayout.orderedAllIds) {
+            const g = groupsById[id]
+            if (!g) continue
+            const entries = activeVitalRecords.filter((v) => v.title === g.title)
+            arrangeItemsMap[id] = {
+                id: g.id,
+                title: g.title,
+                entryCount: entries.length,
+                icon: g.icon,
+            }
+            orderedExportBlocks.push({
+                id: g.id,
+                title: g.title,
+                colorHex: colorMap[g.color] || '#3b82f6',
+                multi: Boolean((g as any).multi),
+                allEntries: entries,
+                evalResult: g.id === 'bp' ? null : evaluateVital(g.id, entries, evalCtx),
+                parsedAge: vitalsProfile.parsedAge,
+            })
+        }
+
+        const visibleVitalGroups = vitalsLayout.visibleOrderedIds
+            .map((id) => groupsById[id])
+            .filter(Boolean)
+
+        const areAllVisibleExpanded =
+            visibleVitalGroups.length > 0 &&
+            visibleVitalGroups.every((g) => Boolean(vitalsLayout.state.expandedIds[g.id]))
 
         const filteredHistoricalLog = vitalRecords.filter(vital => {
             const isArchived = Boolean(vital.item_metadata?.is_archived)
@@ -939,185 +1037,365 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         }).sort((a, b) => new Date(b.item_metadata.date).getTime() - new Date(a.item_metadata.date).getTime())
 
         return (
-            <div className="space-y-6">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-bold">Vital Sign Trends</h2>
-                    <div className="flex gap-2">
+            <div className="space-y-4">
+                <div className="flex flex-wrap justify-between items-center gap-2.5">
+                    <h2 className="text-xl sm:text-2xl font-bold">Vital Sign Trends</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <HealthTooltip content={areAllVisibleExpanded ? "Collapse all vital cards" : "Expand all vital cards"}>
+                            <button
+                                type="button"
+                                onClick={() => vitalsLayout.setAllVisibleExpanded(!areAllVisibleExpanded)}
+                                aria-label={areAllVisibleExpanded ? "Collapse all vitals" : "Expand all vitals"}
+                                className="h-9 w-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200 inline-flex items-center justify-center transition-colors cursor-pointer"
+                            >
+                                {areAllVisibleExpanded ? <ChevronsDownUp className="h-4 w-4" /> : <ChevronsUpDown className="h-4 w-4" />}
+                            </button>
+                        </HealthTooltip>
 
-                        <button
-                            onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
-                            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl shadow-lg transition-all font-bold flex items-center gap-2"
-                        >
-                            <Plus className="h-4 w-4" /> Log Vital
-                        </button>
+                        <HealthTooltip content="Arrange order and show or hide vitals">
+                            <button
+                                type="button"
+                                onClick={() => setShowArrangeVitalsModal(true)}
+                                className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-200 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <SlidersHorizontal className="h-3.5 w-3.5 text-blue-400" />
+                                <span>Arrange</span>
+                            </button>
+                        </HealthTooltip>
+
+                        <HealthTooltip content="Save or print Vital Signs Report (PDF)">
+                            <button
+                                type="button"
+                                onClick={() => setShowVitalsPdfModal(true)}
+                                className="h-9 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-gray-200 inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <FileDown className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>PDF</span>
+                            </button>
+                        </HealthTooltip>
+
+                        <HealthTooltip content="Log a new vital sign reading">
+                            <button
+                                type="button"
+                                onClick={() => { setAddModalType('vital'); setShowAddModal(true) }}
+                                className="h-9 bg-blue-600 hover:bg-blue-500 text-white px-4 rounded-xl shadow-lg transition-all text-xs sm:text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                                <Plus className="h-4 w-4" /> Log Vital
+                            </button>
+                        </HealthTooltip>
                     </div>
                 </div>
 
                 <VitalsProfileControl />
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-4 duration-500">
-                    {vitalGroups.map((group) => {
-                        const activeFilter = activeVitalRecords.filter(v => v.title === group.title)
-                        const latest = activeFilter[activeFilter.length - 1]
-                        const colorMap: any = { rose: '#f43f5e', orange: '#f97316', yellow: '#eab308', cyan: '#06b6d4', red: '#ef4444', emerald: '#10b981', violet: '#8b5cf6', blue: '#3b82f6' }
-                        const color = colorMap[group.color]
-                        const refResult: VitalEvalResult | null = group.id === 'bp' ? null : evaluateVital(group.id, activeFilter, {
-                            age: vitalsProfile.parsedAge,
-                            infantAgeDetail: vitalsProfile.profile.infantAgeDetail,
-                            sex: vitalsProfile.profile.sex,
-                            heightInches: vitalsProfile.heightInches,
-                            calorieActivity: vitalsProfile.profile.calorieActivity,
-                            glucoseOverrides: glucoseCtxOverrides,
-                        })
-                        const isRefOpen = Boolean(openVitalRefs[group.id])
-                        const toggleRef = () => setOpenVitalRefs((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
+                {visibleVitalGroups.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-white/15 bg-black/30 p-8 text-center space-y-2">
+                        <p className="text-xs text-gray-400">All vitals are currently hidden in Arrange.</p>
+                        <button
+                            type="button"
+                            onClick={() => setShowArrangeVitalsModal(true)}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white cursor-pointer"
+                        >
+                            Open Arrange
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-in slide-in-from-bottom-4 duration-500">
+                        {visibleVitalGroups.map((group) => {
+                            const activeFilter = activeVitalRecords.filter(v => v.title === group.title)
+                            const latest = activeFilter[activeFilter.length - 1]
+                            const color = colorMap[group.color] || '#3b82f6'
+                            const refResult: VitalEvalResult | null = group.id === 'bp' ? null : evaluateVital(group.id, activeFilter, evalCtx)
+                            const bpVerdict = group.id === 'bp' ? getBpCardVerdict(latest, vitalsProfile.parsedAge) : null
+                            const isRefOpen = Boolean(openVitalRefs[group.id])
+                            const toggleRef = () => setOpenVitalRefs((prev) => ({ ...prev, [group.id]: !prev[group.id] }))
+                            const isCardExpanded = Boolean(vitalsLayout.state.expandedIds[group.id])
+                            const spanFullRow = isCardExpanded && ((group.id === 'bp' && showBpReference) || isRefOpen)
 
-                        return (
-                            <div key={group.id} className={`p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20'} ${group.id === 'bp' && showBpReference ? 'md:col-span-2 lg:col-span-3' : ''} transition-all shadow-xl group overflow-hidden relative`}>
-                                <div className={`absolute top-0 right-0 w-32 h-32 bg-${group.color}-500 opacity-[0.03] rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110 duration-500`}></div>
+                            const renderBpChip = () => {
+                                if (!bpVerdict) return null
+                                const st = bpVerdict.tone === "neutral"
+                                    ? { chip: "bg-white/5 text-gray-300 border-white/15", dot: "bg-gray-500" }
+                                    : VITAL_TONE_STYLES[bpVerdict.tone]
+                                return (
+                                    <HealthTooltip content={`${bpVerdict.line} ${VITALS_FOOTER_DISCLAIMER}`}>
+                                        <span className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold leading-tight ${st.chip}`}>
+                                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${st.dot}`} />
+                                            <span className="truncate">{bpVerdict.chip}</span>
+                                        </span>
+                                    </HealthTooltip>
+                                )
+                            }
 
-                                <div className="flex justify-between items-start mb-6 relative z-10">
-                                    <div className={`p-3 rounded-2xl bg-${group.color}-500/10 text-${group.color}-500`}>
-                                        <group.icon className="h-6 w-6" />
+                            if (!isCardExpanded) {
+                                return (
+                                    <div
+                                        key={group.id}
+                                        onClick={() => vitalsLayout.toggleCardExpanded(group.id)}
+                                        className={`px-3.5 py-2.5 min-h-[78px] rounded-2xl border flex items-center justify-between gap-2.5 transition-all cursor-pointer select-none ${
+                                            theme === 'light'
+                                                ? 'bg-white border-gray-200 hover:border-gray-300'
+                                                : 'bg-black border-white/10 hover:border-white/25'
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                            <div className={`h-9 w-9 rounded-xl ${iconBadgeMap[group.color] || 'bg-blue-500/10 text-blue-500'} flex items-center justify-center shrink-0`}>
+                                                <group.icon className="h-4 w-4" />
+                                            </div>
+                                            <div className="min-w-0 flex-1 space-y-0.5">
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <span className="text-xs font-bold uppercase tracking-wide text-gray-300 truncate">
+                                                        {group.title}
+                                                    </span>
+                                                    {latest && (group.id === 'bp' ? renderBpChip() : refResult ? <VitalVerdictChip result={refResult} /> : null)}
+                                                </div>
+                                                {latest ? (
+                                                    <div className="flex flex-wrap items-baseline gap-x-1.5 text-xs min-w-0">
+                                                        <span className="text-base font-black font-mono leading-tight">
+                                                            {latest.item_metadata.value}
+                                                        </span>
+                                                        {latest.item_metadata.unit && (
+                                                            <span className="text-[10px] text-gray-400 uppercase">
+                                                                {latest.item_metadata.unit}
+                                                            </span>
+                                                        )}
+                                                        {latest.item_metadata.date && (
+                                                            <span className="text-[11px] text-gray-500 truncate">
+                                                                · {formatVitalDateNoShift(latest.item_metadata.date)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs text-gray-500 italic">No entries</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {latest && (
+                                                <VitalsSparkline
+                                                    id={group.id}
+                                                    points={group.data}
+                                                    color={color}
+                                                    multi={Boolean((group as any).multi)}
+                                                />
+                                            )}
+                                            <HealthTooltip content={`Expand ${group.title}`}>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        vitalsLayout.toggleCardExpanded(group.id)
+                                                    }}
+                                                    aria-expanded={false}
+                                                    aria-label={`Expand ${group.title}`}
+                                                    className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                                                >
+                                                    <ChevronDown className="h-4 w-4" />
+                                                </button>
+                                            </HealthTooltip>
+                                        </div>
                                     </div>
-                                    <div className="text-right flex flex-col items-end">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <div className="text-xs font-black uppercase text-gray-500">{group.title}</div>
-                                            {group.id === 'bp' && (
-                                                <HealthTooltip content={showBpReference ? "Hide Blood Pressure Reference" : "Blood Pressure Reference chart"}>
+                                )
+                            }
+
+                            return (
+                                <div key={group.id} className={`p-5 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/10 hover:border-white/20'} ${spanFullRow ? 'md:col-span-2 lg:col-span-3' : ''} transition-all shadow-xl group overflow-hidden relative`}>
+                                    <div className={`absolute top-0 right-0 w-32 h-32 bg-${group.color}-500 opacity-[0.03] rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110 duration-500 pointer-events-none`}></div>
+
+                                    <div
+                                        onClick={() => vitalsLayout.toggleCardExpanded(group.id)}
+                                        className="flex justify-between items-start mb-4 relative z-10 cursor-pointer"
+                                    >
+                                        <div className={`p-3 rounded-2xl ${iconBadgeMap[group.color] || 'bg-blue-500/10 text-blue-500'}`}>
+                                            <group.icon className="h-6 w-6" />
+                                        </div>
+                                        <div className="text-right flex flex-col items-end">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <div className="text-xs font-black uppercase text-gray-400">{group.title}</div>
+                                                {group.id === 'bp' && (
+                                                    <HealthTooltip content={showBpReference ? "Hide Blood Pressure Reference" : "Blood Pressure Reference chart"}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setShowBpReference((prev) => !prev)
+                                                            }}
+                                                            aria-expanded={showBpReference}
+                                                            aria-label="Toggle Blood Pressure Reference chart"
+                                                            className={`p-1.5 rounded transition-all cursor-pointer ${
+                                                                showBpReference
+                                                                    ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
+                                                                    : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
+                                                            }`}
+                                                        >
+                                                            <BarChart3 className="h-3 w-3" />
+                                                        </button>
+                                                    </HealthTooltip>
+                                                )}
+                                                {refResult && (
+                                                    <HealthTooltip content={isRefOpen ? `Hide ${group.title} Reference` : `${group.title} Reference chart`}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                toggleRef()
+                                                            }}
+                                                            aria-expanded={isRefOpen}
+                                                            aria-label={`Toggle ${group.title} Reference chart`}
+                                                            className={`p-1.5 rounded transition-all cursor-pointer ${
+                                                                isRefOpen
+                                                                    ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
+                                                                    : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
+                                                            }`}
+                                                        >
+                                                            <BarChart3 className="h-3 w-3" />
+                                                        </button>
+                                                    </HealthTooltip>
+                                                )}
+                                                {latest ? (
+                                                    <HealthTooltip content="Edit latest vital reading">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setEditingVital(latest)
+                                                                setAddModalType('vital')
+                                                                setShowAddModal(true)
+                                                            }}
+                                                            className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all cursor-pointer"
+                                                        >
+                                                            <Edit className="h-3 w-3" />
+                                                        </button>
+                                                    </HealthTooltip>
+                                                ) : (
+                                                    <HealthTooltip content={`Log ${group.title}`}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setEditingVital({ title: group.title, _isDummy: true })
+                                                                setAddModalType('vital')
+                                                                setShowAddModal(true)
+                                                            }}
+                                                            className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all cursor-pointer"
+                                                        >
+                                                            <Plus className="h-3 w-3" />
+                                                        </button>
+                                                    </HealthTooltip>
+                                                )}
+                                                <HealthTooltip content={`Collapse ${group.title}`}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => setShowBpReference((prev) => !prev)}
-                                                        aria-expanded={showBpReference}
-                                                        aria-label="Toggle Blood Pressure Reference chart"
-                                                        className={`p-1.5 rounded transition-all cursor-pointer ${
-                                                            showBpReference
-                                                                ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
-                                                                : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
-                                                        }`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            vitalsLayout.toggleCardExpanded(group.id)
+                                                        }}
+                                                        aria-expanded={true}
+                                                        aria-label={`Collapse ${group.title}`}
+                                                        className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
                                                     >
-                                                        <BarChart3 className="h-3 w-3" />
+                                                        <ChevronUp className="h-3.5 w-3.5" />
                                                     </button>
                                                 </HealthTooltip>
-                                            )}
-                                            {refResult && (
-                                                <HealthTooltip content={isRefOpen ? `Hide ${group.title} Reference` : `${group.title} Reference chart`}>
-                                                    <button
-                                                        type="button"
-                                                        onClick={toggleRef}
-                                                        aria-expanded={isRefOpen}
-                                                        aria-label={`Toggle ${group.title} Reference chart`}
-                                                        className={`p-1.5 rounded transition-all cursor-pointer ${
-                                                            isRefOpen
-                                                                ? "bg-rose-500/20 text-rose-300 ring-1 ring-rose-500/40"
-                                                                : "bg-white/5 hover:bg-white/10 text-gray-400 hover:text-rose-300"
-                                                        }`}
-                                                    >
-                                                        <BarChart3 className="h-3 w-3" />
-                                                    </button>
-                                                </HealthTooltip>
-                                            )}
-                                            {latest ? (
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingVital(latest)
-                                                        setAddModalType('vital')
-                                                        setShowAddModal(true)
-                                                    }}
-                                                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all"
-                                                    title="Edit vital"
-                                                >
-                                                    <Edit className="h-3 w-3" />
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    onClick={() => {
-                                                        setEditingVital({ title: group.title, _isDummy: true })
-                                                        setAddModalType('vital')
-                                                        setShowAddModal(true)
-                                                    }}
-                                                    className="p-1.5 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-blue-400 transition-all"
-                                                    title="Log vital"
-                                                >
-                                                    <Plus className="h-3 w-3" />
-                                                </button>
+                                            </div>
+                                            <div className="text-2xl font-black font-mono">
+                                                {latest ? latest.item_metadata.value : '--'}
+                                                <span className="text-xs text-gray-500 ml-1 font-normal uppercase">{latest?.item_metadata.unit || ""}</span>
+                                            </div>
+                                            {latest && (
+                                                <div className="mt-1 max-w-[200px] flex justify-end">
+                                                    {group.id === 'bp' ? renderBpChip() : refResult ? <VitalVerdictChip result={refResult} /> : null}
+                                                </div>
                                             )}
                                         </div>
-                                        <div className="text-2xl font-black font-mono">
-                                            {latest ? latest.item_metadata.value : '--'}
-                                            <span className="text-xs text-gray-500 ml-1 font-normal uppercase">{latest?.item_metadata.unit || ""}</span>
-                                        </div>
-                                        {latest && refResult && (
-                                            <div className="mt-1 max-w-[180px] flex justify-end">
-                                                <VitalVerdictChip result={refResult} />
+                                    </div>
+
+                                    {/* Graph Section */}
+                                    <div className="h-32 w-full mb-5 mt-2">
+                                        {group.data.length > 1 ? (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                {(group as any).multi ? (
+                                                    <LineChart data={group.data}>
+                                                        <Line type="monotone" dataKey="systolic" stroke="#ef4444" strokeWidth={3} dot={false} />
+                                                        <Line type="monotone" dataKey="diastolic" stroke="#3b82f6" strokeWidth={3} dot={false} />
+                                                    </LineChart>
+                                                ) : (
+                                                    <AreaChart data={group.data}>
+                                                        <defs>
+                                                            <linearGradient id={`color-${group.id}`} x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                                                                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                                                            </linearGradient>
+                                                        </defs>
+                                                        <Area type="monotone" dataKey="value" stroke={color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${group.id})`} />
+                                                    </AreaChart>
+                                                )}
+                                            </ResponsiveContainer>
+                                        ) : (
+                                            <div className="h-full flex items-center justify-center text-xs text-gray-600 italic">Logging required for trend...</div>
+                                        )}
+                                    </div>
+
+                                    {/* Notes Section in Card */}
+                                    <div className="pt-4 border-t border-white/5 space-y-2">
+                                        <h4 className="text-[10px] font-black uppercase text-gray-400">Notes & Observations</h4>
+                                        <p className="text-xs text-gray-300 line-clamp-2 italic">
+                                            {latest?.item_metadata?.notes || "No additional data recorded for latest entry."}
+                                        </p>
+                                        {latest?.item_metadata?.date && (
+                                            <div className="text-[10px] text-blue-400 font-bold uppercase mt-2">
+                                                Recorded {formatVitalDateNoShift(latest.item_metadata.date, { includeYear: true })}
                                             </div>
                                         )}
                                     </div>
-                                </div>
 
-                                {/* Graph Section */}
-                                <div className="h-32 w-full mb-6 mt-4">
-                                    {group.data.length > 1 ? (
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            {group.multi ? (
-                                                <LineChart data={group.data}>
-                                                    <Line type="monotone" dataKey="systolic" stroke="#ef4444" strokeWidth={3} dot={false} />
-                                                    <Line type="monotone" dataKey="diastolic" stroke="#3b82f6" strokeWidth={3} dot={false} />
-                                                </LineChart>
-                                            ) : (
-                                                <AreaChart data={group.data}>
-                                                    <defs>
-                                                        <linearGradient id={`color-${group.id}`} x1="0" y1="0" x2="0" y2="1">
-                                                            <stop offset="5%" stopColor={color} stopOpacity={0.2} />
-                                                            <stop offset="95%" stopColor={color} stopOpacity={0} />
-                                                        </linearGradient>
-                                                    </defs>
-                                                    <Area type="monotone" dataKey="value" stroke={color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${group.id})`} />
-                                                </AreaChart>
-                                            )}
-                                        </ResponsiveContainer>
-                                    ) : (
-                                        <div className="h-full flex items-center justify-center text-xs text-gray-600 italic">Logging required for trend...</div>
+                                    {group.id === 'bp' && (
+                                        <BloodPressureReference
+                                            isOpen={showBpReference}
+                                            onToggle={() => setShowBpReference((prev) => !prev)}
+                                            latestBpRecord={latest}
+                                            theme={theme}
+                                            onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
+                                        />
+                                    )}
+                                    {refResult && (
+                                        <VitalReferencePanel
+                                            title={group.title}
+                                            isOpen={isRefOpen}
+                                            onToggle={toggleRef}
+                                            result={refResult}
+                                            theme={theme}
+                                            onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
+                                            onGlucoseContextChange={setGlucoseCtxOverride}
+                                        />
                                     )}
                                 </div>
+                            )
+                        })}
+                    </div>
+                )}
 
-                                {/* Notes Section in Card */}
-                                <div className="pt-4 border-t border-white/5 space-y-2">
-                                    <h4 className="text-[10px] font-black uppercase text-gray-400">Notes & Observations</h4>
-                                    <p className="text-xs text-gray-300 line-clamp-2 italic">
-                                        {latest?.item_metadata?.notes || "No additional data recorded for latest entry."}
-                                    </p>
-                                    {latest?.item_metadata?.date && (
-                                        <div className="text-[10px] text-blue-400 font-bold uppercase mt-2">
-                                            Recorded {safeFormat(latest.item_metadata.date, 'LLL d, yyyy')}
-                                        </div>
-                                    )}
-                                </div>
+                <VitalsArrangeModal
+                    isOpen={showArrangeVitalsModal}
+                    onClose={() => setShowArrangeVitalsModal(false)}
+                    orderedAllIds={vitalsLayout.orderedAllIds}
+                    customOrder={vitalsLayout.state.customOrder}
+                    hiddenSet={vitalsLayout.hiddenSet}
+                    entriesFirst={vitalsLayout.state.entriesFirst}
+                    itemsMap={arrangeItemsMap}
+                    onMove={vitalsLayout.moveInCustomOrder}
+                    onSetCustomOrder={vitalsLayout.setCustomOrder}
+                    onToggleHidden={vitalsLayout.toggleVitalHidden}
+                    onSetEntriesFirst={vitalsLayout.setEntriesFirst}
+                    onReset={vitalsLayout.resetToDefault}
+                />
 
-                                {group.id === 'bp' && (
-                                    <BloodPressureReference
-                                        isOpen={showBpReference}
-                                        onToggle={() => setShowBpReference((prev) => !prev)}
-                                        latestBpRecord={latest}
-                                        theme={theme}
-                                        onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
-                                    />
-                                )}
-                                {refResult && (
-                                    <VitalReferencePanel
-                                        title={group.title}
-                                        isOpen={isRefOpen}
-                                        onToggle={toggleRef}
-                                        result={refResult}
-                                        theme={theme}
-                                        onOpenHelp={onOpenHelp ? () => onOpenHelp("type-health-records") : undefined}
-                                        onGlucoseContextChange={setGlucoseCtxOverride}
-                                    />
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
+                <VitalsPdfModal
+                    isOpen={showVitalsPdfModal}
+                    onClose={() => setShowVitalsPdfModal(false)}
+                    orderedBlocks={orderedExportBlocks}
+                />
 
                 <div className="mt-12 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
                     <div className="flex justify-between items-center mb-4">

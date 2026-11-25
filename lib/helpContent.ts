@@ -248,8 +248,31 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
       "steps",
       "activity",
       "units",
+      "sparkline",
+      "expand all",
+      "collapse all",
+      "arrange",
+      "reorder",
+      "hide",
+      "show",
+      "entries first",
+      "vital signs report",
+      "pdf",
+      "print",
     ],
     steps: [
+      {
+        heading: "Collapsed Vital Cards, Sparklines & Expand / Collapse All",
+        body: "Every vital card starts collapsed as a compact summary showing its icon, name, latest value with unit and date, colored verdict chip, and a 14-entry sparkline (or 'No entries' when empty). Tap any card header or its chevron to expand the full trend chart, notes, and Reference panel. Use the double-chevron icon button next to Log Vital to Expand all or Collapse all visible vitals at once (remembered on this device).",
+      },
+      {
+        heading: "Arrange Vitals (Custom Order, Show/Hide & Entries First)",
+        body: "Tap Arrange in the Vitals header to reorder vitals with the up/down arrows or drag handles, uncheck vitals to hide them from the page, or turn on 'Show vitals with entries first' (entries on top, empty ones below, keeping your custom order inside each group). Tap Reset to default at any time. The Vitals page, PDF checklist, and Expand/Collapse all follow your arranged order.",
+      },
+      {
+        heading: "Save or Print Vital Signs Report (PDF)",
+        body: "Tap PDF in the Vitals header to generate a Letter-size Vital Signs Report directly in your browser with zero server calls. By default, vitals with entries are selected. Choose whether to include line charts, reference bands, and history tables (Last 30 days, Last 90 days, or All), optionally enter a Patient name (remembered on this device), and click Download PDF or Print.",
+      },
       {
         heading: "Opening the Blood Pressure Reference Chart",
         body: "On the Vitals tab, find the Blood Pressure card and tap the Blood Pressure Reference bar (or the small chart icon next to BLOOD PRESSURE). It stays collapsed by default so your Vitals dashboard stays compact, and uses zero network or database queries.",
