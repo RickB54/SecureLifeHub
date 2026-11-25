@@ -338,6 +338,11 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
       "rx quick import",
       "preset",
       "pill library",
+      "ai assistant",
+      "dailymed",
+      "popular questions",
+      "drug interactions",
+      "question history",
     ],
     steps: [
       {
@@ -355,6 +360,10 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
       {
         heading: "Skip, Take, Reschedule, Reminder Popup & Reset",
         body: "Tap Take to log a dose, Skip to skip a scheduled dose (skipped doses are not subtracted from your pill count), or Reschedule to set a one-off reminder time. When a 'Time to Take Meds' reminder popup appears, you can tap TAKE NOW, Skip, or Snooze right from the notice. Tap Reset on the card to undo today's logged status back to Not taken.",
+      },
+      {
+        heading: "AI Assistant: Popular DailyMed Questions, Interactions & Q&A History",
+        body: "Tap AI Assistant at the top of the Meds page to open the DailyMed Medication Q&A & Interaction Checker. Select one or more medications from your list (or type any other drug name), pick a question from the Popular Medication Questions dropdown (such as taking drugs together, interactions, food/alcohol/grapefruit, uses, dosage, missed dose/overdose, side effects, warnings, pregnancy, or storage) or type your own, and click AI Assistant. It pulls the answer directly from official NLM DailyMed / FDA prescribing labels with source links and automatically saves every question and answer in your Question & Answer History (and mirrors it to Dr. AI history on this device).",
       },
       {
         heading: "Info (i) Detail Screen, Official FDA Label Lookup & Safe Fill Fields",

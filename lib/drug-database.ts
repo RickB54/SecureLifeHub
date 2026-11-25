@@ -15,12 +15,17 @@ export interface OfficialDrugLabel {
   rawEffectiveTime?: string
   dailyMedUrl: string
   usesText: string
+  dosageAdminText?: string
+  contraindicationsText?: string
   mechanismText: string
   sideEffectsText: string
   interactionsText: string
   boxedWarningText: string
   warningsText: string
   pregnancyText: string
+  overdosageText?: string
+  storageText?: string
+  patientCounselingText?: string
 }
 
 export interface DrugLabelLookupResult {
@@ -29,7 +34,7 @@ export interface DrugLabelLookupResult {
   fromCache?: boolean
 }
 
-const CACHE_PREFIX = "slh_fda_drug_label_v1:"
+const CACHE_PREFIX = "slh_fda_drug_label_v2:"
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 interface CachedLabelEntry {

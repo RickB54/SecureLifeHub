@@ -190,6 +190,8 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
     : `https://dailymed.nlm.nih.gov/dailymed/search.cfm?labeltype=all&query=${encodeURIComponent(primaryGeneric || primaryBrand || fallbackQuery)}`
 
   const usesText = cleanLabelSectionText(r?.indications_and_usage || r?.purpose)
+  const dosageAdminText = cleanLabelSectionText(r?.dosage_and_administration)
+  const contraindicationsText = cleanLabelSectionText(r?.contraindications)
   const mechanismText = cleanLabelSectionText(r?.mechanism_of_action || r?.clinical_pharmacology)
   const sideEffectsText = cleanLabelSectionText(r?.adverse_reactions)
   const interactionsText = cleanLabelSectionText(r?.drug_interactions)
@@ -205,6 +207,16 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
       ...(Array.isArray(r?.nursing_mothers) ? r.nursing_mothers : []),
     ]
   )
+  const overdosageText = cleanLabelSectionText(r?.overdosage)
+  const storageText = cleanLabelSectionText(r?.storage_and_handling || r?.how_supplied)
+  const patientCounselingText = cleanLabelSectionText(
+    r?.information_for_patients ||
+      r?.patient_medication_information ||
+      r?.spl_medguide ||
+      r?.spl_patient_package_insert ||
+      r?.ask_doctor ||
+      r?.ask_doctor_or_pharmacist
+  )
 
   return {
     id,
@@ -218,12 +230,17 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
     rawEffectiveTime: rawEffective,
     dailyMedUrl,
     usesText,
+    dosageAdminText,
+    contraindicationsText,
     mechanismText,
     sideEffectsText,
     interactionsText,
     boxedWarningText,
     warningsText,
     pregnancyText,
+    overdosageText,
+    storageText,
+    patientCounselingText,
   }
 }
 

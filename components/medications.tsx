@@ -19,6 +19,7 @@ import {
 } from './health-ui/health-field-helpers'
 import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
 import MedicationDetailView from './health-ui/medication-detail-view'
+import { MedicationAiAssistantPanel } from './health-ui/medication-ai-assistant'
 import { HealthTooltip, FieldHelpPopover } from './health-ui/health-tooltip'
 import {
     MedicationCategorySelect,
@@ -1362,26 +1363,12 @@ ${selectedMed ? `
                     </div>
                 </div>
 
-                {/* Quick AI Panel */}
+                {/* Official DailyMed Medication Q&A & Interaction Panel */}
                 {showQuickAI && (
-                    <div className="mb-3 p-3 rounded-xl bg-blue-950/30 border border-blue-500/30">
-                        <div className="flex gap-2 mb-2">
-                            <input
-                                type="text"
-                                placeholder="Ask about drug interactions, side effects, dosage..."
-                                value={aiQuestion}
-                                onChange={(e) => setAiQuestion(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleAIQuestion()}
-                                className="flex-1 h-9 px-3 bg-[#222222] border border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
-                            />
-                            <button onClick={handleAIQuestion} className="h-9 px-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white"><Send className="h-4 w-4" /></button>
-                        </div>
-                        {aiResponse && (
-                            <div className="p-2.5 rounded-lg bg-blue-500/10 border border-blue-500/30 max-h-48 overflow-y-auto custom-scrollbar">
-                                <div className="text-sm whitespace-pre-wrap">{aiResponse}</div>
-                            </div>
-                        )}
-                    </div>
+                    <MedicationAiAssistantPanel
+                        medRecords={medRecords}
+                        onClose={() => setShowQuickAI(false)}
+                    />
                 )}
 
                 {/* Stats */}
