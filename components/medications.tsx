@@ -1368,6 +1368,15 @@ ${selectedMed ? `
                     <MedicationAiAssistantPanel
                         medRecords={medRecords}
                         onClose={() => setShowQuickAI(false)}
+                        onAddToMedications={(prefill) => {
+                            setSelectedMed(null)
+                            setShowEditModal(false)
+                            setShowAddModal(true)
+                            setPrefillTarget({
+                                token: Date.now(),
+                                fields: prefill,
+                            })
+                        }}
                     />
                 )}
 
@@ -2603,6 +2612,7 @@ function MedicationModal({
             const f = prefillData.fields
             setFormData(prev => ({
                 ...prev,
+                ...(f.name !== undefined && !prev.name ? { name: f.name } : {}),
                 ...(f.genericName !== undefined ? { genericName: f.genericName } : {}),
                 ...(f.drugClass !== undefined ? { drugClass: f.drugClass } : {}),
                 ...(f.purpose !== undefined ? { purpose: f.purpose } : {}),

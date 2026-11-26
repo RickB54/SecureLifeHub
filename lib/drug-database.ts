@@ -26,18 +26,24 @@ export interface OfficialDrugLabel {
   boxedWarningText: string
   warningsText: string
   pregnancyText: string
+  specificPopulationsText?: string
+  geriatricUseText?: string
+  hepaticImpairmentText?: string
+  renalImpairmentText?: string
   overdosageText?: string
   storageText?: string
   patientCounselingText?: string
+  medGuideText?: string
 }
 
 export interface DrugLabelLookupResult {
   query: string
   labels: OfficialDrugLabel[]
+  didYouMean?: string[]
   fromCache?: boolean
 }
 
-const CACHE_PREFIX = "slh_fda_drug_label_v3:"
+const CACHE_PREFIX = "slh_fda_drug_label_v4:"
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 interface CachedLabelEntry {
@@ -123,6 +129,7 @@ export async function fetchOfficialDrugLabels(
 
   const data = await res.json()
   const labels: OfficialDrugLabel[] = Array.isArray(data?.labels) ? data.labels : []
+  const didYouMean: string[] = Array.isArray(data?.didYouMean) ? data.didYouMean : []
 
   if (labels.length > 0) {
     writeCachedLabels(key, labels)
@@ -131,6 +138,7 @@ export async function fetchOfficialDrugLabels(
   return {
     query: cleanName || cleanGeneric,
     labels,
+    ...(didYouMean.length > 0 ? { didYouMean } : {}),
     fromCache: false,
   }
 }

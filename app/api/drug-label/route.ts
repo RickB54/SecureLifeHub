@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server"
 const OPENFDA_URL = "https://api.fda.gov/drug/label.json"
 const DAILYMED_SPLS_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json"
 const DAILYMED_DRUGNAMES_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2/drugnames.json"
+const RXNORM_SPELLING_URL = "https://rxnav.nlm.nih.gov/REST/spellingsuggestions.json"
+const RXNORM_APPROX_URL = "https://rxnav.nlm.nih.gov/REST/approximateTerm.json"
 
 const MONTHS_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -211,16 +213,19 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
       ...(Array.isArray(r?.nursing_mothers) ? r.nursing_mothers : []),
     ]
   )
+  const specificPopulationsText = cleanLabelSectionText(r?.use_in_specific_populations)
+  const geriatricUseText = cleanLabelSectionText(r?.geriatric_use)
+  const hepaticImpairmentText = cleanLabelSectionText(r?.hepatic_impairment)
+  const renalImpairmentText = cleanLabelSectionText(r?.renal_impairment)
   const overdosageText = cleanLabelSectionText(r?.overdosage)
   const storageText = cleanLabelSectionText(r?.storage_and_handling || r?.how_supplied)
   const patientCounselingText = cleanLabelSectionText(
     r?.information_for_patients ||
       r?.patient_medication_information ||
-      r?.spl_medguide ||
-      r?.spl_patient_package_insert ||
       r?.ask_doctor ||
       r?.ask_doctor_or_pharmacist
   )
+  const medGuideText = cleanLabelSectionText(r?.spl_medguide || r?.spl_patient_package_insert)
 
   return {
     id,
@@ -245,9 +250,14 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
     boxedWarningText,
     warningsText,
     pregnancyText,
+    specificPopulationsText,
+    geriatricUseText,
+    hepaticImpairmentText,
+    renalImpairmentText,
     overdosageText,
     storageText,
     patientCounselingText,
+    medGuideText,
   }
 }
 
@@ -275,44 +285,77 @@ function scoreLabelRelevance(label: ReturnType<typeof mapFdaResultToLabel>, prim
   return score
 }
 
+function levenshteinDistance(a: string, b: string): number {
+  const s = a.toLowerCase()
+  const t = b.toLowerCase()
+  const m = s.length
+  const n = t.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp: number[] = Array.from({ length: n + 1 }, (_, j) => j)
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0]
+    dp[0] = i
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j]
+      const cost = s[i - 1] === t[j - 1] ? 0 : 1
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost)
+      prev = temp
+    }
+  }
+  return dp[n]
+}
+
+function titleCaseDrug(raw: string): string {
+  const trimmed = raw.replace(/\s+/g, " ").trim()
+  if (!trimmed) return ""
+  if (trimmed === trimmed.toUpperCase()) {
+    return trimmed.toLowerCase().replace(/\b([a-z])/g, (m) => m.toUpperCase())
+  }
+  return trimmed
+}
+
 async function fetchDrugNameSuggestions(prefix: string): Promise<string[]> {
   const clean = prefix.replace(/[^a-zA-Z0-9\s-]/g, " ").replace(/\s+/g, " ").trim()
   if (clean.length < 3) return []
 
   const lowerPrefix = clean.toLowerCase()
-  const seen = new Map<string, string>()
+  // Map lowercase primary name -> display string ("Brand (generic)" when brand-to-generic is known)
+  const seen = new Map<string, { primary: string; display: string }>()
 
-  const addName = (raw?: unknown) => {
-    if (typeof raw !== "string") return
-    const trimmed = raw.replace(/\s+/g, " ").trim()
-    if (trimmed.length < 3 || trimmed.length > 60) return
-    // Title-case ALL-CAPS names cleanly while preserving mixed case
-    const formatted =
-      trimmed === trimmed.toUpperCase()
-        ? trimmed
-            .toLowerCase()
-            .replace(/\b([a-z])/g, (m) => m.toUpperCase())
-        : trimmed
-    const key = formatted.toLowerCase()
-    if (!seen.has(key)) seen.set(key, formatted)
+  const addCandidate = (primaryRaw?: unknown, genericRaw?: unknown) => {
+    if (typeof primaryRaw !== "string") return
+    const primary = titleCaseDrug(primaryRaw)
+    if (primary.length < 3 || primary.length > 55) return
+    const gen = typeof genericRaw === "string" ? titleCaseDrug(genericRaw) : ""
+    const display =
+      gen && gen.length >= 3 && gen.length <= 45 && gen.toLowerCase() !== primary.toLowerCase()
+        ? `${primary} (${gen.toLowerCase()})`
+        : primary
+    const key = primary.toLowerCase()
+    const existing = seen.get(key)
+    // Prefer entry that includes brand-to-generic mapping
+    if (!existing || (!existing.display.includes("(") && display.includes("("))) {
+      seen.set(key, { primary, display })
+    }
   }
 
-  // Query DailyMed drugnames + openFDA in parallel for fast, reliable coverage
+  const spellingTerms: string[] = []
+
+  // 1. Run DailyMed drugnames, openFDA prefix, and NLM RxNorm spelling/fuzzy suggestions in parallel
   await Promise.all([
     (async () => {
       try {
         const res = await fetch(
-          `${DAILYMED_DRUGNAMES_URL}?drug_name=${encodeURIComponent(clean)}&pagesize=15`,
+          `${DAILYMED_DRUGNAMES_URL}?drug_name=${encodeURIComponent(clean)}&pagesize=12`,
           { headers: { Accept: "application/json" }, cache: "no-store" }
         )
         if (!res.ok) return
         const json = await res.json()
         const rows = Array.isArray(json?.data) ? json.data : []
-        for (const row of rows) {
-          addName(row?.drug_name)
-        }
+        for (const row of rows) addCandidate(row?.drug_name)
       } catch {
-        // Ignore DailyMed suggest failure
+        // Ignore
       }
     })(),
     (async () => {
@@ -325,28 +368,118 @@ async function fetchDrugNameSuggestions(prefix: string): Promise<string[]> {
         )
         for (const r of fdaRows) {
           const openfda = r?.openfda || {}
-          for (const g of Array.isArray(openfda.generic_name) ? openfda.generic_name.slice(0, 2) : []) {
-            if (String(g).toLowerCase().includes(lowerPrefix)) addName(g)
+          const firstGen = Array.isArray(openfda.generic_name) ? String(openfda.generic_name[0] || "") : ""
+          const firstBrand = Array.isArray(openfda.brand_name) ? String(openfda.brand_name[0] || "") : ""
+          if (firstBrand && firstBrand.toLowerCase().includes(lowerPrefix)) {
+            addCandidate(firstBrand, firstGen)
           }
-          for (const b of Array.isArray(openfda.brand_name) ? openfda.brand_name.slice(0, 2) : []) {
-            if (String(b).toLowerCase().includes(lowerPrefix)) addName(b)
+          if (firstGen && firstGen.toLowerCase().includes(lowerPrefix)) {
+            addCandidate(firstGen)
           }
         }
       } catch {
-        // Ignore openFDA suggest failure
+        // Ignore
+      }
+    })(),
+    (async () => {
+      try {
+        const res = await fetch(
+          `${RXNORM_SPELLING_URL}?name=${encodeURIComponent(clean)}`,
+          { headers: { Accept: "application/json" }, cache: "no-store" }
+        )
+        if (!res.ok) return
+        const json = await res.json()
+        const list = json?.suggestionGroup?.suggestionList?.suggestion
+        if (Array.isArray(list)) {
+          for (const s of list.slice(0, 6)) {
+            if (typeof s === "string" && s.trim().length >= 3) {
+              spellingTerms.push(s.trim())
+              addCandidate(s.trim())
+            }
+          }
+        }
+      } catch {
+        // Ignore
+      }
+    })(),
+    (async () => {
+      try {
+        const res = await fetch(
+          `${RXNORM_APPROX_URL}?term=${encodeURIComponent(clean)}&maxEntries=8`,
+          { headers: { Accept: "application/json" }, cache: "no-store" }
+        )
+        if (!res.ok) return
+        const json = await res.json()
+        const cands = json?.approximateGroup?.candidate
+        if (Array.isArray(cands)) {
+          for (const c of cands) {
+            if (typeof c?.name === "string" && c.name.trim().length >= 3) {
+              const nameOnly = stripStrengthAndNoise(c.name)
+              if (nameOnly.length >= 3) {
+                spellingTerms.push(nameOnly)
+                addCandidate(nameOnly)
+              }
+            }
+          }
+        }
+      } catch {
+        // Ignore
       }
     })(),
   ])
 
-  const all = Array.from(seen.values())
-  all.sort((a, b) => {
-    const aStarts = a.toLowerCase().startsWith(lowerPrefix) ? 0 : 1
-    const bStarts = b.toLowerCase().startsWith(lowerPrefix) ? 0 : 1
-    if (aStarts !== bStarts) return aStarts - bStarts
-    return a.length - b.length
+  // 2. If few exact matches (likely misspelled, e.g. "Proacta" -> "Promacta"), also probe openFDA with
+  //    spelling suggestions AND 3-char prefix wildcard so we get brand-to-generic mapping ("Promacta (eltrombopag)")
+  const fuzzyProbes = Array.from(new Set(spellingTerms.map((s) => s.toLowerCase()))).slice(0, 3)
+  if (fuzzyProbes.length > 0 || seen.size < 3) {
+    const probes = [...fuzzyProbes]
+    if (probes.length === 0 && clean.length >= 4) {
+      probes.push(clean.slice(0, 3))
+    }
+    await Promise.all(
+      probes.map(async (probe) => {
+        const token = escapeLucenePhrase(probe.split(" ")[0] || probe)
+        if (token.length < 3) return
+        const rows = await queryOpenFda(
+          `openfda.brand_name:"${token}" OR openfda.generic_name:"${token}" OR openfda.brand_name:${token}*`,
+          8
+        )
+        for (const r of rows) {
+          const openfda = r?.openfda || {}
+          const firstGen = Array.isArray(openfda.generic_name) ? String(openfda.generic_name[0] || "") : ""
+          const firstBrand = Array.isArray(openfda.brand_name) ? String(openfda.brand_name[0] || "") : ""
+          if (firstBrand) addCandidate(firstBrand, firstGen)
+          else if (firstGen) addCandidate(firstGen)
+        }
+      })
+    )
+  }
+
+  // 3. Score & sort by exact/prefix match first, then Levenshtein edit distance
+  const scored = Array.from(seen.values()).map((item) => {
+    const pLow = item.primary.toLowerCase()
+    const firstWord = pLow.split(/[\s(]+/)[0] || pLow
+    const dist = Math.min(levenshteinDistance(lowerPrefix, pLow), levenshteinDistance(lowerPrefix, firstWord))
+    let rank = dist * 10
+    if (pLow === lowerPrefix) rank -= 100
+    else if (pLow.startsWith(lowerPrefix)) rank -= 50
+    else if (pLow.includes(lowerPrefix)) rank -= 20
+    if (item.display.includes("(")) rank -= 4
+    return { ...item, dist, rank }
   })
 
-  return all.slice(0, 10)
+  // Filter out very distant noise when user typed 4+ chars
+  const maxAllowedDist = Math.max(3, Math.ceil(lowerPrefix.length * 0.55))
+  const filtered = scored.filter(
+    (x) =>
+      x.primary.toLowerCase().includes(lowerPrefix) ||
+      x.display.toLowerCase().includes(lowerPrefix) ||
+      x.dist <= maxAllowedDist
+  )
+
+  filtered.sort((a, b) => a.rank - b.rank || a.primary.length - b.primary.length)
+
+  return filtered.slice(0, 10).map((x) => x.display)
 }
 
 export async function GET(req: NextRequest) {
@@ -443,8 +576,14 @@ export async function GET(req: NextRequest) {
     if (deduped.length >= 8) break
   }
 
+  let didYouMean: string[] = []
+  if (deduped.length === 0) {
+    didYouMean = (await fetchDrugNameSuggestions(rawName || rawGeneric)).slice(0, 5)
+  }
+
   return NextResponse.json({
     query: rawName || rawGeneric,
     labels: deduped,
+    ...(didYouMean.length > 0 ? { didYouMean } : {}),
   })
 }
