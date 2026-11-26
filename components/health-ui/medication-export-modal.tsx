@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import type { DoctorOption, FacilityOption } from "./health-field-helpers"
 import { HealthTooltip, FieldHelpPopover } from "./health-tooltip"
+import { SmartSelect } from "./smart-select"
 import {
   DEFAULT_MED_CATEGORIES,
   MED_EXPORT_PREFS_KEY,
@@ -50,98 +51,29 @@ export function MedicationCategorySelect({
   label = "",
   compact = false,
 }: MedicationCategorySelectProps) {
-  const [addingNew, setAddingNew] = useState(false)
-  const [newName, setNewName] = useState("")
-
-  const allOptions = useMemo(() => {
-    const set = new Set<string>(DEFAULT_MED_CATEGORIES as unknown as string[])
-    for (const c of categories) {
-      if (c && c !== UNCATEGORIZED_MED_CATEGORY) set.add(c)
-    }
-    if (value && value !== UNCATEGORIZED_MED_CATEGORY) set.add(value)
-    return Array.from(set)
-  }, [categories, value])
-
-  const commitNew = () => {
-    const clean = newName.trim()
-    if (!clean) {
-      setAddingNew(false)
-      return
-    }
-    onCreateCategory?.(clean)
-    onChange(clean)
-    setNewName("")
-    setAddingNew(false)
-  }
+  const prevValues = useMemo(
+    () => categories.filter((c) => c && c !== UNCATEGORIZED_MED_CATEGORY),
+    [categories]
+  )
 
   return (
-    <div>
-      {label && (
-        <label className={compact ? "text-[11px] font-bold text-gray-400 uppercase mb-1.5 block" : "text-sm font-bold text-gray-400 uppercase mb-2 block"}>
-          {label}
-        </label>
-      )}
-      {addingNew ? (
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            autoFocus
-            placeholder="Type new category name..."
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                commitNew()
-              } else if (e.key === "Escape") {
-                setAddingNew(false)
-                setNewName("")
-              }
-            }}
-            className="flex-1 px-3 py-2.5 bg-[#2a2a2a] border border-purple-500 rounded-xl text-sm text-white focus:outline-none"
-          />
-          <button
-            type="button"
-            onClick={commitNew}
-            className="px-3 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold cursor-pointer"
-          >
-            Add
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setAddingNew(false)
-              setNewName("")
-            }}
-            className="px-2.5 py-2.5 rounded-xl bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs cursor-pointer"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <select
-          value={value || ""}
-          onChange={(e) => {
-            if (e.target.value === "__new__") {
-              setAddingNew(true)
-            } else {
-              onChange(e.target.value)
-            }
-          }}
-          className={`w-full bg-[#2a2a2a] border border-gray-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-            compact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm"
-          }`}
-        >
-          <option value="">Uncategorized</option>
-          {allOptions.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-          <option value="__new__">+ New category...</option>
-        </select>
-      )}
-    </div>
+    <SmartSelect
+      fieldKey="medication_category"
+      value={value === UNCATEGORIZED_MED_CATEGORY ? "" : value || ""}
+      onChange={(next) => {
+        const clean = next.trim()
+        if (clean && !(DEFAULT_MED_CATEGORIES as readonly string[]).includes(clean)) {
+          onCreateCategory?.(clean)
+        }
+        onChange(clean)
+      }}
+      previousValues={prevValues}
+      label={label || undefined}
+      placeholder="Uncategorized"
+      compact={compact}
+      allowClear
+      tooltip="Select a medication category or add a custom one"
+    />
   )
 }
 

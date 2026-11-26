@@ -100,8 +100,12 @@ export default function DoctorVisitMode({
 
   const unansweredQuestions = questions.filter((q) => !q.answered)
   const answeredQuestions = questions.filter((q) => q.answered)
-  const activeLetters = letters.filter((l) => l.status === "needed" || l.status === "requested")
-  const activeReferrals = referrals.filter((r) => r.status === "needed" || r.status === "requested" || r.status === "scheduled")
+  const activeLetters = letters.filter(
+    (l) => !["received", "sent", "filed"].includes((l.status || "").trim().toLowerCase())
+  )
+  const activeReferrals = referrals.filter(
+    (r) => !["seen", "completed", "cancelled"].includes((r.status || "").trim().toLowerCase())
+  )
 
   const apptDateStr = nextAppt?.date
     ? new Date(nextAppt.date).toLocaleDateString(undefined, {

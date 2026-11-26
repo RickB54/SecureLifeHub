@@ -132,6 +132,10 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
         body: "Track specialist referrals from Needed -> Requested -> Scheduled -> Seen, including the referring doctor, target specialist, facility, phone number, and reason.",
       },
       {
+        heading: "Dropdown Options, Custom Entries & Optional Dates",
+        body: "Every Health Hub dropdown (Date Type, Specialty, Location/Facility, Pharmacy, Reason, Form, Frequency, Category, Letter Direction/Status, Referral Status, Vitals Context/Mood, Insurance Plan/Relationship, Portal Type) always lists built-in defaults, your previously used values, and a final '+ Custom...' option. Custom options are remembered locally and show a small 'x' button to remove them from the dropdown without changing existing records. New Notes, Letters, Referrals, and Visit Summaries default Date Type to 'Date written' and allow leaving Date blank ('No date', sorted last).",
+      },
+      {
         heading: "Visit Summary",
         body: "Paste or type after-visit instructions, medication changes, or portal encounter recaps in the Visit Summary clinical box. You can copy any summary as plain text in one tap.",
       },

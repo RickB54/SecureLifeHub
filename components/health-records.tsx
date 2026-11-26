@@ -47,6 +47,7 @@ import { getBpCardVerdict, VitalExportBlockInput } from "@/lib/vitalsPdfExport"
 import { VitalsSparkline } from "./health-ui/vitals-sparkline"
 import { VitalsArrangeModal, ArrangeVitalItem } from "./health-ui/vitals-arrange-modal"
 import { VitalsPdfModal } from "./health-ui/vitals-pdf-modal"
+import { SmartSelect } from "./health-ui/smart-select"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -205,6 +206,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         facility_id: "" as string | null,
         facility_name: "",
     })
+    const [vitalContextVal, setVitalContextVal] = useState("At Rest")
+    const [vitalMoodVal, setVitalMoodVal] = useState("")
+
+    useEffect(() => {
+        if (showAddModal && addModalType === "vital") {
+            setVitalContextVal(editingVital?.item_metadata?.context || "At Rest")
+            setVitalMoodVal(editingVital?.item_metadata?.mood || "")
+        }
+    }, [showAddModal, addModalType, editingVital])
 
     // Google Calendar State
     const [googleCalendarEvents, setGoogleCalendarEvents] = useState<any[]>([])
@@ -2252,33 +2262,50 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                             <input type="datetime-local" name="date" required defaultValue={formatForDateTimeInput(editingVital?.item_metadata?.date)} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }} />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">State/Context (AI Informed)</label>
-                                            <select name="context" defaultValue={editingVital?.item_metadata?.context || "At Rest"} className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white" style={{ colorScheme: 'dark' }}>
-                                                <option className="bg-[#1a1a1a]">At Rest</option>
-                                                <option className="bg-[#1a1a1a]">Post Workout</option>
-                                                <option className="bg-[#1a1a1a]">Waking Up</option>
-                                                <option className="bg-[#1a1a1a]">Feeling Stress</option>
-                                                <optgroup label="Glucose" className="bg-[#1a1a1a]">
-                                                    <option className="bg-[#1a1a1a]">Fasting</option>
-                                                    <option className="bg-[#1a1a1a]">2 hours after eating</option>
-                                                    <option className="bg-[#1a1a1a]">Random</option>
-                                                </optgroup>
-                                            </select>
+                                            <SmartSelect
+                                                fieldKey="vitals_context"
+                                                name="context"
+                                                label="State/Context (AI Informed)"
+                                                value={vitalContextVal}
+                                                onChange={setVitalContextVal}
+                                                previousValues={effectiveRecords
+                                                    .filter((r) => r.item_metadata?.is_vital || r.category === "Vitals")
+                                                    .map((r) => r.item_metadata?.context)}
+                                                placeholder="Select state/context..."
+                                                triggerClassName="w-full p-4 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-rose-500/50 transition-all font-bold text-white flex items-center justify-between gap-2 text-left"
+                                            />
                                         </div>
                                     </div>
 
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest pl-1">Current Mood/Feeling</label>
-                                        <div className="flex gap-4">
+                                        <div className="flex gap-3">
                                             {['😊', '🤒', '😴', '😰', '⚡'].map(mood => (
-                                                <label key={mood} className="flex-1 cursor-pointer">
-                                                    <input type="radio" name="mood" value={mood} defaultChecked={editingVital?.item_metadata?.mood === mood} className="hidden peer" />
-                                                    <div className="p-4 text-2xl text-center rounded-2xl bg-white/5 border border-white/10 peer-checked:bg-rose-500/20 peer-checked:border-rose-500/50 transition-all">
-                                                        {mood}
-                                                    </div>
-                                                </label>
+                                                <button
+                                                    key={mood}
+                                                    type="button"
+                                                    onClick={() => setVitalMoodVal(vitalMoodVal === mood ? "" : mood)}
+                                                    className={`flex-1 p-3 text-2xl text-center rounded-2xl border transition-all cursor-pointer ${
+                                                        vitalMoodVal === mood
+                                                            ? "bg-rose-500/20 border-rose-500/50"
+                                                            : "bg-white/5 border-white/10 hover:bg-white/10"
+                                                    }`}
+                                                >
+                                                    {mood}
+                                                </button>
                                             ))}
                                         </div>
+                                        <SmartSelect
+                                            fieldKey="vitals_mood"
+                                            name="mood"
+                                            value={vitalMoodVal}
+                                            onChange={setVitalMoodVal}
+                                            previousValues={effectiveRecords
+                                                .filter((r) => r.item_metadata?.is_vital || r.category === "Vitals")
+                                                .map((r) => r.item_metadata?.mood)}
+                                            placeholder="Or pick / type mood..."
+                                            compact
+                                        />
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

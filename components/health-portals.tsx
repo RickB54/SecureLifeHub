@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { upsertSharedHealthRecord, removeSharedHealthRecord } from "@/lib/health-store"
+import { SmartSelect } from "./health-ui/smart-select"
 
 interface HealthPortalsProps {
   records: any[]
@@ -58,6 +59,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
 
   const [formData, setFormData] = useState({
     title: "",
+    portalType: "",
     url: "",
     username: "",
     password: "",
@@ -66,7 +68,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
   })
 
   const resetForm = () => {
-    setFormData({ title: "", url: "", username: "", password: "", facility: "", notes: "" })
+    setFormData({ title: "", portalType: "", url: "", username: "", password: "", facility: "", notes: "" })
     setEditingPortal(null)
   }
 
@@ -79,6 +81,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
       title: formData.title.trim(),
       category: "Health Portals",
       item_metadata: {
+        portalType: formData.portalType,
         url: normalizedUrl,
         username: formData.username,
         password: formData.password,
@@ -110,6 +113,7 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
     setEditingPortal(portal)
     setFormData({
       title: portal.title || "",
+      portalType: portal.item_metadata?.portalType || "",
       url: portal.item_metadata?.url || "",
       username: portal.item_metadata?.username || "",
       password: portal.item_metadata?.password || "",
@@ -287,13 +291,27 @@ export default function HealthPortals({ records, addItem, updateItem, deleteItem
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Facility / Doctor</label>
-                <input 
-                  value={formData.facility} onChange={(e) => setFormData({...formData, facility: e.target.value})}
-                  placeholder="e.g. Mass General Hospital"
-                  className={`w-full p-4 rounded-2xl border ${theme === 'light' ? 'bg-gray-100 border-gray-200' : 'bg-white/5 border-white/10'} focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <SmartSelect
+                    fieldKey="portal_type"
+                    label="Portal Type"
+                    value={formData.portalType}
+                    onChange={(val) => setFormData({ ...formData, portalType: val })}
+                    previousValues={portals.map((p) => p.item_metadata?.portalType)}
+                    placeholder="e.g. MyChart, Pharmacy..."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <SmartSelect
+                    fieldKey="location"
+                    label="Facility / Doctor"
+                    value={formData.facility}
+                    onChange={(val) => setFormData({ ...formData, facility: val })}
+                    previousValues={portals.map((p) => p.item_metadata?.facility)}
+                    placeholder="e.g. Mass General Hospital"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">

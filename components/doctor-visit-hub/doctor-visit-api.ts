@@ -443,7 +443,7 @@ export async function fetchHealthNotes(userId?: string): Promise<HealthNote[]> {
       .from("health_notes")
       .select("id, user_id, title, text, date, date_type, doctor_id, doctor_name, facility_id, facility_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
-      .order("date", { ascending: false })
+      .order("date", { ascending: false, nullsFirst: false })
 
     if (!error && data) {
       setCachedItem("notes", data)
@@ -461,8 +461,10 @@ export async function saveHealthNote(
   userId?: string
 ): Promise<HealthNote> {
   const id = note.id || crypto.randomUUID()
+  const normalizedDate = note.date && String(note.date).trim() ? String(note.date).trim() : null
   const completeNote: HealthNote = {
     ...note,
+    date: normalizedDate,
     id,
     user_id: userId,
     created_at: note.created_at || new Date().toISOString(),
@@ -524,7 +526,7 @@ export async function fetchHealthLetters(userId?: string): Promise<HealthLetter[
       .from("health_letters")
       .select("id, user_id, doctor_id, doctor_name, facility_id, facility_name, visit_id, date, date_type, direction, status, notes, attachment_url, attachment_name, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
-      .order("date", { ascending: false })
+      .order("date", { ascending: false, nullsFirst: false })
 
     if (!error && data) {
       setCachedItem("letters", data)
@@ -542,8 +544,10 @@ export async function saveHealthLetter(
   userId?: string
 ): Promise<HealthLetter> {
   const id = letter.id || crypto.randomUUID()
+  const normalizedDate = letter.date && String(letter.date).trim() ? String(letter.date).trim() : null
   const completeLetter: HealthLetter = {
     ...letter,
+    date: normalizedDate,
     id,
     user_id: userId,
     created_at: letter.created_at || new Date().toISOString(),
@@ -610,7 +614,7 @@ export async function fetchHealthReferrals(userId?: string): Promise<HealthRefer
       .from("health_referrals")
       .select("id, user_id, specialist_name, specialty, doctor_id, referred_by_doctor_id, referred_by_name, facility_id, facility_name, visit_id, reason, date, date_type, status, phone, notes, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
-      .order("date", { ascending: false })
+      .order("date", { ascending: false, nullsFirst: false })
 
     if (!error && data) {
       setCachedItem("referrals", data)
@@ -628,8 +632,10 @@ export async function saveHealthReferral(
   userId?: string
 ): Promise<HealthReferral> {
   const id = referral.id || crypto.randomUUID()
+  const normalizedDate = referral.date && String(referral.date).trim() ? String(referral.date).trim() : null
   const completeReferral: HealthReferral = {
     ...referral,
+    date: normalizedDate,
     id,
     user_id: userId,
     created_at: referral.created_at || new Date().toISOString(),
@@ -739,7 +745,7 @@ export async function fetchVisitSummaries(userId?: string): Promise<HealthVisitS
       .from("health_visit_summaries")
       .select("id, user_id, title, summary_text, date, date_type, doctor_id, doctor_name, facility_id, facility_name, visit_id, given_to_doctor, given_method, given_date, created_at, updated_at")
       .eq("user_id", userId)
-      .order("date", { ascending: false })
+      .order("date", { ascending: false, nullsFirst: false })
 
     if (!error && data) {
       setCachedItem("visit_summaries", data)
@@ -757,8 +763,10 @@ export async function saveVisitSummary(
   userId?: string
 ): Promise<HealthVisitSummary> {
   const id = summary.id || crypto.randomUUID()
+  const normalizedDate = summary.date && String(summary.date).trim() ? String(summary.date).trim() : null
   const completeSummary: HealthVisitSummary = {
     ...summary,
+    date: normalizedDate,
     id,
     user_id: userId,
     created_at: summary.created_at || new Date().toISOString(),

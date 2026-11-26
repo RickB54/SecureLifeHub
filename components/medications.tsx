@@ -17,6 +17,7 @@ import {
     extractHealthSuggestions,
     findSingleLinkedFacility,
 } from './health-ui/health-field-helpers'
+import { SmartSelect } from './health-ui/smart-select'
 import { upsertSharedHealthRecord, removeSharedHealthRecord, resolveDoctorInfo } from '@/lib/health-store'
 import MedicationDetailView from './health-ui/medication-detail-view'
 import { MedicationAiAssistantPanel } from './health-ui/medication-ai-assistant'
@@ -2906,25 +2907,14 @@ function MedicationModal({
                             />
                         </div>
                         <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Form (Optional)</label>
-                            <input
-                                list="med-dosage-forms"
-                                placeholder="e.g., Tablet, Capsule, Liquid, Inhaler..."
+                            <SmartSelect
+                                fieldKey="medication_form"
+                                label="Form (Optional)"
                                 value={formData.dosageForm}
-                                onChange={(e) => setFormData({ ...formData, dosageForm: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white"
+                                onChange={(val) => setFormData({ ...formData, dosageForm: val })}
+                                placeholder="e.g., Tablet, Capsule, Liquid, Inhaler..."
+                                triggerClassName="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white flex items-center justify-between gap-2 text-left"
                             />
-                            <datalist id="med-dosage-forms">
-                                <option value="Tablet" />
-                                <option value="Capsule" />
-                                <option value="Oral Solution / Liquid" />
-                                <option value="Topical Cream / Ointment" />
-                                <option value="Inhaler" />
-                                <option value="Nasal Spray" />
-                                <option value="Eye Drops" />
-                                <option value="Injection" />
-                                <option value="Patch" />
-                            </datalist>
                         </div>
                     </div>
 
@@ -3166,71 +3156,23 @@ function MedicationModal({
                     {/* Frequency & Prescriber */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-sm font-bold text-gray-400 uppercase mb-2 block">Frequency / Doses</label>
-                            <div className="flex gap-2">
-                                <select
-                                    value={(() => {
-                                        const freq = formData.frequency?.toLowerCase().trim() || ""
-                                        if (freq === "once daily - morning") return "once_morning"
-                                        if (freq === "once daily - afternoon") return "once_afternoon"
-                                        if (freq === "once daily - evening") return "once_evening"
-                                        if (freq === "once daily - bedtime") return "once_bedtime"
-                                        if (freq === "every other day") return "every_other_day"
-                                        if (freq === "weekly") return "weekly"
-                                        if (freq.includes("once")) return "once"
-                                        if (freq.includes("twice")) return "twice"
-                                        if (freq.includes("three")) return "three"
-                                        if (freq.includes("four")) return "four"
-                                        if (freq === "as needed") return "as_needed"
-                                        return "custom"
-                                    })()}
-                                    onChange={(e) => {
-                                        const val = e.target.value
-                                        let freq = ""
-                                        let doses = "1"
-
-                                        if (val === "once") { freq = "Once Daily"; doses = "1"; }
-                                        else if (val === "once_morning") { freq = "Once Daily - Morning"; doses = "1"; }
-                                        else if (val === "once_afternoon") { freq = "Once Daily - Afternoon"; doses = "1"; }
-                                        else if (val === "once_evening") { freq = "Once Daily - Evening"; doses = "1"; }
-                                        else if (val === "once_bedtime") { freq = "Once Daily - Bedtime"; doses = "1"; }
-                                        else if (val === "twice") { freq = "Twice Daily"; doses = "2"; }
-                                        else if (val === "three") { freq = "Three Times Daily"; doses = "3"; }
-                                        else if (val === "four") { freq = "Four Times Daily"; doses = "4"; }
-                                        else if (val === "every_other_day") { freq = "Every Other Day"; doses = "1"; }
-                                        else if (val === "weekly") { freq = "Weekly"; doses = "1"; }
-                                        else if (val === "as_needed") { freq = "As needed"; doses = "1"; }
-                                        else { freq = formData.frequency; doses = "1"; }
-
-                                        const defaultRem = getDefaultReminderForFrequency(freq)
-                                        const nextReminders = defaultRem
-                                            ? [defaultRem]
-                                            : formData.reminders
-
-                                        setFormData({ ...formData, frequency: freq, dosesPerDay: doses, reminders: nextReminders })
-                                    }}
-                                    className="px-3 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                                >
-                                    <option value="once">Once Daily</option>
-                                    <option value="once_morning">Once Daily - Morning</option>
-                                    <option value="once_afternoon">Once Daily - Afternoon</option>
-                                    <option value="once_evening">Once Daily - Evening</option>
-                                    <option value="once_bedtime">Once Daily - Bedtime</option>
-                                    <option value="twice">Twice Daily</option>
-                                    <option value="three">3x Daily</option>
-                                    <option value="four">4x Daily</option>
-                                    <option value="every_other_day">Every Other Day</option>
-                                    <option value="weekly">Weekly</option>
-                                    <option value="as_needed">As Needed</option>
-                                    <option value="custom">Custom Text...</option>
-                                </select>
-                                <input
-                                    placeholder="e.g., Every 2 days"
-                                    value={formData.frequency}
-                                    onChange={(e) => setFormData({ ...formData, frequency: e.target.value })}
-                                    className="flex-1 px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                />
-                            </div>
+                            <SmartSelect
+                                fieldKey="medication_frequency"
+                                label="Frequency / Doses"
+                                value={formData.frequency}
+                                onChange={(freq) => {
+                                    const lower = freq.toLowerCase().trim()
+                                    let doses = "1"
+                                    if (lower.includes("twice") || lower.includes("2x")) doses = "2"
+                                    else if (lower.includes("three") || lower.includes("3x")) doses = "3"
+                                    else if (lower.includes("four") || lower.includes("4x")) doses = "4"
+                                    const defaultRem = getDefaultReminderForFrequency(freq)
+                                    const nextReminders = defaultRem ? [defaultRem] : formData.reminders
+                                    setFormData({ ...formData, frequency: freq, dosesPerDay: doses, reminders: nextReminders })
+                                }}
+                                placeholder="Select frequency or + Custom..."
+                                triggerClassName="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-white flex items-center justify-between gap-2 text-left"
+                            />
                         </div>
                         <div>
                             <DoctorCombobox

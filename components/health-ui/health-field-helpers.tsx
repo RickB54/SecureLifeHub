@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect, useMemo } from "react"
 import { Search, ChevronDown, Plus, User, Stethoscope, Check, X, Building2 } from "lucide-react"
 import { format } from "date-fns"
+import { SmartSelect } from "./smart-select"
+import { SmartFieldKey } from "@/lib/health-field-defaults"
 
 export const FACILITY_TYPES = [
   "Hospital",
@@ -480,6 +482,7 @@ interface FieldSuggestionInputProps {
   value: string
   onChange: (value: string) => void
   suggestions: string[]
+  fieldKey?: SmartFieldKey | string
   name?: string
   label?: string
   placeholder?: string
@@ -491,14 +494,26 @@ interface FieldSuggestionInputProps {
   icon?: React.ReactNode
 }
 
+function inferSmartFieldKey(name?: string, label?: string): SmartFieldKey {
+  const combined = `${name || ""} ${label || ""}`.toLowerCase()
+  if (combined.includes("date-type") || combined.includes("date type") || combined.includes("datetype")) return "date_type"
+  if (combined.includes("specialty")) return "specialty"
+  if (combined.includes("pharmacy")) return "pharmacy"
+  if (combined.includes("location") || combined.includes("address")) return "location"
+  if (combined.includes("form") && combined.includes("dosage")) return "medication_form"
+  if (combined.includes("reason") || combined.includes("title")) return "reason_for_visit"
+  return "custom"
+}
+
 /**
- * Text field with interactive dropdown + HTML5 datalist suggestion list.
- * Users can pick a suggestion or freely type any custom value.
+ * Upgraded to delegate to the shared SmartSelect component so EVERY field always has:
+ * (a) built-in defaults, (b) previously used & saved custom values (with removable "x"), and (c) "+ Custom...".
  */
 export function FieldSuggestionInput({
   value,
   onChange,
   suggestions = [],
+  fieldKey,
   name,
   label,
   placeholder,
@@ -506,111 +521,25 @@ export function FieldSuggestionInput({
   inputClassName = "",
   compact = false,
   required = false,
-  type = "text",
   icon,
 }: FieldSuggestionInputProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  // Generate a unique datalist id
-  const listId = useMemo(
-    () => `suggestions-${name || Math.random().toString(36).substring(2, 9)}`,
-    [name]
-  )
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
-
-  const filtered = useMemo(() => {
-    const q = (value || "").toLowerCase().trim()
-    if (!q) return suggestions.slice(0, 8)
-    return suggestions
-      .filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q)
-      .slice(0, 8)
-  }, [suggestions, value])
-
+  const resolvedKey = fieldKey || inferSmartFieldKey(name, label)
   return (
-    <div ref={containerRef} className={`relative space-y-1.5 ${className}`}>
-      {label && (
-        <label className={compact ? "text-slate-400 font-semibold text-xs block mb-1" : "text-[10px] font-black uppercase text-gray-400 tracking-widest pl-1 block"}>
-          {label} {required && <span className="text-rose-500">*</span>}
-        </label>
-      )}
-
-      <div className="relative">
-        {icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
-            {icon}
-          </div>
-        )}
-
-        <input
-          type={type}
-          name={name}
-          list={listId}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setIsOpen(true)}
-          placeholder={placeholder}
-          required={required}
-          className={
-            inputClassName
-              ? `${inputClassName} ${icon ? "pl-12" : ""}`
-              : compact
-              ? `w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 pr-8 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 ${icon ? "pl-10" : ""}`
-              : `w-full p-4 pr-10 rounded-2xl bg-white/5 border border-white/10 outline-none focus:border-blue-500/50 transition-all font-bold text-white text-sm placeholder:text-gray-500 ${icon ? "pl-12" : ""}`
-          }
-        />
-
-        <datalist id={listId}>
-          {suggestions.map((s, idx) => (
-            <option key={idx} value={s} />
-          ))}
-        </datalist>
-
-        {suggestions.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-white rounded-lg"
-            tabIndex={-1}
-            title="Show suggestions"
-          >
-            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180 text-blue-400" : ""}`} />
-          </button>
-        )}
-      </div>
-
-      {/* Floating Suggestions Dropdown */}
-      {isOpen && filtered.length > 0 && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-40 max-h-48 overflow-y-auto rounded-2xl bg-[#1e1e1e] border border-white/15 p-1.5 shadow-2xl backdrop-blur-xl animate-in fade-in-50 zoom-in-95 custom-scrollbar">
-          <div className="px-2 py-1 text-[9px] font-black uppercase text-gray-500 tracking-wider">
-            Previous Suggestions
-          </div>
-          {filtered.map((item, idx) => (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => {
-                onChange(item)
-                setIsOpen(false)
-              }}
-              className="w-full text-left px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-colors flex items-center justify-between"
-            >
-              <span>{item}</span>
-              <span className="text-[10px] text-gray-500 uppercase">Insert</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <SmartSelect
+      fieldKey={resolvedKey}
+      value={value}
+      onChange={onChange}
+      previousValues={suggestions}
+      name={name}
+      label={label}
+      placeholder={placeholder}
+      className={className}
+      triggerClassName={inputClassName}
+      compact={compact}
+      required={required}
+      icon={icon}
+      allowClear={!required}
+    />
   )
 }
 

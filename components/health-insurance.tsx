@@ -5,6 +5,7 @@ import { Plus, Shield, CreditCard, Phone, Upload, X, FileText, ChevronDown, Tras
 import { toast } from "sonner"
 import { upsertSharedHealthRecord, removeSharedHealthRecord } from "@/lib/health-store"
 import { prepareHealthAttachment } from "@/lib/image-downsize"
+import { SmartSelect } from "./health-ui/smart-select"
 
 interface Props {
     records: any[]
@@ -295,6 +296,8 @@ function AddInsuranceModal({ editingPolicy, onClose, onSave, theme }: { editingP
 
     const [frontUrl, setFrontUrl] = useState(meta.cardFrontUrl || "")
     const [backUrl, setBackUrl] = useState(meta.cardBackUrl || "")
+    const [relationshipVal, setRelationshipVal] = useState(meta.relationship || "Self")
+    const [planTypeVal, setPlanTypeVal] = useState(meta.planType || "")
     const [saving, setSaving] = useState(false)
 
     return (
@@ -312,8 +315,9 @@ function AddInsuranceModal({ editingPolicy, onClose, onSave, theme }: { editingP
                             title: fd.get("planName"),
                             item_metadata: {
                                 planName: fd.get("planName"),
+                                planType: planTypeVal || fd.get("planType") || "",
                                 policyHolder: fd.get("policyHolder"),
-                                relationship: fd.get("relationship"),
+                                relationship: relationshipVal || fd.get("relationship") || "Self",
                                 memberId: fd.get("memberId"),
                                 groupNumber: fd.get("groupNumber"),
                                 // Copays
@@ -340,9 +344,19 @@ function AddInsuranceModal({ editingPolicy, onClose, onSave, theme }: { editingP
                 }} className="space-y-6">
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
+                        <div>
                             <label className={labelClass}>Plan Name / Carrier</label>
                             <input name="planName" required defaultValue={editingPolicy?.title || meta.planName || ""} className={inputClass} placeholder="e.g. Blue Cross Blue Shield PPO" />
+                        </div>
+                        <div>
+                            <SmartSelect
+                                fieldKey="insurance_plan_type"
+                                name="planType"
+                                label="Plan Type"
+                                value={planTypeVal}
+                                onChange={setPlanTypeVal}
+                                placeholder="e.g. PPO, HMO, Medicare..."
+                            />
                         </div>
                         <div>
                             <label className={labelClass}>Member ID</label>
@@ -357,13 +371,14 @@ function AddInsuranceModal({ editingPolicy, onClose, onSave, theme }: { editingP
                             <input name="policyHolder" required defaultValue={meta.policyHolder || ""} className={inputClass} />
                         </div>
                         <div>
-                            <label className={labelClass}>Relationship</label>
-                            <select name="relationship" defaultValue={meta.relationship || "Self"} className={inputClass}>
-                                <option value="Self">Self</option>
-                                <option value="Spouse">Spouse</option>
-                                <option value="Child">Child</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <SmartSelect
+                                fieldKey="insurance_relationship"
+                                name="relationship"
+                                label="Relationship"
+                                value={relationshipVal}
+                                onChange={setRelationshipVal}
+                                placeholder="Select relationship..."
+                            />
                         </div>
                     </div>
 

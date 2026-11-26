@@ -29,6 +29,7 @@ import {
   FACILITY_TYPES,
   type FacilityType,
 } from "./health-ui/health-field-helpers"
+import { SmartSelect } from "./health-ui/smart-select"
 import { HealthTooltip } from "./health-ui/health-tooltip"
 import {
   getCachedHealthRecords,
@@ -198,7 +199,7 @@ export default function Doctors({
   // Facility form state
   const [facilityForm, setFacilityForm] = useState({
     name: "",
-    facilityType: "Clinic" as FacilityType,
+    facilityType: "Clinic" as string,
     address: "",
     phone: "",
     fax: "",
@@ -1166,18 +1167,15 @@ export default function Doctors({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Type</label>
-                  <select
+                  <SmartSelect
+                    fieldKey="facility_type"
+                    label="Type"
                     value={facilityForm.facilityType}
-                    onChange={(e) => setFacilityForm({ ...facilityForm, facilityType: e.target.value as FacilityType })}
-                    className="w-full p-3.5 rounded-xl bg-[#242424] border border-white/10 text-sm text-white focus:border-teal-500 outline-none"
-                  >
-                    {FACILITY_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setFacilityForm({ ...facilityForm, facilityType: val })}
+                    previousValues={facilities.map((f) => f.item_metadata?.facilityType)}
+                    placeholder="Select facility type..."
+                    triggerClassName="w-full p-3.5 rounded-xl bg-[#242424] border border-white/10 text-sm text-white focus:border-teal-500 outline-none flex items-center justify-between gap-2 text-left"
+                  />
                 </div>
               </div>
 

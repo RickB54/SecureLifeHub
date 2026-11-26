@@ -43,6 +43,7 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { toast } from "sonner"
 import { HealthTooltip, FieldHelpPopover } from "@/components/health-ui/health-tooltip"
+import { SmartSelect } from "@/components/health-ui/smart-select"
 import {
   DoctorCombobox,
   FacilityCombobox,
@@ -71,6 +72,7 @@ import {
   GivenMethod,
   parseGivenMethod,
   formatDateOnly,
+  compareOptionalDates,
   getTodayDateString,
 } from "./doctor-visit-types"
 import {
@@ -485,7 +487,7 @@ export default function DoctorVisitHub({
     title: "",
     text: "",
     date: getTodayDateString(),
-    date_type: "Appointment date",
+    date_type: "Date written",
     doctor_id: "",
     doctor_name: "",
     facility_id: "",
@@ -503,9 +505,9 @@ export default function DoctorVisitHub({
     facility_name: "",
     visit_id: "",
     date: getTodayDateString(),
-    date_type: "Letter date",
-    direction: "received" as "sent" | "received",
-    status: "needed" as "needed" | "requested" | "received" | "sent",
+    date_type: "Date written",
+    direction: "received" as string,
+    status: "needed" as string,
     notes: "",
     attachment_url: "",
     attachment_name: "",
@@ -526,8 +528,8 @@ export default function DoctorVisitHub({
     visit_id: "",
     reason: "",
     date: getTodayDateString(),
-    date_type: "Referral date",
-    status: "needed" as "needed" | "requested" | "scheduled" | "seen",
+    date_type: "Date written",
+    status: "needed" as string,
     phone: "",
     notes: "",
   })
@@ -540,7 +542,7 @@ export default function DoctorVisitHub({
     title: "",
     summary_text: "",
     date: getTodayDateString(),
-    date_type: "Visit date",
+    date_type: "Date written",
     doctor_id: "",
     doctor_name: "",
     facility_id: "",
@@ -833,18 +835,20 @@ export default function DoctorVisitHub({
         (n) =>
           n.title.toLowerCase().includes(qLower) ||
           n.text.toLowerCase().includes(qLower) ||
-          (n.doctor_name && n.doctor_name.toLowerCase().includes(qLower))
+          (n.doctor_name && n.doctor_name.toLowerCase().includes(qLower)) ||
+          (n.date_type && n.date_type.toLowerCase().includes(qLower)) ||
+          (!n.date && "no date".includes(qLower))
       )
     }
     list.sort((a, b) => {
       if (notesSort === "oldest") {
-        return (a.date || "").localeCompare(b.date || "")
+        return compareOptionalDates(a.date, b.date, "oldest")
       } else if (notesSort === "doctor_asc") {
         return (a.doctor_name || "").localeCompare(b.doctor_name || "")
       } else if (notesSort === "title_asc") {
         return a.title.localeCompare(b.title)
       } else {
-        return (b.date || "").localeCompare(a.date || "")
+        return compareOptionalDates(a.date, b.date, "newest")
       }
     })
     return list
@@ -874,12 +878,15 @@ export default function DoctorVisitHub({
           (l.doctor_name && l.doctor_name.toLowerCase().includes(qLower)) ||
           (l.notes && l.notes.toLowerCase().includes(qLower)) ||
           (l.status && l.status.toLowerCase().includes(qLower)) ||
+          (l.direction && l.direction.toLowerCase().includes(qLower)) ||
+          (l.date_type && l.date_type.toLowerCase().includes(qLower)) ||
+          (!l.date && "no date".includes(qLower)) ||
           (l.attachment_name && l.attachment_name.toLowerCase().includes(qLower))
       )
     }
     list.sort((a, b) => {
       if (lettersSort === "oldest") {
-        return (a.date || "").localeCompare(b.date || "")
+        return compareOptionalDates(a.date, b.date, "oldest")
       } else if (lettersSort === "doctor_asc") {
         return (a.doctor_name || "").localeCompare(b.doctor_name || "")
       } else if (lettersSort === "title_asc") {
@@ -887,7 +894,7 @@ export default function DoctorVisitHub({
       } else if (lettersSort === "status_asc") {
         return (a.status || "").localeCompare(b.status || "")
       } else {
-        return (b.date || "").localeCompare(a.date || "")
+        return compareOptionalDates(a.date, b.date, "newest")
       }
     })
     return list
@@ -921,12 +928,14 @@ export default function DoctorVisitHub({
           (r.referred_by_name && r.referred_by_name.toLowerCase().includes(qLower)) ||
           (r.reason && r.reason.toLowerCase().includes(qLower)) ||
           (r.notes && r.notes.toLowerCase().includes(qLower)) ||
-          (r.status && r.status.toLowerCase().includes(qLower))
+          (r.status && r.status.toLowerCase().includes(qLower)) ||
+          (r.date_type && r.date_type.toLowerCase().includes(qLower)) ||
+          (!r.date && "no date".includes(qLower))
       )
     }
     list.sort((a, b) => {
       if (referralsSort === "oldest") {
-        return (a.date || "").localeCompare(b.date || "")
+        return compareOptionalDates(a.date, b.date, "oldest")
       } else if (referralsSort === "doctor_asc") {
         return (a.specialist_name || a.referred_by_name || "").localeCompare(
           b.specialist_name || b.referred_by_name || ""
@@ -936,7 +945,7 @@ export default function DoctorVisitHub({
       } else if (referralsSort === "status_asc") {
         return (a.status || "").localeCompare(b.status || "")
       } else {
-        return (b.date || "").localeCompare(a.date || "")
+        return compareOptionalDates(a.date, b.date, "newest")
       }
     })
     return list
@@ -966,13 +975,13 @@ export default function DoctorVisitHub({
     }
     list.sort((a, b) => {
       if (visitsSort === "oldest") {
-        return (a.date || "").localeCompare(b.date || "")
+        return compareOptionalDates(a.date, b.date, "oldest")
       } else if (visitsSort === "doctor_asc") {
         return (a.doctor || a.title || "").localeCompare(b.doctor || b.title || "")
       } else if (visitsSort === "title_asc") {
         return (a.title || a.doctor || "").localeCompare(b.title || b.doctor || "")
       } else {
-        return (b.date || "").localeCompare(a.date || "")
+        return compareOptionalDates(a.date, b.date, "newest")
       }
     })
     return list
@@ -1001,18 +1010,20 @@ export default function DoctorVisitHub({
         (s) =>
           s.title.toLowerCase().includes(qLower) ||
           s.summary_text.toLowerCase().includes(qLower) ||
-          (s.doctor_name && s.doctor_name.toLowerCase().includes(qLower))
+          (s.doctor_name && s.doctor_name.toLowerCase().includes(qLower)) ||
+          (s.date_type && s.date_type.toLowerCase().includes(qLower)) ||
+          (!s.date && "no date".includes(qLower))
       )
     }
     list.sort((a, b) => {
       if (summariesSort === "oldest") {
-        return (a.date || "").localeCompare(b.date || "")
+        return compareOptionalDates(a.date, b.date, "oldest")
       } else if (summariesSort === "doctor_asc") {
         return (a.doctor_name || "").localeCompare(b.doctor_name || "")
       } else if (summariesSort === "title_asc") {
         return a.title.localeCompare(b.title)
       } else {
-        return (b.date || "").localeCompare(a.date || "")
+        return compareOptionalDates(a.date, b.date, "newest")
       }
     })
     return list
@@ -1332,8 +1343,8 @@ export default function DoctorVisitHub({
           : {}),
         title: noteForm.title.trim(),
         text: noteForm.text.trim(),
-        date: noteForm.date || getTodayDateString(),
-        date_type: noteForm.date_type || "Appointment date",
+        date: noteForm.date?.trim() || null,
+        date_type: noteForm.date_type || "Date written",
         doctor_id: noteForm.doctor_id || null,
         doctor_name: doctorObj?.name || noteForm.doctor_name || "",
         facility_id: noteForm.facility_id || null,
@@ -1375,8 +1386,8 @@ export default function DoctorVisitHub({
         facility_id: letterForm.facility_id || null,
         facility_name: facObj?.name || letterForm.facility_name.trim() || "",
         visit_id: letterForm.visit_id || null,
-        date: letterForm.date || getTodayDateString(),
-        date_type: letterForm.date_type || "Letter date",
+        date: letterForm.date?.trim() || null,
+        date_type: letterForm.date_type || "Date written",
         direction: letterForm.direction,
         status: letterForm.status,
         notes: letterForm.notes.trim(),
@@ -1459,8 +1470,8 @@ export default function DoctorVisitHub({
         referred_by_name: refDoctorObj?.name || referralForm.referred_by_name.trim(),
         visit_id: referralForm.visit_id || null,
         reason: referralForm.reason.trim(),
-        date: referralForm.date || getTodayDateString(),
-        date_type: referralForm.date_type || "Referral date",
+        date: referralForm.date?.trim() || null,
+        date_type: referralForm.date_type || "Date written",
         status: referralForm.status,
         phone: referralForm.phone.trim() || specDoctorObj?.phone || facObj?.phone || "",
         notes: referralForm.notes.trim(),
@@ -1501,8 +1512,8 @@ export default function DoctorVisitHub({
           : {}),
         title: summaryForm.title.trim(),
         summary_text: summaryForm.summary_text.trim(),
-        date: summaryForm.date || getTodayDateString(),
-        date_type: summaryForm.date_type || "Visit date",
+        date: summaryForm.date?.trim() || null,
+        date_type: summaryForm.date_type || "Date written",
         doctor_id: summaryForm.doctor_id || null,
         doctor_name: doctorObj?.name || summaryForm.doctor_name || "",
         facility_id: summaryForm.facility_id || null,
@@ -1691,7 +1702,18 @@ export default function DoctorVisitHub({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {summaryForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setSummaryForm({ ...summaryForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={summaryForm.date}
@@ -1701,12 +1723,13 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="summary-date-type"
                   label="Date Type"
                   value={summaryForm.date_type}
                   onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Visit date"
+                  placeholder="Date written"
                 />
                 <DoctorCombobox
                   compact
@@ -2653,7 +2676,7 @@ export default function DoctorVisitHub({
                         title: "",
                         text: "",
                         date: getTodayDateString(),
-                        date_type: "Appointment date",
+                        date_type: "Date written",
                         doctor_id: "",
                         doctor_name: "",
                         facility_id: "",
@@ -2763,8 +2786,8 @@ export default function DoctorVisitHub({
                                 setNoteForm({
                                   title: n.title,
                                   text: n.text,
-                                  date: n.date,
-                                  date_type: n.date_type || "Appointment date",
+                                  date: n.date || "",
+                                  date_type: n.date_type || "Date written",
                                   doctor_id: n.doctor_id || "",
                                   doctor_name: resolveDoctorInfo(n.doctor_id, { name: n.doctor_name }, existingDoctors).name,
                                   facility_id: n.facility_id || "",
@@ -2803,8 +2826,8 @@ export default function DoctorVisitHub({
                                     setNoteForm({
                                       title: n.title,
                                       text: n.text,
-                                      date: n.date,
-                                      date_type: n.date_type || "Appointment date",
+                                      date: n.date || "",
+                                      date_type: n.date_type || "Date written",
                                       doctor_id: n.doctor_id || "",
                                       doctor_name: resolveDoctorInfo(n.doctor_id, { name: n.doctor_name }, existingDoctors).name,
                                       facility_id: n.facility_id || "",
@@ -2969,7 +2992,7 @@ export default function DoctorVisitHub({
                         facility_name: "",
                         visit_id: "",
                         date: getTodayDateString(),
-                        date_type: "Letter date",
+                        date_type: "Date written",
                         direction: "received",
                         status: "needed",
                         notes: "",
@@ -3088,8 +3111,8 @@ export default function DoctorVisitHub({
                                   facility_id: l.facility_id || "",
                                   facility_name: resolveFacilityInfo(l.facility_id, { name: l.facility_name }, existingFacilities).name,
                                   visit_id: l.visit_id || "",
-                                  date: l.date,
-                                  date_type: l.date_type || "Letter date",
+                                  date: l.date || "",
+                                  date_type: l.date_type || "Date written",
                                   direction: l.direction,
                                   status: l.status,
                                   notes: l.notes,
@@ -3132,8 +3155,8 @@ export default function DoctorVisitHub({
                                       facility_id: l.facility_id || "",
                                       facility_name: resolveFacilityInfo(l.facility_id, { name: l.facility_name }, existingFacilities).name,
                                       visit_id: l.visit_id || "",
-                                      date: l.date,
-                                      date_type: l.date_type || "Letter date",
+                                      date: l.date || "",
+                                      date_type: l.date_type || "Date written",
                                       direction: l.direction,
                                       status: l.status,
                                       notes: l.notes,
@@ -3304,7 +3327,7 @@ export default function DoctorVisitHub({
                         visit_id: "",
                         reason: "",
                         date: getTodayDateString(),
-                        date_type: "Referral date",
+                        date_type: "Date written",
                         status: "needed",
                         phone: "",
                         notes: "",
@@ -3428,8 +3451,8 @@ export default function DoctorVisitHub({
                                   referred_by_doctor_id: r.referred_by_doctor_id || "",
                                   visit_id: r.visit_id || "",
                                   reason: r.reason || "",
-                                  date: r.date || getTodayDateString(),
-                                  date_type: r.date_type || "Referral date",
+                                  date: r.date || "",
+                                  date_type: r.date_type || "Date written",
                                   status: r.status || "needed",
                                   phone: r.phone || "",
                                   notes: r.notes || "",
@@ -3489,8 +3512,8 @@ export default function DoctorVisitHub({
                                       referred_by_doctor_id: r.referred_by_doctor_id || "",
                                       visit_id: r.visit_id || "",
                                       reason: r.reason,
-                                      date: r.date,
-                                      date_type: r.date_type || "Referral date",
+                                      date: r.date || "",
+                                      date_type: r.date_type || "Date written",
                                       status: r.status,
                                       phone: r.phone,
                                       notes: r.notes,
@@ -3649,7 +3672,7 @@ export default function DoctorVisitHub({
                         title: "",
                         summary_text: "",
                         date: getTodayDateString(),
-                        date_type: "Visit date",
+                        date_type: "Date written",
                         doctor_id: "",
                         doctor_name: "",
                         facility_id: "",
@@ -3759,8 +3782,8 @@ export default function DoctorVisitHub({
                                 setSummaryForm({
                                   title: s.title,
                                   summary_text: s.summary_text,
-                                  date: s.date,
-                                  date_type: s.date_type || "Visit date",
+                                  date: s.date || "",
+                                  date_type: s.date_type || "Date written",
                                   doctor_id: s.doctor_id || "",
                                   doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
                                   facility_id: s.facility_id || "",
@@ -3818,8 +3841,8 @@ export default function DoctorVisitHub({
                                       setSummaryForm({
                                         title: s.title,
                                         summary_text: s.summary_text,
-                                        date: s.date,
-                                        date_type: s.date_type || "Visit date",
+                                        date: s.date || "",
+                                        date_type: s.date_type || "Date written",
                                         doctor_id: s.doctor_id || "",
                                         doctor_name: resolveDoctorInfo(s.doctor_id, { name: s.doctor_name }, existingDoctors).name,
                                         facility_id: s.facility_id || "",
@@ -4168,7 +4191,18 @@ export default function DoctorVisitHub({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {noteForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setNoteForm({ ...noteForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={noteForm.date}
@@ -4178,12 +4212,13 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="note-date-type"
                   label="Date Type"
                   value={noteForm.date_type}
                   onChange={(val) => setNoteForm({ ...noteForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Appointment date"
+                  placeholder="Date written"
                 />
                 <DoctorCombobox
                   compact
@@ -4322,7 +4357,18 @@ export default function DoctorVisitHub({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {summaryForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setSummaryForm({ ...summaryForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={summaryForm.date}
@@ -4332,12 +4378,13 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="summary-date-type"
                   label="Date Type"
                   value={summaryForm.date_type}
                   onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Visit date"
+                  placeholder="Date written"
                 />
                 <DoctorCombobox
                   compact
@@ -4517,7 +4564,18 @@ export default function DoctorVisitHub({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {letterForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setLetterForm({ ...letterForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={letterForm.date}
@@ -4527,37 +4585,32 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="letter-date-type"
                   label="Date Type"
                   value={letterForm.date_type}
                   onChange={(val) => setLetterForm({ ...letterForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Letter date"
+                  placeholder="Date written"
                 />
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Direction</label>
-                  <select
-                    value={letterForm.direction}
-                    onChange={(e) => setLetterForm({ ...letterForm, direction: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="received">Received</option>
-                    <option value="sent">Sent</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Status</label>
-                  <select
-                    value={letterForm.status}
-                    onChange={(e) => setLetterForm({ ...letterForm, status: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="needed">Needed</option>
-                    <option value="requested">Requested</option>
-                    <option value="received">Received</option>
-                    <option value="sent">Sent</option>
-                  </select>
-                </div>
+                <SmartSelect
+                  compact
+                  fieldKey="letter_direction"
+                  label="Direction"
+                  value={letterForm.direction}
+                  onChange={(val) => setLetterForm({ ...letterForm, direction: val })}
+                  previousValues={letters.map((l) => l.direction)}
+                  placeholder="Direction..."
+                />
+                <SmartSelect
+                  compact
+                  fieldKey="letter_status"
+                  label="Status"
+                  value={letterForm.status}
+                  onChange={(val) => setLetterForm({ ...letterForm, status: val })}
+                  previousValues={letters.map((l) => l.status)}
+                  placeholder="Status..."
+                />
               </div>
 
               <div>
@@ -4657,7 +4710,18 @@ export default function DoctorVisitHub({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {summaryForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setSummaryForm({ ...summaryForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={summaryForm.date}
@@ -4667,12 +4731,13 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="summary-date-type"
                   label="Date Type"
                   value={summaryForm.date_type}
                   onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Visit date"
+                  placeholder="Date written"
                 />
                 <DoctorCombobox
                   compact
@@ -4902,7 +4967,18 @@ export default function DoctorVisitHub({
                   }
                 />
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {referralForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setReferralForm({ ...referralForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={referralForm.date}
@@ -4912,26 +4988,23 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="referral-date-type"
                   label="Date Type"
                   value={referralForm.date_type}
                   onChange={(val) => setReferralForm({ ...referralForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Referral date"
+                  placeholder="Date written"
                 />
-                <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Status</label>
-                  <select
-                    value={referralForm.status}
-                    onChange={(e) => setReferralForm({ ...referralForm, status: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white"
-                  >
-                    <option value="needed">Needed</option>
-                    <option value="requested">Requested</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="seen">Seen</option>
-                  </select>
-                </div>
+                <SmartSelect
+                  compact
+                  fieldKey="referral_status"
+                  label="Status"
+                  value={referralForm.status}
+                  onChange={(val) => setReferralForm({ ...referralForm, status: val })}
+                  previousValues={referrals.map((r) => r.status)}
+                  placeholder="Status..."
+                />
               </div>
 
               <FieldSuggestionInput
@@ -5014,7 +5087,18 @@ export default function DoctorVisitHub({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  <label className="text-slate-400 font-semibold block mb-1">Date</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 font-semibold">Date (Optional)</label>
+                    {summaryForm.date && (
+                      <button
+                        type="button"
+                        onClick={() => setSummaryForm({ ...summaryForm, date: "" })}
+                        className="text-[10px] text-slate-400 hover:text-rose-300 font-semibold cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="date"
                     value={summaryForm.date}
@@ -5024,12 +5108,13 @@ export default function DoctorVisitHub({
                 </div>
                 <FieldSuggestionInput
                   compact
+                  fieldKey="date_type"
                   name="summary-date-type"
                   label="Date Type"
                   value={summaryForm.date_type}
                   onChange={(val) => setSummaryForm({ ...summaryForm, date_type: val })}
                   suggestions={hubSuggestions.dateTypes}
-                  placeholder="Visit date"
+                  placeholder="Date written"
                 />
                 <DoctorCombobox
                   compact

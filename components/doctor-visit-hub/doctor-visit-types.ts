@@ -124,8 +124,15 @@ export interface HealthQuestion {
 }
 
 export const DATE_TYPE_OPTIONS = [
+  "Date written",
+  "Planning (no appointment yet)",
   "Appointment date",
   "Visit date",
+  "Follow-up due date",
+  "Test / lab date",
+  "Procedure / surgery date",
+  "Prescription date",
+  "Request date",
   "Letter date",
   "Received date",
   "Sent date",
@@ -133,14 +140,14 @@ export const DATE_TYPE_OPTIONS = [
   "Other",
 ] as const
 
-export type DateType = (typeof DATE_TYPE_OPTIONS)[number]
+export type DateType = string
 
 /**
  * Format a date-only YYYY-MM-DD string manually (no UTC offset bug).
- * E.g. "2026-11-22" -> "11/22/2026".
+ * Returns "No date" when empty/null so undated items display cleanly everywhere.
  */
 export function formatDateOnly(dateStr?: string | null): string {
-  if (!dateStr) return ""
+  if (!dateStr || !String(dateStr).trim()) return "No date"
   const clean = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr.trim()
   const parts = clean.split("-")
   if (parts.length === 3) {
@@ -152,6 +159,22 @@ export function formatDateOnly(dateStr?: string | null): string {
     }
   }
   return dateStr
+}
+
+/**
+ * Compare optional YYYY-MM-DD dates so undated items ALWAYS sort last in both newest & oldest orders.
+ */
+export function compareOptionalDates(
+  a?: string | null,
+  b?: string | null,
+  order: "newest" | "oldest" = "newest"
+): number {
+  const sa = (a || "").trim()
+  const sb = (b || "").trim()
+  if (!sa && !sb) return 0
+  if (!sa) return 1
+  if (!sb) return -1
+  return order === "oldest" ? sa.localeCompare(sb) : sb.localeCompare(sa)
 }
 
 /**
@@ -176,7 +199,7 @@ export interface HealthNote {
   user_id?: string
   title: string
   text: string
-  date: string
+  date?: string | null
   date_type?: string
   doctor_id?: string | null
   doctor_name?: string
@@ -190,8 +213,8 @@ export interface HealthNote {
   updated_at?: string
 }
 
-export type LetterDirection = "sent" | "received"
-export type LetterStatus = "needed" | "requested" | "received" | "sent"
+export type LetterDirection = string
+export type LetterStatus = string
 
 export interface HealthLetter {
   id: string
@@ -201,7 +224,7 @@ export interface HealthLetter {
   facility_id?: string | null
   facility_name?: string
   visit_id?: string | null
-  date: string
+  date?: string | null
   date_type?: string
   direction: LetterDirection
   status: LetterStatus
@@ -215,7 +238,7 @@ export interface HealthLetter {
   updated_at?: string
 }
 
-export type ReferralStatus = "needed" | "requested" | "scheduled" | "seen"
+export type ReferralStatus = string
 
 export interface HealthReferral {
   id: string
@@ -229,7 +252,7 @@ export interface HealthReferral {
   facility_name?: string
   visit_id?: string | null
   reason: string
-  date: string
+  date?: string | null
   date_type?: string
   status: ReferralStatus
   phone: string
@@ -246,7 +269,7 @@ export interface HealthVisitSummary {
   user_id?: string
   title: string
   summary_text: string
-  date: string
+  date?: string | null
   date_type?: string
   doctor_id?: string | null
   doctor_name?: string
