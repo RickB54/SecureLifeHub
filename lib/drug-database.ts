@@ -10,6 +10,9 @@ export interface OfficialDrugLabel {
   genericName: string
   brandNames: string[]
   drugClass: string
+  pharmClassEpc?: string[]
+  pharmClassMoa?: string[]
+  pharmClassCs?: string[]
   manufacturer: string
   effectiveDate: string
   rawEffectiveTime?: string
@@ -34,7 +37,7 @@ export interface DrugLabelLookupResult {
   fromCache?: boolean
 }
 
-const CACHE_PREFIX = "slh_fda_drug_label_v2:"
+const CACHE_PREFIX = "slh_fda_drug_label_v3:"
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
 interface CachedLabelEntry {

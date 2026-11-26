@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from "react"
+import React, { useState, useEffect, useMemo, useRef } from "react"
 import {
   Sparkles,
   ExternalLink,
@@ -13,11 +13,14 @@ import {
   X,
   Copy,
   AlertTriangle,
-  CheckCircle2,
+  Search,
+  ListPlus,
+  Building2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { trimLabelPreview } from "@/lib/drug-database"
 import {
+  MAX_QA_DRUGS,
   POPULAR_MED_QUESTIONS,
   PopularMedQuestionTemplate,
   MedQuestionTopicId,
@@ -25,7 +28,9 @@ import {
   MedQaAnswerSection,
   loadMedQaHistory,
   saveMedQaHistory,
+  savePreferredLabelChoice,
   mirrorMedQaToHealthAiHistory,
+  fetchDrugNameSuggestionsClient,
   answerMedicationQuestionFromDailyMed,
 } from "@/lib/medication-qa"
 import { HealthTooltip, FieldHelpPopover } from "./health-tooltip"
@@ -35,27 +40,69 @@ interface MedicationAiAssistantPanelProps {
   onClose?: () => void
 }
 
+function renderHighlightedText(text: string, terms?: string[]) {
+  if (!terms || terms.length === 0) return text
+  const cleanTerms = Array.from(new Set(terms.map((t) => t.trim()).filter((t) => t.length >= 3)))
+  if (cleanTerms.length === 0) return text
+
+  const escaped = cleanTerms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).sort((a, b) => b.length - a.length)
+  const regex = new RegExp(`(${escaped.join("|")})`, "gi")
+  const parts = text.split(regex)
+
+  return parts.map((part, idx) => {
+    const isMatch = cleanTerms.some((t) => t.toLowerCase() === part.toLowerCase())
+    if (isMatch) {
+      return (
+        <mark key={idx} className="bg-amber-400/30 text-amber-100 rounded px-0.5 font-semibold">
+          {part}
+        </mark>
+      )
+    }
+    return <React.Fragment key={idx}>{part}</React.Fragment>
+  })
+}
+
 function ExpandableSectionBody({ section }: { section: MedQaAnswerSection }) {
   const [expanded, setExpanded] = useState(false)
-  const { preview, isTrimmed } = trimLabelPreview(section.body, 650)
+  const { preview, isTrimmed } = trimLabelPreview(section.body, 550)
 
   const toneCls =
-    section.tone === "warning"
-      ? "border-amber-500/35 bg-amber-500/10"
+    section.tone === "boxed"
+      ? "border-red-500/45 bg-red-950/35"
       : section.tone === "match"
-      ? "border-emerald-500/35 bg-emerald-500/10"
+      ? "border-orange-500/45 bg-orange-500/10"
+      : section.tone === "warning"
+      ? "border-amber-500/35 bg-amber-500/10"
       : "border-white/10 bg-black/30"
+
+  const displayedText = expanded || !isTrimmed ? section.body : preview
 
   return (
     <div className={`rounded-xl border p-3 space-y-1.5 ${toneCls}`}>
-      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
-        {section.tone === "warning" && <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0" />}
-        {section.tone === "match" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />}
-        <span>{section.heading}</span>
+      <div className="flex flex-wrap items-center justify-between gap-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+          {(section.tone === "warning" || section.tone === "boxed" || section.tone === "match") && (
+            <AlertTriangle
+              className={`h-3.5 w-3.5 shrink-0 ${
+                section.tone === "boxed"
+                  ? "text-red-400"
+                  : section.tone === "match"
+                  ? "text-orange-400"
+                  : "text-amber-400"
+              }`}
+            />
+          )}
+          <span>{section.heading}</span>
+        </div>
+        {section.sourceLabel && (
+          <span className="text-[10px] text-gray-400">{section.sourceLabel}</span>
+        )}
       </div>
+
       <div className="text-xs text-gray-200 whitespace-pre-line leading-relaxed">
-        {expanded || !isTrimmed ? section.body : preview}
+        {renderHighlightedText(displayedText, section.matchedTerms)}
       </div>
+
       {isTrimmed && (
         <button
           type="button"
@@ -87,6 +134,9 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
 
   const [selectedDrugs, setSelectedDrugs] = useState<string[]>([])
   const [customDrugInput, setCustomDrugInput] = useState("")
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const [selectedTopicId, setSelectedTopicId] = useState<MedQuestionTopicId | "">("")
   const [questionText, setQuestionText] = useState("")
   const [loading, setLoading] = useState(false)
@@ -94,11 +144,11 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
   const [history, setHistory] = useState<MedQaHistoryEntry[]>([])
   const [showHistory, setShowHistory] = useState(true)
   const [openHistoryIds, setOpenHistoryIds] = useState<Record<string, boolean>>({})
+  const suggestBoxRef = useRef<HTMLDivElement | null>(null)
 
   // Hydrate history and default drug selection on mount
   useEffect(() => {
-    const saved = loadMedQaHistory()
-    setHistory(saved)
+    setHistory(loadMedQaHistory())
     if (savedMedNames.length > 0 && selectedDrugs.length === 0) {
       const defaults = savedMedNames.slice(0, 2)
       setSelectedDrugs(defaults)
@@ -110,41 +160,117 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const toggleDrugChip = (name: string) => {
-    setSelectedDrugs((prev) => {
-      const exists = prev.some((d) => d.toLowerCase() === name.toLowerCase())
-      const next = exists ? prev.filter((d) => d.toLowerCase() !== name.toLowerCase()) : [...prev, name]
-      if (selectedTopicId) {
-        const tpl = POPULAR_MED_QUESTIONS.find((q) => q.id === selectedTopicId)
-        if (tpl && next.length > 0) {
-          setQuestionText(tpl.buildQuestion(next))
-        }
+  // Close suggestion dropdown when clicking outside
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (suggestBoxRef.current && !suggestBoxRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false)
       }
+    }
+    document.addEventListener("mousedown", handleOutside)
+    return () => document.removeEventListener("mousedown", handleOutside)
+  }, [])
+
+  // Debounced DailyMed / openFDA drug name suggestions (3+ chars)
+  useEffect(() => {
+    const q = customDrugInput.trim()
+    if (q.length < 3) {
+      setSuggestions([])
+      setSuggestLoading(false)
+      return
+    }
+    let cancelled = false
+    setSuggestLoading(true)
+    const timer = window.setTimeout(async () => {
+      const items = await fetchDrugNameSuggestionsClient(q)
+      if (cancelled) return
+      setSuggestions(items)
+      setSuggestLoading(false)
+      setShowSuggestions(true)
+    }, 300)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [customDrugInput])
+
+  const syncQuestionToDrugs = (nextDrugs: string[], topicOverride?: MedQuestionTopicId | "") => {
+    const topic = topicOverride !== undefined ? topicOverride : selectedTopicId
+    if (!topic) return
+    const tpl = POPULAR_MED_QUESTIONS.find((q) => q.id === topic)
+    if (tpl) {
+      setQuestionText(tpl.buildQuestion(nextDrugs))
+    }
+  }
+
+  const addDrugToList = (rawName: string) => {
+    const parts = rawName
+      .split(/[,;]+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    if (parts.length === 0) return
+
+    setSelectedDrugs((prev) => {
+      const next = [...prev]
+      let hitLimit = false
+      for (const p of parts) {
+        if (next.some((d) => d.toLowerCase() === p.toLowerCase())) continue
+        if (next.length >= MAX_QA_DRUGS) {
+          hitLimit = true
+          break
+        }
+        next.push(p)
+      }
+      if (hitLimit) {
+        toast.info(`You can check up to ${MAX_QA_DRUGS} drugs at once.`)
+      }
+      const nextTopic =
+        !selectedTopicId && next.length >= 2
+          ? "together_interactions"
+          : selectedTopicId
+      if (nextTopic !== selectedTopicId) setSelectedTopicId(nextTopic)
+      syncQuestionToDrugs(next, nextTopic)
+      return next
+    })
+    setCustomDrugInput("")
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
+
+  const removeDrugFromList = (name: string) => {
+    setSelectedDrugs((prev) => {
+      const next = prev.filter((d) => d.toLowerCase() !== name.toLowerCase())
+      syncQuestionToDrugs(next)
       return next
     })
   }
 
-  const handleAddCustomDrug = () => {
-    const clean = customDrugInput.trim()
-    if (!clean) return
-    const parts = clean
-      .split(/[,;]+/)
-      .map((p) => p.trim())
-      .filter(Boolean)
+  const handleAddAllSavedMeds = () => {
+    if (savedMedNames.length === 0) {
+      toast.info("You have no saved medications yet — type any drug name above.")
+      return
+    }
     setSelectedDrugs((prev) => {
       const next = [...prev]
-      for (const p of parts) {
-        if (!next.some((d) => d.toLowerCase() === p.toLowerCase())) next.push(p)
-      }
-      if (selectedTopicId) {
-        const tpl = POPULAR_MED_QUESTIONS.find((q) => q.id === selectedTopicId)
-        if (tpl && next.length > 0) {
-          setQuestionText(tpl.buildQuestion(next))
+      let truncated = false
+      for (const name of savedMedNames) {
+        if (next.some((d) => d.toLowerCase() === name.toLowerCase())) continue
+        if (next.length >= MAX_QA_DRUGS) {
+          truncated = true
+          break
         }
+        next.push(name)
       }
+      if (truncated) {
+        toast.info(`Added up to the ${MAX_QA_DRUGS}-drug limit.`)
+      }
+      const nextTopic: MedQuestionTopicId | "" =
+        next.length >= 2 ? "together_interactions" : selectedTopicId || "uses"
+      setSelectedTopicId(nextTopic)
+      syncQuestionToDrugs(next, nextTopic)
       return next
     })
-    setCustomDrugInput("")
   }
 
   const handleSelectPopularQuestion = (topicIdStr: string) => {
@@ -157,23 +283,31 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
     }
   }
 
-  const handleAskDailyMed = async () => {
-    // Also fold in any un-submitted text typed in customDrugInput
-    let effectiveDrugs = [...selectedDrugs]
-    if (customDrugInput.trim()) {
+  const runDailyMedQuery = async (opts?: {
+    overrideQuestion?: string
+    overrideDrugs?: string[]
+    overrideTopicId?: MedQuestionTopicId | ""
+    labelOverrides?: Record<string, string>
+    replaceEntryId?: string
+  }) => {
+    let effectiveDrugs = [...(opts?.overrideDrugs ?? selectedDrugs)]
+    if (!opts?.overrideDrugs && customDrugInput.trim()) {
       for (const part of customDrugInput.split(/[,;]+/).map((p) => p.trim()).filter(Boolean)) {
+        if (effectiveDrugs.length >= MAX_QA_DRUGS) break
         if (!effectiveDrugs.some((d) => d.toLowerCase() === part.toLowerCase())) {
           effectiveDrugs.push(part)
         }
       }
       setSelectedDrugs(effectiveDrugs)
       setCustomDrugInput("")
+      setShowSuggestions(false)
     }
 
+    const topicToUse = opts?.overrideTopicId !== undefined ? opts.overrideTopicId : selectedTopicId
     const finalQuestion =
-      questionText.trim() ||
-      (selectedTopicId
-        ? POPULAR_MED_QUESTIONS.find((q) => q.id === selectedTopicId)?.buildQuestion(effectiveDrugs) || ""
+      (opts?.overrideQuestion ?? questionText).trim() ||
+      (topicToUse
+        ? POPULAR_MED_QUESTIONS.find((q) => q.id === topicToUse)?.buildQuestion(effectiveDrugs) || ""
         : "")
 
     if (!finalQuestion.trim()) {
@@ -186,23 +320,41 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
       const entry = await answerMedicationQuestionFromDailyMed({
         question: finalQuestion,
         selectedDrugs: effectiveDrugs,
-        explicitTopicId: selectedTopicId,
+        explicitTopicId: topicToUse,
         savedMeds: medRecords,
+        labelOverrides: opts?.labelOverrides,
       })
 
       setActiveAnswer(entry)
       setHistory((prev) => {
-        const next = [entry, ...prev].slice(0, 100)
+        const next = opts?.replaceEntryId
+          ? [entry, ...prev.filter((item) => item.id !== opts.replaceEntryId)].slice(0, 100)
+          : [entry, ...prev].slice(0, 100)
         saveMedQaHistory(next)
         return next
       })
       mirrorMedQaToHealthAiHistory(entry)
-      toast.success("Official DailyMed answer retrieved and saved to your Q&A history")
+      if (!opts?.replaceEntryId) {
+        toast.success("Official DailyMed answer retrieved and saved to your Q&A history")
+      }
     } catch (err: any) {
       toast.error(err?.message || "Could not retrieve DailyMed label answer")
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleChooseLabelForDrug = async (drugName: string, newLabelId: string) => {
+    savePreferredLabelChoice(drugName, newLabelId)
+    if (!activeAnswer) return
+    await runDailyMedQuery({
+      overrideQuestion: activeAnswer.question,
+      overrideDrugs: activeAnswer.drugs,
+      overrideTopicId: activeAnswer.topicId,
+      labelOverrides: { [drugName.toLowerCase()]: newLabelId },
+      replaceEntryId: activeAnswer.id,
+    })
+    toast.success(`Switched label for ${drugName} (remembered on this device)`)
   }
 
   const handleDeleteHistoryItem = (id: string) => {
@@ -226,7 +378,7 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
       `Question: ${entry.question}`,
       `Summary: ${entry.summaryVerdict}`,
       "",
-      ...entry.sections.map((s) => `${s.heading}:\n${s.body}`),
+      ...entry.sections.map((s) => `${s.heading}${s.sourceLabel ? ` (${s.sourceLabel})` : ""}:\n${s.body}`),
       "",
       ...entry.sources.map((src) => `DailyMed Source (${src.labelTitle}): ${src.dailyMedUrl}`),
     ].join("\n\n")
@@ -247,6 +399,10 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
     return groups
   }, [])
 
+  const unselectedSavedMeds = savedMedNames.filter(
+    (name) => !selectedDrugs.some((d) => d.toLowerCase() === name.toLowerCase())
+  )
+
   return (
     <div className="mb-3 p-3.5 rounded-2xl bg-[#131826] border border-blue-500/30 space-y-3 text-white shadow-xl">
       {/* Header */}
@@ -258,7 +414,7 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
           </h3>
           <FieldHelpPopover
             title="Official DailyMed Medication Q&A"
-            content="Select one or more medications (from your list or type any drug name), pick a popular question from the dropdown or type your own, and click Get DailyMed Answer. Answers come directly from official NLM DailyMed / FDA prescribing labels and are automatically saved in your Question & Answer History."
+            content="Type any generic or brand drug name (live suggestions appear after 3 characters) or add your saved medications — up to 5 drugs at once. Pick a popular question or type your own. For interactions, labels are cross-checked by generic name, brand names, and FDA pharmacologic class terms, and complete safety sections are always included."
           />
         </div>
         {onClose && (
@@ -275,81 +431,138 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
         )}
       </div>
 
-      {/* Step 1: Select Medication(s) — saved meds chips + any custom drug input */}
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mr-1">
-            Medications:
+      {/* Step 1: Any Drug Search with Debounced Suggestions + Up to 5 Chips + Add All My Medications */}
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+            Drugs to check ({selectedDrugs.length}/{MAX_QA_DRUGS})
           </span>
-          {savedMedNames.map((name) => {
-            const active = selectedDrugs.some((d) => d.toLowerCase() === name.toLowerCase())
-            return (
-              <HealthTooltip key={name} content={active ? `Remove ${name} from question` : `Include ${name} in question`}>
-                <button
-                  type="button"
-                  onClick={() => toggleDrugChip(name)}
-                  aria-pressed={active}
-                  className={`px-2.5 py-1 rounded-full text-xs font-semibold border transition-colors cursor-pointer ${
-                    active
-                      ? "bg-blue-600/30 border-blue-400/60 text-blue-100"
-                      : "bg-white/[0.04] border-white/10 text-gray-400 hover:text-white"
-                  }`}
-                >
-                  {name}
-                </button>
-              </HealthTooltip>
-            )
-          })}
-
-          {/* Extra custom drugs not in savedMedNames */}
-          {selectedDrugs
-            .filter((d) => !savedMedNames.some((s) => s.toLowerCase() === d.toLowerCase()))
-            .map((extra) => (
-              <span
-                key={extra}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-600/30 border border-purple-400/50 text-purple-100"
+          {savedMedNames.length > 0 && (
+            <HealthTooltip content={`Add all of your saved medications (up to ${MAX_QA_DRUGS} at once)`}>
+              <button
+                type="button"
+                onClick={handleAddAllSavedMeds}
+                className="px-2.5 py-1 rounded-lg bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 text-[11px] font-semibold text-blue-200 inline-flex items-center gap-1 cursor-pointer"
               >
-                <span>{extra}</span>
-                <button
-                  type="button"
-                  onClick={() => toggleDrugChip(extra)}
-                  aria-label={`Remove ${extra}`}
-                  className="hover:text-white cursor-pointer"
-                >
-                  <X className="h-3 w-3" />
-                </button>
+                <ListPlus className="h-3.5 w-3.5" />
+                <span>Add all my medications</span>
+              </button>
+            </HealthTooltip>
+          )}
+        </div>
+
+        {/* Search any drug box with live suggestions */}
+        <div ref={suggestBoxRef} className="relative">
+          <div className="flex items-center gap-1.5">
+            <div className="relative flex-1">
+              <Search className="h-3.5 w-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={customDrugInput}
+                disabled={selectedDrugs.length >= MAX_QA_DRUGS}
+                onFocus={() => {
+                  if (suggestions.length > 0) setShowSuggestions(true)
+                }}
+                onChange={(e) => setCustomDrugInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    if (customDrugInput.trim()) addDrugToList(customDrugInput)
+                  } else if (e.key === "Escape") {
+                    setShowSuggestions(false)
+                  }
+                }}
+                placeholder={
+                  selectedDrugs.length >= MAX_QA_DRUGS
+                    ? `Limit of ${MAX_QA_DRUGS} drugs reached — remove one to add another`
+                    : "Type any drug name (generic or brand, e.g. Lisinopril, Advil)..."
+                }
+                aria-label="Search any drug name (generic or brand)"
+                className="w-full h-9 pl-8 pr-8 rounded-xl bg-[#1c2233] border border-white/15 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              />
+              {suggestLoading && (
+                <Loader2 className="h-3.5 w-3.5 text-blue-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2" />
+              )}
+            </div>
+            <HealthTooltip content="Add this drug to your check list (up to 5 drugs)">
+              <button
+                type="button"
+                disabled={!customDrugInput.trim() || selectedDrugs.length >= MAX_QA_DRUGS}
+                onClick={() => addDrugToList(customDrugInput)}
+                className="h-9 px-3 rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-40 border border-white/15 text-xs font-semibold text-white inline-flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add drug</span>
+              </button>
+            </HealthTooltip>
+          </div>
+
+          {/* Debounced suggestions dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute left-0 right-0 mt-1 z-30 rounded-xl border border-white/15 bg-[#161b29] shadow-2xl overflow-hidden max-h-52 overflow-y-auto custom-scrollbar">
+              {suggestions.map((sug) => {
+                const alreadyAdded = selectedDrugs.some((d) => d.toLowerCase() === sug.toLowerCase())
+                return (
+                  <button
+                    key={sug}
+                    type="button"
+                    disabled={alreadyAdded}
+                    onClick={() => addDrugToList(sug)}
+                    className="w-full px-3 py-2 text-left text-xs text-gray-100 hover:bg-blue-600/25 disabled:opacity-45 flex items-center justify-between gap-2 border-b border-white/5 last:border-b-0 cursor-pointer"
+                  >
+                    <span className="font-medium truncate">{sug}</span>
+                    <span className="text-[10px] text-blue-300 shrink-0">
+                      {alreadyAdded ? "Added" : "+ Add"}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Selected Drug Chips (each with an "x" to remove) */}
+        {selectedDrugs.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {selectedDrugs.map((drug) => (
+              <span
+                key={drug}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-600/30 border border-blue-400/55 text-blue-100"
+              >
+                <span>{drug}</span>
+                <HealthTooltip content={`Remove ${drug}`}>
+                  <button
+                    type="button"
+                    onClick={() => removeDrugFromList(drug)}
+                    aria-label={`Remove ${drug}`}
+                    className="rounded-full p-0.5 hover:bg-white/20 text-blue-200 hover:text-white cursor-pointer"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </HealthTooltip>
               </span>
             ))}
+          </div>
+        )}
 
-          {/* Add any drug input */}
-          <div className="inline-flex items-center gap-1">
-            <input
-              type="text"
-              value={customDrugInput}
-              onChange={(e) => setCustomDrugInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  handleAddCustomDrug()
-                }
-              }}
-              placeholder="+ Any other drug..."
-              aria-label="Add any drug name for DailyMed lookup"
-              className="h-7 w-36 sm:w-44 px-2.5 rounded-full bg-black/40 border border-white/15 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-            />
-            {customDrugInput.trim() && (
-              <HealthTooltip content="Add drug to selection">
+        {/* Quick-add pills for unselected saved medications */}
+        {unselectedSavedMeds.length > 0 && selectedDrugs.length < MAX_QA_DRUGS && (
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <span className="text-gray-500">Your meds:</span>
+            {unselectedSavedMeds.map((name) => (
+              <HealthTooltip key={name} content={`Add ${name} to check list`}>
                 <button
                   type="button"
-                  onClick={handleAddCustomDrug}
-                  className="h-7 px-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold inline-flex items-center gap-0.5 cursor-pointer"
+                  onClick={() => addDrugToList(name)}
+                  className="px-2 py-0.5 rounded-full bg-white/[0.04] hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white inline-flex items-center gap-1 cursor-pointer"
                 >
-                  <Plus className="h-3 w-3" /> Add
+                  <Plus className="h-2.5 w-2.5" />
+                  <span>{name}</span>
                 </button>
               </HealthTooltip>
-            )}
+            ))}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Step 2: Popular Medication Questions Dropdown */}
@@ -396,7 +609,7 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
             onKeyDown={(e) => {
               if (e.key === "Enter" && !loading) {
                 e.preventDefault()
-                handleAskDailyMed()
+                runDailyMedQuery()
               }
             }}
             className="flex-1 h-9 px-3 bg-[#1c2233] border border-white/15 rounded-xl text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -405,7 +618,7 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
             <button
               type="button"
               disabled={loading}
-              onClick={handleAskDailyMed}
+              onClick={() => runDailyMedQuery()}
               className="h-9 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-lg shadow-blue-600/20"
             >
               {loading ? (
@@ -428,12 +641,7 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
       {activeAnswer && (
         <div className="rounded-xl border border-blue-400/35 bg-[#0d111c] p-3.5 space-y-3">
           <div className="flex items-start justify-between gap-2">
-            <div className="space-y-1 min-w-0">
-              <div className="text-xs font-bold text-blue-300">Question: {activeAnswer.question}</div>
-              <div className="text-xs text-gray-100 font-medium leading-relaxed">
-                {activeAnswer.summaryVerdict}
-              </div>
-            </div>
+            <div className="text-xs font-bold text-blue-300">Question: {activeAnswer.question}</div>
             <HealthTooltip content="Copy question and official DailyMed answer">
               <button
                 type="button"
@@ -446,9 +654,67 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
             </HealthTooltip>
           </div>
 
-          <div className="space-y-2 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
+          {/* Headline Verdict Banner — Amber notice when not found by name, Warning when matched, NEVER green */}
+          <div
+            className={`rounded-xl border px-3 py-2.5 text-xs leading-relaxed flex items-start gap-2 ${
+              activeAnswer.verdictTone === "amber"
+                ? "border-amber-500/50 bg-amber-500/15 text-amber-100"
+                : activeAnswer.verdictTone === "warning"
+                ? "border-orange-500/50 bg-orange-500/15 text-orange-100"
+                : "border-blue-500/30 bg-blue-500/10 text-gray-100"
+            }`}
+          >
+            {(activeAnswer.verdictTone === "amber" || activeAnswer.verdictTone === "warning") && (
+              <AlertTriangle
+                className={`h-4 w-4 shrink-0 mt-0.5 ${
+                  activeAnswer.verdictTone === "amber" ? "text-amber-400" : "text-orange-400"
+                }`}
+              />
+            )}
+            <span className="font-medium">{activeAnswer.summaryVerdict}</span>
+          </div>
+
+          {/* Multi-Label Chooser (when several official labels match a drug; remembered per drug in localStorage) */}
+          {activeAnswer.sources.some((s) => (s.availableLabels?.length || 0) > 1) && (
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-2.5 space-y-2">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-300">
+                <Building2 className="h-3.5 w-3.5 text-blue-400" />
+                <span>Choose FDA / DailyMed Label (remembered on this device)</span>
+              </div>
+              <div className="space-y-1.5">
+                {activeAnswer.sources
+                  .filter((s) => (s.availableLabels?.length || 0) > 1)
+                  .map((src) => (
+                    <div key={src.drugName} className="flex flex-col sm:flex-row sm:items-center gap-1.5 text-xs">
+                      <span className="font-semibold text-blue-200 sm:w-28 shrink-0 truncate">
+                        {src.drugName}:
+                      </span>
+                      <HealthTooltip content={`Select which manufacturer's label to use for ${src.drugName}`}>
+                        <select
+                          aria-label={`Select label for ${src.drugName}`}
+                          value={src.selectedLabelId}
+                          onChange={(e) => handleChooseLabelForDrug(src.drugName, e.target.value)}
+                          className="flex-1 h-8 px-2.5 rounded-lg bg-[#1c2233] border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+                          style={{ colorScheme: "dark" }}
+                        >
+                          {src.availableLabels!.map((opt) => (
+                            <option key={opt.id} value={opt.id} className="bg-[#181d2c]">
+                              {opt.title} — {opt.manufacturer}
+                              {opt.effectiveDate ? ` (${opt.effectiveDate})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </HealthTooltip>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Complete Expandable Label Sections */}
+          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 custom-scrollbar">
             {activeAnswer.sections.map((sec, idx) => (
-              <ExpandableSectionBody key={`${sec.heading}-${idx}`} section={sec} />
+              <ExpandableSectionBody key={`${activeAnswer.id}-${sec.heading}-${idx}`} section={sec} />
             ))}
           </div>
 
@@ -505,8 +771,8 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
           )}
         </div>
 
-        {showHistory && (
-          history.length === 0 ? (
+        {showHistory &&
+          (history.length === 0 ? (
             <p className="text-xs text-gray-500 italic">
               Questions you ask here are automatically recorded with their official DailyMed answers.
             </p>
@@ -544,7 +810,17 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
                           ))}
                           {dateStr && <span className="text-[10px] text-gray-500">· {dateStr}</span>}
                         </div>
-                        <p className="text-[11px] text-gray-400 line-clamp-2">{item.summaryVerdict}</p>
+                        <p
+                          className={`text-[11px] line-clamp-2 ${
+                            item.verdictTone === "amber"
+                              ? "text-amber-200/90"
+                              : item.verdictTone === "warning"
+                              ? "text-orange-200/90"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          {item.summaryVerdict}
+                        </p>
                       </button>
 
                       <div className="flex items-center gap-1 shrink-0">
@@ -615,8 +891,7 @@ export function MedicationAiAssistantPanel({ medRecords, onClose }: MedicationAi
                 )
               })}
             </div>
-          )
-        )}
+          ))}
       </div>
     </div>
   )

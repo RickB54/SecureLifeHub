@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 const OPENFDA_URL = "https://api.fda.gov/drug/label.json"
 const DAILYMED_SPLS_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2/spls.json"
+const DAILYMED_DRUGNAMES_URL = "https://dailymed.nlm.nih.gov/dailymed/services/v2/drugnames.json"
 
 const MONTHS_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -163,13 +164,16 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
   const brandList: string[] = Array.isArray(openfda.brand_name) ? openfda.brand_name : []
   const manufacturerList: string[] = Array.isArray(openfda.manufacturer_name) ? openfda.manufacturer_name : []
 
-  const pharmClasses = Array.from(
-    new Set([
-      ...(Array.isArray(openfda.pharm_class_epc) ? openfda.pharm_class_epc : []),
-      ...(Array.isArray(openfda.pharm_class_moa) ? openfda.pharm_class_moa : []),
-      ...(Array.isArray(openfda.pharm_class_cs) ? openfda.pharm_class_cs : []),
-    ].map((c) => String(c).trim()).filter(Boolean))
+  const pharmClassEpc: string[] = Array.from(
+    new Set((Array.isArray(openfda.pharm_class_epc) ? openfda.pharm_class_epc : []).map((c: any) => String(c).trim()).filter(Boolean))
   )
+  const pharmClassMoa: string[] = Array.from(
+    new Set((Array.isArray(openfda.pharm_class_moa) ? openfda.pharm_class_moa : []).map((c: any) => String(c).trim()).filter(Boolean))
+  )
+  const pharmClassCs: string[] = Array.from(
+    new Set((Array.isArray(openfda.pharm_class_cs) ? openfda.pharm_class_cs : []).map((c: any) => String(c).trim()).filter(Boolean))
+  )
+  const pharmClasses = Array.from(new Set([...pharmClassEpc, ...pharmClassMoa, ...pharmClassCs]))
 
   const genericName = genericList.join(", ")
   const uniqueBrands = Array.from(new Set(brandList.map((b) => String(b).trim()).filter(Boolean)))
@@ -194,7 +198,7 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
   const contraindicationsText = cleanLabelSectionText(r?.contraindications)
   const mechanismText = cleanLabelSectionText(r?.mechanism_of_action || r?.clinical_pharmacology)
   const sideEffectsText = cleanLabelSectionText(r?.adverse_reactions)
-  const interactionsText = cleanLabelSectionText(r?.drug_interactions)
+  const interactionsText = cleanLabelSectionText(r?.drug_interactions || r?.drug_and_or_laboratory_test_interactions)
   const boxedWarningText = cleanLabelSectionText(r?.boxed_warning)
   const warningsText = cleanLabelSectionText(
     r?.warnings_and_cautions || r?.warnings || r?.do_not_use || r?.stop_use
@@ -225,6 +229,9 @@ function mapFdaResultToLabel(r: any, fallbackQuery: string) {
     genericName,
     brandNames: uniqueBrands,
     drugClass: pharmClasses.join("; "),
+    pharmClassEpc,
+    pharmClassMoa,
+    pharmClassCs,
     manufacturer,
     effectiveDate,
     rawEffectiveTime: rawEffective,
@@ -268,8 +275,88 @@ function scoreLabelRelevance(label: ReturnType<typeof mapFdaResultToLabel>, prim
   return score
 }
 
+async function fetchDrugNameSuggestions(prefix: string): Promise<string[]> {
+  const clean = prefix.replace(/[^a-zA-Z0-9\s-]/g, " ").replace(/\s+/g, " ").trim()
+  if (clean.length < 3) return []
+
+  const lowerPrefix = clean.toLowerCase()
+  const seen = new Map<string, string>()
+
+  const addName = (raw?: unknown) => {
+    if (typeof raw !== "string") return
+    const trimmed = raw.replace(/\s+/g, " ").trim()
+    if (trimmed.length < 3 || trimmed.length > 60) return
+    // Title-case ALL-CAPS names cleanly while preserving mixed case
+    const formatted =
+      trimmed === trimmed.toUpperCase()
+        ? trimmed
+            .toLowerCase()
+            .replace(/\b([a-z])/g, (m) => m.toUpperCase())
+        : trimmed
+    const key = formatted.toLowerCase()
+    if (!seen.has(key)) seen.set(key, formatted)
+  }
+
+  // Query DailyMed drugnames + openFDA in parallel for fast, reliable coverage
+  await Promise.all([
+    (async () => {
+      try {
+        const res = await fetch(
+          `${DAILYMED_DRUGNAMES_URL}?drug_name=${encodeURIComponent(clean)}&pagesize=15`,
+          { headers: { Accept: "application/json" }, cache: "no-store" }
+        )
+        if (!res.ok) return
+        const json = await res.json()
+        const rows = Array.isArray(json?.data) ? json.data : []
+        for (const row of rows) {
+          addName(row?.drug_name)
+        }
+      } catch {
+        // Ignore DailyMed suggest failure
+      }
+    })(),
+    (async () => {
+      try {
+        const token = escapeLucenePhrase(clean.split(" ")[0] || clean)
+        if (token.length < 3) return
+        const fdaRows = await queryOpenFda(
+          `openfda.generic_name:${token}* OR openfda.brand_name:${token}*`,
+          10
+        )
+        for (const r of fdaRows) {
+          const openfda = r?.openfda || {}
+          for (const g of Array.isArray(openfda.generic_name) ? openfda.generic_name.slice(0, 2) : []) {
+            if (String(g).toLowerCase().includes(lowerPrefix)) addName(g)
+          }
+          for (const b of Array.isArray(openfda.brand_name) ? openfda.brand_name.slice(0, 2) : []) {
+            if (String(b).toLowerCase().includes(lowerPrefix)) addName(b)
+          }
+        }
+      } catch {
+        // Ignore openFDA suggest failure
+      }
+    })(),
+  ])
+
+  const all = Array.from(seen.values())
+  all.sort((a, b) => {
+    const aStarts = a.toLowerCase().startsWith(lowerPrefix) ? 0 : 1
+    const bStarts = b.toLowerCase().startsWith(lowerPrefix) ? 0 : 1
+    if (aStarts !== bStarts) return aStarts - bStarts
+    return a.length - b.length
+  })
+
+  return all.slice(0, 10)
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
+  const suggestQuery = (searchParams.get("suggest") || "").trim()
+  if (suggestQuery) {
+    const suggestions = await fetchDrugNameSuggestions(suggestQuery)
+    return NextResponse.json({ query: suggestQuery, suggestions })
+  }
+
   const rawName = (searchParams.get("name") || "").trim()
   const rawGeneric = (searchParams.get("generic") || "").trim()
 

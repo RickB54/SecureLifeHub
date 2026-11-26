@@ -24,6 +24,8 @@ export interface PopularMedQuestionTemplate {
   buildQuestion: (drugs: string[]) => string
 }
 
+export const MAX_QA_DRUGS = 5
+
 export const POPULAR_MED_QUESTIONS: PopularMedQuestionTemplate[] = [
   {
     id: "together_interactions",
@@ -46,7 +48,8 @@ export const POPULAR_MED_QUESTIONS: PopularMedQuestionTemplate[] = [
     id: "drug_interactions",
     group: "Interactions & Mixing",
     shortTitle: "What prescription drugs, OTC meds, or supplements interact with it?",
-    buildQuestion: (drugs) => `What prescription drugs, OTC medications, or supplements interact with ${drugs.join(", ") || "this medication"}?`,
+    buildQuestion: (drugs) =>
+      `What prescription drugs, OTC medications, or supplements interact with ${drugs.join(", ") || "this medication"}?`,
   },
   {
     id: "food_alcohol",
@@ -64,13 +67,15 @@ export const POPULAR_MED_QUESTIONS: PopularMedQuestionTemplate[] = [
     id: "dosage",
     group: "Uses, Dosage & How to Take",
     shortTitle: "What is the recommended dosage and how should I take it?",
-    buildQuestion: (drugs) => `What is the recommended dosage and how should I take ${drugs.join(", ") || "this medication"}?`,
+    buildQuestion: (drugs) =>
+      `What is the recommended dosage and how should I take ${drugs.join(", ") || "this medication"}?`,
   },
   {
     id: "missed_overdose",
     group: "Uses, Dosage & How to Take",
     shortTitle: "What should I do for a missed dose or accidental overdose?",
-    buildQuestion: (drugs) => `What should I do if I miss a dose or take too much of ${drugs.join(", ") || "this medication"}?`,
+    buildQuestion: (drugs) =>
+      `What should I do if I miss a dose or take too much of ${drugs.join(", ") || "this medication"}?`,
   },
   {
     id: "mechanism",
@@ -88,7 +93,8 @@ export const POPULAR_MED_QUESTIONS: PopularMedQuestionTemplate[] = [
     id: "warnings_contraindications",
     group: "Side Effects & Safety",
     shortTitle: "What are the important warnings and who should NOT take it?",
-    buildQuestion: (drugs) => `What are the important warnings and contraindications (who should not take ${drugs.join(", ") || "this medication"})?`,
+    buildQuestion: (drugs) =>
+      `What are the important warnings and contraindications (who should not take ${drugs.join(", ") || "this medication"})?`,
   },
   {
     id: "pregnancy",
@@ -100,7 +106,8 @@ export const POPULAR_MED_QUESTIONS: PopularMedQuestionTemplate[] = [
     id: "patient_guide",
     group: "Side Effects & Safety",
     shortTitle: "What key patient counseling / Medication Guide points apply?",
-    buildQuestion: (drugs) => `What patient counseling or Medication Guide instructions apply to ${drugs.join(", ") || "this medication"}?`,
+    buildQuestion: (drugs) =>
+      `What patient counseling or Medication Guide instructions apply to ${drugs.join(", ") || "this medication"}?`,
   },
   {
     id: "storage",
@@ -110,18 +117,31 @@ export const POPULAR_MED_QUESTIONS: PopularMedQuestionTemplate[] = [
   },
 ]
 
-export interface MedQaSourceLink {
-  drugName: string
-  labelTitle: string
+export interface MedQaLabelChoiceOption {
+  id: string
+  title: string
   manufacturer: string
   effectiveDate: string
   dailyMedUrl: string
 }
 
+export interface MedQaSourceLink {
+  drugName: string
+  selectedLabelId: string
+  labelTitle: string
+  manufacturer: string
+  effectiveDate: string
+  dailyMedUrl: string
+  availableLabels?: MedQaLabelChoiceOption[]
+}
+
 export interface MedQaAnswerSection {
   heading: string
   body: string
-  tone?: "info" | "warning" | "match"
+  tone?: "info" | "warning" | "match" | "boxed"
+  sourceLabel?: string
+  matchedTerms?: string[]
+  drugGroup?: string
 }
 
 export interface MedQaHistoryEntry {
@@ -131,11 +151,38 @@ export interface MedQaHistoryEntry {
   topicId: MedQuestionTopicId
   drugs: string[]
   summaryVerdict: string
+  verdictTone?: "amber" | "warning" | "info"
   sections: MedQaAnswerSection[]
   sources: MedQaSourceLink[]
 }
 
 export const MED_QA_HISTORY_KEY = "slh_med_qa_history_v1"
+const LABEL_CHOICE_STORAGE_KEY = "slh_med_qa_label_choices_v1"
+
+export function loadPreferredLabelChoices(): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  try {
+    const raw = window.localStorage.getItem(LABEL_CHOICE_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+export function savePreferredLabelChoice(drugName: string, labelId: string) {
+  if (typeof window === "undefined") return
+  const key = drugName.trim().toLowerCase()
+  if (!key || !labelId) return
+  try {
+    const current = loadPreferredLabelChoices()
+    current[key] = labelId
+    window.localStorage.setItem(LABEL_CHOICE_STORAGE_KEY, JSON.stringify(current))
+  } catch {
+    // Ignore storage quota errors
+  }
+}
 
 export function loadMedQaHistory(): MedQaHistoryEntry[] {
   if (typeof window === "undefined") return []
@@ -158,10 +205,6 @@ export function saveMedQaHistory(entries: MedQaHistoryEntry[]) {
   }
 }
 
-/**
- * Also mirrors the Q&A into the Health Hub Dr. AI localStorage history ('health-ai-history-v2')
- * so the user's question & DailyMed answer appear in Dr. AI history too with zero network calls.
- */
 export function mirrorMedQaToHealthAiHistory(entry: MedQaHistoryEntry) {
   if (typeof window === "undefined") return
   try {
@@ -173,7 +216,7 @@ export function mirrorMedQaToHealthAiHistory(entry: MedQaHistoryEntry) {
       `**Official DailyMed / FDA Answer**`,
       ``,
       `**Summary:** ${entry.summaryVerdict}`,
-      ...entry.sections.map((s) => `\n**${s.heading}**\n${s.body}`),
+      ...entry.sections.map((s) => `\n**${s.heading}**${s.sourceLabel ? `\n_${s.sourceLabel}_` : ""}\n${s.body}`),
       entry.sources.length > 0
         ? `\n**Official DailyMed Sources:**\n${entry.sources
             .map((src) => `- ${src.labelTitle} (${src.manufacturer}): ${src.dailyMedUrl}`)
@@ -190,26 +233,38 @@ export function mirrorMedQaToHealthAiHistory(entry: MedQaHistoryEntry) {
       topics: ["Medications", "DailyMed", ...entry.drugs],
       lastUpdated: nowIso,
       messages: [
-        {
-          id: `${entry.id}-u`,
-          role: "user",
-          content: entry.question,
-          timestamp: nowIso,
-        },
+        { id: `${entry.id}-u`, role: "user", content: entry.question, timestamp: nowIso },
         {
           id: `${entry.id}-a`,
           role: "ai",
           content: aiMarkdown,
-          urgency: "info",
+          urgency: entry.verdictTone === "warning" || entry.verdictTone === "amber" ? "moderate" : "info",
           timestamp: nowIso,
           sources: entry.sources.map((s) => `DailyMed: ${s.labelTitle}`),
         },
       ],
     }
 
-    window.localStorage.setItem("health-ai-history-v2", JSON.stringify([newConv, ...list].slice(0, 50)))
+    const filtered = list.filter((c: any) => c?.id !== `med-qa-${entry.id}`)
+    window.localStorage.setItem("health-ai-history-v2", JSON.stringify([newConv, ...filtered].slice(0, 50)))
   } catch {
     // Ignore
+  }
+}
+
+export async function fetchDrugNameSuggestionsClient(prefix: string): Promise<string[]> {
+  const clean = prefix.trim()
+  if (clean.length < 3) return []
+  try {
+    const res = await fetch(`/api/drug-label?suggest=${encodeURIComponent(clean)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    })
+    if (!res.ok) return []
+    const json = await res.json()
+    return Array.isArray(json?.suggestions) ? json.suggestions : []
+  } catch {
+    return []
   }
 }
 
@@ -223,7 +278,7 @@ const STOP_WORDS = new Set([
   "safe", "during", "pregnancy", "pregnant", "breastfeeding", "nursing", "warnings", "warning",
   "contraindications", "who", "not", "store", "storage", "work", "works", "body", "food", "eat",
   "eating", "drink", "drinking", "alcohol", "grapefruit", "any", "other", "between", "have",
-  "has", "about", "tell", "me", "please", "official", "indications", "patient", "guide", "counseling",
+  "has", "about", "tell", "please", "official", "indications", "patient", "guide", "counseling",
   "common", "serious", "important", "recommended", "prescription", "otc", "supplements", "accidental",
 ])
 
@@ -268,7 +323,12 @@ export function extractDrugNamesFromQuestion(
     }
   }
 
-  // 1. Check drugs explicitly mentioned in the question from user's saved medications first
+  // 1. Explicitly selected drug chips first (preserves user's chosen order)
+  for (const d of selectedDrugs) {
+    addUnique(d)
+  }
+
+  // 2. Saved medications mentioned in the question text
   const qLower = question.toLowerCase()
   for (const m of savedMeds) {
     const title = (m.title || "").trim()
@@ -281,34 +341,174 @@ export function extractDrugNamesFromQuestion(
     }
   }
 
-  // 2. Include explicitly selected drug chips
-  for (const d of selectedDrugs) {
-    addUnique(d)
+  // 3. Any additional drug names typed directly in the question
+  if (found.length === 0) {
+    const cleaned = question.replace(/[?!.;:()[\]"]/g, " ")
+    const rawTokens = cleaned.split(/[\s,/]+/).filter(Boolean)
+    for (const tok of rawTokens) {
+      const cleanTok = tok.trim()
+      if (cleanTok.length < 3) continue
+      if (/^\d/.test(cleanTok)) continue
+      if (STOP_WORDS.has(cleanTok.toLowerCase())) continue
+      addUnique(cleanTok)
+    }
   }
 
-  // 3. Extract any additional non-stopword candidate drug names typed in the question (e.g. comma/and-separated drug names)
-  const cleaned = question.replace(/[?!.;:()[\]"]/g, " ")
-  const rawTokens = cleaned.split(/[\s,/]+/).filter(Boolean)
-  for (const tok of rawTokens) {
-    const cleanTok = tok.trim()
-    if (cleanTok.length < 3) continue
-    if (/^\d/.test(cleanTok)) continue
-    if (STOP_WORDS.has(cleanTok.toLowerCase())) continue
-    addUnique(cleanTok)
-  }
-
-  return found.slice(0, 5)
+  return found.slice(0, MAX_QA_DRUGS)
 }
 
-function extractMatchingParagraphs(texts: Array<string | undefined>, keywords: string[]): string[] {
-  const loweredKeys = keywords
-    .map((k) => k.toLowerCase().trim())
-    .filter((k) => k.length >= 3)
-  if (loweredKeys.length === 0) return []
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
 
-  const matches: string[] = []
+interface SearchTermCandidate {
+  term: string
+  pattern: RegExp
+}
+
+function buildDetailedSearchTermsForDrug(label: OfficialDrugLabel, fallbackName: string): SearchTermCandidate[] {
+  const termMap = new Map<string, string>()
+
+  const addTerm = (raw?: string) => {
+    if (!raw) return
+    const cleaned = raw
+      .replace(/\[(?:EPC|MoA|CS|PE|Chemical\/Ingredient)\]/gi, " ")
+      .replace(/\b(tartrate|hydrochloride|hcl|sodium|calcium|potassium|besylate|maleate|succinate|fumarate|mesylate|sulfate|acetate|phosphate|citrate|pamoate|monohydrate|dihydrate|tablets?|capsules?|oral|extended[- ]release)\b/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+    if (cleaned.length < 4) return
+    const key = cleaned.toLowerCase()
+    if (!termMap.has(key)) termMap.set(key, cleaned)
+  }
+
+  // 1. Generic name(s) & user-entered name
+  addTerm(fallbackName)
+  for (const part of (label.genericName || "").split(/[,;/]+/)) {
+    addTerm(part)
+  }
+
+  // 2. Brand names
+  for (const brand of (label.brandNames || []).slice(0, 6)) {
+    addTerm(brand)
+  }
+
+  // 3. Pharmacologic class terms from openfda pharm_class_epc, pharm_class_moa, pharm_class_cs
+  const rawClasses = [
+    ...(label.pharmClassEpc || []),
+    ...(label.pharmClassMoa || []),
+    ...(label.pharmClassCs || []),
+    ...(label.drugClass ? label.drugClass.split(/[;]+/) : []),
+  ]
+
+  for (const cls of rawClasses) {
+    const base = cls
+      .replace(/\[(?:EPC|MoA|CS|PE|Chemical\/Ingredient)\]/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+    if (base.length >= 4) {
+      addTerm(base)
+      // Common clinical abbreviations/synonyms directly derived from official EPC/MoA/CS phrases
+      const low = base.toLowerCase()
+      if (low.includes("central nervous system depressant")) {
+        addTerm("CNS depressant")
+      }
+      if (low.includes("nonsteroidal anti-inflammatory")) {
+        addTerm("NSAID")
+      }
+      if (low.includes("hmg-coa reductase inhibitor")) {
+        addTerm("statin")
+      }
+      if (low.includes("selective serotonin reuptake inhibitor")) {
+        addTerm("SSRI")
+      }
+      if (low.includes("serotonin and norepinephrine reuptake inhibitor")) {
+        addTerm("SNRI")
+      }
+      if (low.includes("angiotensin converting enzyme inhibitor")) {
+        addTerm("ACE inhibitor")
+      }
+      if (low.includes("proton pump inhibitor")) {
+        addTerm("PPI")
+      }
+      if (low.includes("gaba") && (low.includes("agonist") || low.includes("modulator"))) {
+        addTerm("sedative")
+        addTerm("hypnotic")
+        addTerm("CNS depressant")
+      }
+    }
+  }
+
+  // Compile word-boundary / optional-plural regexes so "CNS depressant" matches "CNS depressants"
+  const candidates: SearchTermCandidate[] = []
+  for (const [, displayTerm] of termMap) {
+    const escaped = escapeRegExp(displayTerm)
+    const pattern = new RegExp(`\\b${escaped}s?\\b`, "i")
+    candidates.push({ term: displayTerm, pattern })
+  }
+  return candidates
+}
+
+interface MatchedPassageHit {
+  text: string
+  sectionName: string
+  matchedTerms: string[]
+}
+
+function findMatchedPassagesInLabel(
+  label: OfficialDrugLabel,
+  candidates: SearchTermCandidate[]
+): MatchedPassageHit[] {
+  if (candidates.length === 0) return []
+
+  // Search specifically Drug Interactions, Contraindications, Warnings and Precautions (plus Boxed Warning)
+  const targetSections: Array<{ name: string; text?: string }> = [
+    { name: "Drug Interactions", text: label.interactionsText },
+    { name: "Contraindications", text: label.contraindicationsText },
+    { name: "Warnings and Precautions", text: label.warningsText },
+    { name: "Boxed Warning", text: label.boxedWarningText },
+  ]
+
+  const hits: MatchedPassageHit[] = []
   const seen = new Set<string>()
 
+  for (const sec of targetSections) {
+    if (!sec.text) continue
+    const chunks = sec.text.split(/\n{2,}|(?<=\.)\s+(?=[A-Z•\-])/)
+    for (const rawChunk of chunks) {
+      const chunk = rawChunk.trim()
+      if (chunk.length < 15) continue
+      const matchedInChunk: string[] = []
+      for (const cand of candidates) {
+        const m = chunk.match(cand.pattern)
+        if (m && m[0]) {
+          if (!matchedInChunk.some((t) => t.toLowerCase() === m[0].toLowerCase())) {
+            matchedInChunk.push(m[0])
+          }
+        }
+      }
+      if (matchedInChunk.length > 0) {
+        const dedupKey = `${sec.name}__${chunk.toLowerCase().slice(0, 110)}`
+        if (!seen.has(dedupKey)) {
+          seen.add(dedupKey)
+          hits.push({
+            text: chunk,
+            sectionName: sec.name,
+            matchedTerms: matchedInChunk,
+          })
+        }
+      }
+    }
+  }
+
+  return hits
+}
+
+function extractKeywordParagraphs(texts: Array<string | undefined>, keywords: string[]): { text: string; matchedTerms: string[] }[] {
+  const loweredKeys = keywords.map((k) => k.toLowerCase().trim()).filter((k) => k.length >= 3)
+  if (loweredKeys.length === 0) return []
+
+  const results: { text: string; matchedTerms: string[] }[] = []
+  const seen = new Set<string>()
   for (const raw of texts) {
     if (!raw) continue
     const chunks = raw.split(/\n{2,}|(?<=\.)\s+(?=[A-Z•\-])/)
@@ -316,38 +516,74 @@ function extractMatchingParagraphs(texts: Array<string | undefined>, keywords: s
       const c = chunk.trim()
       if (c.length < 15) continue
       const cLow = c.toLowerCase()
-      if (loweredKeys.some((kw) => cLow.includes(kw))) {
+      const hitTerms = loweredKeys.filter((kw) => cLow.includes(kw))
+      if (hitTerms.length > 0) {
         const key = cLow.slice(0, 120)
         if (!seen.has(key)) {
           seen.add(key)
-          matches.push(c)
+          results.push({ text: c, matchedTerms: hitTerms })
         }
       }
     }
   }
-  return matches
+  return results
 }
 
-function buildSearchKeywordsForDrug(label: OfficialDrugLabel, fallbackName: string): string[] {
-  const keys = new Set<string>()
-  const add = (s?: string) => {
-    if (!s) return
-    for (const part of s.split(/[,;/()]+/)) {
-      const clean = part
-        .replace(/\b(tartrate|hydrochloride|hcl|sodium|calcium|potassium|besylate|maleate|succinate|fumarate|mesylate|sulfate|acetate|phosphate|citrate|tablets?|capsules?|oral)\b/gi, " ")
-        .trim()
-      if (clean.length >= 4) keys.add(clean.toLowerCase())
-    }
+function appendCompleteSafetySections(
+  sections: MedQaAnswerSection[],
+  drugName: string,
+  label: OfficialDrugLabel,
+  alreadyIncluded?: Set<string>
+) {
+  const sourceDesc = `${label.title} (${label.manufacturer}${label.effectiveDate ? `, ${label.effectiveDate}` : ""})`
+  const skip = alreadyIncluded || new Set<string>()
+
+  if (label.boxedWarningText && !skip.has("boxed")) {
+    sections.push({
+      heading: `${drugName} — Boxed Warning`,
+      body: label.boxedWarningText,
+      tone: "boxed",
+      sourceLabel: sourceDesc,
+      drugGroup: drugName,
+    })
   }
-  add(fallbackName)
-  add(label.genericName)
-  for (const b of label.brandNames.slice(0, 4)) add(b)
-  // Also include meaningful pharmacologic class stems (e.g. "sedative", "statin", "cyclosporine", "fibrate", "cns depressant")
-  for (const cls of (label.drugClass || "").split(/[;,]/)) {
-    const clean = cls.replace(/\b(inhibitor|inhibitors|agent|agents|drug|drugs|receptor|antagonist|agonist)\b/gi, "").trim()
-    if (clean.length >= 5) keys.add(clean.toLowerCase())
+  if (label.contraindicationsText && !skip.has("contraindications")) {
+    sections.push({
+      heading: `${drugName} — Contraindications`,
+      body: label.contraindicationsText,
+      tone: "warning",
+      sourceLabel: sourceDesc,
+      drugGroup: drugName,
+    })
   }
-  return Array.from(keys)
+  if (label.interactionsText && !skip.has("interactions")) {
+    sections.push({
+      heading: `${drugName} — Drug Interactions`,
+      body: label.interactionsText,
+      tone: "info",
+      sourceLabel: sourceDesc,
+      drugGroup: drugName,
+    })
+  }
+  if (label.warningsText && !skip.has("warnings")) {
+    sections.push({
+      heading: `${drugName} — Warnings and Precautions`,
+      body: label.warningsText,
+      tone: "warning",
+      sourceLabel: sourceDesc,
+      drugGroup: drugName,
+    })
+  }
+}
+
+export function formatNotFoundLabelMessage(name: string): string {
+  return `No official FDA label found for '${name}'. Supplements and some herbal products have no label.`
+}
+
+function formatDrugListForHeadline(names: string[]): string {
+  if (names.length <= 1) return names[0] || ""
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`
 }
 
 export async function answerMedicationQuestionFromDailyMed(params: {
@@ -355,6 +591,7 @@ export async function answerMedicationQuestionFromDailyMed(params: {
   selectedDrugs: string[]
   explicitTopicId?: MedQuestionTopicId | ""
   savedMeds: Array<{ title?: string; item_metadata?: { genericName?: string } }>
+  labelOverrides?: Record<string, string>
 }): Promise<MedQaHistoryEntry> {
   const drugs = extractDrugNamesFromQuestion(params.question, params.selectedDrugs, params.savedMeds)
   if (drugs.length === 0) {
@@ -363,6 +600,11 @@ export async function answerMedicationQuestionFromDailyMed(params: {
 
   const topicId: MedQuestionTopicId =
     params.explicitTopicId || inferTopicFromQuestion(params.question, drugs.length)
+
+  const preferredChoices = {
+    ...loadPreferredLabelChoices(),
+    ...(params.labelOverrides || {}),
+  }
 
   // Look up official DailyMed / FDA labels in parallel
   const lookupResults = await Promise.all(
@@ -373,34 +615,46 @@ export async function answerMedicationQuestionFromDailyMed(params: {
       const genericHint = savedMatch?.item_metadata?.genericName || ""
       try {
         const res = await fetchOfficialDrugLabels(drugName, genericHint)
-        return { drugName, label: res.labels[0] || null }
+        const labels = res.labels || []
+        const prefId = preferredChoices[drugName.toLowerCase()]
+        const chosen = (prefId ? labels.find((l) => l.id === prefId || l.setId === prefId) : null) || labels[0] || null
+        return { drugName, label: chosen, allLabels: labels }
       } catch {
-        return { drugName, label: null }
+        return { drugName, label: null, allLabels: [] as OfficialDrugLabel[] }
       }
     })
   )
 
-  const foundItems = lookupResults.filter((x): x is { drugName: string; label: OfficialDrugLabel } => Boolean(x.label))
+  const foundItems = lookupResults.filter(
+    (x): x is { drugName: string; label: OfficialDrugLabel; allLabels: OfficialDrugLabel[] } => Boolean(x.label)
+  )
   const missingNames = lookupResults.filter((x) => !x.label).map((x) => x.drugName)
 
   if (foundItems.length === 0) {
-    throw new Error(
-      `Could not find an official DailyMed / FDA label for "${drugs.join(", ")}". Check the spelling or enter the generic drug name.`
-    )
+    throw new Error(missingNames.map(formatNotFoundLabelMessage).join(" "))
   }
 
-  const sources: MedQaSourceLink[] = foundItems.map(({ drugName, label }) => ({
+  const sources: MedQaSourceLink[] = foundItems.map(({ drugName, label, allLabels }) => ({
     drugName,
+    selectedLabelId: label.id,
     labelTitle: label.title,
     manufacturer: label.manufacturer,
     effectiveDate: label.effectiveDate,
     dailyMedUrl: label.dailyMedUrl,
+    availableLabels: allLabels.map((l) => ({
+      id: l.id,
+      title: l.title,
+      manufacturer: l.manufacturer,
+      effectiveDate: l.effectiveDate,
+      dailyMedUrl: l.dailyMedUrl,
+    })),
   }))
 
   const sections: MedQaAnswerSection[] = []
   let summaryVerdict = ""
+  let verdictTone: "amber" | "warning" | "info" = "info"
 
-  // MULTI-DRUG INTERACTION CROSS-CHECK
+  // MULTI-DRUG INTERACTION CROSS-CHECK (searches Drug Interactions, Contraindications, Warnings & Precautions)
   if (topicId === "together_interactions" && foundItems.length >= 2) {
     const crossMatches: MedQaAnswerSection[] = []
 
@@ -409,95 +663,55 @@ export async function answerMedicationQuestionFromDailyMed(params: {
         if (i === j) continue
         const sourceDrug = foundItems[i]
         const targetDrug = foundItems[j]
-        const targetKeywords = buildSearchKeywordsForDrug(targetDrug.label, targetDrug.drugName)
-        const hits = extractMatchingParagraphs(
-          [
-            sourceDrug.label.boxedWarningText,
-            sourceDrug.label.contraindicationsText,
-            sourceDrug.label.interactionsText,
-            sourceDrug.label.warningsText,
-            sourceDrug.label.patientCounselingText,
-          ],
-          targetKeywords
-        )
+        const targetCandidates = buildDetailedSearchTermsForDrug(targetDrug.label, targetDrug.drugName)
+        const hits = findMatchedPassagesInLabel(sourceDrug.label, targetCandidates)
 
-        if (hits.length > 0) {
+        for (const hit of hits.slice(0, 4)) {
           crossMatches.push({
-            heading: `Direct Label Match: ${sourceDrug.label.title} mentions ${targetDrug.drugName}`,
-            body: hits.slice(0, 4).join("\n\n"),
+            heading: `Matched in ${sourceDrug.drugName} label (${hit.sectionName}) — term: ${hit.matchedTerms.join(", ")}`,
+            body: hit.text,
             tone: "match",
+            sourceLabel: `From ${sourceDrug.label.title} (${sourceDrug.label.manufacturer}) · ${hit.sectionName}`,
+            matchedTerms: hit.matchedTerms,
           })
         }
       }
     }
 
-    const pairNames = foundItems.map((f) => f.drugName).join(" + ")
+    const drugPairLabel = formatDrugListForHeadline(foundItems.map((f) => f.drugName))
     if (crossMatches.length > 0) {
-      summaryVerdict = `Interaction details found in the official DailyMed label(s) for ${pairNames}. Review the matched label warnings below and consult your doctor or pharmacist before combining.`
+      verdictTone = "warning"
+      summaryVerdict = `Potential interaction or drug-class match found in official DailyMed label(s) for ${drugPairLabel}. Review each highlighted passage and complete label sections below, and confirm with your pharmacist or doctor.`
       sections.push(...crossMatches)
     } else {
-      summaryVerdict = `No direct interaction between ${foundItems
-        .map((f) => f.drugName)
-        .join(" and ")} is listed by name in their official DailyMed / FDA prescribing labels. Always review each medication's full Drug Interactions & Warnings below and confirm with your pharmacist or prescriber.`
+      verdictTone = "amber"
+      summaryVerdict = `Not found by name: ${drugPairLabel} are not named in each other's labels. This does NOT mean they are safe together. Labels often describe drug classes (for example 'CNS depressants') instead of naming each drug. Review the label sections below and ask your pharmacist.`
     }
 
+    // COMPLETE SECTIONS: For every drug always show Boxed Warning, Contraindications, Drug Interactions, and Warnings and Precautions (each separately expandable)
     for (const { drugName, label } of foundItems) {
-      const parts = [
-        label.drugClass ? `Drug Class: ${label.drugClass}` : "",
-        label.boxedWarningText ? `BOXED WARNING:\n${label.boxedWarningText}` : "",
-        label.contraindicationsText ? `Do Not Use / Contraindications:\n${label.contraindicationsText}` : "",
-        label.interactionsText
-          ? `Official Drug Interactions:\n${label.interactionsText}`
-          : "No dedicated Drug Interactions section is listed on this label; see Warnings below.",
-        !label.interactionsText && label.warningsText ? `Warnings:\n${label.warningsText}` : "",
-      ].filter(Boolean)
-
-      sections.push({
-        heading: `${drugName} (${label.title}) — DailyMed Interactions & Warnings`,
-        body: parts.join("\n\n"),
-        tone: label.boxedWarningText ? "warning" : "info",
-      })
+      appendCompleteSafetySections(sections, drugName, label)
     }
   } else {
-    // SINGLE OR PER-DRUG TOPIC LOOKUP
+    // SINGLE-DRUG OR TOPIC-SPECIFIC QUESTION
     for (const { drugName, label } of foundItems) {
-      const prefix = foundItems.length > 1 ? `${drugName} — ` : ""
+      const sourceDesc = `${label.title} (${label.manufacturer}${label.effectiveDate ? `, ${label.effectiveDate}` : ""})`
+      const alreadyIncluded = new Set<string>()
 
       switch (topicId) {
         case "drug_interactions":
         case "together_interactions": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed drug interaction information for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          if (label.interactionsText) {
-            sections.push({
-              heading: `${prefix}Official Drug Interactions`,
-              body: label.interactionsText,
-              tone: "info",
-            })
-          }
-          if (label.contraindicationsText) {
-            sections.push({
-              heading: `${prefix}Contraindications (Do Not Combine / Use)`,
-              body: label.contraindicationsText,
-              tone: "warning",
-            })
-          }
-          if (!label.interactionsText && label.warningsText) {
-            sections.push({
-              heading: `${prefix}Warnings & Precautions`,
-              body: label.warningsText,
-              tone: "warning",
-            })
-          }
+            `Official DailyMed drug interactions and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
           break
         }
 
         case "food_alcohol": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed food, alcohol, and administration guidance for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          const hits = extractMatchingParagraphs(
+            `Official DailyMed food, alcohol, and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          const hits = extractKeywordParagraphs(
             [
               label.interactionsText,
               label.dosageAdminText,
@@ -508,23 +722,24 @@ export async function answerMedicationQuestionFromDailyMed(params: {
             ["alcohol", "food", "meal", "meals", "empty stomach", "grapefruit", "beverage", "drink", "milk"]
           )
           if (hits.length > 0) {
-            sections.push({
-              heading: `${prefix}Food, Alcohol & Beverage Mentions on Label`,
-              body: hits.slice(0, 6).join("\n\n"),
-              tone: "match",
-            })
-          } else {
-            sections.push({
-              heading: `${prefix}Food, Alcohol & Beverage Mentions`,
-              body: "No specific food, grapefruit, or alcohol restriction sentence was matched automatically — review Dosage & Administration and Warnings below.",
-              tone: "info",
-            })
+            for (const hit of hits.slice(0, 4)) {
+              sections.push({
+                heading: `${drugName} — Food / Alcohol Mention (${hit.matchedTerms.join(", ")})`,
+                body: hit.text,
+                tone: "match",
+                sourceLabel: sourceDesc,
+                matchedTerms: hit.matchedTerms,
+                drugGroup: drugName,
+              })
+            }
           }
           if (label.dosageAdminText) {
-            sections.push({ heading: `${prefix}Dosage & Administration`, body: label.dosageAdminText })
-          }
-          if (label.interactionsText) {
-            sections.push({ heading: `${prefix}Drug Interactions`, body: label.interactionsText })
+            sections.push({
+              heading: `${drugName} — Dosage & Administration`,
+              body: label.dosageAdminText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
           }
           break
         }
@@ -532,13 +747,22 @@ export async function answerMedicationQuestionFromDailyMed(params: {
         case "uses": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed uses and indications for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          sections.push({
-            heading: `${prefix}Uses & Indications`,
-            body: label.usesText || "Indications section not listed on this label.",
-          })
+            `Official DailyMed uses and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          if (label.usesText) {
+            sections.push({
+              heading: `${drugName} — Uses & Indications`,
+              body: label.usesText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
+          }
           if (label.drugClass) {
-            sections.push({ heading: `${prefix}Pharmacologic Class`, body: label.drugClass })
+            sections.push({
+              heading: `${drugName} — Pharmacologic Class`,
+              body: label.drugClass,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
           }
           break
         }
@@ -546,43 +770,45 @@ export async function answerMedicationQuestionFromDailyMed(params: {
         case "dosage": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed dosage and administration instructions for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          sections.push({
-            heading: `${prefix}Dosage & Administration`,
-            body:
-              label.dosageAdminText ||
-              label.patientCounselingText ||
-              "Detailed dosing instructions are not separated on this label; follow your prescription label and prescriber's directions.",
-          })
+            `Official DailyMed dosage and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          if (label.dosageAdminText) {
+            sections.push({
+              heading: `${drugName} — Dosage & Administration`,
+              body: label.dosageAdminText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
+          }
           break
         }
 
         case "missed_overdose": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed missed-dose and overdosage guidance for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          const missedHits = extractMatchingParagraphs(
+            `Official DailyMed missed-dose, overdosage, and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          const missedHits = extractKeywordParagraphs(
             [label.patientCounselingText, label.dosageAdminText, label.warningsText],
             ["miss", "missed", "forget", "forgot", "skip"]
           )
           if (missedHits.length > 0) {
-            sections.push({
-              heading: `${prefix}Missed Dose Instructions from Label`,
-              body: missedHits.slice(0, 4).join("\n\n"),
-              tone: "match",
-            })
+            for (const hit of missedHits.slice(0, 3)) {
+              sections.push({
+                heading: `${drugName} — Missed Dose Guidance`,
+                body: hit.text,
+                tone: "match",
+                sourceLabel: sourceDesc,
+                matchedTerms: hit.matchedTerms,
+                drugGroup: drugName,
+              })
+            }
           }
           if (label.overdosageText) {
             sections.push({
-              heading: `${prefix}Overdosage`,
+              heading: `${drugName} — Overdosage`,
               body: label.overdosageText,
               tone: "warning",
-            })
-          }
-          if (missedHits.length === 0 && !label.overdosageText && label.dosageAdminText) {
-            sections.push({
-              heading: `${prefix}Dosage & Administration`,
-              body: label.dosageAdminText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
             })
           }
           break
@@ -591,109 +817,103 @@ export async function answerMedicationQuestionFromDailyMed(params: {
         case "side_effects": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed adverse reactions (side effects) for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          if (label.boxedWarningText) {
+            `Official DailyMed adverse reactions and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          if (label.sideEffectsText) {
             sections.push({
-              heading: `${prefix}Boxed Warning`,
-              body: label.boxedWarningText,
-              tone: "warning",
+              heading: `${drugName} — Adverse Reactions / Side Effects`,
+              body: label.sideEffectsText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
             })
           }
-          sections.push({
-            heading: `${prefix}Adverse Reactions / Side Effects`,
-            body: label.sideEffectsText || "Side effects section not listed on this label.",
-          })
           break
         }
 
         case "warnings_contraindications": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed warnings and contraindications for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          if (label.boxedWarningText) {
-            sections.push({
-              heading: `${prefix}Boxed Warning`,
-              body: label.boxedWarningText,
-              tone: "warning",
-            })
-          }
-          if (label.contraindicationsText) {
-            sections.push({
-              heading: `${prefix}Contraindications (Who Should NOT Take It)`,
-              body: label.contraindicationsText,
-              tone: "warning",
-            })
-          }
-          sections.push({
-            heading: `${prefix}Warnings & Precautions`,
-            body: label.warningsText || "Warnings section not listed on this label.",
-            tone: "warning",
-          })
+            `Official DailyMed warnings, contraindications, and interactions for ${foundItems.map((f) => f.drugName).join(", ")}.`
           break
         }
 
         case "pregnancy": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed pregnancy and breastfeeding information for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          sections.push({
-            heading: `${prefix}Pregnancy & Breastfeeding (Lactation)`,
-            body:
-              label.pregnancyText ||
-              "No dedicated pregnancy or lactation section is separated on this label; consult your healthcare provider.",
-          })
+            `Official DailyMed pregnancy, breastfeeding, and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          if (label.pregnancyText) {
+            sections.push({
+              heading: `${drugName} — Pregnancy & Breastfeeding (Lactation)`,
+              body: label.pregnancyText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
+          }
           break
         }
 
         case "mechanism": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed clinical pharmacology & mechanism of action for ${foundItems.map((f) => f.drugName).join(", ")}.`
+            `Official DailyMed mechanism of action and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
           if (label.drugClass) {
-            sections.push({ heading: `${prefix}Pharmacologic Class`, body: label.drugClass })
+            sections.push({
+              heading: `${drugName} — Pharmacologic Class`,
+              body: label.drugClass,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
           }
-          sections.push({
-            heading: `${prefix}How It Works (Mechanism of Action)`,
-            body: label.mechanismText || label.usesText || "Mechanism of action not listed on this label.",
-          })
+          if (label.mechanismText) {
+            sections.push({
+              heading: `${drugName} — How It Works (Mechanism of Action)`,
+              body: label.mechanismText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
+          }
           break
         }
 
         case "patient_guide": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed patient counseling / Medication Guide information for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          sections.push({
-            heading: `${prefix}Patient Counseling & Medication Guide`,
-            body:
-              label.patientCounselingText ||
-              label.warningsText ||
-              label.usesText ||
-              "No separate patient counseling section on this label.",
-          })
+            `Official DailyMed patient counseling and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          if (label.patientCounselingText) {
+            sections.push({
+              heading: `${drugName} — Patient Counseling & Medication Guide`,
+              body: label.patientCounselingText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
+          }
           break
         }
 
         case "storage": {
           summaryVerdict =
             summaryVerdict ||
-            `Official DailyMed storage and handling details for ${foundItems.map((f) => f.drugName).join(", ")}.`
-          sections.push({
-            heading: `${prefix}Storage & How Supplied`,
-            body:
-              label.storageText ||
-              "No separate storage section found on this label; check your pharmacy bottle or full DailyMed label.",
-          })
+            `Official DailyMed storage and safety sections for ${foundItems.map((f) => f.drugName).join(", ")}.`
+          if (label.storageText) {
+            sections.push({
+              heading: `${drugName} — Storage & How Supplied`,
+              body: label.storageText,
+              sourceLabel: sourceDesc,
+              drugGroup: drugName,
+            })
+          }
           break
         }
       }
+
+      // Always include Boxed Warning, Contraindications, full Drug Interactions, and Warnings and Precautions when present
+      appendCompleteSafetySections(sections, drugName, label, alreadyIncluded)
     }
   }
 
-  if (missingNames.length > 0) {
+  for (const missing of missingNames) {
     sections.push({
-      heading: "Unmatched Name(s)",
-      body: `No official DailyMed / FDA label matched: ${missingNames.join(", ")}. Check spelling or use the generic name.`,
+      heading: `No Label Found — ${missing}`,
+      body: formatNotFoundLabelMessage(missing),
       tone: "warning",
     })
   }
@@ -705,6 +925,7 @@ export async function answerMedicationQuestionFromDailyMed(params: {
     topicId,
     drugs: foundItems.map((f) => f.drugName),
     summaryVerdict,
+    verdictTone,
     sections,
     sources,
   }
