@@ -519,8 +519,15 @@ export default function LabResultsPage({
           {/* 1. SUMMARY CARD */}
           {activeReport.summary_text && (
             <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-black border border-cyan-500/30 p-4 sm:p-5 space-y-2.5">
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-cyan-300">
-                <Sparkles className="h-4 w-4" /> Plain-Language Summary
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-cyan-300">
+                  <Sparkles className="h-4 w-4" /> Plain-Language Summary
+                </div>
+                {activeReport.big_picture_json?.ai_fallback_used && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-semibold text-amber-300">
+                    AI explanations are turned off until a Gemini key is added
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-100 leading-relaxed">{activeReport.summary_text}</p>
               <p className="text-[11px] text-gray-500 italic">{LAB_DISCLAIMER}</p>
@@ -848,6 +855,9 @@ export default function LabResultsPage({
                                         )}
                                         <p className="text-[10px] text-gray-500 italic pt-1 border-t border-white/10">
                                           {LAB_DISCLAIMER}
+                                          {activeReport.big_picture_json?.ai_fallback_used
+                                            ? " • AI explanations are turned off until a Gemini key is added (showing built-in general reference text)."
+                                            : ""}
                                         </p>
                                       </>
                                     )}

@@ -159,16 +159,23 @@ export async function POST(req: NextRequest) {
 
       // If no GEMINI_API_KEY is configured yet:
       // - For pasted text, use our structured text parser fallback so text imports work immediately
-      // - For image/PDF, return a clear actionable error explaining how to set GEMINI_API_KEY
+      // - For image/PDF, return a clear actionable error explaining what is missing and what still works
       if (body?.pastedText) {
         const parsed = parseLabReportTextFallback(String(body.pastedText), body?.hints, userAliases)
+        if (parsed.needs_retake) {
+          return NextResponse.json({
+            ...parsed,
+            retake_reason:
+              "Could not read any lab result rows from the pasted text (AI image/text reading is turned off until a Gemini key is added). Try pasting the table lines with test names, values, and ranges, or use Add Result Manually.",
+          })
+        }
         return NextResponse.json(parsed)
       }
 
       return NextResponse.json(
         {
           error:
-            "GEMINI_API_KEY is not configured in Supabase Edge Function secrets (or server env). Deploy supabase/functions/lab-results-ai with a Paid-Tier GEMINI_API_KEY for image/PDF vision extraction, or use Paste Text.",
+            "Image and PDF scanning is turned off because no Gemini API key is configured. Paste Text and Add Result Manually both still work right now (including flags, trends, Glucose sync, and built-in plain-language explanations).",
         },
         { status: 503 }
       )
@@ -193,10 +200,11 @@ export async function POST(req: NextRequest) {
           ])
           return NextResponse.json({
             summary_text: sanitizeExplanationText(parsed.summary_text || ""),
-            big_picture: parsed.big_picture || null,
+            big_picture: parsed.big_picture ? { ...parsed.big_picture, ai_fallback_used: false } : null,
             panel_overviews: parsed.panel_overviews || {},
             personalized_lines: parsed.personalized_lines || {},
             generic_explanations: parsed.generic_explanations || {},
+            ai_fallback_used: false,
             token_usage,
           })
         } catch {
@@ -205,7 +213,12 @@ export async function POST(req: NextRequest) {
       }
 
       const fallback = buildPlainLanguageExplanationsFallback(report, results, vitalsContext)
-      return NextResponse.json({ ...fallback, token_usage: null })
+      return NextResponse.json({
+        ...fallback,
+        big_picture: { ...fallback.big_picture, ai_fallback_used: true },
+        ai_fallback_used: true,
+        token_usage: null,
+      })
     }
 
     return NextResponse.json({ error: "Invalid action." }, { status: 400 })

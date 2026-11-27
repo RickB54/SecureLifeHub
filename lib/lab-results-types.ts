@@ -23,6 +23,7 @@ export const LAB_REPORT_TYPE_OPTIONS = [
 ] as const
 
 export const LAB_INPUT_TYPE_OPTIONS = [
+  "Auto-detect",
   "Image",
   "PDF",
   "Pasted text",
@@ -81,6 +82,7 @@ export interface LabBigPicture {
   needs_attention: LabBigPictureSystemGroup[]
   doctor_checklist: string[]
   where_to_improve: string[]
+  ai_fallback_used?: boolean
 }
 
 export interface LabReport {

@@ -78,7 +78,7 @@ export function LabUploadReview({
   const [labProvider, setLabProvider] = useState<string>("Auto-detect")
   const [labProviderCustom, setLabProviderCustom] = useState("")
   const [reportType, setReportType] = useState<string>("Auto-detect")
-  const [inputTypeHint, setInputTypeHint] = useState<string>("PDF")
+  const [inputTypeHint, setInputTypeHint] = useState<string>("Auto-detect")
   const [saveOriginalDefault, setSaveOriginalDefault] = useState<boolean>(true)
   const [pastedText, setPastedText] = useState("")
   const [extractingPaste, setExtractingPaste] = useState(false)
@@ -519,11 +519,12 @@ export function LabUploadReview({
                 Input Type (Optional)
               </label>
               <select
-                value={inputMode === "paste" ? "Pasted text" : inputTypeHint}
+                value={inputTypeHint}
                 onChange={(e) => {
-                  setInputTypeHint(e.target.value)
-                  if (e.target.value === "Pasted text") setInputMode("paste")
-                  else setInputMode("upload")
+                  const val = e.target.value
+                  setInputTypeHint(val)
+                  if (val === "Pasted text") setInputMode("paste")
+                  else if (val === "Image" || val === "PDF") setInputMode("upload")
                 }}
                 className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white"
                 style={{ colorScheme: "dark" }}
@@ -720,6 +721,18 @@ export function LabUploadReview({
                       className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer"
                     >
                       {d.status === "needs_retake" ? "Inspect / Retake" : "Review & Confirm"}
+                    </button>
+                  )}
+                  {d.status === "error" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInputMode("paste")
+                        setInputTypeHint("Pasted text")
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-200 text-xs font-bold cursor-pointer"
+                    >
+                      Use Paste Text
                     </button>
                   )}
                   <button
