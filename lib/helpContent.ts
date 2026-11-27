@@ -136,6 +136,10 @@ export const HEALTH_HUB_HELP_SECTIONS: HealthHelpSection[] = [
         body: "Every Health Hub dropdown (Date Type, Specialty, Location/Facility, Pharmacy, Reason, Form, Frequency, Category, Letter Direction/Status, Referral Status, Vitals Context/Mood, Insurance Plan/Relationship, Portal Type) always lists built-in defaults, your previously used values, and a final '+ Custom...' option. Custom options are remembered locally and show a small 'x' button to remove them from the dropdown without changing existing records. New Notes, Letters, Referrals, and Visit Summaries default Date Type to 'Date written' and allow leaving Date blank ('No date', sorted last).",
       },
       {
+        heading: "Lab Results (Upload, Batch Queue, Plain-Language Explanations & Trends)",
+        body: "Open Lab Results (between Vitals and My Doctors) to upload PNG/JPG/PDF lab reports from LabCorp, Quest, or any hospital, paste copied text, or add results manually. Multiple files queue in the background as lightweight JSON drafts so you can review side by side before confirming. Every result row expands to plain-language explanations (cached per test to keep Supabase egress minimal), plus a Summary card, Big Picture grouped by body system, Lab Trends with unit-mismatch warnings, Glucose sync to your Vitals card (never A1c), Timeline events, Dr. AI context, and Doctor Visit Hub PDF inclusion. Educational information only, not a diagnosis.",
+      },
+      {
         heading: "Visit Summary",
         body: "Paste or type after-visit instructions, medication changes, or portal encounter recaps in the Visit Summary clinical box. You can copy any summary as plain text in one tap.",
       },

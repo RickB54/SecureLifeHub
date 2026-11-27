@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, SlidersHorizontal, FileDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3, Bell } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, SlidersHorizontal, FileDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3, Bell, FlaskConical } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays, differenceInCalendarDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -49,6 +49,9 @@ import { VitalsArrangeModal, ArrangeVitalItem } from "./health-ui/vitals-arrange
 import { VitalsPdfModal } from "./health-ui/vitals-pdf-modal"
 import { SmartSelect } from "./health-ui/smart-select"
 import { parseReminderTimes, formatReminderTime12h, getScheduledNextDose } from "@/lib/pill-count"
+import LabResultsPage from "./lab-results"
+import { fetchLabOverviewSummary, fetchLabTimelineEvents } from "@/lib/lab-results-api"
+import type { LabOverviewSummary } from "@/lib/lab-results-types"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -71,7 +74,7 @@ interface HealthDashboardProps {
     setRecords?: any
     onOpenHelp?: (targetId?: string) => void
     setActivePage?: (page: string) => void
-    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors"
+    initialTab?: "dashboard" | "records" | "meds" | "vitals" | "labs" | "calendar" | "appointments" | "ai" | "checkin" | "doctors"
     mockSettings?: Record<string, boolean>
 }
 
@@ -96,6 +99,9 @@ export const normalizeHealthTab = (tabStr?: string | null): any => {
         "meds": "meds",
         "medications": "meds",
         "vitals": "vitals",
+        "labs": "labs",
+        "lab-results": "labs",
+        "lab_results": "labs",
         "timeline": "calendar",
         "calendar": "calendar",
         "checkin": "checkin",
@@ -104,7 +110,7 @@ export const normalizeHealthTab = (tabStr?: string | null): any => {
         "overview": "dashboard",
     }
     const target = map[lower] || lower
-    const valid = ["dashboard", "records", "meds", "vitals", "calendar", "appointments", "ai", "checkin", "doctors"]
+    const valid = ["dashboard", "records", "meds", "vitals", "labs", "calendar", "appointments", "ai", "checkin", "doctors"]
     return valid.includes(target) ? target : null
 }
 
@@ -142,14 +148,14 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const router = useRouter()
     const searchParams = useSearchParams()
     const tabParam = searchParams.get("tab")
-    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
+    const [activeTab, setActiveTab] = useState<"dashboard" | "records" | "meds" | "vitals" | "labs" | "calendar" | "appointments" | "ai" | "checkin" | "doctors">(() => {
         const fromParam = normalizeHealthTab(tabParam)
         if (fromParam) return fromParam
         return (normalizeHealthTab(initialTab) || "dashboard") as any
     })
 
     // Navigate between Health Hub tabs with real browser history entries so Back returns to the previous tab
-    const navigateToTab = (nextTab: "dashboard" | "records" | "meds" | "vitals" | "calendar" | "appointments" | "ai" | "checkin" | "doctors") => {
+    const navigateToTab = (nextTab: "dashboard" | "records" | "meds" | "vitals" | "labs" | "calendar" | "appointments" | "ai" | "checkin" | "doctors") => {
         setActiveTab(nextTab)
         if (tabParam !== nextTab) {
             router.push(`/?page=type-health-records&tab=${nextTab}`, { scroll: false })
@@ -170,17 +176,44 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const { overrides: glucoseCtxOverrides, setOverrideForEntry: setGlucoseCtxOverride } = useGlucoseContextOverrides()
 
     // Overview Accordion State (all non-green Health Hub sections, defaulted to expanded)
-    const OVERVIEW_SECTION_KEYS = ['records', 'meds', 'ai', 'vitals', 'doctors', 'appointments', 'calendar', 'checkin'] as const
+    const OVERVIEW_SECTION_KEYS = ['records', 'meds', 'ai', 'vitals', 'labs', 'doctors', 'appointments', 'calendar', 'checkin'] as const
     const [expandedOverviewSections, setExpandedOverviewSections] = useState<Record<string, boolean>>({
         records: true,
         meds: true,
         ai: true,
         vitals: true,
+        labs: true,
         doctors: true,
         appointments: true,
         calendar: true,
         checkin: true,
     })
+
+    // Lightweight Lab Results summary & timeline events (fetched once per visit, cached)
+    const [labOverview, setLabOverview] = useState<LabOverviewSummary | null>(null)
+    const [labTimelineEvents, setLabTimelineEvents] = useState<
+        Array<{ id: string; lab_name: string; date_collected: string | null; flagged_count: number }>
+    >([])
+
+    const refreshLabSummary = async (force = false) => {
+        if (!user?.id) return
+        try {
+            const [ov, tl] = await Promise.all([
+                fetchLabOverviewSummary(user.id, force),
+                fetchLabTimelineEvents(user.id),
+            ])
+            setLabOverview(ov)
+            setLabTimelineEvents(tl)
+        } catch {
+            // Tables may not exist yet before migration is run
+        }
+    }
+
+    useEffect(() => {
+        if (user?.id) {
+            refreshLabSummary(false)
+        }
+    }, [user?.id])
     const anyOverviewExpanded = OVERVIEW_SECTION_KEYS.some((k) => expandedOverviewSections[k] !== false)
     const toggleOverviewSection = (key: string) => {
         setExpandedOverviewSections((prev) => ({ ...prev, [key]: !(prev[key] !== false) }))
@@ -820,6 +853,15 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 detail: c.item_metadata?.notes || '',
                 onClick: () => navigateToTab('checkin'),
             })),
+            ...labTimelineEvents.map((lr) => ({
+                id: `lab-${lr.id}`,
+                kind: 'Lab Results',
+                color: lr.flagged_count > 0 ? 'text-orange-300 bg-orange-500/15 border-orange-500/30' : 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30',
+                title: `Lab Results – ${lr.lab_name}${lr.date_collected ? `, ${formatVitalDateNoShift(lr.date_collected)}` : ''}`,
+                date: lr.date_collected || '',
+                detail: lr.flagged_count > 0 ? `${lr.flagged_count} flagged` : 'All normal',
+                onClick: () => navigateToTab('labs'),
+            })),
         ]
             .filter((item) => item.date)
             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -833,7 +875,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
             title: string
             icon: React.ReactNode
             countBadge?: string
-            tabTarget: "records" | "meds" | "ai" | "vitals" | "doctors" | "appointments" | "calendar" | "checkin"
+            tabTarget: "records" | "meds" | "ai" | "vitals" | "labs" | "doctors" | "appointments" | "calendar" | "checkin"
             children: React.ReactNode
         }) => {
             const isOpen = expandedOverviewSections[opts.sectionKey] !== false
@@ -888,7 +930,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
         return (
             <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Quick Stats - ALWAYS AT TOP */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className={`p-5 rounded-2xl ${cardBg} border flex flex-col items-center justify-center text-center shadow-xl`}>
                         <div className="text-3xl sm:text-4xl font-black text-blue-500 mb-1">{upcomingAppts.length}</div>
                         <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Appointments</div>
@@ -904,6 +946,18 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                     <div className={`p-5 rounded-2xl ${cardBg} border flex flex-col items-center justify-center text-center shadow-xl`}>
                         <div className="text-3xl sm:text-4xl font-black text-rose-500 mb-1">{healthRecords.length}</div>
                         <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Records</div>
+                    </div>
+                    <div
+                        onClick={() => navigateToTab('labs')}
+                        className={`col-span-2 md:col-span-1 p-5 rounded-2xl ${cardBg} border hover:border-cyan-500/40 flex flex-col items-center justify-center text-center shadow-xl cursor-pointer transition-colors`}
+                    >
+                        <div className="text-3xl sm:text-4xl font-black text-cyan-400 mb-1">
+                            {labOverview?.latestReportId ? labOverview.latestFlaggedCount : 0}
+                        </div>
+                        <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Labs Flagged</div>
+                        <div className="text-[10px] text-gray-500 mt-0.5 truncate max-w-full">
+                            {labOverview?.latestDateCollected ? `Latest ${labOverview.latestDateCollected}` : 'No reports yet'}
+                        </div>
                     </div>
                 </div>
 
@@ -1114,6 +1168,41 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                                         )
                                     })}
                                 </div>
+                            </div>
+                        ),
+                    })}
+
+                    {/* 4b. Lab Results */}
+                    {renderAccordionSection({
+                        sectionKey: 'labs',
+                        title: 'Lab Results',
+                        icon: <FlaskConical className="h-4 w-4 text-cyan-400 shrink-0" />,
+                        countBadge: labOverview?.latestReportId
+                            ? `${labOverview.totalReports} reports • ${labOverview.latestFlaggedCount} flagged`
+                            : '0 reports',
+                        tabTarget: 'labs',
+                        children: !labOverview?.latestReportId ? (
+                            <div className="py-4 flex items-center justify-between gap-3 text-xs text-gray-500">
+                                <span>No lab reports uploaded yet.</span>
+                                <button
+                                    type="button"
+                                    onClick={() => navigateToTab('labs')}
+                                    className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 font-bold cursor-pointer"
+                                >
+                                    + Upload Lab Report
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2.5 pt-2">
+                                <div className="text-xs text-gray-300">
+                                    Latest: <strong className="text-white">{labOverview.latestLabName}</strong> ({labOverview.latestDateCollected || 'Recent'}) —{' '}
+                                    <span className={labOverview.latestFlaggedCount > 0 ? 'text-orange-300 font-bold' : 'text-emerald-300 font-bold'}>
+                                        {labOverview.latestFlaggedCount > 0 ? `${labOverview.latestFlaggedCount} flagged` : 'All normal'}
+                                    </span>
+                                </div>
+                                {labOverview.latestSummaryText && (
+                                    <p className="text-xs text-gray-400 line-clamp-2">{labOverview.latestSummaryText}</p>
+                                )}
                             </div>
                         ),
                     })}
@@ -2486,6 +2575,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         <option value="meds">Meds</option>
                         <option value="ai">Dr. AI</option>
                         <option value="vitals">Vitals</option>
+                        <option value="labs">Lab Results</option>
                         <option value="doctors">My Doctors</option>
                         <option value="appointments">Appointments</option>
                         <option value="calendar">Timeline</option>
@@ -2545,6 +2635,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                         { id: 'meds', label: 'Meds', icon: Pill },
                         { id: 'ai', label: 'Dr. AI', icon: Sparkles },
                         { id: 'vitals', label: 'Vitals', icon: Activity },
+                        { id: 'labs', label: 'Lab Results', icon: FlaskConical },
                         { id: 'doctors', label: 'My Doctors', icon: User },
                         { id: 'appointments', label: 'Appointments', icon: Clock },
                         { id: 'calendar', label: 'Timeline', icon: CalendarIcon },
@@ -2590,6 +2681,58 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                 )}
 
                 {activeTab === 'vitals' && <div className="px-4 md:px-8 pb-8">{renderVitals()}</div>}
+                {activeTab === 'labs' && (
+                    <div className="px-4 md:px-8 pb-8">
+                        <LabResultsPage
+                            theme={theme}
+                            onOpenHelp={onOpenHelp}
+                            vitalsContext={(() => {
+                                const latestBpRec = activeVitalRecords.filter((v) => v.title === "Blood Pressure").slice(-1)[0]
+                                const latestWeightRec = activeVitalRecords.filter((v) => v.title === "Weight").slice(-1)[0]
+                                let latestBmi: string | null = null
+                                if (latestWeightRec && vitalsProfile.heightInches) {
+                                    const wVal = parseFloat(String(latestWeightRec.item_metadata?.value || ""))
+                                    const unit = String(latestWeightRec.item_metadata?.unit || "lbs").toLowerCase()
+                                    if (Number.isFinite(wVal) && wVal > 0) {
+                                        const lbs = unit.includes("kg") ? wVal * 2.20462 : wVal
+                                        const bmi = (lbs / (vitalsProfile.heightInches * vitalsProfile.heightInches)) * 703
+                                        if (Number.isFinite(bmi)) latestBmi = bmi.toFixed(1)
+                                    }
+                                }
+                                return {
+                                    latestBp: latestBpRec?.item_metadata?.value ? `${latestBpRec.item_metadata.value} mmHg` : null,
+                                    latestBmi,
+                                }
+                            })()}
+                            syncGlucoseToVital={async (entry) => {
+                                const targetDate = entry.date.slice(0, 10)
+                                const alreadyExists = vitalRecords.some((v) => {
+                                    if (v.title !== "Glucose") return false
+                                    const vDate = String(v.item_metadata?.date || "").slice(0, 10)
+                                    const vVal = String(v.item_metadata?.value || "").trim()
+                                    return vDate === targetDate && vVal === entry.value.trim()
+                                })
+                                if (alreadyExists) return
+                                const created = await addItem({
+                                    type: "note",
+                                    category: "Vitals",
+                                    title: "Glucose",
+                                    item_metadata: {
+                                        is_vital: true,
+                                        value: entry.value,
+                                        unit: entry.unit || "mg/dL",
+                                        date: targetDate,
+                                        context: entry.context || "Random",
+                                        notes: entry.notes || "source: lab report",
+                                        source: "lab report",
+                                    },
+                                })
+                                if (created) upsertSharedHealthRecord(created)
+                            }}
+                            onLabsChanged={() => refreshLabSummary(true)}
+                        />
+                    </div>
+                )}
                 {activeTab === 'calendar' && <div className="px-4 md:px-8 pb-8">{renderCalendarView()}</div>}
                 {activeTab === 'appointments' && <div className="px-4 md:px-8 pb-8">{renderAppointments()}</div>}
                 {activeTab === 'checkin' && <div className="px-4 md:px-8 pb-8">{renderCheckin()}</div>}
@@ -2612,6 +2755,7 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
                             records={records}
                             onOpenHelp={onOpenHelp}
                             onScheduleAppointment={openNewAppointmentModal}
+                            labSummaryContext={labOverview}
                         />
                     </div>
                 )}

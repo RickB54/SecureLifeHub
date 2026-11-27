@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { HealthTooltip } from "@/components/health-ui/health-tooltip"
+import { LAB_DISCLAIMER, type LabOverviewSummary } from "@/lib/lab-results-types"
 import {
   HealthProfile,
   HealthQuestion,
@@ -42,6 +43,7 @@ interface DoctorVisitModeProps {
   letters: HealthLetter[]
   referrals: HealthReferral[]
   visitSummaries?: HealthVisitSummary[]
+  labSummary?: LabOverviewSummary | null
   theme?: string
 }
 
@@ -55,6 +57,7 @@ export default function DoctorVisitMode({
   letters,
   referrals,
   visitSummaries = [],
+  labSummary = null,
   theme = "dark",
 }: DoctorVisitModeProps) {
   const [copiedText, setCopiedText] = useState(false)
@@ -87,6 +90,21 @@ export default function DoctorVisitMode({
       lines.push("")
       lines.push(`QUESTIONS FOR DOCTOR (${pendingQs.length}):`)
       pendingQs.forEach((q, idx) => lines.push(`  ${idx + 1}. ${q.question}`))
+    }
+    if (labSummary?.latestReportId) {
+      lines.push("")
+      lines.push(`LATEST LAB RESULTS (${labSummary.latestLabName || "Lab"}, ${labSummary.latestDateCollected || "Recent"}):`)
+      if (labSummary.latestSummaryText) lines.push(`  Summary: ${labSummary.latestSummaryText}`)
+      if (labSummary.latestFlaggedResults.length > 0) {
+        lines.push(`  Flagged Results (${labSummary.latestFlaggedResults.length}):`)
+        labSummary.latestFlaggedResults.forEach((r) =>
+          lines.push(`    - ${r.test_name}: ${r.value_text} ${r.unit} (Range: ${r.reference_text || "N/A"}) [${r.flag_status.toUpperCase()}]`)
+        )
+      }
+      if (labSummary.latestChecklist.length > 0) {
+        lines.push("  Bring Up With My Doctor:")
+        labSummary.latestChecklist.forEach((c, idx) => lines.push(`    ${idx + 1}. ${c}`))
+      }
     }
     try {
       await navigator.clipboard.writeText(lines.join("\n"))
@@ -468,7 +486,54 @@ export default function DoctorVisitMode({
           </section>
         )}
 
-        {/* 7. VISIT SUMMARIES (Read-Only) */}
+        {/* 7. LATEST LAB RESULTS (Summary, Flagged Results & Doctor Checklist) */}
+        {labSummary?.latestReportId && (
+          <section className="print-section p-6 rounded-2xl bg-zinc-950 border-2 border-cyan-500/30 space-y-4">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span className="text-xs font-black tracking-widest uppercase text-cyan-400 flex items-center gap-1.5">
+                <AlertTriangle className="h-4 w-4" /> Latest Lab Results ({labSummary.latestLabName || "Lab"} &bull; {labSummary.latestDateCollected || "Recent"})
+              </span>
+              <span className="text-xs font-bold text-orange-300">
+                {labSummary.latestFlaggedCount} flagged
+              </span>
+            </div>
+            {labSummary.latestSummaryText && (
+              <p className="text-sm text-gray-200 leading-relaxed">{labSummary.latestSummaryText}</p>
+            )}
+            {labSummary.latestFlaggedResults.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-orange-300">Flagged Results</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {labSummary.latestFlaggedResults.map((r, i) => (
+                    <div key={i} className="p-3 rounded-xl bg-white/5 border border-orange-500/30 text-sm flex items-center justify-between gap-2">
+                      <div>
+                        <p className="font-bold text-white">{r.test_name}</p>
+                        <p className="text-xs text-gray-400">Range: {r.reference_text || "N/A"}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-white">{r.value_text} {r.unit}</p>
+                        <span className="text-[10px] font-black uppercase text-orange-300">{r.flag_status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {labSummary.latestChecklist.length > 0 && (
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-blue-300">What to Bring Up With My Doctor</h4>
+                <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-200">
+                  {labSummary.latestChecklist.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            <p className="text-[11px] text-gray-400 italic">{LAB_DISCLAIMER}</p>
+          </section>
+        )}
+
+        {/* 8. VISIT SUMMARIES (Read-Only) */}
         {visitSummaries.length > 0 && (
           <section className="print-section p-6 rounded-2xl bg-zinc-950 border-2 border-white/20 space-y-4">
             <span className="text-xs font-black tracking-widest uppercase text-blue-400 flex items-center gap-1.5">

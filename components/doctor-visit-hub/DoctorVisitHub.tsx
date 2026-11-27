@@ -109,6 +109,8 @@ import {
   deleteHealthAttachment,
 } from "./doctor-visit-api"
 import DoctorVisitMode from "./DoctorVisitMode"
+import { fetchLabOverviewSummary } from "@/lib/lab-results-api"
+import type { LabOverviewSummary } from "@/lib/lab-results-types"
 
 interface SectionToolbarProps {
   search: string
@@ -536,6 +538,7 @@ export default function DoctorVisitHub({
 
   // Visit Summaries State
   const [visitSummaries, setVisitSummaries] = useState<HealthVisitSummary[]>([])
+  const [labSummary, setLabSummary] = useState<LabOverviewSummary | null>(null)
   const [summaryModalOpen, setSummaryModalOpen] = useState(false)
   const [editingSummary, setEditingSummary] = useState<HealthVisitSummary | null>(null)
   const [summaryForm, setSummaryForm] = useState({
@@ -1042,6 +1045,11 @@ export default function DoctorVisitHub({
           fetchExistingVisits(userId),
           fetchExistingMedications(userId),
         ])
+        if (userId) {
+          fetchLabOverviewSummary(userId)
+            .then((ls) => { if (isMounted) setLabSummary(ls) })
+            .catch(() => {})
+        }
         if (isMounted) {
           setProfile(prof)
           setProfileForm(prof)
@@ -1582,6 +1590,7 @@ export default function DoctorVisitHub({
         letters={letters}
         referrals={referrals}
         visitSummaries={visitSummaries}
+        labSummary={labSummary}
         theme={theme}
       />
     )

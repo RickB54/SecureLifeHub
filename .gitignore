@@ -37,3 +37,11 @@ next-env.d.ts
 # Keeper backup files
 *-keeper.json
 *keeper.json
+
+# Lab Results synthetic test fixtures & private reports (NEVER commit real reports/PDFs/images)
+tmp-lab-fixtures/
+.lab-test-fixtures/
+lab-reports-local/
+*.lab.pdf
+*.lab.png
+*.lab.jpg

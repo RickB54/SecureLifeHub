@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { Bot, User, Send, Sparkles, AlertTriangle, Info, CheckCircle, Clock, Plus, Stethoscope, Pill, Activity, Brain, FileText, ChevronDown, ChevronUp, Search, Book, ExternalLink, ShieldCheck, Thermometer, Copy, Download, X, Minimize2, Maximize2, Archive, Edit, ChevronRight, Globe, HelpCircle, Printer, Lock, Check, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
+import { LAB_DISCLAIMER, type LabOverviewSummary } from "@/lib/lab-results-types"
 
 enum UrgencyLevel {
     INFO = 'info',
@@ -31,6 +32,7 @@ interface HealthAIProps {
     records: any[]
     onScheduleAppointment: () => void
     onOpenHelp?: (targetId?: string) => void
+    labSummaryContext?: LabOverviewSummary | null
 }
 
 interface ConversationHistory {
@@ -43,7 +45,7 @@ interface ConversationHistory {
     isArchived?: boolean
 }
 
-export default function HealthAI({ theme, records, onScheduleAppointment, onOpenHelp }: HealthAIProps) {
+export default function HealthAI({ theme, records, onScheduleAppointment, onOpenHelp, labSummaryContext }: HealthAIProps) {
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState("")
     const [isThinking, setIsThinking] = useState(false)
@@ -348,6 +350,34 @@ export default function HealthAI({ theme, records, onScheduleAppointment, onOpen
         } else if (lowerQuery.includes("appointment") || lowerQuery.includes("book")) {
             mainContent = "Opening the Medical Appointment Scheduler..."
             setTimeout(onScheduleAppointment, 1000)
+        } else if (
+            labSummaryContext?.latestReportId &&
+            /\b(lab|labs|blood work|blood test|ferritin|glucose|a1c|alt|ast|cholesterol|flagged|panel|results)\b/i.test(lowerQuery)
+        ) {
+            const flaggedText =
+                labSummaryContext.latestFlaggedResults.length > 0
+                    ? labSummaryContext.latestFlaggedResults
+                          .map((r) => `• **${r.test_name}**: ${r.value_text} ${r.unit} (Range: ${r.reference_text || "N/A"}) — **${r.flag_status.toUpperCase()}**`)
+                          .join("\n")
+                    : "No flagged results in your latest lab report."
+            mainContent = `## Latest Lab Results (${labSummaryContext.latestLabName || "Lab"}, ${labSummaryContext.latestDateCollected || "Recent"})\n\n${labSummaryContext.latestSummaryText || "Your latest lab report is available on the Lab Results tab."}`
+            sections.push({
+                title: `Flagged Results (${labSummaryContext.latestFlaggedCount})`,
+                content: flaggedText,
+                type: labSummaryContext.latestFlaggedCount > 0 ? "warning" : "info",
+            })
+            if (labSummaryContext.latestChecklist.length > 0) {
+                sections.push({
+                    title: "What to Bring Up With Your Doctor",
+                    content: labSummaryContext.latestChecklist.map((c, idx) => `${idx + 1}. ${c}`).join("\n"),
+                    type: "action",
+                })
+            }
+            sections.push({
+                title: "Important Note",
+                content: LAB_DISCLAIMER,
+                type: "reference",
+            })
         } else {
             const wiki = await searchMedicalWiki(query)
             if (wiki) {
