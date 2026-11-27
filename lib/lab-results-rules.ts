@@ -181,38 +181,70 @@ export const BUILTIN_CANONICAL_TESTS: CanonicalTestDef[] = [
     system: "Iron",
     aliases: ["iron saturation", "% saturation", "transferrin saturation"],
   },
-  // CBC
-  { key: "wbc", displayName: "WBC", system: "Blood Count", aliases: ["wbc", "white blood cell count", "white blood cells"] },
-  { key: "rbc", displayName: "RBC", system: "Blood Count", aliases: ["rbc", "red blood cell count", "red blood cells"] },
+  // CBC (full CBC with differential)
+  { key: "wbc", displayName: "WBC", system: "Blood Count", aliases: ["wbc", "white blood cell count", "white blood cells", "leukocytes"] },
+  { key: "rbc", displayName: "RBC", system: "Blood Count", aliases: ["rbc", "red blood cell count", "red blood cells", "erythrocytes"] },
   { key: "hemoglobin", displayName: "Hemoglobin", system: "Blood Count", aliases: ["hemoglobin", "hgb", "hb"] },
   { key: "hematocrit", displayName: "Hematocrit", system: "Blood Count", aliases: ["hematocrit", "hct"] },
-  { key: "mcv", displayName: "MCV", system: "Blood Count", aliases: ["mcv"] },
-  { key: "mch", displayName: "MCH", system: "Blood Count", aliases: ["mch"] },
-  { key: "mchc", displayName: "MCHC", system: "Blood Count", aliases: ["mchc"] },
-  { key: "rdw", displayName: "RDW", system: "Blood Count", aliases: ["rdw"] },
+  { key: "mcv", displayName: "MCV", system: "Blood Count", aliases: ["mcv", "mean corpuscular volume"] },
+  { key: "mch", displayName: "MCH", system: "Blood Count", aliases: ["mch", "mean corpuscular hemoglobin"] },
+  { key: "mchc", displayName: "MCHC", system: "Blood Count", aliases: ["mchc", "mean corpuscular hgb conc"] },
+  { key: "rdw", displayName: "RDW", system: "Blood Count", aliases: ["rdw", "red cell distribution width"] },
   { key: "platelets", displayName: "Platelets", system: "Blood Count", aliases: ["platelets", "platelet count", "plt"] },
-  { key: "neutrophils_pct", displayName: "Neutrophils %", system: "Blood Count", aliases: ["neutrophils", "neutrophils %"] },
-  { key: "lymphs_pct", displayName: "Lymphocytes %", system: "Blood Count", aliases: ["lymphs", "lymphocytes", "lymphocytes %"] },
-  { key: "monocytes_pct", displayName: "Monocytes %", system: "Blood Count", aliases: ["monocytes", "monocytes %"] },
-  { key: "eos_pct", displayName: "Eosinophils %", system: "Blood Count", aliases: ["eos", "eosinophils", "eosinophils %"] },
-  { key: "basos_pct", displayName: "Basophils %", system: "Blood Count", aliases: ["basos", "basophils", "basophils %"] },
-  { key: "neutrophils_abs", displayName: "Neutrophils (Absolute)", system: "Blood Count", aliases: ["neutrophils (absolute)", "absolute neutrophils"] },
-  { key: "lymphs_abs", displayName: "Lymphs (Absolute)", system: "Blood Count", aliases: ["lymphs (absolute)", "absolute lymphocytes"] },
-  { key: "monocytes_abs", displayName: "Monocytes (Absolute)", system: "Blood Count", aliases: ["monocytes(absolute)", "monocytes (absolute)", "absolute monocytes"] },
-  { key: "eos_abs", displayName: "Eos (Absolute)", system: "Blood Count", aliases: ["eos (absolute)", "absolute eosinophils"] },
-  { key: "baso_abs", displayName: "Baso (Absolute)", system: "Blood Count", aliases: ["baso (absolute)", "absolute basophils"] },
-  { key: "immature_granulocytes_pct", displayName: "Immature Granulocytes %", system: "Blood Count", aliases: ["immature granulocytes"] },
-  { key: "immature_grans_abs", displayName: "Immature Grans (Abs)", system: "Blood Count", aliases: ["immature grans (abs)", "immature granulocytes (abs)"] },
-  // Lipids
-  { key: "cholesterol_total", displayName: "Total Cholesterol", system: "Cholesterol & Heart", aliases: ["cholesterol, total", "total cholesterol"] },
-  { key: "triglycerides", displayName: "Triglycerides", system: "Cholesterol & Heart", aliases: ["triglycerides"] },
-  { key: "hdl", displayName: "HDL Cholesterol", system: "Cholesterol & Heart", aliases: ["hdl cholesterol", "hdl"] },
-  { key: "ldl", displayName: "LDL Cholesterol", system: "Cholesterol & Heart", aliases: ["ldl cholesterol", "ldl cholesterol calc", "ldl"] },
-  // Thyroid & Vitamins
-  { key: "tsh", displayName: "TSH", system: "Thyroid", aliases: ["tsh", "thyroid stimulating hormone"] },
-  { key: "free_t4", displayName: "Free T4", system: "Thyroid", aliases: ["t4, free", "free t4", "t4 free(direct)"] },
-  { key: "vitamin_d", displayName: "Vitamin D, 25-Hydroxy", system: "Vitamins & Hormones", aliases: ["vitamin d, 25-hydroxy", "vitamin d", "25-hydroxy vitamin d"] },
-  { key: "vitamin_b12", displayName: "Vitamin B12", system: "Vitamins & Hormones", aliases: ["vitamin b12", "b12"] },
+  { key: "mpv", displayName: "MPV", system: "Blood Count", aliases: ["mpv", "mean platelet volume"] },
+  { key: "neutrophils_pct", displayName: "Neutrophils %", system: "Blood Count", aliases: ["neutrophils", "neutrophils %", "neutrophils, %", "polys", "segmented neutrophils"] },
+  { key: "lymphs_pct", displayName: "Lymphocytes %", system: "Blood Count", aliases: ["lymphs", "lymphocytes", "lymphocytes %", "lymphocytes, %"] },
+  { key: "monocytes_pct", displayName: "Monocytes %", system: "Blood Count", aliases: ["monocytes", "monocytes %", "monocytes, %"] },
+  { key: "eos_pct", displayName: "Eosinophils %", system: "Blood Count", aliases: ["eos", "eosinophils", "eosinophils %", "eosinophils, %"] },
+  { key: "basos_pct", displayName: "Basophils %", system: "Blood Count", aliases: ["basos", "basophils", "basophils %", "basophils, %"] },
+  { key: "neutrophils_abs", displayName: "Neutrophils (Absolute)", system: "Blood Count", aliases: ["neutrophils (absolute)", "absolute neutrophils", "neutrophils, absolute"] },
+  { key: "lymphs_abs", displayName: "Lymphs (Absolute)", system: "Blood Count", aliases: ["lymphs (absolute)", "absolute lymphocytes", "lymphocytes, absolute"] },
+  { key: "monocytes_abs", displayName: "Monocytes (Absolute)", system: "Blood Count", aliases: ["monocytes(absolute)", "monocytes (absolute)", "absolute monocytes", "monocytes, absolute"] },
+  { key: "eos_abs", displayName: "Eos (Absolute)", system: "Blood Count", aliases: ["eos (absolute)", "absolute eosinophils", "eosinophils, absolute"] },
+  { key: "baso_abs", displayName: "Baso (Absolute)", system: "Blood Count", aliases: ["baso (absolute)", "absolute basophils", "basophils, absolute"] },
+  { key: "immature_granulocytes_pct", displayName: "Immature Granulocytes %", system: "Blood Count", aliases: ["immature granulocytes", "immature granulocytes %"] },
+  { key: "immature_grans_abs", displayName: "Immature Grans (Abs)", system: "Blood Count", aliases: ["immature grans (abs)", "immature granulocytes (abs)", "absolute immature granulocytes"] },
+  // Lipid Panel
+  { key: "cholesterol_total", displayName: "Total Cholesterol", system: "Cholesterol & Heart", aliases: ["cholesterol, total", "total cholesterol", "cholesterol"] },
+  { key: "triglycerides", displayName: "Triglycerides", system: "Cholesterol & Heart", aliases: ["triglycerides", "triglyceride"] },
+  { key: "hdl", displayName: "HDL Cholesterol", system: "Cholesterol & Heart", aliases: ["hdl cholesterol", "hdl", "hdl-cholesterol", "hdl-c"] },
+  { key: "ldl", displayName: "LDL Cholesterol", system: "Cholesterol & Heart", aliases: ["ldl cholesterol", "ldl cholesterol calc", "ldl-cholesterol", "ldl-c", "ldl", "ldl cholesterol (calc)", "ldl chol calc (nih)"] },
+  { key: "non_hdl", displayName: "Non-HDL Cholesterol", system: "Cholesterol & Heart", aliases: ["non-hdl cholesterol", "non hdl cholesterol"] },
+  { key: "chol_hdl_ratio", displayName: "Chol/HDL Ratio", system: "Cholesterol & Heart", aliases: ["chol/hdlc ratio", "chol/hdl ratio", "cholesterol/hdl ratio"] },
+  { key: "vldl", displayName: "VLDL Cholesterol", system: "Cholesterol & Heart", aliases: ["vldl cholesterol", "vldl cholesterol cal", "vldl"] },
+  // Thyroid
+  { key: "tsh", displayName: "TSH", system: "Thyroid", aliases: ["tsh", "thyroid stimulating hormone", "tsh w/reflex to free t4"] },
+  { key: "free_t4", displayName: "Free T4", system: "Thyroid", aliases: ["t4, free", "free t4", "t4 free(direct)", "t4, free (direct)", "thyroxine (t4) free"] },
+  { key: "free_t3", displayName: "Free T3", system: "Thyroid", aliases: ["t3, free", "free t3", "triiodothyronine (t3), free", "triiodothyronine, free"] },
+  // Vitamins & Nutrition
+  { key: "vitamin_d", displayName: "Vitamin D, 25-Hydroxy", system: "Vitamins & Hormones", aliases: ["vitamin d, 25-hydroxy", "vitamin d", "25-hydroxy vitamin d", "vitamin d,25-oh,total,ia", "vitamin d, 25-oh, total", "25-oh vitamin d"] },
+  { key: "vitamin_b12", displayName: "Vitamin B12", system: "Vitamins & Hormones", aliases: ["vitamin b12", "b12", "vitamin b-12", "cobalamin"] },
+  { key: "folate", displayName: "Folate", system: "Vitamins & Hormones", aliases: ["folate", "folate, serum", "folic acid", "serum folate"] },
+  // Hormones & Prostate
+  { key: "psa", displayName: "PSA (Prostate Specific Antigen)", system: "Hormones & Prostate", aliases: ["psa", "psa, total", "prostate specific ag", "prostate specific ag, total", "prostate-specific antigen", "total psa"] },
+  { key: "testosterone_total", displayName: "Testosterone, Total", system: "Vitamins & Hormones", aliases: ["testosterone, total", "testosterone, total, ms", "total testosterone", "testosterone", "testosterone, serum"] },
+  { key: "testosterone_free", displayName: "Testosterone, Free", system: "Vitamins & Hormones", aliases: ["testosterone, free", "free testosterone", "testosterone, free (direct)", "free testosterone (direct)"] },
+  // Inflammation
+  { key: "crp", displayName: "C-Reactive Protein (CRP)", system: "Inflammation", aliases: ["crp", "c-reactive protein", "c-reactive protein, quant", "c reactive protein"] },
+  { key: "hs_crp", displayName: "hs-CRP (High Sensitivity CRP)", system: "Inflammation", aliases: ["hs-crp", "hs crp", "c-reactive protein, cardiac", "high sensitivity crp", "cardiac crp"] },
+  { key: "esr", displayName: "ESR (Sedimentation Rate)", system: "Inflammation", aliases: ["esr", "sed rate", "sedimentation rate", "sedimentation rate-westergren", "esr, westergren"] },
+  // Minerals, Liver & Metabolic
+  { key: "magnesium", displayName: "Magnesium", system: "Electrolytes", aliases: ["magnesium", "magnesium, serum", "mg"] },
+  { key: "phosphorus", displayName: "Phosphorus", system: "Electrolytes", aliases: ["phosphorus", "phosphorus, serum", "phosphate"] },
+  { key: "uric_acid", displayName: "Uric Acid", system: "Metabolic", aliases: ["uric acid", "uric acid, serum"] },
+  { key: "ggt", displayName: "GGT", system: "Liver", aliases: ["ggt", "gamma-glutamyl transferase", "gamma glutamyl transferase", "ggtp"] },
+  { key: "fasting_insulin", displayName: "Fasting Insulin", system: "Blood Sugar", aliases: ["insulin", "fasting insulin", "insulin, fasting", "insulin, serum"] },
+  // Urinalysis
+  { key: "urine_specific_gravity", displayName: "Urine Specific Gravity", system: "Urinalysis", aliases: ["specific gravity", "urine specific gravity", "sp gravity"] },
+  { key: "urine_ph", displayName: "Urine pH", system: "Urinalysis", aliases: ["ph", "urine ph", "ph, urine"] },
+  { key: "urine_leukocyte_esterase", displayName: "Urine Leukocyte Esterase", system: "Urinalysis", aliases: ["leukocyte esterase", "urine leukocyte esterase", "leukocytes, urine"] },
+  { key: "urine_nitrite", displayName: "Urine Nitrite", system: "Urinalysis", aliases: ["nitrite", "urine nitrite", "nitrite, urine"] },
+  { key: "urine_protein", displayName: "Urine Protein", system: "Urinalysis", aliases: ["urine protein", "protein, urine"] },
+  { key: "urine_glucose", displayName: "Urine Glucose", system: "Urinalysis", aliases: ["urine glucose", "glucose, urine"] },
+  { key: "urine_ketones", displayName: "Urine Ketones", system: "Urinalysis", aliases: ["ketones", "urine ketones", "ketones, urine"] },
+  { key: "urine_blood", displayName: "Urine Occult Blood", system: "Urinalysis", aliases: ["occult blood", "urine blood", "blood, urine"] },
+  { key: "urine_bilirubin", displayName: "Urine Bilirubin", system: "Urinalysis", aliases: ["urine bilirubin", "bilirubin, urine"] },
+  { key: "urine_urobilinogen", displayName: "Urine Urobilinogen", system: "Urinalysis", aliases: ["urobilinogen", "urine urobilinogen"] },
 ]
 
 export function cleanTestNameForLookup(raw: string): string {
@@ -312,13 +344,21 @@ export function parseReferenceRange(referenceText: string): {
   high: number | null
   hasRange: boolean
 } {
-  const raw = (referenceText || "").trim()
+  const raw = (referenceText || "")
+    .replace(/^Reference\s*Range:?\s*/i, "")
+    .replace(/\s*\(calc\)\s*$/i, "")
+    .trim()
   if (!raw || /^(not\s*estab\.?|n\/a|none|-|—)$/i.test(raw)) {
     return { low: null, high: null, hasRange: false }
   }
 
+  // Normalize Quest comparator phrasing: "> OR = 40" -> ">=40", "< OR = 4.0" -> "<=4.0"
+  const norm = raw
+    .replace(/>\s*OR\s*=\s*/gi, ">=")
+    .replace(/<\s*OR\s*=\s*/gi, "<=")
+
   // "65-99", "0.76 - 1.27"
-  const between = raw.match(/(-?\d+(?:\.\d+)?)\s*[-–to]+\s*(-?\d+(?:\.\d+)?)/i)
+  const between = norm.match(/(-?\d+(?:\.\d+)?)\s*[-–to]+\s*(-?\d+(?:\.\d+)?)/i)
   if (between) {
     const low = parseFloat(between[1])
     const high = parseFloat(between[2])
@@ -328,14 +368,14 @@ export function parseReferenceRange(referenceText: string): {
   }
 
   // "<200" or "<= 200"
-  const lt = raw.match(/^<=?\s*(-?\d+(?:\.\d+)?)/)
+  const lt = norm.match(/^<=?\s*(-?\d+(?:\.\d+)?)/)
   if (lt) {
     const high = parseFloat(lt[1])
     if (Number.isFinite(high)) return { low: null, high, hasRange: true }
   }
 
   // ">59" or ">= 60"
-  const gt = raw.match(/^>=?\s*(-?\d+(?:\.\d+)?)/)
+  const gt = norm.match(/^>=?\s*(-?\d+(?:\.\d+)?)/)
   if (gt) {
     const low = parseFloat(gt[1])
     if (Number.isFinite(low)) return { low, high: null, hasRange: true }
@@ -689,26 +729,48 @@ export function parseLabReportTextFallback(
   const knownPanels = [
     /^Comp\.\s*Metabolic\s*Panel/i,
     /^Comprehensive\s*Metabolic\s*Panel/i,
-    /^CBC\s*With\s*Differential/i,
+    /^Basic\s*Metabolic\s*Panel/i,
+    /^CBC\s*(?:With\s*Differential|\(includes\s*Diff)/i,
     /^Iron\s*and\s*TIBC/i,
+    /^Iron\s*Panel/i,
     /^Hemoglobin\s*A1c$/i,
     /^Ferritin$/i,
     /^Lipid\s*Panel/i,
-    /^Thyroid\s*Panel/i,
+    /^Thyroid\s*(?:Panel|Cascade|Function)/i,
     /^Hered\.\s*Hemochromatosis/i,
     /^Urinalysis/i,
+    /^Inflammatory\s*Markers/i,
+    /^Hormone\s*Panel/i,
+    /^Vitamins\s*(?:&|and)\s*Minerals/i,
   ]
+
+  // Comprehensive header/metadata line filter — never treat these as lab tests
+  const isMetadataOrHeaderLine = (ln: string): boolean => {
+    if (
+      /^(Test(?:\s+Name)?|TESTS|Result|Flag|Reference\s*Range|In\s*Range|Out\s*Of\s*Range|Units|Lab|LabCorp|Quest\s*Diagnostics|Patient\s*Report|Patient\s*Details|Patient\s*Name|Patient\s*ID|Alternate\s*Patient\s*ID|DOB|Date\s*of\s*Birth|Age|Sex|Gender|Specimen\s*ID|Specimen\s*Details|Accession|Requisition|Order\s*#|Control\s*ID|Account\s*(?:Number|#)|Client\s*(?:Number|#)|NPI|CLIA|Physician\s*Details|Ordering\s*(?:Physician|Provider)|Referring\s*(?:Physician|Provider)|Date\s*Collected|Collection\s*Date|Date\s*Received|Date\s*Reported|Date\s*Entered|Date\s*Created|Report\s*Date|Print\s*Date|Fasting\s*[:]|Fasting\s+(?:Yes|No|Status|True|False)|Disclaimer|Icon\s*Legend|Performing\s*Labs?|Director|Dir:|©|Copyright|All\s*Rights\s*Reserved|This\s*document|For\s*Inquiries|Phone|Tel|Fax|Address|Street|Suite|Rte:|Ordered\s*Items|General\s*Comments|Page\s*\d+\s*of\s*\d+|Final\s*Report|Status:|Comments?:)\b/i.test(
+        ln
+      )
+    ) {
+      return true
+    }
+    // Street address / phone-only / NPI-only lines
+    if (/^\d{1,5}\s+[A-Z][A-Za-z0-9\s.,]+(?:ST|AVE|RD|BLVD|DR|LN|PKWY|WAY|SUITE|STE)\b/i.test(ln)) return true
+    if (/^\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}$/.test(ln)) return true
+    if (/\bNPI[:\s#]+\d{8,12}\b/i.test(ln)) return true
+    if (/\b(?:Account|Specimen|Accession|Requisition|Control)\s*(?:ID|Number|#)?[:\s]+[A-Z0-9-]{4,}/i.test(ln)) return true
+    return false
+  }
+
+  const QUEST_LAB_CODE_TAIL = /(?:\s+(?:0\d|AMD|SLI|QDI|Z3M|SJC|EN|RN|TB|QTE|SJC|WH|SJ|NC|CB|EZ))$/i
+  const RANGE_EXPR =
+    "(?:\\d+(?:\\.\\d+)?\\s*[-–]\\s*\\d+(?:\\.\\d+)?|(?:>=?|<=?|>[\\s]*OR[\\s]*=|<[\\s]*OR[\\s]*=)\\s*\\d+(?:\\.\\d+)?|Not\\s*Estab\\.?)"
 
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
 
-    // Skip headers / footers / contact / metadata lines
-    if (
-      /^(Test|TESTS|Patient Report|Patient Name|DOB|Age|Sex|Specimen ID|Ordering Physician|Date Collected|Date Received|Date Reported|Fasting|Disclaimer|Icon Legend|Performing Labs|Date Created|©|This document|For Inquiries|Phone:|Address:|Account Number|Control ID|Ordered Items|General Comments)/i.test(
-        line
-      )
-    ) {
+    // Skip headers / footers / contact / metadata lines (Rule 5)
+    if (isMetadataOrHeaderLine(line)) {
       i++
       continue
     }
@@ -725,8 +787,9 @@ export function parseLabReportTextFallback(
       const noteLines = [line]
       while (
         i + 1 < lines.length &&
-        !/^(Test|TESTS|Ferritin|Hered\.|CBC|Iron and TIBC|Hemoglobin A1c|Comp\.)/i.test(lines[i + 1]) &&
-        !/\b(High|Low|Not Estab\.|mg\/dL|g\/dL|IU\/L|ng\/mL|mmol\/L|x10E3\/uL|%)\b/i.test(lines[i + 1]) &&
+        !isMetadataOrHeaderLine(lines[i + 1]) &&
+        !knownPanels.some((p) => p.test(lines[i + 1])) &&
+        !/\b(High|Low|Not Estab\.|mg\/dL|g\/dL|IU\/L|ng\/mL|mmol\/L|mIU\/L|pg\/mL|mg\/L|x10E3\/uL|%)\b/i.test(lines[i + 1]) &&
         !/^([A-Za-z][A-Za-z0-9\s(),./-]{1,35})\s{2,}([<>]?\d+(?:\.\d+)?)\b/.test(lines[i + 1])
       ) {
         i++
@@ -743,7 +806,9 @@ export function parseLabReportTextFallback(
     // Narrative genetic test (Rule 7): e.g. "Hereditary Hemochromatosis" followed by "NO MUTATION IDENTIFIED" + Interpretation
     if (/NO\s+MUTATION\s+IDENTIFIED|MUTATION\s+DETECTED|NEGATIVE\s+FOR/i.test(line)) {
       const testName =
-        i > 0 && !/\d/.test(lines[i - 1]) && lines[i - 1].length < 60 ? lines[i - 1] : currentPanel
+        i > 0 && !/\d/.test(lines[i - 1]) && lines[i - 1].length < 60 && !isMetadataOrHeaderLine(lines[i - 1])
+          ? lines[i - 1]
+          : currentPanel
       const valueText = line.replace(/\s+\b0\d\b$/, "").trim()
       const noteParts: string[] = []
       while (
@@ -773,7 +838,7 @@ export function parseLabReportTextFallback(
     // "Glucose01 101 High 101 02/10/2021 mg/dL 65-99"
     // "Bilirubin, Total 01 <0.2 0.5 02/10/2021 mg/dL 0.0-1.2"
     const labcorpMatch = line.match(
-      /^([A-Za-z][A-Za-z0-9\s(),./-]{1,38}?)(?:\s*0\d)?\s+([<>]?\d+(?:\.\d+)?)\s+(High|Low|Critical|H|L)?\s*([<>]?\d+(?:\.\d+)?\*?)?\s*(\d{2}\/\d{2}\/\d{4})\s+([A-Za-z0-9/%.*-]+)?\s*((?:\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?)|(?:[<>]=?\s*\d+(?:\.\d+)?)|(?:Not\s*Estab\.?))?$/i
+      /^([A-Za-z][A-Za-z0-9\s(),./-]{1,42}?)(?:\s*0\d)?\s+([<>]?\d+(?:\.\d+)?)\s+(High|Low|Critical|H|L)?\s*([<>]?\d+(?:\.\d+)?\*?)?\s*(\d{2}\/\d{2}\/\d{4})\s+([A-Za-z0-9/%.*-]+)?\s*((?:\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?)|(?:[<>]=?\s*\d+(?:\.\d+)?)|(?:Not\s*Estab\.?))?$/i
     )
     if (labcorpMatch) {
       results.push({
@@ -790,13 +855,37 @@ export function parseLabReportTextFallback(
       continue
     }
 
-    // Pattern B: Monospace / general table row (with or without lab code, separate Flag column, "Not Estab."):
+    // Pattern B1: Quest-style single-line row (Range BEFORE unit, optional H/L flag, optional trailing lab code AMD/SLI/01):
+    // "CHOLESTEROL, TOTAL  215  H  <200 mg/dL  AMD"
+    // "HDL CHOLESTEROL  42  L  > OR = 40 mg/dL  AMD"
+    // "TSH  2.45  0.40-4.50 mIU/L  AMD"
+    const cleanedLine = line.replace(QUEST_LAB_CODE_TAIL, "").trim()
+    const questSingleRe = new RegExp(
+      `^([A-Za-z][A-Za-z0-9\\s(),./-]{1,44}?)\\s+([<>]?\\d+(?:\\.\\d+)?)\\s+(?:(High|Low|Critical|H|L)\\s+)?(${RANGE_EXPR})(?:\\s+([A-Za-z0-9/%.*-]+(?:\\s*\\(calc\\))?))?$`,
+      "i"
+    )
+    const questSingleMatch = cleanedLine.match(questSingleRe)
+    if (questSingleMatch) {
+      results.push({
+        test_name: questSingleMatch[1].trim(),
+        panel_name: currentPanel,
+        value_text: questSingleMatch[2].trim(),
+        lab_flag: questSingleMatch[3] ? questSingleMatch[3].trim() : null,
+        reference_text: questSingleMatch[4].trim(),
+        unit: questSingleMatch[5] ? questSingleMatch[5].replace(/\s*\(calc\)\s*$/i, "").trim() : "",
+      })
+      i++
+      continue
+    }
+
+    // Pattern B2: Monospace / LabCorp table row (Unit BEFORE range, separate Flag col, optional lab code):
     // "Iron   193   High   ug/dL   38-169   01"
     // "Neutrophils   64   %   Not Estab.   01"
-    // "Iron Bind.Cap.(TIBC)   326   ug/dL   250-450"
-    const monoMatch = line.match(
-      /^([A-Za-z][A-Za-z0-9\s(),./-]{1,38}?)\s+([<>]?\d+(?:\.\d+)?)\s+(?:(High|Low|Critical|H|L)\s+)?([A-Za-z0-9/%.*-]+)?\s*((?:\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?)|(?:[<>]=?\s*\d+(?:\.\d+)?)|(?:Not\s*Estab\.?))(?:\s+0\d)?$/i
+    const monoRe = new RegExp(
+      `^([A-Za-z][A-Za-z0-9\\s(),./-]{1,44}?)\\s+([<>]?\\d+(?:\\.\\d+)?)\\s+(?:(High|Low|Critical|H|L)\\s+)?([A-Za-z0-9/%.*-]+)?\\s*(${RANGE_EXPR})$`,
+      "i"
     )
+    const monoMatch = cleanedLine.match(monoRe)
     if (monoMatch) {
       results.push({
         test_name: monoMatch[1].trim(),
@@ -810,11 +899,30 @@ export function parseLabReportTextFallback(
       continue
     }
 
+    // Pattern B3: Qualitative Urinalysis single-line row (e.g. "Urine Protein   Negative   Negative   AMD")
+    const qualMatch = cleanedLine.match(
+      /^([A-Za-z][A-Za-z0-9\s(),./-]{2,40}?)\s+(Negative|Positive|Trace|Small|Moderate|Large|Clear|Cloudy|Yellow|Amber|Normal)\s+(?:(High|Low|Abnormal|A|H|L)\s+)?(Negative|Normal|Clear|Yellow)?$/i
+    )
+    if (qualMatch) {
+      results.push({
+        test_name: qualMatch[1].trim(),
+        panel_name: currentPanel,
+        value_text: qualMatch[2].trim(),
+        value_numeric: null,
+        is_narrative: true,
+        lab_flag: qualMatch[3] ? qualMatch[3].trim() : null,
+        reference_text: qualMatch[4] ? qualMatch[4].trim() : "",
+        unit: "",
+      })
+      i++
+      continue
+    }
+
     // Pattern C: Messy pasted text "Test: Value unit (Range: low-high) [High/Low]"
     const messyMatch = line.match(
-      /^([A-Za-z][A-Za-z0-9\s(),./-]{1,35}?)\s*[:=-]\s*([<>]?\d+(?:\.\d+)?)\s*([A-Za-z/%]+)?(?:\s*\(?(?:ref|range)?[:\s]*((?:\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?)|(?:[<>]=?\s*\d+(?:\.\d+)?)|(?:Not\s*Estab\.?))\)?)?(?:\s*\[?(High|Low|Critical|H|L)\]?)?/i
+      /^([A-Za-z][A-Za-z0-9\s(),./-]{1,40}?)\s*[:=-]\s*([<>]?\d+(?:\.\d+)?)\s*([A-Za-z0-9/%.*-]+)?(?:\s*\(?(?:ref|range|reference\s*range)?[:\s]*((?:\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?)|(?:(?:>=?|<=?|>\s*OR\s*=|<\s*OR\s*=)\s*\d+(?:\.\d+)?)|(?:Not\s*Estab\.?))\)?)?(?:\s*\[?(High|Low|Critical|H|L)\]?)?/i
     )
-    if (messyMatch) {
+    if (messyMatch && !isMetadataOrHeaderLine(messyMatch[1].trim())) {
       results.push({
         test_name: messyMatch[1].trim(),
         panel_name: currentPanel,
@@ -825,6 +933,66 @@ export function parseLabReportTextFallback(
       })
       i++
       continue
+    }
+
+    // Pattern D: Quest multi-line split result:
+    // Line i:   "VITAMIN D,25-OH,TOTAL,IA"
+    // Line i+1: "28 L" or "1.8 ng/mL" or "3.4 H mg/L"
+    // Line i+2: "Reference Range: 30-100 ng/mL" or "mg/L" (+ Line i+3 "<1.0")
+    if (
+      i + 1 < lines.length &&
+      /^[A-Za-z][A-Za-z0-9\s(),./-]{1,48}$/.test(line) &&
+      !/[:=]/.test(line) &&
+      !knownPanels.some((p) => p.test(line))
+    ) {
+      const nextValLine = lines[i + 1].replace(QUEST_LAB_CODE_TAIL, "").trim()
+      const valMatch = nextValLine.match(
+        /^([<>]?\d+(?:\.\d+)?)(?:\s+(High|Low|Critical|H|L))?(?:\s+([A-Za-z0-9/%.*-]+))?(?:\s+(High|Low|Critical|H|L))?$/i
+      )
+      if (valMatch) {
+        let unit = valMatch[3] ? valMatch[3].trim() : ""
+        let labFlag = valMatch[2] || valMatch[4] || null
+        let refText = ""
+        let consumed = 2
+
+        // Check line i+2 (and optionally i+3) for Reference Range or Unit
+        if (i + 2 < lines.length) {
+          const line2 = lines[i + 2].replace(QUEST_LAB_CODE_TAIL, "").trim()
+          const refLineRe = new RegExp(
+            `^(?:Reference\\s*Range:?\\s*)?(${RANGE_EXPR})(?:\\s+([A-Za-z0-9/%.*-]+))?$`,
+            "i"
+          )
+          const m2 = line2.match(refLineRe)
+          if (m2) {
+            refText = m2[1].trim()
+            if (!unit && m2[2]) unit = m2[2].trim()
+            consumed = 3
+          } else if (/^[A-Za-z0-9/%.*-]{1,14}$/.test(line2) && !isMetadataOrHeaderLine(line2)) {
+            if (!unit) unit = line2
+            consumed = 3
+            if (i + 3 < lines.length) {
+              const line3 = lines[i + 3].replace(QUEST_LAB_CODE_TAIL, "").trim()
+              const m3 = line3.match(refLineRe)
+              if (m3) {
+                refText = m3[1].trim()
+                if (!unit && m3[2]) unit = m3[2].trim()
+                consumed = 4
+              }
+            }
+          }
+        }
+
+        results.push({
+          test_name: line.trim(),
+          panel_name: currentPanel,
+          value_text: valMatch[1].trim(),
+          lab_flag: labFlag ? labFlag.trim() : null,
+          unit,
+          reference_text: refText,
+        })
+        i += consumed
+        continue
+      }
     }
 
     i++
@@ -847,6 +1015,10 @@ export function parseLabReportTextFallback(
       },
       results,
       needs_retake: results.length === 0,
+      retake_reason:
+        results.length === 0
+          ? "This pasted text could not be parsed confidently. Try pasting the lab table rows cleanly, or use 'Add Result Manually' instead of guessing."
+          : null,
     },
     userAliases
   )
@@ -962,8 +1134,11 @@ export function buildPlainLanguageExplanationsFallback(
 
   for (const r of results) {
     const key = r.normalized_test_key
+    const rangeNote = r.reference_text
+      ? ` Your lab's range is ${r.reference_text}${r.unit ? ` ${r.unit}` : ""}.`
+      : " No reference range was printed on your report."
     const info = BUILTIN_WHAT_IT_IS[key] || {
-      what: `${r.test_name} is a lab measurement that helps your doctor check how this part of your body is working.`,
+      what: `This test measures ${r.test_name}.${rangeNote} Ask your doctor what it means for you.`,
       abnormal: "A result outside the usual range can happen for many everyday or medical reasons and is best reviewed with your doctor.",
       factors: "Commonly discussed factors include hydration, sleep, recent meals, physical activity, stress, and current medications or supplements.",
       questions: [

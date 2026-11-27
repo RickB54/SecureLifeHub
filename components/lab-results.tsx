@@ -818,7 +818,11 @@ export default function LabResultsPage({
                                           <span className="font-bold text-cyan-300">What it is: </span>
                                           <span className="text-gray-200">
                                             {cachedExp?.what_it_is ||
-                                              `${row.test_name} is a lab measurement that helps your doctor check how this part of your body is working.`}
+                                              `This test measures ${row.test_name}.${
+                                                row.reference_text
+                                                  ? ` Your lab's range is ${row.reference_text}${row.unit ? ` ${row.unit}` : ""}.`
+                                                  : " No reference range was printed on your report."
+                                              } Ask your doctor what it means for you.`}
                                           </span>
                                         </div>
                                         {row.personalized_line && (
