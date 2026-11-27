@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, SlidersHorizontal, FileDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3 } from "lucide-react"
+import { Search, Plus, Filter, Calendar as CalendarIcon, FileText, Upload, MoreHorizontal, X, User, MapPin, Clock, Activity, Heart, Droplets, Utensils, LayoutDashboard, TrendingUp, Loader2, Baby, Weight, ChevronDown, ChevronUp, ChevronsUpDown, ChevronsDownUp, SlidersHorizontal, FileDown, Image, Pill, Edit, Sparkles, Mic, HelpCircle, Archive, Trash2, Moon, Flame, GlassWater, Stethoscope, Hospital, AlertTriangle, Mail, Share2, FileCheck2, Info, BarChart3, Bell } from "lucide-react"
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isAfter, subDays, differenceInCalendarDays } from "date-fns"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { toast } from "sonner"
@@ -48,6 +48,7 @@ import { VitalsSparkline } from "./health-ui/vitals-sparkline"
 import { VitalsArrangeModal, ArrangeVitalItem } from "./health-ui/vitals-arrange-modal"
 import { VitalsPdfModal } from "./health-ui/vitals-pdf-modal"
 import { SmartSelect } from "./health-ui/smart-select"
+import { parseReminderTimes, formatReminderTime12h, getScheduledNextDose } from "@/lib/pill-count"
 
 // Helper to format date safely
 const safeFormat = (date: any, formatStr: string) => {
@@ -167,6 +168,29 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     const [showVitalsPdfModal, setShowVitalsPdfModal] = useState(false)
     const vitalsProfile = useVitalsProfile()
     const { overrides: glucoseCtxOverrides, setOverrideForEntry: setGlucoseCtxOverride } = useGlucoseContextOverrides()
+
+    // Overview Accordion State (all non-green Health Hub sections, defaulted to expanded)
+    const OVERVIEW_SECTION_KEYS = ['records', 'meds', 'ai', 'vitals', 'doctors', 'appointments', 'calendar', 'checkin'] as const
+    const [expandedOverviewSections, setExpandedOverviewSections] = useState<Record<string, boolean>>({
+        records: true,
+        meds: true,
+        ai: true,
+        vitals: true,
+        doctors: true,
+        appointments: true,
+        calendar: true,
+        checkin: true,
+    })
+    const anyOverviewExpanded = OVERVIEW_SECTION_KEYS.some((k) => expandedOverviewSections[k] !== false)
+    const toggleOverviewSection = (key: string) => {
+        setExpandedOverviewSections((prev) => ({ ...prev, [key]: !(prev[key] !== false) }))
+    }
+    const toggleAllOverviewSections = () => {
+        const nextVal = !anyOverviewExpanded
+        const next: Record<string, boolean> = {}
+        for (const k of OVERVIEW_SECTION_KEYS) next[k] = nextVal
+        setExpandedOverviewSections(next)
+    }
 
     // Calendar State
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -700,124 +724,570 @@ export default function HealthDashboard({ records, addItem, updateItem, deleteIt
     }
 
     // --- VIEWS ---
-    const renderDashboard = () => (
-        <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center px-1">
-                <h2 className="text-xl font-bold opacity-50 uppercase tracking-widest text-xs">Overview Dashboard</h2>
-            </div>
-            {/* Quick Stats - ALWAYS AT TOP */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
-                    <div className="text-4xl font-black text-blue-500 mb-1">{upcomingAppts.length}</div>
-                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Appointments</div>
-                </div>
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
-                    <div className="text-4xl font-black text-emerald-500 mb-1">{currentStreak}</div>
-                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Day Streak</div>
-                </div>
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
-                    <div className="text-4xl font-black text-amber-500 mb-1">{medRecords.length}</div>
-                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Medications</div>
-                </div>
-                <div className={`p-6 rounded-2xl ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20'} border flex flex-col items-center justify-center text-center shadow-xl`}>
-                    <div className="text-4xl font-black text-rose-500 mb-1">{healthRecords.length}</div>
-                    <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Records</div>
-                </div>
-            </div>
+    const renderDashboard = () => {
+        const cardBg = theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/15'
+        const subCardBg = theme === 'light' ? 'bg-gray-50 border-gray-200' : 'bg-white/[0.03] border-white/10'
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Upcoming Appointments */}
-                <div className={`lg:col-span-1 p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
-                    <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                            <CalendarIcon className="h-5 w-5 text-blue-500" /> Upcoming
-                            <button onClick={() => onOpenHelp?.('type-health-records')} className="p-1 hover:text-blue-400 opacity-50"><HelpCircle className="h-3 w-3" /></button>
-                        </span>
-                        <span className="text-xs font-normal text-gray-500">{upcomingAppts.length} found</span>
-                    </h3>
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                        {upcomingAppts.length === 0 ? (
-                            <div className="text-center py-12">
-                                <CalendarIcon className="h-12 w-12 text-gray-700 mx-auto mb-3 opacity-20" />
-                                <p className="text-gray-500 text-sm">No upcoming appointments scheduled.</p>
+        // Build ALL vitals summary grouped by vital title (zero blank chart box)
+        const vitalIdByTitle: Record<string, string> = {
+            'Blood Pressure': 'bp',
+            'Weight': 'weight',
+            'Temperature': 'temp',
+            'Blood Oxygen': 'spo2',
+            'Heart Rate': 'hr',
+            'Glucose': 'glucose',
+            'Sleep Duration': 'sleep_duration',
+            'Sleep Score': 'sleep_score',
+            'Water Intake': 'water',
+            'Calorie Intake': 'calories',
+            'Steps': 'steps',
+            'Activity (Mins)': 'activity',
+        }
+        const evalCtx = {
+            age: vitalsProfile.parsedAge,
+            infantAgeDetail: vitalsProfile.profile.infantAgeDetail,
+            sex: vitalsProfile.profile.sex,
+            heightInches: vitalsProfile.heightInches,
+            calorieActivity: vitalsProfile.profile.calorieActivity,
+            glucoseOverrides: glucoseCtxOverrides,
+        }
+        const vitalsByTitle = new Map<string, any[]>()
+        for (const v of activeVitalRecords) {
+            const key = v.title || 'Vital'
+            const arr = vitalsByTitle.get(key) || []
+            arr.push(v)
+            vitalsByTitle.set(key, arr)
+        }
+        const vitalSummaryCards = Array.from(vitalsByTitle.entries()).map(([title, entries]) => {
+            const sorted = [...entries].sort(
+                (a, b) => new Date(a.item_metadata?.date || a.created_at || 0).getTime() - new Date(b.item_metadata?.date || b.created_at || 0).getTime()
+            )
+            const latest = sorted[sorted.length - 1]
+            const vitalId = vitalIdByTitle[title]
+            const bpVerdict = vitalId === 'bp' ? getBpCardVerdict(latest, vitalsProfile.parsedAge) : null
+            const evalRes = vitalId && vitalId !== 'bp' ? evaluateVital(vitalId, sorted, evalCtx) : null
+            const verdict = bpVerdict
+                ? { chip: bpVerdict.chip, tone: bpVerdict.tone }
+                : evalRes?.verdict
+                    ? { chip: evalRes.verdict.chip, tone: evalRes.verdict.tone }
+                    : null
+            return {
+                title,
+                count: sorted.length,
+                latest,
+                verdict,
+                latestTs: new Date(latest?.item_metadata?.date || latest?.created_at || 0).getTime(),
+            }
+        }).sort((a, b) => b.latestTs - a.latestTs)
+
+        // Chronological Timeline items across appointments, records, vitals, check-ins
+        const timelineItems = [
+            ...allAppointments.map((a) => ({
+                id: `apt-${a.id}`,
+                kind: 'Appointment',
+                color: 'text-blue-400 bg-blue-500/15 border-blue-500/30',
+                title: a.title || 'Appointment',
+                date: a.item_metadata?.date || a.created_at,
+                detail: resolveDoctorInfo(a.item_metadata?.doctor_id, { name: a.item_metadata?.doctor }, savedDoctors).name || a.item_metadata?.location || '',
+                onClick: () => openEditAppointment(a),
+            })),
+            ...healthRecords
+                .filter((r) => r.item_metadata?.type !== 'Appointment' && r.type !== 'appointment' && r.category !== 'Appointments')
+                .map((r) => ({
+                    id: `rec-${r.id}`,
+                    kind: 'Record',
+                    color: 'text-rose-400 bg-rose-500/15 border-rose-500/30',
+                    title: r.title || 'Medical Record',
+                    date: r.item_metadata?.date || r.created_at,
+                    detail: resolveDoctorInfo(r.item_metadata?.doctor_id, { name: r.item_metadata?.doctor }, savedDoctors).name || '',
+                    onClick: () => openEditRecord(r),
+                })),
+            ...activeVitalRecords.map((v) => ({
+                id: `vit-${v.id}`,
+                kind: 'Vital',
+                color: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30',
+                title: `${v.title}: ${v.item_metadata?.value || ''} ${v.item_metadata?.unit || ''}`.trim(),
+                date: v.item_metadata?.date || v.created_at,
+                detail: v.item_metadata?.context || '',
+                onClick: () => navigateToTab('vitals'),
+            })),
+            ...checkinHistory.map((c) => ({
+                id: `chk-${c.id}`,
+                kind: 'Check-in',
+                color: 'text-amber-400 bg-amber-500/15 border-amber-500/30',
+                title: c.title || `Check-in ${c.item_metadata?.mood || ''}`,
+                date: c.item_metadata?.date || c.created_at,
+                detail: c.item_metadata?.notes || '',
+                onClick: () => navigateToTab('checkin'),
+            })),
+        ]
+            .filter((item) => item.date)
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+        const nonApptHistoryRecords = healthRecords.filter(
+            (r) => r.item_metadata?.type !== 'Appointment' && r.type !== 'appointment' && r.category !== 'Appointments'
+        )
+
+        const renderAccordionSection = (opts: {
+            sectionKey: string
+            title: string
+            icon: React.ReactNode
+            countBadge?: string
+            tabTarget: "records" | "meds" | "ai" | "vitals" | "doctors" | "appointments" | "calendar" | "checkin"
+            children: React.ReactNode
+        }) => {
+            const isOpen = expandedOverviewSections[opts.sectionKey] !== false
+            return (
+                <div key={opts.sectionKey} className={`rounded-2xl border overflow-hidden transition-all ${cardBg} shadow-lg`}>
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => toggleOverviewSection(opts.sectionKey)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                toggleOverviewSection(opts.sectionKey)
+                            }
+                        }}
+                        className="w-full px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/[0.03] select-none"
+                    >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            {opts.icon}
+                            <h3 className="text-sm sm:text-base font-bold tracking-tight truncate">{opts.title}</h3>
+                            {opts.countBadge && (
+                                <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-semibold text-gray-400 shrink-0">
+                                    {opts.countBadge}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    navigateToTab(opts.tabTarget)
+                                }}
+                                className="px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[11px] font-bold transition-colors cursor-pointer"
+                            >
+                                Open
+                            </button>
+                            <span className="p-1 rounded-lg text-gray-400">
+                                {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </span>
+                        </div>
+                    </div>
+                    {isOpen && (
+                        <div className="px-4 sm:px-5 pb-4 pt-1 border-t border-white/10">
+                            {opts.children}
+                        </div>
+                    )}
+                </div>
+            )
+        }
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Quick Stats - ALWAYS AT TOP */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className={`p-5 rounded-2xl ${cardBg} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                        <div className="text-3xl sm:text-4xl font-black text-blue-500 mb-1">{upcomingAppts.length}</div>
+                        <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Appointments</div>
+                    </div>
+                    <div className={`p-5 rounded-2xl ${cardBg} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                        <div className="text-3xl sm:text-4xl font-black text-emerald-500 mb-1">{currentStreak}</div>
+                        <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Day Streak</div>
+                    </div>
+                    <div className={`p-5 rounded-2xl ${cardBg} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                        <div className="text-3xl sm:text-4xl font-black text-amber-500 mb-1">{medRecords.length}</div>
+                        <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Medications</div>
+                    </div>
+                    <div className={`p-5 rounded-2xl ${cardBg} border flex flex-col items-center justify-center text-center shadow-xl`}>
+                        <div className="text-3xl sm:text-4xl font-black text-rose-500 mb-1">{healthRecords.length}</div>
+                        <div className="text-xs uppercase font-bold text-gray-400 tracking-widest">Records</div>
+                    </div>
+                </div>
+
+                {/* Overview Sections Header + Collapse / Expand All Toggle */}
+                <div className="flex items-center justify-between gap-3 px-1">
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">
+                            Health Hub Sections Overview
+                        </h2>
+                        <HealthTooltip content={anyOverviewExpanded ? "Collapse all overview sections" : "Expand all overview sections"}>
+                            <button
+                                type="button"
+                                onClick={toggleAllOverviewSections}
+                                aria-label={anyOverviewExpanded ? "Collapse all sections" : "Expand all sections"}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[11px] font-bold transition-colors cursor-pointer"
+                            >
+                                {anyOverviewExpanded ? (
+                                    <ChevronsDownUp className="h-3.5 w-3.5" />
+                                ) : (
+                                    <ChevronsUpDown className="h-3.5 w-3.5" />
+                                )}
+                                <span>{anyOverviewExpanded ? "Collapse all" : "Expand all"}</span>
+                            </button>
+                        </HealthTooltip>
+                    </div>
+                </div>
+
+                {/* Collapsible Accordions for all non-green Health Hub sections (defaulted to expanded) */}
+                <div className="space-y-4">
+                    {/* 1. Medical History */}
+                    {renderAccordionSection({
+                        sectionKey: 'records',
+                        title: 'Medical History',
+                        icon: <FileText className="h-4 w-4 text-rose-400 shrink-0" />,
+                        countBadge: `${nonApptHistoryRecords.length}`,
+                        tabTarget: 'records',
+                        children: nonApptHistoryRecords.length === 0 ? (
+                            <div className="py-4 flex items-center justify-between gap-3 text-xs text-gray-500">
+                                <span>No medical history records added yet.</span>
+                                <button
+                                    type="button"
+                                    onClick={() => navigateToTab('records')}
+                                    className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-bold cursor-pointer"
+                                >
+                                    + Add Record
+                                </button>
                             </div>
                         ) : (
-                            upcomingAppts.map(apt => {
-                                const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
-                                const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
-                                return (
-                                <div key={apt.id} className={`flex items-start gap-4 p-4 rounded-xl border ${theme === 'light' ? 'bg-gray-50 border-gray-100' : 'bg-white/5 border-white/5'} hover:border-blue-500/30 transition-all`}>
-                                    <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl cursor-pointer" onClick={() => openEditAppointment(apt)}>
-                                        <CalendarIcon className="h-6 w-6" />
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <h4
-                                            onClick={() => openEditAppointment(apt)}
-                                            className="font-bold text-sm truncate cursor-pointer hover:text-blue-400 transition-colors"
-                                            title="Tap to edit appointment"
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 pt-2">
+                                {nonApptHistoryRecords.slice(0, 6).map((rec) => {
+                                    const docName = resolveDoctorInfo(rec.item_metadata?.doctor_id, { name: rec.item_metadata?.doctor }, savedDoctors).name
+                                    const facName = resolveFacilityInfo(rec.item_metadata?.facility_id, { name: rec.item_metadata?.facility_name }, savedFacilities).name
+                                    return (
+                                        <div
+                                            key={rec.id}
+                                            onClick={() => openEditRecord(rec)}
+                                            className={`p-3 rounded-xl border ${subCardBg} hover:border-rose-500/30 transition-colors cursor-pointer flex items-center justify-between gap-2`}
                                         >
-                                            {apt.title}
-                                        </h4>
-                                        <p className="text-xs text-blue-400 font-medium mb-1">{safeFormat(apt.item_metadata.date, 'MMM d, h:mm a')}</p>
-                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase font-black flex-wrap">
-                                            <span className="inline-flex items-center gap-1"><User className="h-3 w-3" /> {docInfo.name || "Medical Provider"}</span>
-                                            {facInfo.name && <span className="text-teal-400/90">&bull; {facInfo.name}</span>}
+                                            <div className="min-w-0">
+                                                <div className="text-xs font-bold truncate">{rec.title || 'Medical Record'}</div>
+                                                <div className="text-[11px] text-gray-400 truncate mt-0.5">
+                                                    {safeFormat(rec.item_metadata?.date || rec.created_at, 'MMM d, yyyy')}
+                                                    {docName ? ` • ${docName}` : ''}
+                                                    {facName ? ` • ${facName}` : ''}
+                                                </div>
+                                            </div>
+                                            <Edit className="h-3.5 w-3.5 text-gray-500 shrink-0" />
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ),
+                    })}
+
+                    {/* 2. Meds */}
+                    {renderAccordionSection({
+                        sectionKey: 'meds',
+                        title: 'Meds',
+                        icon: <Pill className="h-4 w-4 text-purple-400 shrink-0" />,
+                        countBadge: `${medRecords.length}`,
+                        tabTarget: 'meds',
+                        children: medRecords.length === 0 ? (
+                            <div className="py-4 text-xs text-gray-500">No medications logged yet.</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2">
+                                {medRecords.slice(0, 9).map((med) => {
+                                    const explicitRems = parseReminderTimes(med.item_metadata?.reminders)
+                                    const hasRem = explicitRems.length > 0
+                                    const remText = hasRem ? explicitRems.map((r) => formatReminderTime12h(r.hh, r.mm)).join(', ') : null
+                                    const nextDose = getScheduledNextDose(med.item_metadata) || med.item_metadata?.nextDose
+                                    return (
+                                        <div
+                                            key={med.id}
+                                            onClick={() => navigateToTab('meds')}
+                                            className={`p-3 rounded-xl border ${subCardBg} hover:border-purple-500/35 transition-colors cursor-pointer space-y-1`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="text-xs font-bold truncate">
+                                                    {med.title}
+                                                    {med.item_metadata?.dosage ? (
+                                                        <span className="text-gray-400 font-normal ml-1">{med.item_metadata.dosage}</span>
+                                                    ) : null}
+                                                </div>
+                                                {hasRem && (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[10px] font-bold shrink-0" title={`Reminder set: ${remText}`}>
+                                                        <Bell className="h-3 w-3" />
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="text-[11px] text-gray-400 truncate">
+                                                {med.item_metadata?.frequency || 'As needed'}
+                                            </div>
+                                            {nextDose && (
+                                                <div className="text-[11px] text-purple-300 flex items-center gap-1">
+                                                    <Clock className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate">Next {safeFormat(nextDose, 'MMM d, h:mm a')}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ),
+                    })}
+
+                    {/* 3. Dr. AI */}
+                    {renderAccordionSection({
+                        sectionKey: 'ai',
+                        title: 'Dr. AI',
+                        icon: <Sparkles className="h-4 w-4 text-indigo-400 shrink-0" />,
+                        tabTarget: 'ai',
+                        children: (
+                            <div className={`mt-2 p-3.5 rounded-xl border ${subCardBg} flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
+                                <div className="text-xs text-gray-300">
+                                    Ask Dr. AI about your symptoms, labs, medications, or prepare questions for your next appointment.
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => navigateToTab('ai')}
+                                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shrink-0 cursor-pointer transition-colors"
+                                >
+                                    Open Dr. AI
+                                </button>
+                            </div>
+                        ),
+                    })}
+
+                    {/* 4. Vitals (ALL logged vitals data — replaces the old blank Vital Statistics box) */}
+                    {renderAccordionSection({
+                        sectionKey: 'vitals',
+                        title: 'Vitals',
+                        icon: <Activity className="h-4 w-4 text-rose-500 shrink-0" />,
+                        countBadge: `${activeVitalRecords.length} entries across ${vitalSummaryCards.length} metrics`,
+                        tabTarget: 'vitals',
+                        children: vitalSummaryCards.length === 0 ? (
+                            <div className="py-4 flex items-center justify-between gap-3 text-xs text-gray-500">
+                                <span>No vitals logged yet.</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditingVital(null)
+                                        setAddModalType('vital')
+                                        setShowAddModal(true)
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 font-bold cursor-pointer"
+                                >
+                                    + Log Vital
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3 pt-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                    {vitalSummaryCards.map((item) => {
+                                        const toneStyle = item.verdict && item.verdict.tone !== 'neutral'
+                                            ? VITAL_TONE_STYLES[item.verdict.tone]
+                                            : null
+                                        return (
+                                            <div
+                                                key={item.title}
+                                                onClick={() => navigateToTab('vitals')}
+                                                className={`p-3 rounded-xl border ${subCardBg} hover:border-rose-500/35 transition-colors cursor-pointer space-y-1`}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-xs font-black uppercase tracking-wider text-gray-300">
+                                                        {item.title}
+                                                    </span>
+                                                    <span className="text-[10px] text-gray-500 font-semibold">
+                                                        {item.count} {item.count === 1 ? 'entry' : 'entries'}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-baseline justify-between gap-2">
+                                                    <span className="text-base font-black text-white">
+                                                        {item.latest?.item_metadata?.value || '—'}{' '}
+                                                        <span className="text-xs font-semibold text-gray-400">
+                                                            {item.latest?.item_metadata?.unit || ''}
+                                                        </span>
+                                                    </span>
+                                                    <span className="text-[11px] text-gray-400">
+                                                        {formatVitalDateNoShift(item.latest?.item_metadata?.date || item.latest?.created_at)}
+                                                    </span>
+                                                </div>
+                                                {item.verdict && (
+                                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold border ${toneStyle ? toneStyle.chip : 'bg-white/10 text-gray-300 border-white/15'}`}>
+                                                        {item.verdict.chip}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ),
+                    })}
+
+                    {/* 5. My Doctors */}
+                    {renderAccordionSection({
+                        sectionKey: 'doctors',
+                        title: 'My Doctors',
+                        icon: <User className="h-4 w-4 text-teal-400 shrink-0" />,
+                        countBadge: `${savedDoctors.length} doctors • ${savedFacilities.length} facilities`,
+                        tabTarget: 'doctors',
+                        children: savedDoctors.length === 0 && savedFacilities.length === 0 ? (
+                            <div className="py-4 text-xs text-gray-500">No doctors or medical facilities saved yet.</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2">
+                                {savedDoctors.slice(0, 6).map((doc) => (
+                                    <div
+                                        key={doc.id}
+                                        onClick={() => navigateToTab('doctors')}
+                                        className={`p-3 rounded-xl border ${subCardBg} hover:border-teal-500/35 transition-colors cursor-pointer`}
+                                    >
+                                        <div className="text-xs font-bold truncate">{doc.name}</div>
+                                        {doc.specialty && (
+                                            <div className="text-[11px] text-teal-400 truncate mt-0.5">{doc.specialty}</div>
+                                        )}
+                                        {doc.phone && (
+                                            <div className="text-[11px] text-gray-400 truncate mt-0.5">{doc.phone}</div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        ),
+                    })}
+
+                    {/* 6. Appointments */}
+                    {renderAccordionSection({
+                        sectionKey: 'appointments',
+                        title: 'Appointments',
+                        icon: <Clock className="h-4 w-4 text-blue-400 shrink-0" />,
+                        countBadge: `${upcomingAppts.length} upcoming${pastAppts.length > 0 ? ` • ${pastAppts.length} past` : ''}`,
+                        tabTarget: 'appointments',
+                        children: upcomingAppts.length === 0 ? (
+                            <div className="py-4 flex items-center justify-between gap-3 text-xs text-gray-500">
+                                <span>No upcoming appointments scheduled.</span>
+                                <button
+                                    type="button"
+                                    onClick={openNewAppointmentModal}
+                                    className="px-3 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 font-bold cursor-pointer"
+                                >
+                                    + Schedule Visit
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-2.5 pt-2">
+                                {upcomingAppts.slice(0, 6).map((apt) => {
+                                    const docInfo = resolveDoctorInfo(apt.item_metadata?.doctor_id, { name: apt.item_metadata?.doctor }, savedDoctors)
+                                    const facInfo = resolveFacilityInfo(apt.item_metadata?.facility_id, { name: apt.item_metadata?.facility_name }, savedFacilities)
+                                    return (
+                                        <div
+                                            key={apt.id}
+                                            className={`flex items-start gap-3 p-3 rounded-xl border ${subCardBg} hover:border-blue-500/30 transition-all`}
+                                        >
+                                            <div
+                                                className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl cursor-pointer shrink-0"
+                                                onClick={() => openEditAppointment(apt)}
+                                            >
+                                                <CalendarIcon className="h-5 w-5" />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <h4
+                                                    onClick={() => openEditAppointment(apt)}
+                                                    className="font-bold text-xs sm:text-sm truncate cursor-pointer hover:text-blue-400 transition-colors"
+                                                    title="Tap to edit appointment"
+                                                >
+                                                    {apt.title}
+                                                </h4>
+                                                <p className="text-xs text-blue-400 font-medium">
+                                                    {safeFormat(apt.item_metadata?.date, 'MMM d, h:mm a')}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 uppercase font-black flex-wrap mt-0.5">
+                                                    <span className="inline-flex items-center gap-1">
+                                                        <User className="h-3 w-3" /> {docInfo.name || 'Medical Provider'}
+                                                    </span>
+                                                    {facInfo.name && <span className="text-teal-400/90">&bull; {facInfo.name}</span>}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => openEditAppointment(apt)}
+                                                className="p-2 rounded-lg hover:bg-blue-500/10 text-gray-400 hover:text-blue-400 shrink-0 cursor-pointer"
+                                                title="Edit appointment"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ),
+                    })}
+
+                    {/* 7. Timeline */}
+                    {renderAccordionSection({
+                        sectionKey: 'calendar',
+                        title: 'Timeline',
+                        icon: <CalendarIcon className="h-4 w-4 text-cyan-400 shrink-0" />,
+                        countBadge: `${timelineItems.length} events`,
+                        tabTarget: 'calendar',
+                        children: timelineItems.length === 0 ? (
+                            <div className="py-4 text-xs text-gray-500">No timeline events yet.</div>
+                        ) : (
+                            <div className="space-y-2 pt-2">
+                                {timelineItems.slice(0, 6).map((ev) => (
+                                    <div
+                                        key={ev.id}
+                                        onClick={ev.onClick}
+                                        className={`p-2.5 rounded-xl border ${subCardBg} hover:border-cyan-500/30 transition-colors cursor-pointer flex items-center justify-between gap-2`}
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${ev.color}`}>
+                                                {ev.kind}
+                                            </span>
+                                            <span className="text-xs font-semibold truncate">{ev.title}</span>
+                                            {ev.detail && (
+                                                <span className="hidden sm:inline text-[11px] text-gray-400 truncate">
+                                                    • {ev.detail}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <span className="text-[11px] text-gray-400 shrink-0">
+                                            {safeFormat(ev.date, 'MMM d, yyyy')}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ),
+                    })}
+
+                    {/* 8. Check-in */}
+                    {renderAccordionSection({
+                        sectionKey: 'checkin',
+                        title: 'Check-in',
+                        icon: <Activity className="h-4 w-4 text-emerald-400 shrink-0" />,
+                        countBadge: `${checkinHistory.length} check-ins • ${currentStreak}d streak`,
+                        tabTarget: 'checkin',
+                        children: checkinHistory.length === 0 ? (
+                            <div className="py-4 text-xs text-gray-500">No daily check-ins logged yet.</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 pt-2">
+                                {checkinHistory.slice(0, 6).map((c) => (
+                                    <div
+                                        key={c.id}
+                                        onClick={() => navigateToTab('checkin')}
+                                        className={`p-3 rounded-xl border ${subCardBg} hover:border-emerald-500/30 transition-colors cursor-pointer flex items-center gap-3`}
+                                    >
+                                        <div className="text-2xl shrink-0">{c.item_metadata?.mood || '😊'}</div>
+                                        <div className="min-w-0">
+                                            <div className="text-xs font-bold truncate">
+                                                {safeFormat(c.item_metadata?.date || c.created_at, 'MMM d, yyyy')}
+                                            </div>
+                                            <div className="text-[11px] text-gray-400 truncate">
+                                                Energy {c.item_metadata?.energy ?? '—'}/10
+                                                {c.item_metadata?.notes ? ` • ${c.item_metadata.notes}` : ''}
+                                            </div>
                                         </div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => openEditAppointment(apt)}
-                                        className="p-2 rounded-lg hover:bg-blue-500/10 text-gray-400 hover:text-blue-400 shrink-0"
-                                        title="Edit appointment"
-                                    >
-                                        <Edit className="h-4 w-4" />
-                                    </button>
-                                </div>
-                                )
-                            })
-                        )}
-                    </div>
-                </div>
-
-                {/* Vitals Summary Chart */}
-                <div className={`lg:col-span-2 p-6 rounded-2xl border ${theme === 'light' ? 'bg-white border-gray-200' : 'bg-black border-white/20 shadow-2xl'}`}>
-                    <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
-                        <span className="flex items-center gap-2">
-                            <Activity className="h-5 w-5 text-rose-500" /> Vital Statistics
-                        </span>
-                        <button onClick={() => navigateToTab('vitals')} className="text-xs text-blue-400 hover:underline">View All Trends</button>
-                    </h3>
-                    <div className="h-[300px] w-full">
-                        {weightData.length > 1 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={weightData}>
-                                    <defs>
-                                        <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
-                                    <XAxis dataKey="date" stroke="#666" fontSize={10} axisLine={false} tickLine={false} />
-                                    <YAxis stroke="#666" fontSize={10} axisLine={false} tickLine={false} domain={['dataMin - 10', 'dataMax + 10']} />
-                                    <RechartsTooltip
-                                        contentStyle={{ backgroundColor: '#000', border: '1px solid #333', borderRadius: '12px' }}
-                                        labelStyle={{ color: '#888', fontWeight: 'bold' }}
-                                    />
-                                    <Area type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorVal)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-600">
-                                <TrendingUp className="h-12 w-12 mb-3 opacity-20" />
-                                <p className="text-sm italic">Not enough data to generate trends yet.</p>
+                                ))}
                             </div>
-                        )}
-                    </div>
+                        ),
+                    })}
                 </div>
             </div>
-        </div>
-    )
+        )
+    }
 
 
 

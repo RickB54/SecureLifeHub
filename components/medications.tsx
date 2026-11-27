@@ -42,6 +42,7 @@ import {
     calculatePillCountEstimate,
     getCountBaselineDateForOption,
     getDefaultReminderForFrequency,
+    parseReminderTimes,
     getEffectiveReminderTimes,
     getScheduledNextDose,
     formatReminderTime12h,
@@ -1511,9 +1512,10 @@ ${selectedMed ? `
                                 const tracked = Boolean(estimate?.tracked)
                                 const lowStock = Boolean(estimate?.isLowStock)
                                 const liveNextDose = getScheduledNextDose(med.item_metadata) || med.item_metadata?.nextDose
-                                const reminderTimes = getEffectiveReminderTimes(med.item_metadata)
-                                const todayTimesStr = reminderTimes.length > 0
-                                    ? reminderTimes.map(r => formatReminderTime12h(r.hh, r.mm)).join(", ")
+                                const explicitReminders = parseReminderTimes(med.item_metadata?.reminders)
+                                const hasReminder = explicitReminders.length > 0
+                                const reminderTimesStr = hasReminder
+                                    ? explicitReminders.map(r => formatReminderTime12h(r.hh, r.mm)).join(", ")
                                     : null
                                 const skippedLog = Array.isArray(med.item_metadata?.skippedLog) ? med.item_metadata.skippedLog : []
                                 const takenLog = Array.isArray(med.item_metadata?.takenLog) ? med.item_metadata.takenLog : []
@@ -1547,9 +1549,21 @@ ${selectedMed ? `
                                                 )}
                                             </div>
                                         </div>
-                                        <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[10px] font-semibold shrink-0 max-w-[130px] truncate" title={getMedCategory(med)}>
-                                            {getMedCategory(med)}
-                                        </span>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {hasReminder && (
+                                                <HealthTooltip content={`Reminder set: ${reminderTimesStr}`}>
+                                                    <span
+                                                        className="inline-flex items-center justify-center p-1 rounded-full bg-amber-500/15 border border-amber-500/35 text-amber-400"
+                                                        aria-label={`Reminder set: ${reminderTimesStr}`}
+                                                    >
+                                                        <Bell className="h-3.5 w-3.5" />
+                                                    </span>
+                                                </HealthTooltip>
+                                            )}
+                                            <span className="px-2 py-0.5 rounded-full bg-purple-500/15 border border-purple-500/30 text-purple-200 text-[10px] font-semibold max-w-[130px] truncate" title={getMedCategory(med)}>
+                                                {getMedCategory(med)}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {/* Line 2: Frequency + Est. left + Status chips inline */}
@@ -1591,13 +1605,19 @@ ${selectedMed ? `
                                         )}
                                     </div>
 
-                                    {/* Line 3: Today <time> - Next <date, time> */}
-                                    {(todayTimesStr || liveNextDose) && (
+                                    {/* Line 3: Reminder (if explicitly set) + Next scheduled dose */}
+                                    {(hasReminder || liveNextDose) && (
                                         <div className="flex items-center gap-1.5 flex-wrap text-xs text-purple-300">
-                                            <Clock className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                                            {hasReminder ? (
+                                                <Bell className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                                            ) : (
+                                                <Clock className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                                            )}
                                             <span>
-                                                {todayTimesStr ? `Today ${todayTimesStr}` : ""}
-                                                {todayTimesStr && liveNextDose ? " - " : ""}
+                                                {hasReminder ? (
+                                                    <span className="text-amber-300 font-medium">Reminder {reminderTimesStr}</span>
+                                                ) : null}
+                                                {hasReminder && liveNextDose ? " • " : ""}
                                                 {liveNextDose ? `Next ${format(new Date(liveNextDose), 'MMM d, h:mm a')}` : ""}
                                             </span>
                                         </div>
